@@ -605,6 +605,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         queue: Queue.mainQueue(),
         controller.result |> take(1),
         context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
         )
@@ -615,8 +616,9 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
             return
         }
         
-        let (limits, premiumLimits) = data
-                
+        let (accountPeer, limits, premiumLimits) = data
+        let isPremium = accountPeer?.isPremium ?? false
+        
         var includePeers: [PeerId] = []
         for peerId in peerIds {
             switch peerId {
@@ -628,15 +630,13 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         }
         includePeers.sort()
         
-        if includePeers.count > limits.maxFolderChatsCount {
-            if includePeers.count > premiumLimits.maxFolderChatsCount {
-                let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.ChatListFolder_MaxChatsInFolder(Int(premiumLimits.maxFolderChatsCount)).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                controller?.present(alertController, in: .window(.root))
-                return
-            }
-            
+        if includePeers.count > premiumLimits.maxFolderChatsCount {
+            let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(includePeers.count), action: {})
+            controller?.push(limitController)
+            return
+        } else if includePeers.count > limits.maxFolderChatsCount && !isPremium {
             var replaceImpl: ((ViewController) -> Void)?
-            let limitController = PremiumLimitScreen(context: context, subject: .chatsInFolder, count: Int32(includePeers.count), action: {
+            let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(includePeers.count), action: {
                 let introController = PremiumIntroScreen(context: context, source: .chatsPerFolder)
                 replaceImpl?(introController)
             })
@@ -980,28 +980,28 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 stateWithPeers |> take(1)
             ).start(next: { result, state in
                 let (accountPeer, limits, premiumLimits) = result
-                                
+                let isPremium = accountPeer?.isPremium ?? false
+                
                 let (_, currentIncludePeers, _) = state
 
                 let limit = limits.maxFolderChatsCount
                 let premiumLimit = premiumLimits.maxFolderChatsCount
-                if let accountPeer = accountPeer, accountPeer.isPremium {
-                    if currentIncludePeers.count >= premiumLimit {
-                        return
+                
+                if currentIncludePeers.count >= premiumLimit {
+                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(currentIncludePeers.count), action: {})
+                    pushControllerImpl?(controller)
+                    return
+                } else if currentIncludePeers.count >= limit && !isPremium {
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(currentIncludePeers.count), action: {
+                        let controller = PremiumIntroScreen(context: context, source: .chatsPerFolder)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
                     }
-                } else {
-                    if currentIncludePeers.count >= limit {
-                        var replaceImpl: ((ViewController) -> Void)?
-                        let controller = PremiumLimitScreen(context: context, subject: .chatsInFolder, count: Int32(currentIncludePeers.count), action: {
-                            let controller = PremiumIntroScreen(context: context, source: .chatsPerFolder)
-                            replaceImpl?(controller)
-                        })
-                        replaceImpl = { [weak controller] c in
-                            controller?.replace(with: c)
-                        }
-                        pushControllerImpl?(controller)
-                        return
-                    }
+                    pushControllerImpl?(controller)
+                    return
                 }
                 
                 let state = stateValue.with { $0 }

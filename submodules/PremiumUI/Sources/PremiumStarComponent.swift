@@ -47,7 +47,7 @@ private func generateDiffuseTexture() -> UIImage {
 class PremiumStarComponent: Component {
     let isVisible: Bool
     let hasIdleAnimations: Bool
-    
+        
     init(isVisible: Bool, hasIdleAnimations: Bool) {
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
@@ -73,6 +73,10 @@ class PremiumStarComponent: Component {
             return self._ready.get()
         }
         
+        weak var animateFrom: UIView?
+        weak var containerView: UIView?
+        var animationColor: UIColor?
+        
         private let sceneView: SCNView
                 
         private var previousInteractionTimestamp: Double = 0.0
@@ -80,7 +84,7 @@ class PremiumStarComponent: Component {
         private var hasIdleAnimations = false
         
         override init(frame: CGRect) {
-            self.sceneView = SCNView(frame: frame)
+            self.sceneView = SCNView(frame: CGRect(origin: .zero, size: CGSize(width: 64.0, height: 64.0)))
             self.sceneView.backgroundColor = .clear
             self.sceneView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
             self.sceneView.isUserInteractionEnabled = false
@@ -194,7 +198,19 @@ class PremiumStarComponent: Component {
                 case .changed:
                     let translation = gesture.translation(in: gesture.view)
                     let yawPan = deg2rad(Float(translation.x))
-                    let pitchPan = deg2rad(Float(translation.y))
+                
+                    func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
+                        let bandedOffset = offset - bandingStart
+                        let range: CGFloat = 60.0
+                        let coefficient: CGFloat = 0.4
+                        return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
+                    }
+                
+                    var pitchTranslation = rubberBandingOffset(offset: abs(translation.y), bandingStart: 0.0)
+                    if translation.y < 0.0 {
+                        pitchTranslation *= -1.0
+                    }
+                    let pitchPan = deg2rad(Float(pitchTranslation))
                 
                     self.previousYaw = yawPan
                     node.eulerAngles = SCNVector3(pitchPan, yawPan, 0.0)
@@ -246,15 +262,68 @@ class PremiumStarComponent: Component {
             if !self.didSetReady {
                 self.didSetReady = true
                 
-                self._ready.set(.single(true))
-                self.onReady()
+                Queue.mainQueue().justDispatch {
+                    self._ready.set(.single(true))
+                    self.onReady()
+                }
             }
+        }
+        
+        private func maybeAnimateIn() {
+            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false), let animateFrom = self.animateFrom, let containerView = self.containerView else {
+                return
+            }
+            
+            if let animationColor = self.animationColor {
+                let newNode = node.clone()
+                newNode.geometry = node.geometry?.copy() as? SCNGeometry
+                
+                let colorMaterial = SCNMaterial()
+                colorMaterial.diffuse.contents = animationColor
+                colorMaterial.lightingModel = SCNMaterial.LightingModel.blinn
+                newNode.geometry?.materials = [colorMaterial]
+                node.addChildNode(newNode)
+                
+                newNode.scale = SCNVector3(1.03, 1.03, 1.03)
+                newNode.geometry?.materials.first?.diffuse.contents = animationColor
+                   
+                let animation = CABasicAnimation(keyPath: "opacity")
+                animation.beginTime = CACurrentMediaTime() + 0.1
+                animation.duration = 0.7
+                animation.fromValue = 1.0
+                animation.toValue = 0.0
+                animation.fillMode = .forwards
+                animation.isRemovedOnCompletion = false
+                animation.completion = { [weak newNode] _ in
+                    newNode?.removeFromParentNode()
+                }
+                newNode.addAnimation(animation, forKey: "opacity")
+            }
+            
+            let initialPosition = self.sceneView.center
+            let targetPosition = self.sceneView.superview!.convert(self.sceneView.center, to: containerView)
+            let sourcePosition = animateFrom.superview!.convert(animateFrom.center, to: containerView).offsetBy(dx: 0.0, dy: -20.0)
+            
+            containerView.addSubview(self.sceneView)
+            self.sceneView.center = targetPosition
+            
+            animateFrom.alpha = 0.0
+            self.sceneView.layer.animateScale(from: 0.05, to: 0.5, duration: 1.0, timingFunction: kCAMediaTimingFunctionSpring)
+            self.sceneView.layer.animatePosition(from: sourcePosition, to: targetPosition, duration: 1.0, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+                self.addSubview(self.sceneView)
+                self.sceneView.center = initialPosition
+                animateFrom.alpha = 1.0
+            })
+            
+            self.animateFrom = nil
+            self.containerView = nil
         }
         
         private func onReady() {
             self.setupGradientAnimation()
             self.setupShineAnimation()
             
+            self.maybeAnimateIn()
             self.playAppearanceAnimation(explode: true)
             
             self.previousInteractionTimestamp = CACurrentMediaTime()
@@ -367,7 +436,9 @@ class PremiumStarComponent: Component {
         
         func update(component: PremiumStarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
-            self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
+            if self.sceneView.superview == self {
+                self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
+            }
             
             self.hasIdleAnimations = component.hasIdleAnimations
             

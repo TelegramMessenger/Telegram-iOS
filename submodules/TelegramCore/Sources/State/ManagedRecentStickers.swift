@@ -154,3 +154,27 @@ func managedGreetingStickers(postbox: Postbox, network: Network) -> Signal<Void,
     })
     return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
+
+func managedPremiumStickers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudPremiumStickers, reverseHashOrder: false, forceFetch: false, fetch: { hash in
+        return network.request(Api.functions.messages.getStickers(emoticon: "⭐️⭐️", hash: 0))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+                case .stickersNotModified:
+                    return .single(nil)
+                case let .stickers(_, stickers):
+                    var items: [OrderedItemListEntry] = []
+                    for sticker in stickers {
+                        if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
+                            if let entry = CodableEntry(RecentMediaItem(file)) {
+                                items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: entry))
+                            }
+                        }
+                    }
+                    return .single(items)
+            }
+        }
+    })
+    return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}

@@ -845,15 +845,10 @@ public final class ChatListNode: ListView {
                         switch result {
                         case .done:
                             break
-                        case let .limitExceeded(count, limit):
+                        case let .limitExceeded(count, _):
                             if isPremium {
-                                let text: String
-                                if chatListFilter != nil {
-                                    text = strongSelf.currentState.presentationData.strings.DialogList_UnknownPinLimitError
-                                } else {
-                                    text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(limit)").string
-                                }
-                                strongSelf.presentAlert?(text)
+                                let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {})
+                                strongSelf.push?(controller)
                             } else {
                                 var replaceImpl: ((ViewController) -> Void)?
                                 let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {

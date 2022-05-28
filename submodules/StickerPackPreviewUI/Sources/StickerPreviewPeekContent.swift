@@ -181,7 +181,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
         }
             
         if let dimensitons = self.item.file.dimensions {
-            let textSpacing: CGFloat = 10.0
+            let textSpacing: CGFloat = 50.0
             let textSize = self.textNode.measure(CGSize(width: 100.0, height: 100.0))
             
             let imageSize = dimensitons.cgSize.aspectFitted(boundingSize)

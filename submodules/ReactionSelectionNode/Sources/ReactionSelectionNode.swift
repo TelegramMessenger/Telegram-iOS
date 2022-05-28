@@ -45,6 +45,7 @@ protocol ReactionItemNode: ASDisplayNode {
 public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     let context: AccountContext
     let item: ReactionItem
+    private let hasAppearAnimation: Bool
     
     private var animateInAnimationNode: AnimatedStickerNode?
     private let staticAnimationNode: AnimatedStickerNode
@@ -67,6 +68,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, hasAppearAnimation: Bool = true) {
         self.context = context
         self.item = item
+        self.hasAppearAnimation = hasAppearAnimation
         
         self.staticAnimationNode = AnimatedStickerNode()
     
@@ -113,6 +115,8 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         }
     }
     
+    public var mainAnimationCompletion: (() -> Void)?
+    
     public func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
         let intrinsicSize = size
         
@@ -130,7 +134,9 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         
         let expandedAnimationFrame = animationFrame
         
-        if isExpanded, self.animationNode == nil {
+        if isExpanded && !self.hasAppearAnimation {
+            self.staticAnimationNode.play(fromIndex: 0)
+        } else if isExpanded, self.animationNode == nil {
             let animationNode = AnimatedStickerNode()
             animationNode.automaticallyLoadFirstFrame = true
             self.animationNode = animationNode
@@ -142,6 +148,9 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                     didReportStarted = true
                     self?.expandedAnimationDidBegin?()
                 }
+            }
+            animationNode.completed = { [weak self] _ in
+                self?.mainAnimationCompletion?()
             }
             
             if largeExpanded {
@@ -274,7 +283,11 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             if self.animationNode == nil {
                 self.didSetupStillAnimation = true
                 
-                self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
+                if !self.hasAppearAnimation {
+                    self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.largeListAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.largeListAnimation.resource.id)))
+                } else {
+                    self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
+                }
                 self.staticAnimationNode.position = animationFrame.center
                 self.staticAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
                 self.staticAnimationNode.updateLayout(size: animationFrame.size)

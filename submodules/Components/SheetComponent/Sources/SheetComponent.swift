@@ -115,6 +115,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         }
         
         private func animateOut(completion: @escaping () -> Void) {
+            self.isUserInteractionEnabled = false
             self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
             self.scrollView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.bounds.height - self.scrollView.contentInset.top), duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
                 completion()

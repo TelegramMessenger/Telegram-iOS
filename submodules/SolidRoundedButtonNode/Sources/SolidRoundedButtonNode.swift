@@ -523,6 +523,14 @@ public final class SolidRoundedButtonView: UIView {
         }
     }
     
+    public var gloss: Bool {
+        didSet {
+            if self.gloss != oldValue {
+                self.setupGloss()
+            }
+        }
+    }
+    
     public var progressType: SolidRoundedButtonProgressType = .fullSize
     
     public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
@@ -532,6 +540,7 @@ public final class SolidRoundedButtonView: UIView {
         self.buttonHeight = height
         self.buttonCornerRadius = cornerRadius
         self.title = title
+        self.gloss = gloss
         
         self.buttonBackgroundNode = UIImageView()
         self.buttonBackgroundNode.clipsToBounds = true
@@ -604,33 +613,55 @@ public final class SolidRoundedButtonView: UIView {
         }
         
         if gloss {
-            let shimmerView = ShimmerEffectForegroundView()
-            self.shimmerView = shimmerView
-            
-            if #available(iOS 13.0, *) {
-                shimmerView.layer.cornerCurve = .continuous
-                shimmerView.layer.cornerRadius = self.buttonCornerRadius
+            self.setupGloss()
+        }
+    }
+    
+    private func setupGloss() {
+        if self.gloss {
+            if self.shimmerView == nil {
+                let shimmerView = ShimmerEffectForegroundView()
+                self.shimmerView = shimmerView
+                
+                if #available(iOS 13.0, *) {
+                    shimmerView.layer.cornerCurve = .continuous
+                    shimmerView.layer.cornerRadius = self.buttonCornerRadius
+                }
+                
+                let borderView = UIView()
+                borderView.isUserInteractionEnabled = false
+                self.borderView = borderView
+                
+                let borderMaskView = UIView()
+                borderMaskView.layer.borderWidth = 1.0 + UIScreenPixel
+                borderMaskView.layer.borderColor = UIColor.white.cgColor
+                borderMaskView.layer.cornerRadius = self.buttonCornerRadius
+                borderView.mask = borderMaskView
+                self.borderMaskView = borderMaskView
+                
+                let borderShimmerView = ShimmerEffectForegroundView()
+                self.borderShimmerView = borderShimmerView
+                borderView.addSubview(borderShimmerView)
+                
+                self.insertSubview(shimmerView, belowSubview: self.buttonNode)
+                self.insertSubview(borderView, belowSubview: self.buttonNode)
+                
+                self.updateShimmerParameters()
+                
+                if let width = self.validLayout {
+                    _ = self.updateLayout(width: width, transition: .immediate)
+                }
             }
+        } else if self.shimmerView != nil {
+            self.shimmerView?.removeFromSuperview()
+            self.borderView?.removeFromSuperview()
+            self.borderMaskView?.removeFromSuperview()
+            self.borderShimmerView?.removeFromSuperview()
             
-            let borderView = UIView()
-            borderView.isUserInteractionEnabled = false
-            self.borderView = borderView
-            
-            let borderMaskView = UIView()
-            borderMaskView.layer.borderWidth = 1.0 + UIScreenPixel
-            borderMaskView.layer.borderColor = UIColor.white.cgColor
-            borderMaskView.layer.cornerRadius = self.buttonCornerRadius
-            borderView.mask = borderMaskView
-            self.borderMaskView = borderMaskView
-            
-            let borderShimmerView = ShimmerEffectForegroundView()
-            self.borderShimmerView = borderShimmerView
-            borderView.addSubview(borderShimmerView)
-            
-            self.insertSubview(shimmerView, belowSubview: self.buttonNode)
-            self.insertSubview(borderView, belowSubview: self.buttonNode)
-            
-            self.updateShimmerParameters()
+            self.shimmerView = nil
+            self.borderView = nil
+            self.borderMaskView = nil
+            self.borderShimmerView = nil
         }
     }
     

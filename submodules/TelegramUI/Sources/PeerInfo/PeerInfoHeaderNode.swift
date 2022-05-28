@@ -2016,6 +2016,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
     
+    var displayPremiumIntro: ((UIView, Bool) -> Void)?
+    
     var navigationTransition: PeerInfoHeaderNavigationTransition?
     
     var backgroundAlpha: CGFloat = 1.0
@@ -2180,6 +2182,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let phoneGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePhoneLongPress(_:)))
         self.subtitleNodeRawContainer.view.addGestureRecognizer(phoneGestureRecognizer)
+        
+        let premiumGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleStarTap(_:)))
+        self.titleCredibilityIconNode.view.addGestureRecognizer(premiumGestureRecognizer)
+        
+        let expandedPremiumGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleStarTap(_:)))
+        self.titleExpandedCredibilityIconNode.view.addGestureRecognizer(expandedPremiumGestureRecognizer)
     }
     
     @objc private func handleUsernameLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
@@ -2192,6 +2200,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if gestureRecognizer.state == .began {
             self.displayCopyContextMenu?(self.subtitleNodeRawContainer, true, !self.isAvatarExpanded)
         }
+    }
+    
+    @objc private func handleStarTap(_ gestureRecognizer: UITapGestureRecognizer) {
+        guard let view = gestureRecognizer.view, self.currentCredibilityIcon == .premium else {
+            return
+        }
+        self.displayPremiumIntro?(view, view == self.titleExpandedCredibilityIconNode.view)
     }
     
     func initiateAvatarExpansion(gallery: Bool, first: Bool) {
@@ -3073,6 +3088,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if !self.backgroundNode.frame.contains(point) {
             return nil
         }
+        if self.currentCredibilityIcon == .premium {
+            let iconFrame = self.titleCredibilityIconNode.view.convert(self.titleCredibilityIconNode.bounds, to: self.view)
+            let expandedIconFrame = self.titleExpandedCredibilityIconNode.view.convert(self.titleExpandedCredibilityIconNode.bounds, to: self.view)
+            if expandedIconFrame.contains(point) && self.isAvatarExpanded {
+                return self.titleExpandedCredibilityIconNode.view
+            } else if iconFrame.contains(point) {
+                return self.titleCredibilityIconNode.view
+            }
+        }
+        
         if result == self.view || result == self.regularContentNode.view || result == self.editingContentNode.view {
             return nil
         }

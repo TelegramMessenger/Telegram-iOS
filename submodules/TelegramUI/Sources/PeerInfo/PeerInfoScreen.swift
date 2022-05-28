@@ -651,11 +651,10 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                     interaction.accountContextMenu(peerAccountContext.account.id, node, gesture)
                 }))
             }
-            if settings.accountsAndPeers.count + 1 < maximumNumberOfAccounts {
-                items[.accounts]!.append(PeerInfoScreenActionItem(id: 100, text: presentationData.strings.Settings_AddAccount, icon: PresentationResourcesItemList.plusIconImage(presentationData.theme), action: {
-                    interaction.openSettings(.addAccount)
-                }))
-            }
+            
+            items[.accounts]!.append(PeerInfoScreenActionItem(id: 100, text: presentationData.strings.Settings_AddAccount, icon: PresentationResourcesItemList.plusIconImage(presentationData.theme), action: {
+                interaction.openSettings(.addAccount)
+            }))
         }
         
         if !settings.proxySettings.servers.isEmpty {
@@ -824,12 +823,10 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
           interaction.openSettings(.username)
     }))
     
-    if let settings = data.globalSettings, settings.accountsAndPeers.count + 1 < maximumNumberOfAccounts {
-        items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
-            interaction.openSettings(.addAccount)
-        }))
-        items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: presentationData.strings.Settings_AddAnotherAccount_Help))
-    }
+    items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
+        interaction.openSettings(.addAccount)
+    }))
+    items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: presentationData.strings.Settings_AddAnotherAccount_Help))
     
     items[.logout]!.append(PeerInfoScreenActionItem(id: ItemLogout, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
         interaction.openSettings(.logout)
@@ -2938,6 +2935,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             
             screenData = peerInfoScreenSettingsData(context: context, peerId: peerId, accountsAndPeers: self.accountsAndPeers.get(), activeSessionsContextAndCount: self.activeSessionsContextAndCount.get(), notificationExceptions: self.notificationExceptions.get(), privacySettings: self.privacySettings.get(), archivedStickerPacks: self.archivedPacks.get(), hasPassport: self.hasPassport.get())
             
+            
             self.headerNode.displayCopyContextMenu = { [weak self] node, copyPhone, copyUsername in
                 guard let strongSelf = self, let data = strongSelf.data, let user = data.peer as? TelegramUser else {
                     return
@@ -2976,7 +2974,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)
-                        
+                       
+            self.headerNode.displayPremiumIntro = { [weak self] sourceView, white in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let controller = PremiumIntroScreen(context: strongSelf.context, source: .profile(strongSelf.peerId))
+                controller.sourceView = sourceView
+                controller.containerView = strongSelf.controller?.navigationController?.view
+                controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
+                strongSelf.controller?.push(controller)
+            }
+            
             self.headerNode.displayAvatarContextMenu = { [weak self] node, gesture in
                 guard let strongSelf = self, let peer = strongSelf.data?.peer else {
                     return
@@ -6192,7 +6202,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             case .language:
                 push(LocalizationListController(context: self.context))
             case .premium:
-            self.controller?.push(PremiumIntroScreen(context: self.context, modal: false, source: .settings))
+                self.controller?.push(PremiumIntroScreen(context: self.context, modal: false, source: .settings))
             case .stickers:
                 if let settings = self.data?.globalSettings {
                     push(installedStickerPacksController(context: self.context, mode: .general, archivedPacks: settings.archivedStickerPacks, updatedPacks: { [weak self] packs in
@@ -6233,11 +6243,37 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             case .username:
                 push(usernameSetupController(context: self.context))
             case .addAccount:
-                self.context.sharedContext.beginNewAuth(testingEnvironment: self.context.account.testingEnvironment)
+                var maximumAvailableAccounts: Int = 3
+                if self.data?.peer?.isPremium == true {
+                    maximumAvailableAccounts = 4
+                }
+                var count: Int = 1
+                if let settings = self.data?.globalSettings {
+                    for (_, peer, _) in settings.accountsAndPeers {
+                        if peer.isPremium {
+                            maximumAvailableAccounts = 4
+                        }
+                    }
+                    count += settings.accountsAndPeers.count
+                }
+                if count >= maximumAvailableAccounts {
+                    let context = self.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = PremiumLimitScreen(context: context, subject: .accounts, count: Int32(count), action: {
+                        let controller = PremiumIntroScreen(context: context, source: .accounts)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    self.controller?.push(controller)
+                } else {
+                    self.context.sharedContext.beginNewAuth(testingEnvironment: self.context.account.testingEnvironment)
+                }
             case .logout:
-                if let user = self.data?.peer as? TelegramUser, let phoneNumber = user.phone, let accounts = self.data?.globalSettings?.accountsAndPeers {
+                if let user = self.data?.peer as? TelegramUser, let phoneNumber = user.phone {
                     if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
-                        self.controller?.push(logoutOptionsController(context: self.context, navigationController: navigationController, canAddAccounts: accounts.count + 1 < maximumNumberOfAccounts, phoneNumber: phoneNumber))
+                        self.controller?.push(logoutOptionsController(context: self.context, navigationController: navigationController, canAddAccounts: true, phoneNumber: phoneNumber))
                     }
                 }
             case .rememberPassword:
@@ -7946,7 +7982,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         let presentationDataSignal: Signal<PresentationData, NoError>
         if let updatedPresentationData = updatedPresentationData {
             presentationDataSignal = updatedPresentationData.signal
-        } else {
+        } else if self.peerId != self.context.account.peerId {
             let themeEmoticon: Signal<String?, NoError> = self.cachedDataPromise.get()
             |> map { cachedData -> String? in
                 if let cachedData = cachedData as? CachedUserData {
@@ -7972,6 +8008,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
                 }
                 return presentationData
             }
+        } else {
+            presentationDataSignal = context.sharedContext.presentationData
         }
         
         self.presentationDataDisposable = (presentationDataSignal
@@ -8129,17 +8167,16 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         let strings = self.presentationData.strings
         
         var items: [ContextMenuItem] = []
-        if other.count + 1 < maximumNumberOfAccounts {
-            items.append(.action(ContextMenuActionItem(text: strings.Settings_AddAccount, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, f in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.controllerNode.openSettings(section: .addAccount)
-                f(.dismissWithoutContent)
-            })))
-        }
+        items.append(.action(ContextMenuActionItem(text: strings.Settings_AddAccount, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] _, f in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.controllerNode.openSettings(section: .addAccount)
+            f(.dismissWithoutContent)
+        })))
+        
         
         let avatarSize = CGSize(width: 28.0, height: 28.0)
         

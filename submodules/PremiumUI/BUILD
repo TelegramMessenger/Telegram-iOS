@@ -45,6 +45,8 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/GZip:GZip",
         "//submodules/InstantPageCache:InstantPageCache",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
     ],
     visibility = [
         "//visibility:public",
