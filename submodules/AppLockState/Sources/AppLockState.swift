@@ -1,6 +1,5 @@
 import Foundation
 import MonotonicTime
-import TelegramCore
 
 public struct MonotonicTimestamp: Codable, Equatable {
     public var bootTimestamp: Int32
@@ -27,14 +26,12 @@ public struct LockState: Codable, Equatable {
     public var autolockTimeout: Int32?
     public var unlockAttemts: UnlockAttempts?
     public var applicationActivityTimestamp: MonotonicTimestamp?
-    public var unlockMode: UnlockMode
 
-    public init(isManuallyLocked: Bool = false, autolockTimeout: Int32? = nil, unlockAttemts: UnlockAttempts? = nil, applicationActivityTimestamp: MonotonicTimestamp? = nil, unlockMode: UnlockMode = .full) {
+    public init(isManuallyLocked: Bool = false, autolockTimeout: Int32? = nil, unlockAttemts: UnlockAttempts? = nil, applicationActivityTimestamp: MonotonicTimestamp? = nil) {
         self.isManuallyLocked = isManuallyLocked
         self.autolockTimeout = autolockTimeout
         self.unlockAttemts = unlockAttemts
         self.applicationActivityTimestamp = applicationActivityTimestamp
-        self.unlockMode = unlockMode
     }
 }
 

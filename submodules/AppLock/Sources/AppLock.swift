@@ -12,6 +12,7 @@ import ImageBlur
 import FastBlur
 import AppLockState
 import PassKit
+import FakePasscode
 
 private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState, isApplicationActive: Bool) -> Bool {
     if state.isManuallyLocked {
@@ -110,7 +111,7 @@ public final class AppLockContextImpl: AppLockContext {
         
         let _ = (combineLatest(queue: .mainQueue(),
             accountManager.accessChallengeData(),
-            accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.presentationPasscodeSettings])),
+            accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.presentationPasscodeSettings, ApplicationSpecificSharedDataKeys.fakePasscodeSettings])),
             presentationDataSignal,
             applicationBindings.applicationIsActive,
             self.currentState.get()
@@ -120,7 +121,18 @@ public final class AppLockContextImpl: AppLockContext {
                 return
             }
             
-            let passcodeSettings: PresentationPasscodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? .defaultSettings
+            var passcodeSettings: PresentationPasscodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? .defaultSettings
+            
+            let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+            
+            var correctedAutolockTimeout = fakePasscodeHolder.correctAutolockTimeout(passcodeSettings.autolockTimeout)
+            if correctedAutolockTimeout == 1 && appInForeground && strongSelf.passcodeController == nil {
+                // prevent auto-lock when app in foreground because of 5-second precision in timeout calculation
+                correctedAutolockTimeout = 6
+            }
+            if correctedAutolockTimeout != passcodeSettings.autolockTimeout {
+                passcodeSettings = passcodeSettings.withUpdatedAutolockTimeout(correctedAutolockTimeout)
+            }
             
             let timestamp = CFAbsoluteTimeGetCurrent()
             var becameActiveRecently = false
@@ -325,10 +337,6 @@ public final class AppLockContextImpl: AppLockContext {
             }
         }
     }
-
-    public var unlockMode: UnlockMode {
-        return self.currentStateValue.unlockMode
-    }
     
     public func lock() {
         self.updateLockState { state in
@@ -338,7 +346,7 @@ public final class AppLockContextImpl: AppLockContext {
         }
     }
     
-    public func unlock(_ mode: UnlockMode) {
+    public func unlock() {
         self.updateLockState { state in
             var state = state
             
@@ -350,8 +358,6 @@ public final class AppLockContextImpl: AppLockContext {
             let uptime = getDeviceUptimeSeconds(&bootTimestamp)
             let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
             state.applicationActivityTimestamp = timestamp
-
-            state.unlockMode = mode
             
             return state
         }

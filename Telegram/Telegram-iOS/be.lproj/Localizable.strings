@@ -42,4 +42,4 @@
 "PasscodeSettings.BadAttempts.SettingsLogin" = "Уваход у налады кода блакіроўкі";
 "PasscodeSettings.BadAttempts.FakePasscode" = "Несапраўдны код блакіроўкі";
 "PasscodeSettings.BadAttempts.Clear" = "Ачысціць";
-"PasscodeSettings.BadAttempts.ClearConfiramtion" = "Ачысціць няўдалыя спробы разблакіроўкі?";
+"PasscodeSettings.BadAttempts.ClearConfirmation" = "Ачысціць няўдалыя спробы разблакіроўкі";

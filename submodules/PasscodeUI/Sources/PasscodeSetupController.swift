@@ -7,13 +7,14 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import AccountContext
+import FakePasscode
 
 public enum PasscodeSetupControllerMode {
     case setup(change: Bool, allowChangeType: Bool, PasscodeEntryFieldType)
     case entry(PostboxAccessChallengeData)
 }
 
-public final class PasscodeSetupController: ViewController {
+public final class PasscodeSetupController: ViewController, ReactiveToPasscodeSwitch {
     private var controllerNode: PasscodeSetupControllerNode {
         return self.displayNode as! PasscodeSetupControllerNode
     }
@@ -154,5 +155,9 @@ public final class PasscodeSetupController: ViewController {
     
     @objc private func nextPressed() {
        self.controllerNode.activateNext()
+    }
+    
+    public func passcodeSwitched() {
+        self.dismiss(animated: false)
     }
 }

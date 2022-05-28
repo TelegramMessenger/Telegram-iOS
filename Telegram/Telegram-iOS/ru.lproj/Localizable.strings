@@ -42,4 +42,4 @@
 "PasscodeSettings.BadAttempts.SettingsLogin" = "Вход в настройки кода-пароля";
 "PasscodeSettings.BadAttempts.FakePasscode" = "Ложный код-пароль";
 "PasscodeSettings.BadAttempts.Clear" = "Очистить";
-"PasscodeSettings.BadAttempts.ClearConfiramtion" = "Очистить неудачные попытки разблокировки?";
+"PasscodeSettings.BadAttempts.ClearConfirmation" = "Очистить неудачные попытки разблокировки";

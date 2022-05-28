@@ -75,7 +75,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         switch self.mode {
             case let .entry(challenge):
                 switch challenge {
-                    case let .numericalPassword(value, _):
+                    case let .numericalPassword(value):
                         passcodeType = value.count == 6 ? .digits6 : .digits4
                     default:
                         passcodeType = .alphanumeric
@@ -210,16 +210,15 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                                 numerical = true
                             }
                         }
-
                         self.complete?(self.currentPasscode, numerical)
                     } else {
                         self.previousPasscode = nil
-
+                        
                         self.updateTitles(success: false, text: self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange, subtitle: self.presentationData.strings.PasscodeSettings_DoNotMatch)
                     }
                 } else {
                     self.previousPasscode = self.currentPasscode
-
+                    
                     if let failureReason = self.validatePasscode?(self.currentPasscode) {
                         self.previousPasscode = nil
                         self.updateTitles(success: false, text: self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange, subtitle: failureReason, withAnimation: false)

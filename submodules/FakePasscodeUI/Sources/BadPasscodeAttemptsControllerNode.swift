@@ -10,6 +10,7 @@ import ItemListUI
 import MergeLists
 import AccountContext
 import TelegramStringFormatting
+import FakePasscode
 
 private struct BadPasscodeAttemptListEntry: Comparable, Identifiable {
     var bpa: BadPasscodeAttempt
@@ -92,13 +93,13 @@ final class BadPasscodeAttemptsControllerNode: ASDisplayNode {
         self.addSubnode(self.listNode)
         
         let previousEntriesHolder = Atomic<([BadPasscodeAttemptListEntry], PresentationTheme, PresentationStrings)?>(value: nil)
-        self.listDisposable = combineLatest(queue: .mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), self.presentationDataValue.get()).start(next: { [weak self] sharedData, presentationData in
+        self.listDisposable = combineLatest(queue: .mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.badPasscodeAttempts]), self.presentationDataValue.get()).start(next: { [weak self] sharedData, presentationData in
             guard let strongSelf = self else {
                 return
             }
             
-            let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self)
-            let entries = (passcodeSettings?.badPasscodeAttempts ?? []).sorted(by: { l, r in
+            let badPasscodeAttempts = BadPasscodeAttempts(sharedData.entries[ApplicationSpecificSharedDataKeys.badPasscodeAttempts])
+            let entries = badPasscodeAttempts.badPasscodeAttempts.sorted(by: { l, r in
                 return l.date > r.date
             }).map { BadPasscodeAttemptListEntry(bpa: $0) }
             
