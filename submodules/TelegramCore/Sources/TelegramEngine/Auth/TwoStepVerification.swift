@@ -353,7 +353,7 @@ func _internal_cacheTwoStepPasswordToken(postbox: Postbox, token: TemporaryTwoSt
         let key = ValueBoxKey(length: 1)
         key.setUInt8(0, value: 0)
         if let token = token.flatMap(CodableEntry.init) {
-            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedTwoStepToken, key: key), entry: token, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedTwoStepToken, key: key), entry: token)
         } else {
             transaction.removeItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedTwoStepToken, key: key))
         }

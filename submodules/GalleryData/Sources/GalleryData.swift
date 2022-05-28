@@ -230,7 +230,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                 if let timecode = timecode {
                     startState = .single((timecode: timecode, rate: 1.0))
                 } else {
-                    startState = mediaPlaybackStoredState(postbox: context.account.postbox, messageId: message.id)
+                    startState = mediaPlaybackStoredState(engine: context.engine, messageId: message.id)
                     |> map { state in
                         return (state?.timestamp, state?.playbackRate.doubleValue ?? 1.0)
                     }

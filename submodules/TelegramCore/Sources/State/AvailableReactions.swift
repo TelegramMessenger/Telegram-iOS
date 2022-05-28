@@ -258,7 +258,7 @@ func _internal_setCachedAvailableReactions(transaction: Transaction, availableRe
     key.setInt64(0, value: 0)
     
     if let entry = CodableEntry(availableReactions) {
-        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.availableReactions, key: key), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 10))
+        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.availableReactions, key: key), entry: entry)
     }
 }
 

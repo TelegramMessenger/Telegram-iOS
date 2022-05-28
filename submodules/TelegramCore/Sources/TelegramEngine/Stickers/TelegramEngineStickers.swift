@@ -118,5 +118,18 @@ public extension TelegramEngine {
                 return getIsStickerSaved(transaction: transaction, fileId: id)
             }
         }
+        
+        public func isGifSaved(id: EngineMedia.Id) -> Signal<Bool, NoError> {
+            return self.account.postbox.transaction { transaction -> Bool in
+                return getIsGifSaved(transaction: transaction, mediaId: id)
+            }
+        }
+        
+        public func clearRecentlyUsedStickers() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_clearRecentlyUsedStickers(transaction: transaction)
+            }
+            |> ignoreValues
+        }
     }
 }

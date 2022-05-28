@@ -33,9 +33,8 @@ public func ==(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool
 }
 
 public func nearbyVenues(context: AccountContext, latitude: Double, longitude: Double, query: String? = nil) -> Signal<[TelegramMediaMap], NoError> {
-    return context.account.postbox.transaction { transaction -> SearchBotsConfiguration in
-        return currentSearchBotsConfiguration(transaction: transaction)
-    } |> mapToSignal { searchBotsConfiguration in
+    return context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
+    |> mapToSignal { searchBotsConfiguration in
         return context.engine.peers.resolvePeerByName(name: searchBotsConfiguration.venueBotUsername ?? "foursquare")
         |> take(1)
         |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in

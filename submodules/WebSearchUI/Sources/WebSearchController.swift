@@ -280,7 +280,7 @@ public final class WebSearchController: ViewController {
             }
         }, deleteRecentQuery: { [weak self] query in
             if let strongSelf = self {
-                _ = removeRecentWebSearchQuery(postbox: strongSelf.context.account.postbox, string: query).start()
+                let _ = removeRecentWebSearchQuery(engine: strongSelf.context.engine, string: query).start()
             }
         }, toggleSelection: { [weak self] result, value in
             if let strongSelf = self {
@@ -415,7 +415,7 @@ public final class WebSearchController: ViewController {
     
     private func updateSearchQuery(_ query: String) {
         if !query.isEmpty {
-            let _ = addRecentWebSearchQuery(postbox: self.context.account.postbox, string: query).start()
+            let _ = addRecentWebSearchQuery(engine: self.context.engine, string: query).start()
         }
         
         let scope: Signal<WebSearchScope?, NoError>

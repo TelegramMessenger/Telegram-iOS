@@ -964,7 +964,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 strongSelf.archiveChats(peerIds: [peerId])
             } else {
                 strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerId)
-                let _ = updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: group ? Namespaces.PeerGroup.archive : .root).start(completed: {
+                let _ = strongSelf.context.engine.peers.updatePeersGroupIdInteractively(peerIds: [peerId], groupId: group ? .archive : .root).start(completed: {
                     guard let strongSelf = self else {
                         return
                     }
@@ -1673,7 +1673,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }),
                             TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_DismissActionOK, action: { [weak controller] in
                                 if let strongSelf = self {
-                                    let _ = ApplicationSpecificNotice.setForcedPasswordSetup(postbox: strongSelf.context.account.postbox, reloginDaysTimeout: nil).start()
+                                    let _ = ApplicationSpecificNotice.setForcedPasswordSetup(engine: strongSelf.context.engine, reloginDaysTimeout: nil).start()
                                 }
                                 controller?.dismiss()
                             })
@@ -1968,7 +1968,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         let filterItems = chatListFilterItems(context: self.context)
         var notifiedFirstUpdate = false
         self.filterDisposable.set((combineLatest(queue: .mainQueue(),
-                self.context.account.postbox.combinedView(keys: [
+            self.context.account.postbox.combinedView(keys: [
                 preferencesKey
             ]),
             filterItems,
@@ -2419,19 +2419,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     override public func toolbarActionSelected(action: ToolbarActionOption) {
         let peerIds = self.chatListDisplayNode.containerNode.currentItemNode.currentState.selectedPeerIds
         if case .left = action {
-            let signal: Signal<Void, NoError>
+            let signal: Signal<Never, NoError>
             var completion: (() -> Void)?
-            let context = self.context
             if !peerIds.isEmpty {
                 self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
                 completion = { [weak self] in
                     self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
                 }
-                signal = self.context.account.postbox.transaction { transaction -> Void in
-                    for peerId in peerIds {
-                        togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: context.account.viewTracker, peerId: peerId, setToValue: false)
-                    }
-                }
+                signal = self.context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: Array(peerIds), setToValue: false)
             } else {
                 let groupId = self.groupId
                 let filterPredicate: ChatListFilterPredicate?
@@ -2440,14 +2435,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 } else {
                     filterPredicate = nil
                 }
-                signal = self.context.account.postbox.transaction { transaction -> Void in
-                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: groupId, filterPredicate: filterPredicate)
-                    if let filterPredicate = filterPredicate {
-                        for additionalGroupId in filterPredicate.includeAdditionalPeerGroupIds {
-                            markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: additionalGroupId, filterPredicate: filterPredicate)
-                        }
+                var markItems: [(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?)] = []
+                markItems.append((EngineChatList.Group(groupId), filterPredicate))
+                if let filterPredicate = filterPredicate {
+                    for additionalGroupId in filterPredicate.includeAdditionalPeerGroupIds {
+                        markItems.append((EngineChatList.Group(additionalGroupId), filterPredicate))
                     }
                 }
+                signal = self.context.engine.messages.markAllChatsAsReadInteractively(items: markItems)
             }
             let _ = (signal
             |> deliverOnMainQueue).start(completed: { [weak self] in
@@ -2545,11 +2540,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             } else {
                 if !peerIds.isEmpty {
                     self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
-                    let _ = (self.context.account.postbox.transaction { transaction -> Void in
-                        for peerId in peerIds {
-                            updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
-                        }
-                    }
+                    let _ = (self.context.engine.peers.updatePeersGroupIdInteractively(peerIds: Array(peerIds), groupId: .root)
                     |> deliverOnMainQueue).start(completed: { [weak self] in
                         guard let strongSelf = self else {
                             return
@@ -2563,23 +2554,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     func toggleArchivedFolderHiddenByDefault() {
-        let _ = (self.context.account.postbox.transaction { transaction -> Bool in
-            var updatedValue = false
-            updateChatArchiveSettings(transaction: transaction, { settings in
-                var settings = settings
-                settings.isHiddenByDefault = !settings.isHiddenByDefault
-                updatedValue = settings.isHiddenByDefault
-                return settings
-            })
-            return updatedValue
-        }
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        var updatedValue = false
+        let _ = (updateChatArchiveSettings(engine: self.context.engine, { settings in
+            var settings = settings
+            settings.isHiddenByDefault = !settings.isHiddenByDefault
+            updatedValue = settings.isHiddenByDefault
+            return settings
+        })
+        |> deliverOnMainQueue).start(completed: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.chatListDisplayNode.containerNode.updateState { state in
                 var state = state
-                if value {
+                if updatedValue {
                     state.archiveShouldBeTemporaryRevealed = false
                 }
                 state.peerIdWithRevealedOptions = nil
@@ -2592,22 +2580,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return true
             })
             
-            if value {
+            if updatedValue {
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
                     guard let strongSelf = self else {
                         return false
                     }
                     if value == .undo {
-                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                            var updatedValue = false
-                            updateChatArchiveSettings(transaction: transaction, { settings in
-                                var settings = settings
-                                settings.isHiddenByDefault = false
-                                updatedValue = settings.isHiddenByDefault
-                                return settings
-                            })
-                            return updatedValue
+                        let _ = updateChatArchiveSettings(engine: strongSelf.context.engine, { settings in
+                            var settings = settings
+                            settings.isHiddenByDefault = false
+                            return settings
                         }).start()
+                        
                         return true
                     }
                     return false
@@ -3047,15 +3031,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         guard !peerIds.isEmpty else {
             return
         }
-        let postbox = self.context.account.postbox
+        let engine = self.context.engine
         self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds[0])
         let _ = (ApplicationSpecificNotice.incrementArchiveChatTips(accountManager: self.context.sharedContext.accountManager, count: 1)
         |> deliverOnMainQueue).start(next: { [weak self] previousHintCount in
-            let _ = (postbox.transaction { transaction -> Void in
-                for peerId in peerIds {
-                    updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: Namespaces.PeerGroup.archive)
-                }
-            }
+            let _ = (engine.peers.updatePeersGroupIdInteractively(peerIds: peerIds, groupId: .archive)
             |> deliverOnMainQueue).start(completed: {
                 guard let strongSelf = self else {
                     return
@@ -3072,11 +3052,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                     if value == .undo {
                         strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds[0])
-                        let _ = (postbox.transaction { transaction -> Void in
-                            for peerId in peerIds {
-                                updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
-                            }
-                        }
+                        let _ = (engine.peers.updatePeersGroupIdInteractively(peerIds: peerIds, groupId: .root)
                         |> deliverOnMainQueue).start(completed: {
                             guard let strongSelf = self else {
                                 return

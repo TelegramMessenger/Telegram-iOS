@@ -1093,7 +1093,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     }
 
     private func commitDeleteMessages(_ messages: [EngineMessage], ask: Bool) {
-        self.messageContextDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: Set(messages.map { $0.id })) |> deliverOnMainQueue).start(next: { [weak self] actions in
+        self.messageContextDisposable.set((self.context.sharedContext.chatAvailableMessageActions(engine: self.context.engine, accountPeerId: self.context.account.peerId, messageIds: Set(messages.map { $0.id })) |> deliverOnMainQueue).start(next: { [weak self] actions in
             if let strongSelf = self, let controllerInteration = strongSelf.controllerInteraction, !actions.options.isEmpty {
                 var presentationData = strongSelf.presentationData
                 if !presentationData.theme.overallDarkAppearance {

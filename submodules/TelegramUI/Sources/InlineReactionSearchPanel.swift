@@ -99,9 +99,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                 }
                 
                 if let itemNode = selectedNode, let item = itemNode.stickerItem {
-                    return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                        return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                    }
+                    return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                     |> deliverOnMainQueue
                     |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                         if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {

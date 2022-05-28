@@ -317,8 +317,6 @@ func _internal_deleteAllRevokedPeerExportedInvitations(account: Account, peerId:
     |> switchToLatest
 }
 
-private let cachedPeerExportedInvitationsCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20)
-
 public struct PeerExportedInvitationsState: Equatable {
     public var invitations: [ExportedInvitation]
     public var isLoadingMore: Bool
@@ -500,7 +498,7 @@ private final class PeerExportedInvitationsContextImpl {
                             let invitations: [ExportedInvitation] = invites.compactMap { ExportedInvitation(apiExportedInvite: $0) }
                             if populateCache {
                                 if let entry = CodableEntry(CachedPeerExportedInvitations(invitations: invitations, canLoadMore: count >= 50, count: count)) {
-                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: entry, collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: entry)
                                 }
                             }
                             return (invitations, count)
@@ -590,7 +588,7 @@ private final class PeerExportedInvitationsContextImpl {
         let count = self.count
         self.updateDisposable.set(self.account.postbox.transaction({ transaction in
             if let entry = CodableEntry(CachedPeerExportedInvitations(invitations: invitations, canLoadMore: canLoadMore, count: count)) {
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: entry, collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: entry)
             }
         }).start())
     }
@@ -659,10 +657,6 @@ public final class PeerExportedInvitationsContext {
         }
     }
 }
-
-
-
-private let cachedPeerInvitationImportersCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20)
 
 public struct PeerInvitationImportersState: Equatable {
     public struct Importer: Equatable {
@@ -977,7 +971,7 @@ private final class PeerInvitationImportersContextImpl {
                             }
                             if populateCache && query == nil {
                                 if let entry = CodableEntry(CachedPeerInvitationImporters(importers: resultImporters, count: count)) {
-                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: self.requested)), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: self.requested)), entry: entry)
                                 }
                             }
                             return (resultImporters, count)
@@ -1073,7 +1067,7 @@ private final class PeerInvitationImportersContextImpl {
         let link = self.link
         self.updateDisposables.add(self.account.postbox.transaction({ transaction in
             if let entry = CodableEntry(CachedPeerInvitationImporters(importers: resultImporters, count: count)) {
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: self.requested)), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: self.requested)), entry: entry)
             }
         }).start())
     }

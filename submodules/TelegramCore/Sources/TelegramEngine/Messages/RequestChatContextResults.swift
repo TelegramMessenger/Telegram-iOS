@@ -33,8 +33,6 @@ public final class CachedChatContextResult: Codable {
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 40, highWaterItemCount: 60)
-
 private struct RequestData: Codable {
     let version: String
     let botId: PeerId
@@ -146,7 +144,7 @@ func _internal_requestChatContextResults(account: Account, botId: PeerId, peerId
                             if let keyData = try? JSONEncoder().encode(requestData) {
                                 let key = ValueBoxKey(MemoryBuffer(data: keyData))
                                 if let entry = CodableEntry(CachedChatContextResult(data: resultData, timestamp: Int32(Date().timeIntervalSince1970))) {
-                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedContextResults, key: key), entry: entry, collectionSpec: collectionSpec)
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedContextResults, key: key), entry: entry)
                                 }
                             }
                         }

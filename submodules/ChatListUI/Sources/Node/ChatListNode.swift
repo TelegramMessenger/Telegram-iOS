@@ -581,8 +581,6 @@ public enum ChatListGlobalScrollOption {
 }
 
 public enum ChatListNodeScrollPosition {
-    case auto
-    case autoUp
     case top
 }
 
@@ -887,7 +885,7 @@ public final class ChatListNode: ListView {
                 return
             }
             self?.setCurrentRemovingPeerId(peerId)
-            let _ = (togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId)
+            let _ = (context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
                     var state = state
@@ -1895,29 +1893,6 @@ public final class ChatListNode: ListView {
     
     public func scrollToPosition(_ position: ChatListNodeScrollPosition) {
         if let view = self.chatListView?.originalView {
-            if case .auto = position {
-                switch self.visibleContentOffset() {
-                    case .none, .unknown:
-                        if let maxVisibleChatListIndex = self.currentlyVisibleLatestChatListIndex() {
-                            self.scrollToEarliestUnread(earlierThan: maxVisibleChatListIndex)
-                            return
-                        }
-                    case let .known(offset):
-                        if offset <= 0.0 {
-                            self.scrollToEarliestUnread(earlierThan: nil)
-                            return
-                        } else {
-                            if let maxVisibleChatListIndex = self.currentlyVisibleLatestChatListIndex() {
-                                self.scrollToEarliestUnread(earlierThan: maxVisibleChatListIndex)
-                                return
-                            }
-                        }
-                }
-            } else if case .autoUp = position, let maxVisibleChatListIndex = self.currentlyVisibleLatestChatListIndex() {
-                self.scrollToEarliestUnread(earlierThan: maxVisibleChatListIndex)
-                return
-            }
-            
             if view.laterIndex == nil {
                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else {
@@ -1938,7 +1913,7 @@ public final class ChatListNode: ListView {
     
     private func relativeUnreadChatListIndex(position: EngineChatList.RelativePosition) -> Signal<EngineChatList.Item.Index?, NoError> {
         let groupId = self.groupId
-        let postbox = self.context.account.postbox
+        let engine = self.context.engine
         return self.context.sharedContext.accountManager.transaction { transaction -> Signal<EngineChatList.Item.Index?, NoError> in
             var filter = true
             if let inAppNotificationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)?.get(InAppNotificationSettings.self) {
@@ -1947,29 +1922,9 @@ public final class ChatListNode: ListView {
                         filter = true
                 }
             }
-            return postbox.transaction { transaction -> EngineChatList.Item.Index? in
-                return transaction.getRelativeUnreadChatListIndex(filtered: filter, position: position._asPosition(), groupId: groupId._asGroup())
-            }
+            return engine.messages.getRelativeUnreadChatListIndex(filtered: filter, position: position, groupId: groupId)
         }
         |> switchToLatest
-    }
-    
-    public func scrollToEarliestUnread(earlierThan: EngineChatList.Item.Index?) {
-        let _ = (relativeUnreadChatListIndex(position: .earlier(than: earlierThan)) |> deliverOnMainQueue).start(next: { [weak self] index in
-            guard let strongSelf = self else {
-                return
-            }
-            
-            if let index = index {
-                let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: self?.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound
-                    , scrollPosition: .center(.top), animated: true, filter: strongSelf.chatListFilter)
-                strongSelf.setChatListLocation(location)
-            } else {
-                let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound
-                    , scrollPosition: .top(0.0), animated: true, filter: strongSelf.chatListFilter)
-                strongSelf.setChatListLocation(location)
-            }
-        })
     }
     
     public func selectChat(_ option: ChatListSelectionOption) {

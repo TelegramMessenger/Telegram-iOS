@@ -127,6 +127,31 @@ public extension TelegramEngine.EngineData.Item {
                 return result
             }
         }
+        
+        public struct ReadState: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = CombinedPeerReadState?
+
+            fileprivate let id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            var key: PostboxViewKey {
+                return .combinedReadState(peerId: self.id)
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CombinedReadStateView else {
+                    preconditionFailure()
+                }
+
+                return view.state
+            }
+        }
 
         public struct PeerUnreadCount: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = Int
@@ -144,7 +169,7 @@ public extension TelegramEngine.EngineData.Item {
                 self.id = id
             }
 
-            func extract(view: PostboxView) -> Int {
+            func extract(view: PostboxView) -> Result {
                 guard let view = view as? UnreadMessageCountsView else {
                     preconditionFailure()
                 }

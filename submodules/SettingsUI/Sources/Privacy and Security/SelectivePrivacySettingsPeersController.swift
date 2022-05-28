@@ -222,9 +222,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
     actionsDisposable.add(removePeerDisposable)
     
     let peersPromise = Promise<[SelectivePrivacyPeer]>()
-    peersPromise.set(context.account.postbox.transaction { transaction -> [SelectivePrivacyPeer] in
-        return Array(initialPeers.values)
-    })
+    peersPromise.set(.single(Array(initialPeers.values)))
     
     let arguments = SelectivePrivacyPeersControllerArguments(context: context, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in

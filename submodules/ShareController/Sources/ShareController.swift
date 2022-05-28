@@ -673,24 +673,19 @@ public final class ShareController: ViewController {
                     for (id, status, error) in statuses {
                         if let error = error {
                             Queue.mainQueue().async {
-                                let _ = (account.postbox.transaction { transaction -> Peer? in
-                                    TelegramEngine(account: account).messages.deleteMessages(transaction: transaction, ids: [id])
-                                    return transaction.getPeer(id.peerId)
-                                }
+                                let _ = TelegramEngine(account: account).messages.deleteMessagesInteractively(messageIds: [id], type: .forEveryone).start()
+                                let _ = (TelegramEngine(account: account).data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: id.peerId))
                                 |> deliverOnMainQueue).start(next: { peer in
                                     guard let strongSelf = self, let peer = peer else {
                                         return
                                     }
                                     if !displayedError, case .slowmodeActive = error {
                                         displayedError = true
-                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: strongSelf.presentationData.strings.Chat_SlowmodeSendError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), text: strongSelf.presentationData.strings.Chat_SlowmodeSendError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                     }
                                 })
                             }
                         }
-                        let _ = account.postbox.transaction({ transaction in
-                            
-                        }).start()
                         if status != nil {
                             hasStatuses = true
                         }

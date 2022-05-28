@@ -1861,7 +1861,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
             
             let gesture: ContextGesture? = anyRecognizer as? ContextGesture
-            let _ = (chatAvailableMessageActionsImpl(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
+            let _ = (chatAvailableMessageActionsImpl(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
             |> deliverOnMainQueue).start(next: { actions in
                 guard let strongSelf = self else {
                     return
@@ -2016,7 +2016,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 if let previewData = previewData {
                     let context = strongSelf.context
                     let strings = strongSelf.presentationData.strings
-                    let items = chatAvailableMessageActionsImpl(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
+                    let items = chatAvailableMessageActionsImpl(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
                     |> map { actions -> [ContextMenuItem] in
                         var items: [ContextMenuItem] = []
                         
@@ -3285,7 +3285,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             if let timestamp = timestamp {
                 storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: AudioPlaybackRate(playbackRate))
             }
-            let _ = updateMediaPlaybackStoredStateInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, state: storedState).start()
+            let _ = updateMediaPlaybackStoredStateInteractively(engine: strongSelf.context.engine, messageId: messageId, state: storedState).start()
         }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
             guard let strongSelf = self else {
                 return
@@ -6379,14 +6379,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     
     private func accountContextMenuItems(context: AccountContext, logout: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
-        return context.account.postbox.transaction { transaction -> [ContextMenuItem] in
+        return context.engine.messages.unreadChatListPeerIds(groupId: .root, filterPredicate: nil)
+        |> map { unreadChatListPeerIds -> [ContextMenuItem] in
             var items: [ContextMenuItem] = []
             
-            if !transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: nil).isEmpty {
+            if !unreadChatListPeerIds.isEmpty {
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAllAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                    let _ = (context.account.postbox.transaction { transaction in
-                        markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: .root, filterPredicate: nil)
-                    }
+                    let _ = (context.engine.messages.markAllChatsAsReadInteractively(items: [(groupId: .root, filterPredicate: nil)])
                     |> deliverOnMainQueue).start(completed: {
                         f(.default)
                     })
@@ -6436,7 +6435,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     
     private func deleteMessages(messageIds: Set<MessageId>?) {
         if let messageIds = messageIds ?? self.state.selectedMessageIds, !messageIds.isEmpty {
-            self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds)
+            self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(engine: self.context.engine, accountPeerId: self.context.account.peerId, messageIds: messageIds)
             |> deliverOnMainQueue).start(next: { [weak self] actions in
                 if let strongSelf = self, let peer = strongSelf.data?.peer, !actions.options.isEmpty {
                     let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)

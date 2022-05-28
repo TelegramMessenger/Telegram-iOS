@@ -287,14 +287,13 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     private func ringingStatesUpdated(_ ringingStates: [(AccountContext, Peer, CallSessionRingingState, Bool, NetworkType)], enableCallKit: Bool) {
         if let firstState = ringingStates.first {
             if self.currentCall == nil && self.currentGroupCall == nil {
-                self.currentCallDisposable.set((combineLatest(firstState.0.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1))
+                self.currentCallDisposable.set((combineLatest(firstState.0.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1))
                 |> deliverOnMainQueue).start(next: { [weak self] preferences, sharedData in
                     guard let strongSelf = self else {
                         return
                     }
                     
                     let configuration = preferences.values[PreferencesKeys.voipConfiguration]?.get(VoipConfiguration.self) ?? .defaultValue
-                    let derivedState = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState]?.get(VoipDerivedState.self) ?? .default
                     let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings]?.get(AutodownloadSettings.self) ?? .defaultSettings
                     let experimentalSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? .defaultSettings
                     let appConfiguration = preferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
@@ -306,7 +305,6 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil,
                         serializedData: configuration.serializedData,
                         dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
-                        derivedState: derivedState,
                         getDeviceAccessData: strongSelf.getDeviceAccessData,
                         initialState: nil,
                         internalId: firstState.2.id,
@@ -508,7 +506,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             
             return (combineLatest(queue: .mainQueue(), request, networkType |> take(1), context.account.postbox.peerView(id: peerId) |> map { peerView -> Bool in
                 return peerView.peerIsContact
-            } |> take(1), context.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1), areVideoCallsAvailable)
+            } |> take(1), context.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1), areVideoCallsAvailable)
             |> deliverOnMainQueue
             |> beforeNext { internalId, currentNetworkType, isContact, preferences, sharedData, areVideoCallsAvailable in
                 if let strongSelf = self, accessEnabled {
@@ -517,7 +515,6 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     }
                     
                     let configuration = preferences.values[PreferencesKeys.voipConfiguration]?.get(VoipConfiguration.self) ?? .defaultValue
-                    let derivedState = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState]?.get(VoipDerivedState.self) ?? .default
                     let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings]?.get(AutodownloadSettings.self) ?? .defaultSettings
                     let appConfiguration = preferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
                     
@@ -535,7 +532,6 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         ),
                         serializedData: configuration.serializedData,
                         dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
-                        derivedState: derivedState,
                         getDeviceAccessData: strongSelf.getDeviceAccessData,
                         initialState: nil,
                         internalId: internalId,

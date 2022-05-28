@@ -326,9 +326,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 var items: [ActionSheetItem] = []
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
-                    let _ = (context.account.postbox.transaction { transaction in
-                        clearRecentlyUsedStickers(transaction: transaction)
-                    }).start()
+                    let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
                 }))
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -441,9 +439,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     var items: [ActionSheetItem] = []
                     items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        let _ = (context.account.postbox.transaction { transaction in
-                            clearRecentlyUsedStickers(transaction: transaction)
-                        }).start()
+                        let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
                     }))
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in

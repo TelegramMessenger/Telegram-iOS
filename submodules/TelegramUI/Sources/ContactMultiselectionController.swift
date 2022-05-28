@@ -117,11 +117,10 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             }
         })
         
-        self.limitsConfigurationDisposable = (context.account.postbox.transaction { transaction -> LimitsConfiguration in
-            return currentLimitsConfiguration(transaction: transaction)
-        } |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.limitsConfigurationDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.Limits())
+        |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
-                strongSelf.limitsConfiguration = value
+                strongSelf.limitsConfiguration = value._asLimits()
                 strongSelf.updateTitle()
                 strongSelf._limitsReady.set(.single(true))
             }

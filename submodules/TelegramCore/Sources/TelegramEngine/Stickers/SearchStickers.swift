@@ -43,8 +43,6 @@ public final class FoundStickerItem: Equatable {
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
-
 public struct SearchStickersScope: OptionSet {
     public var rawValue: Int32
     
@@ -244,7 +242,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
                         
                         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                         if let entry = CodableEntry(CachedStickerQueryResult(items: files, hash: hash, timestamp: currentTime)) {
-                            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: entry, collectionSpec: collectionSpec)
+                            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: entry)
                         }
                     
                         return result

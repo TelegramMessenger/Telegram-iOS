@@ -32,34 +32,27 @@ public final class CachedGeocode: Codable {
     }
 }
 
-private func cachedGeocode(postbox: Postbox, address: DeviceContactAddressData) -> Signal<CachedGeocode?, NoError> {
-    return postbox.transaction { transaction -> CachedGeocode? in
-        let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: Int64(bitPattern: address.string.persistentHashValue))
-        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedGeocodes, key: key))?.get(CachedGeocode.self) {
-            return entry
-        } else {
-            return nil
-        }
+private func cachedGeocode(engine: TelegramEngine, address: DeviceContactAddressData) -> Signal<CachedGeocode?, NoError> {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: Int64(bitPattern: address.string.persistentHashValue))
+    
+    return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.cachedGeocodes, id: key))
+    |> map { entry -> CachedGeocode? in
+        return entry?.get(CachedGeocode.self)
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20)
-
-private func updateCachedGeocode(postbox: Postbox, address: DeviceContactAddressData, latitude: Double, longitude: Double) -> Signal<(Double, Double), NoError> {
-    return postbox.transaction { transaction -> (Double, Double) in
-        let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: Int64(bitPattern: address.string.persistentHashValue))
-        let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedGeocodes, key: key)
-        if let entry = CodableEntry(CachedGeocode(latitude: latitude, longitude: longitude)) {
-            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
-        }
-        return (latitude, longitude)
-    }
+private func updateCachedGeocode(engine: TelegramEngine, address: DeviceContactAddressData, latitude: Double, longitude: Double) -> Signal<(Double, Double), NoError> {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: Int64(bitPattern: address.string.persistentHashValue))
+    
+    return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.cachedGeocodes, id: key, item: CachedGeocode(latitude: latitude, longitude: longitude))
+    |> map { _ -> (Double, Double) in }
+    |> then(.single((latitude, longitude)))
 }
 
-public func geocodeAddress(postbox: Postbox, address: DeviceContactAddressData) -> Signal<(Double, Double)?, NoError> {
-    return cachedGeocode(postbox: postbox, address: address)
+public func geocodeAddress(engine: TelegramEngine, address: DeviceContactAddressData) -> Signal<(Double, Double)?, NoError> {
+    return cachedGeocode(engine: engine, address: address)
     |> mapToSignal { cached -> Signal<(Double, Double)?, NoError> in
         if let cached = cached {
             return .single((cached.latitude, cached.longitude))
@@ -67,7 +60,7 @@ public func geocodeAddress(postbox: Postbox, address: DeviceContactAddressData) 
             return geocodeLocation(dictionary: address.dictionary)
             |> mapToSignal { coordinate in
                 if let (latitude, longitude) = coordinate  {
-                    return updateCachedGeocode(postbox: postbox, address: address, latitude: latitude, longitude: longitude)
+                    return updateCachedGeocode(engine: engine, address: address, latitude: latitude, longitude: longitude)
                     |> map(Optional.init)
                 } else {
                     return .single(nil)

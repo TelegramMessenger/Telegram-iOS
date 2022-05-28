@@ -27,8 +27,6 @@ public final class CachedWallpaper: Codable {
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10000, highWaterItemCount: 20000)
-
 public func cachedWallpaper(account: Account, slug: String, settings: WallpaperSettings?, update: Bool = false) -> Signal<CachedWallpaper?, NoError> {
     return account.postbox.transaction { transaction -> Signal<CachedWallpaper?, NoError> in
         let key = ValueBoxKey(length: 8)
@@ -58,7 +56,7 @@ public func cachedWallpaper(account: Account, slug: String, settings: WallpaperS
                             break
                         }
                         if let entry = CodableEntry(CachedWallpaper(wallpaper: wallpaper)) {
-                            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
+                            transaction.putItemCacheEntry(id: id, entry: entry)
                         }
                         if let settings = settings {
                             return CachedWallpaper(wallpaper: wallpaper.withUpdatedSettings(settings))
@@ -75,16 +73,12 @@ public func cachedWallpaper(account: Account, slug: String, settings: WallpaperS
     } |> switchToLatest
 }
 
-public func updateCachedWallpaper(account: Account, wallpaper: TelegramWallpaper) {
+public func updateCachedWallpaper(engine: TelegramEngine, wallpaper: TelegramWallpaper) {
     guard case let .file(file) = wallpaper, file.id != 0 else {
         return
     }
-    let _ = (account.postbox.transaction { transaction in
-        let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: Int64(bitPattern: file.slug.persistentHashValue))
-        let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, key: key)
-        if let entry = CodableEntry(CachedWallpaper(wallpaper: wallpaper)) {
-            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
-        }
-    }).start()
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: Int64(bitPattern: file.slug.persistentHashValue))
+    
+    let _ = engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, id: key, item: CachedWallpaper(wallpaper: wallpaper)).start()
 }

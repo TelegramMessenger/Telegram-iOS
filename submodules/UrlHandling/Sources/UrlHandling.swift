@@ -727,8 +727,8 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
     
     return ApplicationSpecificNotice.getSecretChatLinkPreviews(accountManager: context.sharedContext.accountManager)
     |> mapToSignal { linkPreviews -> Signal<ResolvedUrl, NoError> in
-        return context.account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
-            let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+        return context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.App())
+        |> mapToSignal { appConfiguration -> Signal<ResolvedUrl, NoError> in
             let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
             
             var skipUrlAuth = skipUrlAuth
@@ -786,7 +786,7 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                 }
             }
             return .single(.externalUrl(url))
-        } |> switchToLatest
+        }
     }
 }
 
