@@ -348,18 +348,11 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
         |> take(1)
         |> mapToSignal { peers -> Signal<Never, NoError> in
             let peers = peers ?? []
-            return context.account.postbox.transaction { transaction -> Void in
-                for peer in peers {
-                    if state.selectedPeers.contains(peer.peer.id) {
-                        if transaction.getPeer(peer.peer.id) == nil {
-                            updatePeers(transaction: transaction, peers: [peer.peer], update: { _, updated in
-                                return updated
-                            })
-                        }
-                    }
-                }
-            }
-            |> ignoreValues
+            
+            let ensureStoredPeers = peers.map { $0.peer }.filter { state.selectedPeers.contains($0.id) }
+            let ensureStoredPeersSignal: Signal<Never, NoError> = context.engine.peers.ensurePeersAreLocallyAvailable(peers: ensureStoredPeers.map(EnginePeer.init))
+            
+            return ensureStoredPeersSignal
             |> then(context.engine.peers.removePeerChats(peerIds: Array(peers.map(\.peer.id))))
         }
         |> deliverOnMainQueue).start(completed: {

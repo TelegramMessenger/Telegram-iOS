@@ -19,7 +19,7 @@ private let subtitleFont = Font.regular(12.0)
 
 private struct SharePeerEntry: Comparable, Identifiable {
     let index: Int32
-    let peer: RenderedPeer
+    let peer: EngineRenderedPeer
     let presence: PeerPresence?
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -84,8 +84,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let debugAction: () -> Void
     private let extendedInitialReveal: Bool
     
-    let accountPeer: Peer
-    private let foundPeers = Promise<[RenderedPeer]>([])
+    let accountPeer: EnginePeer
+    private let foundPeers = Promise<[EngineRenderedPeer]>([])
     
     private let disposable = MetaDisposable()
     private var entries: [SharePeerEntry] = []
@@ -115,9 +115,9 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
-    let peersValue = Promise<[(RenderedPeer, PeerPresence?)]>()
+    let peersValue = Promise<[(EngineRenderedPeer, PeerPresence?)]>()
     
-    init(sharedContext: SharedAccountContext, context: AccountContext, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?) {
+    init(sharedContext: SharedAccountContext, context: AccountContext, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(EngineRenderedPeer, PeerPresence?)], accountPeer: EnginePeer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?) {
         self.sharedContext = sharedContext
         self.context = context
         self.theme = theme
@@ -138,7 +138,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             var index: Int32 = 0
             
             var existingPeerIds: Set<PeerId> = Set()
-            entries.append(SharePeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), presence: nil, theme: theme, strings: strings))
+            entries.append(SharePeerEntry(index: index, peer: EngineRenderedPeer(peer: accountPeer), presence: nil, theme: theme, strings: strings))
             existingPeerIds.insert(accountPeer.id)
             index += 1
             
@@ -442,7 +442,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if peer.peerId == self.accountPeer.id {
                         text = self.strings.DialogList_SavedMessages
                     } else {
-                        text = peer.chatMainPeer.flatMap(EnginePeer.init)?.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder) ?? ""
+                        text = peer.chatMainPeer?.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder) ?? ""
                     }
                     
                     if !string.isEmpty {

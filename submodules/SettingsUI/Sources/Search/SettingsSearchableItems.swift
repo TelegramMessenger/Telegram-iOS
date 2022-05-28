@@ -190,11 +190,13 @@ private func profileSearchableItems(context: AccountContext, canAddAccount: Bool
     
     var items: [SettingsSearchableItem] = []
     items.append(SettingsSearchableItem(id: .profile(2), title: strings.Settings_PhoneNumber, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_PhoneNumber), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
-        let _ = (context.account.postbox.transaction { transaction -> String in
-            return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone ?? ""
-        }
-        |> deliverOnMainQueue).start(next: { phoneNumber in
-            present(.push, PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber), proceedAction: {
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> deliverOnMainQueue).start(next: { peer in
+            var phoneNumber: String?
+            if case let .user(user) = peer {
+                phoneNumber = user.phone
+            }
+            present(.push, PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber ?? ""), proceedAction: {
                 present(.push, ChangePhoneNumberController(context: context))
             }))
         })
@@ -209,12 +211,14 @@ private func profileSearchableItems(context: AccountContext, canAddAccount: Bool
         }))
     }
     items.append(SettingsSearchableItem(id: .profile(5), title: strings.Settings_Logout, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Logout), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, navigationController, present in
-        let _ = (context.account.postbox.transaction { transaction -> String in
-            return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone ?? ""
-        }
-        |> deliverOnMainQueue).start(next: { phoneNumber in
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> deliverOnMainQueue).start(next: { peer in
+            var phoneNumber: String?
+            if case let .user(user) = peer {
+                phoneNumber = user.phone
+            }
             if let navigationController = navigationController {
-                present(.modal, logoutOptionsController(context: context, navigationController: navigationController, canAddAccounts: canAddAccount, phoneNumber: phoneNumber))
+                present(.modal, logoutOptionsController(context: context, navigationController: navigationController, canAddAccounts: canAddAccount, phoneNumber: phoneNumber ?? ""))
             }
         })
     }))

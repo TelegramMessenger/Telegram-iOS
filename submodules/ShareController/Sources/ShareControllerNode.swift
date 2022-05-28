@@ -614,7 +614,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     func send(peerId: PeerId? = nil, showNames: Bool = true, silently: Bool = false) {
         if !self.inputFieldNode.text.isEmpty {
             for peer in self.controllerInteraction!.selectedPeers {
-                if let channel = peer.peer as? TelegramChannel, channel.isRestrictedBySlowmode {
+                if case let .channel(channel) = peer.peer, channel.isRestrictedBySlowmode {
                     self.presentError(channel.title, self.presentationData.strings.Share_MultipleMessagesDisabled)
                     return
                 }
@@ -804,7 +804,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
-    func updatePeers(context: AccountContext, switchableAccounts: [AccountWithInfo], peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, defaultAction: ShareControllerAction?) {
+    func updatePeers(context: AccountContext, switchableAccounts: [AccountWithInfo], peers: [(EngineRenderedPeer, PeerPresence?)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
         self.context = context
         
         if let peersContentNode = self.peersContentNode, peersContentNode.accountPeer.id == accountPeer.id {
@@ -814,9 +814,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         if let peerId = self.immediatePeerId {
             self.immediatePeerId = nil
-            let _ = (context.account.postbox.transaction { transaction -> RenderedPeer? in
-                return transaction.getPeer(peerId).flatMap(RenderedPeer.init(peer:))
-            } |> deliverOnMainQueue).start(next: { [weak self] peer in
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self, let peer = peer {
                     strongSelf.controllerInteraction?.togglePeer(peer, peer.peerId != context.account.peerId)
                 }

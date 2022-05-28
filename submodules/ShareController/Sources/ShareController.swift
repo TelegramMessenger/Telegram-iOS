@@ -112,19 +112,21 @@ private struct CollectableExternalShareItem {
     let mediaReference: AnyMediaReference?
 }
 
-private func collectExternalShareItems(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, postbox: Postbox, collectableItems: [CollectableExternalShareItem], takeOne: Bool = true) -> Signal<ExternalShareItemsState, NoError> {
+private func collectExternalShareItems(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, engine: TelegramEngine, postbox: Postbox, collectableItems: [CollectableExternalShareItem], takeOne: Bool = true) -> Signal<ExternalShareItemsState, NoError> {
     var signals: [Signal<ExternalShareItemStatus, NoError>] = []
     let authorsPeerIds = collectableItems.compactMap { $0.author }
     let authorsPromise = Promise<[PeerId: String]>()
-    authorsPromise.set(postbox.transaction { transaction in
-        var result: [PeerId: String] = [:]
-        for peerId in authorsPeerIds {
-            if let title = transaction.getPeer(peerId).flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameOrder) {
-                result[peerId] = title
-            }
+    
+    let peerTitles = engine.data.get(EngineDataMap(
+        authorsPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+    ))
+    |> map { peerMap -> [EnginePeer.Id: String] in
+        return peerMap.compactMapValues { peer -> String? in
+            return peer?.displayTitle(strings: strings, displayOrder: nameOrder)
         }
-        return result
-    })
+    }
+    
+    authorsPromise.set(peerTitles)
     for item in collectableItems {
         if let mediaReference = item.mediaReference, let file = mediaReference.media as? TelegramMediaFile {
             signals.append(collectExternalShareResource(postbox: postbox, resourceReference: mediaReference.resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes))
@@ -311,7 +313,7 @@ public final class ShareController: ViewController {
     private let segmentedValues: [ShareControllerSegmentedValue]?
     private let fromForeignApp: Bool
     
-    private let peers = Promise<([(RenderedPeer, PeerPresence?)], Peer)>()
+    private let peers = Promise<([(EngineRenderedPeer, PeerPresence?)], EnginePeer)>()
     private let peersDisposable = MetaDisposable()
     private let readyDisposable = MetaDisposable()
     private let accountActiveDisposable = MetaDisposable()
@@ -785,7 +787,7 @@ public final class ShareController: ViewController {
                     case .fromExternal:
                         break
                 }
-                return (collectExternalShareItems(strings: strongSelf.presentationData.strings, dateTimeFormat: strongSelf.presentationData.dateTimeFormat, nameOrder: strongSelf.presentationData.nameDisplayOrder, postbox: strongSelf.currentAccount.postbox, collectableItems: collectableItems, takeOne: !strongSelf.immediateExternalShare)
+                return (collectExternalShareItems(strings: strongSelf.presentationData.strings, dateTimeFormat: strongSelf.presentationData.dateTimeFormat, nameOrder: strongSelf.presentationData.nameDisplayOrder, engine: TelegramEngine(account: strongSelf.currentAccount), postbox: strongSelf.currentAccount.postbox, collectableItems: collectableItems, takeOne: !strongSelf.immediateExternalShare)
                 |> deliverOnMainQueue)
                 |> map { state in
                     switch state {
@@ -965,18 +967,19 @@ public final class ShareController: ViewController {
         self.accountActiveDisposable.set(self.sharedContext.setAccountUserInterfaceInUse(account.id))
         
         self.peers.set(combineLatest(
-            self.currentAccount.postbox.loadedPeerWithId(self.currentAccount.peerId)
-            |> take(1),
+            TelegramEngine(account: self.currentAccount).data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.currentAccount.peerId)),
             self.currentAccount.viewTracker.tailChatListView(groupId: .root, count: 150)
             |> take(1)
         )
-        |> mapToSignal { accountPeer, view -> Signal<([(RenderedPeer, PeerPresence?)], Peer), NoError> in
-            var peers: [RenderedPeer] = []
+        |> mapToSignal { maybeAccountPeer, view -> Signal<([(EngineRenderedPeer, PeerPresence?)], EnginePeer), NoError> in
+            let accountPeer = maybeAccountPeer!
+            
+            var peers: [EngineRenderedPeer] = []
             for entry in view.0.entries.reversed() {
                 switch entry {
                     case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
                         if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
-                            peers.append(renderedPeer)
+                            peers.append(EngineRenderedPeer(renderedPeer))
                         }
                     default:
                         break
@@ -984,8 +987,8 @@ public final class ShareController: ViewController {
             }
             let key = PostboxViewKey.peerPresences(peerIds: Set(peers.map { $0.peerId }))
             return account.postbox.combinedView(keys: [key])
-            |> map { views -> ([(RenderedPeer, PeerPresence?)], Peer) in
-                var resultPeers: [(RenderedPeer, PeerPresence?)] = []
+            |> map { views -> ([(EngineRenderedPeer, PeerPresence?)], EnginePeer) in
+                var resultPeers: [(EngineRenderedPeer, PeerPresence?)] = []
                 if let presencesView = views.views[key] as? PeerPresencesView {
                     for peer in peers {
                         resultPeers.append((peer, presencesView.presences[peer.peerId]))

@@ -961,8 +961,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             |> mapToSignal { authAndAccounts -> Signal<(UnauthorizedAccount, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                 if let (primary, auth, accounts) = authAndAccounts {
                     let phoneNumbers = combineLatest(accounts.map { context -> Signal<(AccountRecordId, String, Bool)?, NoError> in
-                        return context.account.postbox.transaction { transaction -> (AccountRecordId, String, Bool)? in
-                            if let phone = (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone {
+                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                        |> map { peer -> (AccountRecordId, String, Bool)? in
+                            if case let .user(user) = peer, let phone = user.phone {
                                 return (context.account.id, phone, context.account.testingEnvironment)
                             } else {
                                 return nil
@@ -1766,10 +1767,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     guard let context = self.contextValue?.context else {
                                         return true
                                     }
-                                    let _ = (context.account.postbox.transaction { transaction -> PeerId? in
+                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
+                                    |> map { contactList -> PeerId? in
                                         var result: PeerId?
-                                        for peerId in transaction.getContactPeerIds() {
-                                            if let peer = transaction.getPeer(peerId) as? TelegramUser, let peerPhoneNumber = peer.phone {
+                                        for peer in contactList.peers {
+                                            if case let .user(peer) = peer, let peerPhoneNumber = peer.phone {
                                                 if matchPhoneNumbers(phoneNumber, peerPhoneNumber) {
                                                     result = peer.id
                                                     break
@@ -1777,7 +1779,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                             }
                                         }
                                         return result
-                                    } |> deliverOnMainQueue).start(next: { peerId in
+                                    }
+                                    |> deliverOnMainQueue).start(next: { peerId in
                                         if let peerId = peerId {
                                             startCall(peerId.id._internalGetInt64Value())
                                         }
@@ -1816,8 +1819,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         |> take(1)
                         |> mapToSignal { primary, contexts, _ -> Signal<(AccountRecordId?, [AccountContext?]), NoError> in
                             return combineLatest(contexts.map { _, context, _ -> Signal<AccountContext?, NoError> in
-                                return context.account.postbox.transaction { transaction -> AccountContext? in
-                                    if transaction.getPeer(peerId) != nil {
+                                return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                |> map { peer -> AccountContext? in
+                                    if peer != nil {
                                         return context
                                     } else {
                                         return nil

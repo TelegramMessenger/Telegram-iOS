@@ -478,7 +478,7 @@ private enum StatsEntry: ItemListNodeEntry {
     }
 }
 
-private func groupStatsControllerEntries(accountPeerId: PeerId, state: GroupStatsState, data: GroupStats?, channelPeer: Peer, peers: [PeerId: Peer]?, presentationData: PresentationData) -> [StatsEntry] {
+private func groupStatsControllerEntries(accountPeerId: PeerId, state: GroupStatsState, data: GroupStats?, channelPeer: Peer, peers: [EnginePeer.Id: EnginePeer]?, presentationData: PresentationData) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
     if let data = data {
@@ -545,7 +545,7 @@ private func groupStatsControllerEntries(accountPeerId: PeerId, state: GroupStat
                 
                 for topPoster in topPosters {
                     if let peer = peers[topPoster.peerId], topPoster.messageCount > 0 {
-                        entries.append(.topPoster(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topPoster, topPoster.peerId == state.posterPeerIdWithRevealedOptions, canPromote))
+                        entries.append(.topPoster(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer._asPeer(), topPoster, topPoster.peerId == state.posterPeerIdWithRevealedOptions, canPromote))
                         index += 1
                     }
                 }
@@ -568,7 +568,7 @@ private func groupStatsControllerEntries(accountPeerId: PeerId, state: GroupStat
                 
                 for topAdmin in data.topAdmins {
                     if let peer = peers[topAdmin.peerId], (topAdmin.deletedCount + topAdmin.kickedCount + topAdmin.bannedCount) > 0 {
-                        entries.append(.topAdmin(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topAdmin, topAdmin.peerId == state.adminPeerIdWithRevealedOptions, canPromote))
+                        entries.append(.topAdmin(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer._asPeer(), topAdmin, topAdmin.peerId == state.adminPeerIdWithRevealedOptions, canPromote))
                         index += 1
                     }
                 }
@@ -591,7 +591,7 @@ private func groupStatsControllerEntries(accountPeerId: PeerId, state: GroupStat
                 
                 for topInviter in data.topInviters {
                     if let peer = peers[topInviter.peerId], topInviter.inviteCount > 0 {
-                        entries.append(.topInviter(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topInviter, topInviter.peerId == state.inviterPeerIdWithRevealedOptions, canPromote))
+                        entries.append(.topInviter(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer._asPeer(), topInviter, topInviter.peerId == state.inviterPeerIdWithRevealedOptions, canPromote))
                         index += 1
                     }
                 }
@@ -708,7 +708,7 @@ private func canEditAdminRights(accountPeerId: PeerId, channelPeer: Peer, initia
     }
 }
 
-public func groupStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
+public func groupStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, statsDatacenterId: Int32?) -> ViewController {
     let statePromise = ValuePromise(GroupStatsState())
     let stateValue = Atomic(value: GroupStatsState())
     let updateState: ((GroupStatsState) -> GroupStatsState) -> Void = { f in
@@ -717,12 +717,9 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
     
     let actionsDisposable = DisposableSet()
     let dataPromise = Promise<GroupStats?>(nil)
-    let peersPromise = Promise<[PeerId: Peer]?>(nil)
+    let peersPromise = Promise<[EnginePeer.Id: EnginePeer]?>(nil)
     
-    var datacenterId: Int32 = 0
-    if let cachedData = cachedPeerData as? CachedChannelData {
-        datacenterId = cachedData.statsDatacenterId
-    }
+    let datacenterId: Int32 = statsDatacenterId ?? 0
     
     var openPeerImpl: ((PeerId) -> Void)?
     var openPeerHistoryImpl: ((PeerId) -> Void)?
@@ -757,27 +754,26 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
         return value != nil
     }
     |> take(1)
-    |> map { stats -> [PeerId]? in
+    |> map { stats -> [EnginePeer.Id]? in
         guard let stats = stats else {
             return nil
         }
-        var peerIds = Set<PeerId>()
+        var peerIds = Set<EnginePeer.Id>()
         peerIds.formUnion(stats.topPosters.map { $0.peerId })
         peerIds.formUnion(stats.topAdmins.map { $0.peerId })
         peerIds.formUnion(stats.topInviters.map { $0.peerId })
         return Array(peerIds)
     }
-    |> mapToSignal { peerIds -> Signal<[PeerId: Peer]?, NoError> in
-        return context.account.postbox.transaction { transaction -> [PeerId: Peer]? in
-            var peers: [PeerId: Peer] = [:]
-            if let peerIds = peerIds {
-                for peerId in peerIds {
-                    if let peer = transaction.getPeer(peerId) {
-                        peers[peerId] = peer
-                    }
-                }
+    |> mapToSignal { peerIds -> Signal<[EnginePeer.Id: EnginePeer]?, NoError> in
+        if let peerIds = peerIds {
+            return context.engine.data.get(EngineDataMap(
+                peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+            ))
+            |> map { peerMap -> [EnginePeer.Id: EnginePeer]? in
+                return peerMap.compactMapValues { $0 }
             }
-            return peers
+        } else {
+            return .single([:])
         }
     }))
     

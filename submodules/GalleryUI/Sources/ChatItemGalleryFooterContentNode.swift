@@ -1298,16 +1298,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         }
                         shareController.completed = { [weak self] peerIds in
                             if let strongSelf = self {
-                                let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
-                                    var peers: [Peer] = []
-                                    for peerId in peerIds {
-                                        if let peer = transaction.getPeer(peerId) {
-                                            peers.append(peer)
-                                        }
-                                    }
-                                    return peers
-                                } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                                let _ = (strongSelf.context.engine.data.get(
+                                    EngineDataList(
+                                        peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                                    )
+                                )
+                                |> deliverOnMainQueue).start(next: { [weak self] peerList in
                                     if let strongSelf = self {
+                                        let peers = peerList.compactMap { $0 }
                                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                         
                                         let text: String
@@ -1317,14 +1315,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                             savedMessages = true
                                         } else {
                                             if peers.count == 1, let peer = peers.first {
-                                                let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                 text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
                                             } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                                let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                                let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                 text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
                                             } else if let peer = peers.first {
-                                                let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                 text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").string
                                             } else {
                                                 text = ""
@@ -1368,16 +1366,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                 }
                                 shareController.completed = { [weak self] peerIds in
                                     if let strongSelf = self {
-                                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
-                                            var peers: [Peer] = []
-                                            for peerId in peerIds {
-                                                if let peer = transaction.getPeer(peerId) {
-                                                    peers.append(peer)
-                                                }
-                                            }
-                                            return peers
-                                        } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                                        let _ = (strongSelf.context.engine.data.get(
+                                            EngineDataList(
+                                                peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                                            )
+                                        )
+                                        |> deliverOnMainQueue).start(next: { [weak self] peerList in
                                             if let strongSelf = self {
+                                                let peers = peerList.compactMap { $0 }
                                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                                 
                                                 let text: String
@@ -1387,14 +1383,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                                     savedMessages = true
                                                 } else {
                                                     if peers.count == 1, let peer = peers.first {
-                                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                         text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
                                                     } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                         text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
                                                     } else if let peer = peers.first {
-                                                        let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                         text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").string
                                                     } else {
                                                         text = ""
@@ -1517,16 +1513,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
             shareController.completed = { [weak self] peerIds in
                 if let strongSelf = self {
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
-                        var peers: [Peer] = []
-                        for peerId in peerIds {
-                            if let peer = transaction.getPeer(peerId) {
-                                peers.append(peer)
-                            }
-                        }
-                        return peers
-                    } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                    let _ = (strongSelf.context.engine.data.get(
+                        EngineDataList(
+                            peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                        )
+                    )
+                    |> deliverOnMainQueue).start(next: { [weak self] peerList in
                         if let strongSelf = self {
+                            let peers = peerList.compactMap { $0 }
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                             
                             let text: String
@@ -1536,14 +1530,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                 savedMessages = true
                             } else {
                                 if peers.count == 1, let peer = peers.first {
-                                    let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string
                                 } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                    let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     text = presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
                                 } else if let peer = peers.first {
-                                    let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     text = presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
                                 } else {
                                     text = ""

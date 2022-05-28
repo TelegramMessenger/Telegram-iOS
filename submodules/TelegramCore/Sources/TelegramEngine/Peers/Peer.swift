@@ -99,6 +99,50 @@ public enum EnginePeer: Equatable {
             self.displayPreviews = displayPreviews
         }
     }
+    
+    public struct StatusSettings: Equatable {
+        public struct Flags: OptionSet {
+            public var rawValue: Int32
+            
+            public init(rawValue: Int32) {
+                self.rawValue = rawValue
+            }
+            
+            public static let canReport = Flags(rawValue: 1 << 1)
+            public static let canShareContact = Flags(rawValue: 1 << 2)
+            public static let canBlock = Flags(rawValue: 1 << 3)
+            public static let canAddContact = Flags(rawValue: 1 << 4)
+            public static let addExceptionWhenAddingContact = Flags(rawValue: 1 << 5)
+            public static let canReportIrrelevantGeoLocation = Flags(rawValue: 1 << 6)
+            public static let autoArchived = Flags(rawValue: 1 << 7)
+            public static let suggestAddMembers = Flags(rawValue: 1 << 8)
+
+        }
+        
+        public var flags: Flags
+        public var geoDistance: Int32?
+        public var requestChatTitle: String?
+        public var requestChatDate: Int32?
+        public var requestChatIsChannel: Bool?
+        
+        public init(
+            flags: Flags,
+            geoDistance: Int32?,
+            requestChatTitle: String?,
+            requestChatDate: Int32?,
+            requestChatIsChannel: Bool?
+        ) {
+            self.flags = flags
+            self.geoDistance = geoDistance
+            self.requestChatTitle = requestChatTitle
+            self.requestChatDate = requestChatDate
+            self.requestChatIsChannel = requestChatIsChannel
+        }
+        
+        public func contains(_ member: Flags) -> Bool {
+            return self.flags.contains(member)
+        }
+    }
 
     public enum IndexName: Equatable {
         case title(title: String, addressName: String?)
@@ -292,6 +336,18 @@ public extension EnginePeer.NotificationSettings {
             muteState: self.muteState._asMuteState(),
             messageSound: self.messageSound._asMessageSound(),
             displayPreviews: self.displayPreviews._asDisplayPreviews()
+        )
+    }
+}
+
+public extension EnginePeer.StatusSettings {
+    init(_ statusSettings: PeerStatusSettings) {
+        self.init(
+            flags: Flags(rawValue: statusSettings.flags.rawValue),
+            geoDistance: statusSettings.geoDistance,
+            requestChatTitle: statusSettings.requestChatTitle,
+            requestChatDate: statusSettings.requestChatDate,
+            requestChatIsChannel: statusSettings.requestChatIsChannel
         )
     }
 }

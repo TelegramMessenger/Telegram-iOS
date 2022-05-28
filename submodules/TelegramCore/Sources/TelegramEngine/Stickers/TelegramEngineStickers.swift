@@ -112,5 +112,11 @@ public extension TelegramEngine {
             }).start()
             return _internal_updateDefaultReaction(account: self.account, reaction: reaction)
         }
+        
+        public func isStickerSaved(id: EngineMedia.Id) -> Signal<Bool, NoError> {
+            return self.account.postbox.transaction { transaction -> Bool in
+                return getIsStickerSaved(transaction: transaction, fileId: id)
+            }
+        }
     }
 }

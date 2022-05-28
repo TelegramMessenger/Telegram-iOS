@@ -1686,7 +1686,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.context = context
         self.peerId = peerId
         self.isOpenedFromChat = isOpenedFromChat
-        self.videoCallsEnabled = VideoCallsConfiguration(appConfiguration: context.currentAppConfiguration.with { $0 }).areVideoCallsEnabled
+        self.videoCallsEnabled = true
         self.presentationData = controller.presentationData
         self.nearbyPeerDistance = nearbyPeerDistance
         self.callMessages = callMessages
@@ -4967,11 +4967,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         self.view.endEditing(true)
         
+        var statsDatacenterId: Int32?
+        if let cachedData = cachedData as? CachedChannelData {
+            statsDatacenterId = cachedData.statsDatacenterId
+        }
+        
         let statsController: ViewController
         if let channel = peer as? TelegramChannel, case .group = channel.info {
-            statsController = groupStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, cachedPeerData: cachedData)
+            statsController = groupStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, statsDatacenterId: statsDatacenterId)
         } else {
-            statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, cachedPeerData: cachedData)
+            statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, statsDatacenterId: statsDatacenterId)
         }
         controller.push(statsController)
     }
