@@ -1214,17 +1214,9 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }, action: { _, f in
             f(.dismissWithoutContent)
             
-            let _ = (context.account.postbox.transaction { transaction -> String? in
-                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
-                    if let cachedData = cachedData as? CachedChannelData {
-                        return cachedData.exportedInvitation?.link
-                    } else if let cachedData = cachedData as? CachedGroupData {
-                        return cachedData.exportedInvitation?.link
-                    }
-                }
-                return nil
-            } |> deliverOnMainQueue).start(next: { link in
-                if let link = link {
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId))
+            |> deliverOnMainQueue).start(next: { exportedInvitation in
+                if let link = exportedInvitation?.link {
                     UIPasteboard.general.string = link
                     
                     dismissTooltipsImpl?()
@@ -1240,16 +1232,8 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }, action: { _, f in
             f(.dismissWithoutContent)
             
-            let _ = (context.account.postbox.transaction { transaction -> ExportedInvitation? in
-                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
-                    if let cachedData = cachedData as? CachedChannelData {
-                        return cachedData.exportedInvitation
-                    } else if let cachedData = cachedData as? CachedGroupData {
-                        return cachedData.exportedInvitation
-                    }
-                }
-                return nil
-            } |> deliverOnMainQueue).start(next: { invite in
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId))
+            |> deliverOnMainQueue).start(next: { invite in
                 if let invite = invite {
                     let _ = (context.account.postbox.loadedPeerWithId(peerId)
                     |> deliverOnMainQueue).start(next: { peer in
@@ -1289,17 +1273,9 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                         ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                             dismissAction()
                             
-                            let _ = (context.account.postbox.transaction { transaction -> String? in
-                                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
-                                    if let cachedData = cachedData as? CachedChannelData {
-                                        return cachedData.exportedInvitation?.link
-                                    } else if let cachedData = cachedData as? CachedGroupData {
-                                        return cachedData.exportedInvitation?.link
-                                    }
-                                }
-                                return nil
-                            } |> deliverOnMainQueue).start(next: { link in
-                                if let link = link {
+                            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId))
+                            |> deliverOnMainQueue).start(next: { exportedInvitation in
+                                if let link = exportedInvitation?.link {
                                     var revoke = false
                                     updateState { state in
                                         if !state.revokingPrivateLink {

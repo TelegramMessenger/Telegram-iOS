@@ -728,6 +728,10 @@ public extension TelegramEngine {
             return _internal_storedMessageFromSearchPeer(account: self.account, peer: peer._asPeer())
         }
         
+        public func ensurePeersAreLocallyAvailable(peers: [EnginePeer]) -> Signal<Never, NoError> {
+            return _internal_storedMessageFromSearchPeers(account: self.account, peers: peers.map { $0._asPeer() })
+        }
+        
         public func mostRecentSecretChat(id: EnginePeer.Id) -> Signal<EnginePeer.Id?, NoError> {
             return self.account.postbox.transaction { transaction -> EnginePeer.Id? in
                 let filteredPeerIds = Array(transaction.getAssociatedPeerIds(id)).filter { $0.namespace == Namespaces.Peer.SecretChat }

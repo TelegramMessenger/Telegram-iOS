@@ -1268,7 +1268,7 @@ public final class ChatListNode: ListView {
         }
         self.setChatListLocation(initialLocation)
         
-        let postbox = context.account.postbox
+        let engine = context.engine
         let previousPeerCache = Atomic<[EnginePeer.Id: EnginePeer]>(value: [:])
         let previousActivities = Atomic<ChatListNodePeerInputActivities?>(value: nil)
         self.activityStatusesDisposable = (context.account.allPeerInputActivities()
@@ -1295,7 +1295,18 @@ public final class ChatListNode: ListView {
             if foundAllPeers {
                 return .single(cachedResult)
             } else {
-                return postbox.transaction { transaction -> [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] in
+                return engine.data.get(EngineDataMap(
+                    activitiesByPeerId.keys.filter { key in
+                        if case .global = key.category {
+                            return false
+                        } else {
+                            return true
+                        }
+                    }.map { key in
+                        return TelegramEngine.EngineData.Item.Peer.Peer(id: key.peerId)
+                    }
+                ))
+                |> map { peerMap -> [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] in
                     var result: [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] = [:]
                     var peerCache: [EnginePeer.Id: EnginePeer] = [:]
                     for (chatPeerId, activities) in activitiesByPeerId {
@@ -1305,9 +1316,9 @@ public final class ChatListNode: ListView {
                         var chatResult: [(EnginePeer, PeerInputActivity)] = []
                         
                         for (peerId, activity) in activities {
-                            if let peer = transaction.getPeer(peerId) {
-                                chatResult.append((EnginePeer(peer), activity))
-                                peerCache[peerId] = EnginePeer(peer)
+                            if let maybePeer = peerMap[peerId], let peer = maybePeer {
+                                chatResult.append((peer, activity))
+                                peerCache[peerId] = peer
                             }
                         }
                         
@@ -2012,13 +2023,14 @@ public final class ChatListNode: ListView {
                 } else {
                     position = .later(than: nil)
                 }
-                let postbox = self.context.account.postbox
+                let engine = self.context.engine
                 let _ = (relativeUnreadChatListIndex(position: position)
                 |> mapToSignal { index -> Signal<(EngineChatList.Item.Index, EnginePeer)?, NoError> in
                     if let index = index {
-                        return postbox.transaction { transaction -> (EngineChatList.Item.Index, EnginePeer)? in
-                            return transaction.getPeer(index.messageIndex.id.peerId).flatMap { peer -> (EngineChatList.Item.Index, EnginePeer)? in
-                                (index, EnginePeer(peer))
+                        return engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: index.messageIndex.id.peerId))
+                        |> map { peer -> (EngineChatList.Item.Index, EnginePeer)? in
+                            return peer.flatMap { peer -> (EngineChatList.Item.Index, EnginePeer)? in
+                                (index, peer)
                             }
                         }
                     } else {
@@ -2058,9 +2070,7 @@ public final class ChatListNode: ListView {
                     self.peerSelected?(target.1, false, false, nil)
                 }
             case let .peerId(peerId):
-                let _ = (self.context.account.postbox.transaction { transaction -> EnginePeer? in
-                    return transaction.getPeer(peerId).flatMap(EnginePeer.init)
-                }
+                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                     guard let strongSelf = self, let peer = peer else {
                         return

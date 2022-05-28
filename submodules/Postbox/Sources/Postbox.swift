@@ -2107,7 +2107,7 @@ final class PostboxImpl {
         return indices.max()
     }
     
-    fileprivate func getPeerChatListInclusion(_ id: PeerId) -> PeerChatListInclusion {
+    func getPeerChatListInclusion(_ id: PeerId) -> PeerChatListInclusion {
         if let inclusion = self.currentUpdatedChatListInclusions[id] {
             return inclusion
         } else {

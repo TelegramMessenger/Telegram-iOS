@@ -13,12 +13,12 @@ import AccountContext
 import ShimmerEffect
 
 final class ShareControllerInteraction {
-    var foundPeers: [RenderedPeer] = []
+    var foundPeers: [EngineRenderedPeer] = []
     var selectedPeerIds = Set<PeerId>()
-    var selectedPeers: [RenderedPeer] = []
-    let togglePeer: (RenderedPeer, Bool) -> Void
+    var selectedPeers: [EngineRenderedPeer] = []
+    let togglePeer: (EngineRenderedPeer, Bool) -> Void
     
-    init(togglePeer: @escaping (RenderedPeer, Bool) -> Void) {
+    init(togglePeer: @escaping (EngineRenderedPeer, Bool) -> Void) {
         self.togglePeer = togglePeer
     }
 }
@@ -90,14 +90,14 @@ final class ShareControllerPeerGridItem: GridItem {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let peer: RenderedPeer?
+    let peer: EngineRenderedPeer?
     let presence: PeerPresence?
     let controllerInteraction: ShareControllerInteraction
     let search: Bool
     
     let section: GridSection?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer?, presence: PeerPresence?, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil, search: Bool = false) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer?, presence: PeerPresence?, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil, search: Bool = false) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -131,7 +131,7 @@ final class ShareControllerPeerGridItem: GridItem {
 }
 
 final class ShareControllerPeerGridItemNode: GridItemNode {
-    private var currentState: (AccountContext, PresentationTheme, PresentationStrings, RenderedPeer?, Bool, PeerPresence?)?
+    private var currentState: (AccountContext, PresentationTheme, PresentationStrings, EngineRenderedPeer?, Bool, PeerPresence?)?
     private let peerNode: SelectablePeerNode
     private var presenceManager: PeerPresenceStatusManager?
     
@@ -171,13 +171,13 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         }
     }
     
-    func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer?, presence: PeerPresence?, search: Bool, synchronousLoad: Bool, force: Bool) {
+    func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer?, presence: PeerPresence?, search: Bool, synchronousLoad: Bool, force: Bool) {
         if force || self.currentState == nil || self.currentState!.0 !== context || self.currentState!.3 != peer || !arePeerPresencesEqual(self.currentState!.5, presence) {
             let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: theme.chatList.secretTitleColor, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.checkContentColor, avatarPlaceholderColor: theme.list.mediaPlaceholderColor)
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             var online = false
-            if let peer = peer?.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != context.account.peerId  {
+            if case let .user(peer) = peer?.peer, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != context.account.peerId  {
                 let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(presence), relativeTo: timestamp)
                 if case .online = relativeStatus {
                     online = true
@@ -186,7 +186,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             
             self.peerNode.theme = itemTheme
             if let peer = peer {
-                self.peerNode.setup(context: context, theme: theme, strings: strings, peer: EngineRenderedPeer(peer), online: online, synchronousLoad: synchronousLoad)
+                self.peerNode.setup(context: context, theme: theme, strings: strings, peer: peer, online: online, synchronousLoad: synchronousLoad)
                 if let shimmerNode = self.placeholderNode {
                     self.placeholderNode = nil
                     shimmerNode.removeFromSupernode()

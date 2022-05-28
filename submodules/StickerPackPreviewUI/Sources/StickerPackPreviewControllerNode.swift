@@ -201,14 +201,16 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             if let strongSelf = self {
                 if let itemNode = strongSelf.contentGridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode, let item = itemNode.stickerPackItem {
                     let accountPeerId = strongSelf.context.account.peerId
-                    return strongSelf.context.account.postbox.transaction { transaction -> (Bool, Bool) in
-                        let isStarred = getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                        var hasPremium = false
-                        if let peer = transaction.getPeer(accountPeerId) as? TelegramUser, peer.isPremium {
-                            hasPremium = true
+                    return combineLatest(
+                        strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId),
+                        strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: accountPeerId)) |> map { peer -> Bool in
+                            var hasPremium = false
+                            if case let .user(user) = peer, user.isPremium {
+                                hasPremium = true
+                            }
+                            return hasPremium
                         }
-                        return (isStarred, hasPremium)
-                    }
+                    )
                     |> deliverOnMainQueue
                     |> map { isStarred, hasPremium -> (ASDisplayNode, PeekControllerContent)? in
                         if let strongSelf = self {

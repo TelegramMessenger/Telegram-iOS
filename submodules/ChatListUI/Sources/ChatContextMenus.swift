@@ -51,20 +51,18 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
     let strings = presentationData.strings
 
     return combineLatest(
-        context.account.postbox.transaction { transaction -> (PeerGroupId, ChatListIndex)? in
-            transaction.getPeerChatListIndex(peerId)
-        },
+        context.engine.data.get(TelegramEngine.EngineData.Item.Messages.ChatListGroup(id: peerId)),
         context.engine.peers.recentlySearchedPeers() |> take(1)
     )
-    |> mapToSignal { groupAndIndex, recentlySearchedPeers -> Signal<[ContextMenuItem], NoError> in
+    |> mapToSignal { peerGroup, recentlySearchedPeers -> Signal<[ContextMenuItem], NoError> in
         let location: TogglePeerChatPinnedLocation
         var chatListFilter: ChatListFilter?
         if case let .chatList(filter) = source, let chatFilter = filter {
             chatListFilter = chatFilter
             location = .filter(chatFilter.id)
         } else {
-            if let (group, _) = groupAndIndex {
-                location = .group(group)
+            if let peerGroup = peerGroup {
+                location = .group(peerGroup._asGroup())
             } else {
                 location = .group(.root)
             }
@@ -292,9 +290,9 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                 }
 
                 let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(777000)) && peerId == context.account.peerId
-                if let (group, _) = groupAndIndex {
+                if let group = peerGroup {
                     if archiveEnabled {
-                        let isArchived = group == Namespaces.PeerGroup.archive
+                        let isArchived = group == .archive
                         items.append(.action(ContextMenuActionItem(text: isArchived ? strings.ChatList_Context_Unarchive : strings.ChatList_Context_Archive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isArchived ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                             if isArchived {
                                 let _ = (context.account.postbox.transaction { transaction -> Void in
@@ -412,7 +410,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     }
                 }
 
-                if case .chatList = source, groupAndIndex != nil {
+                if case .chatList = source, peerGroup != nil {
                     items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                         if let chatListController = chatListController {
                             chatListController.deletePeerChat(peerId: peerId, joined: joined)

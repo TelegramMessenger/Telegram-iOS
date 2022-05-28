@@ -1191,27 +1191,33 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private func switchToTemporaryParticipantsContext(sourceContext: GroupCallParticipantsContext?, oldMyPeerId: PeerId) {
         let myPeerId = self.joinAsPeerId
         let accountContext = self.accountContext
-        let myPeer = self.accountContext.account.postbox.transaction { transaction -> (Peer, CachedPeerData?)? in
-            if let peer = transaction.getPeer(myPeerId) {
-                return (peer, transaction.getPeerCachedData(peerId: myPeerId))
-            } else {
+        let myPeerData = self.accountContext.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: myPeerId),
+            TelegramEngine.EngineData.Item.Peer.AboutText(id: myPeerId)
+        )
+        |> map { peer, aboutText -> (EnginePeer, String?)? in
+            guard let peer = peer else {
                 return nil
             }
-        }
-        |> beforeNext { view in
-            if let view = view, view.1 == nil {
+            switch aboutText {
+            case let .known(value):
+                return (peer, value)
+            case .unknown:
                 let _ = accountContext.engine.peers.fetchAndUpdateCachedPeerData(peerId: myPeerId).start()
+                
+                return (peer, nil)
             }
         }
+        
         if let sourceContext = sourceContext, let initialState = sourceContext.immediateState {
             let temporaryParticipantsContext = self.accountContext.engine.calls.groupCall(peerId: self.peerId, myPeerId: myPeerId, id: sourceContext.id, accessHash: sourceContext.accessHash, state: initialState, previousServiceState: sourceContext.serviceState)
             self.temporaryParticipantsContext = temporaryParticipantsContext
             self.participantsContextStateDisposable.set((combineLatest(queue: .mainQueue(),
-                myPeer,
+                myPeerData,
                 temporaryParticipantsContext.state,
                 temporaryParticipantsContext.activeSpeakers
             )
-            |> take(1)).start(next: { [weak self] myPeerAndCachedData, state, activeSpeakers in
+            |> take(1)).start(next: { [weak self] myPeerData, state, activeSpeakers in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1240,17 +1246,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
 
                 if !participants.contains(where: { $0.peer.id == myPeerId }) {
-                    if let (myPeer, cachedData) = myPeerAndCachedData {
+                    if let (myPeer, aboutText) = myPeerData {
                         let about: String?
-                        if let cachedData = cachedData as? CachedUserData {
-                            about = cachedData.about
-                        } else if let cachedData = cachedData as? CachedUserData {
-                            about = cachedData.about
+                        if let aboutText = aboutText {
+                            about = aboutText
                         } else {
                             about = " "
                         }
                         participants.append(GroupCallParticipantsContext.Participant(
-                            peer: myPeer,
+                            peer: myPeer._asPeer(),
                             ssrc: nil,
                             videoDescription: nil,
                             presentationDescription: nil,
@@ -1304,9 +1308,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }))
         } else {
             self.temporaryParticipantsContext = nil
-            self.participantsContextStateDisposable.set((myPeer
+            self.participantsContextStateDisposable.set((myPeerData
             |> deliverOnMainQueue
-            |> take(1)).start(next: { [weak self] myPeerAndCachedData in
+            |> take(1)).start(next: { [weak self] myPeerData in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1322,17 +1326,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                 var participants: [GroupCallParticipantsContext.Participant] = []
 
-                if let (myPeer, cachedData) = myPeerAndCachedData {
+                if let (myPeer, aboutText) = myPeerData {
                     let about: String?
-                    if let cachedData = cachedData as? CachedUserData {
-                        about = cachedData.about
-                    } else if let cachedData = cachedData as? CachedUserData {
-                        about = cachedData.about
+                    if let aboutText = aboutText {
+                        about = aboutText
                     } else {
                         about = " "
                     }
                     participants.append(GroupCallParticipantsContext.Participant(
-                        peer: myPeer,
+                        peer: myPeer._asPeer(),
                         ssrc: nil,
                         videoDescription: nil,
                         presentationDescription: nil,
@@ -1454,24 +1456,30 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.participantsContext = participantsContext
         
         let myPeerId = self.joinAsPeerId
-        let myPeer = self.accountContext.account.postbox.transaction { transaction -> (Peer, CachedPeerData?)? in
-            if let peer = transaction.getPeer(myPeerId) {
-                return (peer, transaction.getPeerCachedData(peerId: myPeerId))
-            } else {
+        let myPeerData = self.accountContext.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: myPeerId),
+            TelegramEngine.EngineData.Item.Peer.AboutText(id: myPeerId)
+        )
+        |> map { peer, aboutText -> (EnginePeer, String?)? in
+            guard let peer = peer else {
                 return nil
             }
-        }
-        |> beforeNext { view in
-            if let view = view, view.1 == nil {
+            switch aboutText {
+            case let .known(value):
+                return (peer, value)
+            case .unknown:
                 let _ = accountContext.engine.peers.fetchAndUpdateCachedPeerData(peerId: myPeerId).start()
+                
+                return (peer, nil)
             }
         }
+        
         self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
             participantsContext.state,
             adminIds,
-            myPeer,
+            myPeerData,
             accountContext.account.postbox.peerView(id: peerId)
-        ).start(next: { [weak self] state, adminIds, myPeerAndCachedData, view in
+        ).start(next: { [weak self] state, adminIds, myPeerData, view in
             guard let strongSelf = self else {
                 return
             }
@@ -1488,17 +1496,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             
             var participants: [GroupCallParticipantsContext.Participant] = []
             var topParticipants: [GroupCallParticipantsContext.Participant] = []
-            if let (myPeer, cachedData) = myPeerAndCachedData {
+            if let (myPeer, aboutText) = myPeerData {
                 let about: String?
-                if let cachedData = cachedData as? CachedUserData {
-                    about = cachedData.about
-                } else if let cachedData = cachedData as? CachedUserData {
-                    about = cachedData.about
+                if let aboutText = aboutText {
+                    about = aboutText
                 } else {
                     about = " "
                 }
                 participants.append(GroupCallParticipantsContext.Participant(
-                    peer: myPeer,
+                    peer: myPeer._asPeer(),
                     ssrc: nil,
                     videoDescription: nil,
                     presentationDescription: nil,
@@ -2340,19 +2346,22 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                 }))
                 
-                let postbox = self.accountContext.account.postbox
+                let engine = self.accountContext.engine
                 self.memberEventsPipeDisposable.set((participantsContext.memberEvents
                 |> mapToSignal { event -> Signal<PresentationGroupCallMemberEvent, NoError> in
-                    return postbox.transaction { transaction -> Signal<PresentationGroupCallMemberEvent, NoError> in
-                        if let peer = transaction.getPeer(event.peerId) {
-                            let isContact = transaction.isPeerContact(peerId: event.peerId)
-                            let isInChatList = transaction.getPeerChatListIndex(event.peerId) != nil
-                            return .single(PresentationGroupCallMemberEvent(peer: peer, isContact: isContact, isInChatList: isInChatList, canUnmute: event.canUnmute, joined: event.joined))
+                    return engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: event.peerId),
+                        TelegramEngine.EngineData.Item.Peer.IsContact(id: event.peerId),
+                        TelegramEngine.EngineData.Item.Messages.ChatListIndex(id: event.peerId)
+                    )
+                    |> mapToSignal { peer, isContact, chatListIndex -> Signal<PresentationGroupCallMemberEvent, NoError> in
+                        if let peer = peer {
+                            let isInChatList = chatListIndex != nil
+                            return .single(PresentationGroupCallMemberEvent(peer: peer._asPeer(), isContact: isContact, isInChatList: isInChatList, canUnmute: event.canUnmute, joined: event.joined))
                         } else {
                             return .complete()
                         }
                     }
-                    |> switchToLatest
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] event in
                     guard let strongSelf = self, event.peer.id != strongSelf.stateValue.myPeerId else {
@@ -2559,9 +2568,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if peerId == self.joinAsPeerId {
             return
         }
-        let _ = (self.accountContext.account.postbox.transaction { transaction -> Peer? in
-            return transaction.getPeer(peerId)
-        }
+        let _ = (self.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
         |> deliverOnMainQueue).start(next: { [weak self] myPeer in
             guard let strongSelf = self, let myPeer = myPeer else {
                 return
@@ -2575,14 +2582,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             
             if strongSelf.stateValue.scheduleTimestamp != nil {
                 strongSelf.stateValue.myPeerId = peerId
-                strongSelf.reconnectedAsEventsPipe.putNext(myPeer)
+                strongSelf.reconnectedAsEventsPipe.putNext(myPeer._asPeer())
                 strongSelf.switchToTemporaryScheduledParticipantsContext()
             } else {
                 strongSelf.disableVideo()
                 strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
                 strongSelf.isMutedPromise.set(strongSelf.isMutedValue)
                 
-                strongSelf.reconnectingAsPeer = myPeer
+                strongSelf.reconnectingAsPeer = myPeer._asPeer()
                 
                 if let participantsContext = strongSelf.participantsContext, let immediateState = participantsContext.immediateState {
                     for participant in immediateState.participants {

@@ -859,19 +859,20 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
             return current.withUpdatedUpdatedFlags(updated)
         }
     }, toggleRightWhileDisabled: { right, _ in
-        let _ = (context.account.postbox.transaction { transaction -> (peer: Peer?, member: Peer?) in
-            return (peer: transaction.getPeer(peerId), member: transaction.getPeer(adminId))
-        }
+        let _ = (context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+            TelegramEngine.EngineData.Item.Peer.Peer(id: adminId)
+        )
         |> deliverOnMainQueue).start(next: { peer, member in
-            guard let peer = peer, let _ = member as? TelegramUser else {
+            guard let peer = peer, case .user = member else {
                 return
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let text: String
-            if !canEditAdminRights(accountPeerId: context.account.peerId, channelPeer: peer, initialParticipant: initialParticipant) {
+            if !canEditAdminRights(accountPeerId: context.account.peerId, channelPeer: peer._asPeer(), initialParticipant: initialParticipant) {
                 text = presentationData.strings.Channel_EditAdmin_CannotEdit
-            } else if rightEnabledByDefault(channelPeer: peer, right: right) {
+            } else if rightEnabledByDefault(channelPeer: peer._asPeer(), right: right) {
                 text = presentationData.strings.Channel_EditAdmin_PermissionEnabledByDefault
             } else {
                 text = presentationData.strings.Channel_EditAdmin_CannotEdit
@@ -880,15 +881,17 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
             presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
         })
     }, transferOwnership: {
-        let _ = (context.account.postbox.transaction { transaction -> (peer: Peer?, member: Peer?) in
-            return (peer: transaction.getPeer(peerId), member: transaction.getPeer(adminId))
-        } |> deliverOnMainQueue).start(next: { peer, member in
-            guard let peer = peer, let member = member as? TelegramUser else {
+        let _ = (context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+            TelegramEngine.EngineData.Item.Peer.Peer(id: adminId)
+        )
+        |> deliverOnMainQueue).start(next: { peer, member in
+            guard let peer = peer, case let .user(member) = member else {
                 return
             }
             
             transferOwnershipDisposable.set((context.engine.peers.checkOwnershipTranfserAvailability(memberId: adminId) |> deliverOnMainQueue).start(error: { error in
-                let controller = channelOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, peer: peer, member: member, initialError: error, present: { c, a in
+                let controller = channelOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, peer: peer._asPeer(), member: member, initialError: error, present: { c, a in
                     presentControllerImpl?(c, a)
                 }, completion: { upgradedPeerId in
                     if let upgradedPeerId = upgradedPeerId {

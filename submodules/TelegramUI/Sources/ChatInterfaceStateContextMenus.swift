@@ -543,19 +543,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     }
     
     var loadStickerSaveStatusSignal: Signal<Bool?, NoError> = .single(nil)
-    if loadStickerSaveStatus != nil {
-        loadStickerSaveStatusSignal = context.account.postbox.transaction { transaction -> Bool? in
-            var starStatus: Bool?
-            if let loadStickerSaveStatus = loadStickerSaveStatus {
-                if getIsStickerSaved(transaction: transaction, fileId: loadStickerSaveStatus) {
-                    starStatus = true
-                } else {
-                    starStatus = false
-                }
-            }
-            
-            return starStatus
-        }
+    if let loadStickerSaveStatus = loadStickerSaveStatus {
+        loadStickerSaveStatusSignal = context.engine.stickers.isStickerSaved(id: loadStickerSaveStatus)
+        |> map(Optional.init)
     }
     
     var loadResourceStatusSignal: Signal<MediaResourceStatus?, NoError> = .single(nil)
@@ -575,6 +565,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         return transaction.getPeerCachedData(peerId: messages[0].id.peerId)
     }
 
+    //let readState = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.PeerUnreadCount)
     let readState = context.account.postbox.transaction { transaction -> CombinedPeerReadState? in
         return transaction.getCombinedPeerReadState(messages[0].id.peerId)
     }

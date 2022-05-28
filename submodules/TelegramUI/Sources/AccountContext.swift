@@ -392,9 +392,22 @@ public final class AccountContextImpl: AccountContext {
             if currentPeerId == peerId {
                 self.sharedContext.navigateToCurrentCall()
             } else {
-                let _ = (self.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                    return (transaction.getPeer(peerId), currentPeerId.flatMap(transaction.getPeer))
+                let dataInput: Signal<(EnginePeer?, EnginePeer?), NoError>
+                if let currentPeerId = currentPeerId {
+                    dataInput = self.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: currentPeerId)
+                    )
+                } else {
+                    dataInput = self.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                    )
+                    |> map { peer -> (EnginePeer?, EnginePeer?) in
+                        return (peer, nil)
+                    }
                 }
+                
+                let _ = (dataInput
                 |> deliverOnMainQueue).start(next: { [weak self] peer, current in
                     guard let strongSelf = self else {
                         return
@@ -404,15 +417,16 @@ public final class AccountContextImpl: AccountContext {
                     }
                     let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
                     if let current = current {
-                        if current is TelegramChannel || current is TelegramGroup {
+                        switch current {
+                        case .channel, .legacyGroup:
                             let title: String
                             let text: String
-                            if let channel = current as? TelegramChannel, case .broadcast = channel.info {
+                            if case let .channel(channel) = current, case .broadcast = channel.info {
                                 title = presentationData.strings.Call_LiveStreamInProgressTitle
-                                text = presentationData.strings.Call_LiveStreamInProgressMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                                text = presentationData.strings.Call_LiveStreamInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             } else {
                                 title = presentationData.strings.Call_VoiceChatInProgressTitle
-                                text = presentationData.strings.Call_VoiceChatInProgressMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                                text = presentationData.strings.Call_VoiceChatInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             }
 
                             strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
@@ -421,12 +435,12 @@ public final class AccountContextImpl: AccountContext {
                                 }
                                 let _ = strongSelf.sharedContext.callManager?.joinGroupCall(context: strongSelf, peerId: peer.id, invite: invite, requestJoinAsPeerId: requestJoinAsPeerId, initialCall: activeCall, endCurrentIfAny: true)
                             })]), on: .root)
-                        } else {
+                        default:
                             let text: String
-                            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                                text = presentationData.strings.Call_CallInProgressLiveStreamMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                                text = presentationData.strings.Call_CallInProgressLiveStreamMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             } else {
-                                text = presentationData.strings.Call_CallInProgressVoiceChatMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                                text = presentationData.strings.Call_CallInProgressVoiceChatMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             }
                             strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
@@ -454,9 +468,22 @@ public final class AccountContextImpl: AccountContext {
                 completion()
                 self.sharedContext.navigateToCurrentCall()
             } else {
-                let _ = (self.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                    return (transaction.getPeer(peerId), currentPeerId.flatMap(transaction.getPeer))
+                let dataInput: Signal<(EnginePeer?, EnginePeer?), NoError>
+                if let currentPeerId = currentPeerId {
+                    dataInput = self.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: currentPeerId)
+                    )
+                } else {
+                    dataInput = self.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                    )
+                    |> map { peer -> (EnginePeer?, EnginePeer?) in
+                        return (peer, nil)
+                    }
                 }
+                
+                let _ = (dataInput
                 |> deliverOnMainQueue).start(next: { [weak self] peer, current in
                     guard let strongSelf = self else {
                         return
@@ -466,12 +493,13 @@ public final class AccountContextImpl: AccountContext {
                     }
                     let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
                     if let current = current {
-                        if current is TelegramChannel || current is TelegramGroup {
+                        switch current {
+                        case .channel, .legacyGroup:
                             let text: String
-                            if let channel = current as? TelegramChannel, case .broadcast = channel.info {
-                                text = presentationData.strings.Call_LiveStreamInProgressCallMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                            if case let .channel(channel) = current, case .broadcast = channel.info {
+                                text = presentationData.strings.Call_LiveStreamInProgressCallMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             } else {
-                                text = presentationData.strings.Call_VoiceChatInProgressCallMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                                text = presentationData.strings.Call_VoiceChatInProgressCallMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             }
                             strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_VoiceChatInProgressTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
@@ -480,8 +508,8 @@ public final class AccountContextImpl: AccountContext {
                                 let _ = strongSelf.sharedContext.callManager?.requestCall(context: strongSelf, peerId: peerId, isVideo: isVideo, endCurrentIfAny: true)
                                 completion()
                             })]), on: .root)
-                        } else {
-                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                        default:
+                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
                                     return
                                 }

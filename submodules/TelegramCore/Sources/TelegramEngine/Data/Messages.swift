@@ -173,5 +173,53 @@ public extension TelegramEngine.EngineData.Item {
                 return EngineTotalReadCounters(state: total)
             }
         }
+        
+        public struct ChatListIndex: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = EngineChatList.Item.Index?
+            
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+            
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .chatListIndex(id: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? ChatListIndexView else {
+                    preconditionFailure()
+                }
+                return view.chatListIndex
+            }
+        }
+        
+        public struct ChatListGroup: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = EngineChatList.Group?
+            
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+            
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .chatListIndex(id: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? ChatListIndexView else {
+                    preconditionFailure()
+                }
+                return view.inclusion.groupId.flatMap(EngineChatList.Group.init)
+            }
+        }
     }
 }
