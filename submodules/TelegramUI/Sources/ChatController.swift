@@ -12612,9 +12612,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 var groupedCorrelationIds: [Int64: Int64] = [:]
                 
+                var skipAddingTransitions = false
+                
                 for item in items {
                     var message = item.message
-                    if let uniqueId = item.uniqueId {
+                    if message.groupingKey != nil {
+                        if items.count > 10 {
+                            skipAddingTransitions = true
+                        }
+                    } else if items.count > 3 {
+                        skipAddingTransitions = true
+                    }
+                    
+                    if let uniqueId = item.uniqueId, !item.isFile && !skipAddingTransitions {
                         let correlationId: Int64
                         var addTransition = scheduleTime == nil
                         if let groupingKey = message.groupingKey {
