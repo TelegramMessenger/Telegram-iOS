@@ -63,7 +63,6 @@ swift_library(
         "//submodules/TelegramVoip:TelegramVoip",
         "//submodules/DeviceAccess:DeviceAccess",
         "//submodules/WatchCommon/Host:WatchCommon",
-        "//submodules/LightweightAccountData:LightweightAccountData",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/BuildConfigExtra:BuildConfigExtra",
         "//submodules/rlottie:RLottieBinding",

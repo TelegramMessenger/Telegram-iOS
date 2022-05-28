@@ -416,13 +416,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                     return
                 }
                 
-                let _ = context.account.postbox.transaction({ transaction in
-                    transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
-                        var settings = current?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
-                        settings.synchronizeContacts = false
-                        return PreferencesEntry(settings)
-                    })
-                }).start()
+                let _ = context.engine.contacts.updateIsContactSynchronizationEnabled(isContactSynchronizationEnabled: false).start()
                 
                 actionsDisposable.add((context.engine.contacts.deleteAllContacts()
                 |> deliverOnMainQueue).start(completed: {
@@ -437,13 +431,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]))
         }
     }, updateSyncContacts: { value in
-        let _ = context.account.postbox.transaction({ transaction in
-            transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
-                var settings = current?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
-                settings.synchronizeContacts = value
-                return PreferencesEntry(settings)
-            })
-        }).start()
+        let _ = context.engine.contacts.updateIsContactSynchronizationEnabled(isContactSynchronizationEnabled: value).start()
     }, updateSuggestFrequentContacts: { value in
         let apply: () -> Void = {
             updateState { state in

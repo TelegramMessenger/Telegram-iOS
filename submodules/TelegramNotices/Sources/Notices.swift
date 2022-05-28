@@ -346,12 +346,8 @@ public struct ApplicationSpecificNotice {
         return ApplicationSpecificNoticeKeys.irrelevantPeerGeoNotice(peerId: peerId)
     }
     
-    public static func setIrrelevantPeerGeoReport(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
-        return postbox.transaction { transaction -> Void in
-            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
-                transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.irrelevantPeerGeoNotice(peerId: peerId), value: entry)
-            }
-        }
+    public static func setIrrelevantPeerGeoReport(engine: TelegramEngine, peerId: PeerId) -> Signal<Never, NoError> {
+        return engine.notices.set(id: ApplicationSpecificNoticeKeys.irrelevantPeerGeoNotice(peerId: peerId), item: ApplicationSpecificBoolNotice())
     }
     
     public static func getBotPaymentLiability(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Bool, NoError> {
@@ -1107,17 +1103,12 @@ public struct ApplicationSpecificNotice {
         return ApplicationSpecificNoticeKeys.forcedPasswordSetup()
     }
     
-    public static func setForcedPasswordSetup(postbox: Postbox, reloginDaysTimeout: Int32?) -> Signal<Never, NoError> {
-        return postbox.transaction { transaction -> Void in
-            if let reloginDaysTimeout = reloginDaysTimeout {
-                if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: reloginDaysTimeout)) {
-                    transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.forcedPasswordSetup(), value: entry)
-                }
-            } else {
-                transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.forcedPasswordSetup(), value: nil)
-            }
+    public static func setForcedPasswordSetup(engine: TelegramEngine, reloginDaysTimeout: Int32?) -> Signal<Never, NoError> {
+        var item: ApplicationSpecificCounterNotice?
+        if let reloginDaysTimeout = reloginDaysTimeout {
+            item = ApplicationSpecificCounterNotice(value: reloginDaysTimeout)
         }
-        |> ignoreValues
+        return engine.notices.set(id: ApplicationSpecificNoticeKeys.forcedPasswordSetup(), item: item)
     }
     
     public static func reset(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {

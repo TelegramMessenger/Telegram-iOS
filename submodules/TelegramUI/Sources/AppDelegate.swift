@@ -29,7 +29,6 @@ import PresentationDataUtils
 import TelegramIntents
 import AccountUtils
 import CoreSpotlight
-import LightweightAccountData
 import TelegramAudio
 import DebugSettingsUI
 import BackgroundTasks
@@ -775,20 +774,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             
             presentationDataPromise.set(sharedContext.presentationData)
             
-            let rawAccounts = sharedContext.activeAccountContexts
-            |> map { _, contexts, _ -> [Account] in
-                return contexts.map({ $0.1.account })
-            }
-            let storeQueue = Queue()
-            let _ = (
-                sharedAccountInfos(accountManager: sharedContext.accountManager, accounts: rawAccounts)
-                |> then(Signal<StoredAccountInfos, NoError>.complete() |> delay(10.0, queue: storeQueue))
-                |> restart
-                |> deliverOn(storeQueue)
-            ).start(next: { infos in
-                storeAccountsData(rootPath: rootPath, accounts: infos)
-            })
-            
             sharedContext.presentGlobalController = { [weak self] c, a in
                 guard let strongSelf = self else {
                     return
@@ -987,24 +972,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     return .single(nil)
                 }
             }
-            |> mapToSignal { accountAndOtherAccountPhoneNumbers -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
-                return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
-                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings)?.get(CallListSettings.self) ?? CallListSettings.defaultSettings
-                    }
-                |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
-                    if let (account, otherAccountPhoneNumbers) = accountAndOtherAccountPhoneNumbers {
-                        return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))? in
-                            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
-                            return (account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers)
-                        }
-                    } else {
-                        return .single(nil)
-                    }
-                }
-            }
             |> deliverOnMainQueue
             |> map { accountAndSettings -> UnauthorizedApplicationContext? in
-                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers in
+                return accountAndSettings.flatMap { account, otherAccountPhoneNumbers in
                     return UnauthorizedApplicationContext(apiId: buildConfig.apiId, apiHash: buildConfig.apiHash, sharedContext: sharedApplicationContext.sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers)
                 }
             }

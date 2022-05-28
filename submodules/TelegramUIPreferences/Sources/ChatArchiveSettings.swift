@@ -35,8 +35,8 @@ public struct ChatArchiveSettings: Equatable, Codable {
     }
 }
 
-public func updateChatArchiveSettings(transaction: Transaction, _ f: @escaping (ChatArchiveSettings) -> ChatArchiveSettings) {
-    transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.chatArchiveSettings, { entry in
+public func updateChatArchiveSettings(engine: TelegramEngine, _ f: @escaping (ChatArchiveSettings) -> ChatArchiveSettings) -> Signal<Never, NoError> {
+    return engine.preferences.update(id: ApplicationSpecificPreferencesKeys.chatArchiveSettings, { entry in
         let currentSettings: ChatArchiveSettings
         if let entry = entry?.get(ChatArchiveSettings.self) {
             currentSettings = entry

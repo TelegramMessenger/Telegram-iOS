@@ -1673,7 +1673,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }),
                             TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_DismissActionOK, action: { [weak controller] in
                                 if let strongSelf = self {
-                                    let _ = ApplicationSpecificNotice.setForcedPasswordSetup(postbox: strongSelf.context.account.postbox, reloginDaysTimeout: nil).start()
+                                    let _ = ApplicationSpecificNotice.setForcedPasswordSetup(engine: strongSelf.context.engine, reloginDaysTimeout: nil).start()
                                 }
                                 controller?.dismiss()
                             })
@@ -2560,23 +2560,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     func toggleArchivedFolderHiddenByDefault() {
-        let _ = (self.context.account.postbox.transaction { transaction -> Bool in
-            var updatedValue = false
-            updateChatArchiveSettings(transaction: transaction, { settings in
-                var settings = settings
-                settings.isHiddenByDefault = !settings.isHiddenByDefault
-                updatedValue = settings.isHiddenByDefault
-                return settings
-            })
-            return updatedValue
-        }
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        var updatedValue = false
+        let _ = (updateChatArchiveSettings(engine: self.context.engine, { settings in
+            var settings = settings
+            settings.isHiddenByDefault = !settings.isHiddenByDefault
+            updatedValue = settings.isHiddenByDefault
+            return settings
+        })
+        |> deliverOnMainQueue).start(completed: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.chatListDisplayNode.containerNode.updateState { state in
                 var state = state
-                if value {
+                if updatedValue {
                     state.archiveShouldBeTemporaryRevealed = false
                 }
                 state.peerIdWithRevealedOptions = nil
@@ -2589,22 +2586,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return true
             })
             
-            if value {
+            if updatedValue {
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
                     guard let strongSelf = self else {
                         return false
                     }
                     if value == .undo {
-                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                            var updatedValue = false
-                            updateChatArchiveSettings(transaction: transaction, { settings in
-                                var settings = settings
-                                settings.isHiddenByDefault = false
-                                updatedValue = settings.isHiddenByDefault
-                                return settings
-                            })
-                            return updatedValue
+                        let _ = updateChatArchiveSettings(engine: strongSelf.context.engine, { settings in
+                            var settings = settings
+                            settings.isHiddenByDefault = false
+                            return settings
                         }).start()
+                        
                         return true
                     }
                     return false
