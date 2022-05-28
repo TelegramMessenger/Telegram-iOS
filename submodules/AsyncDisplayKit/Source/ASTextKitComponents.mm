@@ -8,10 +8,30 @@
 //
 
 #import <AsyncDisplayKit/ASTextKitComponents.h>
+#import "ASTextKitContext.h"
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASMainThreadDeallocation.h>
 
 #import <tgmath.h>
+
+@implementation ASCustomTextContainer
+
+- (CGRect)lineFragmentRectForProposedRect:(CGRect)proposedRect atIndex:(NSUInteger)characterIndex writingDirection:(NSWritingDirection)baseWritingDirection remainingRect:(nullable CGRect *)remainingRect {
+    CGRect result = [super lineFragmentRectForProposedRect:proposedRect atIndex:characterIndex writingDirection:baseWritingDirection remainingRect:remainingRect];
+    
+#if DEBUG
+    if (result.origin.y < 10.0f) {
+        result.size.width -= 21.0f;
+        if (result.size.width < 0.0f) {
+            result.size.width = 0.0f;
+        }
+    }
+#endif
+    
+    return result;
+}
+
+@end
 
 @interface ASCustomLayoutManager : NSLayoutManager
 
@@ -118,7 +138,8 @@
   components.layoutManager = layoutManager;
   [components.textStorage addLayoutManager:components.layoutManager];
 
-  components.textContainer = [[NSTextContainer alloc] initWithSize:textContainerSize];
+  components.textContainer = [[ASCustomTextContainer alloc] initWithSize:textContainerSize];
+    //components.textContainer.exclusionPaths = @[[UIBezierPath bezierPathWithRect:CGRectMake(textContainerSize.width - 60.0, 0.0, 60.0, 40.0)]];
   components.textContainer.lineFragmentPadding = 0.0; // We want the text laid out up to the very edges of the text-view.
   [components.layoutManager addTextContainer:components.textContainer];
 

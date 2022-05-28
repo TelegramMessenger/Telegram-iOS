@@ -167,6 +167,37 @@ public enum EnginePeer: Equatable {
     }
 }
 
+public struct EngineGlobalNotificationSettings: Equatable {
+    public struct CategorySettings: Equatable {
+        public var enabled: Bool
+        public var displayPreviews: Bool
+        public var sound: EnginePeer.NotificationSettings.MessageSound
+        
+        public init(enabled: Bool, displayPreviews: Bool, sound: EnginePeer.NotificationSettings.MessageSound) {
+            self.enabled = enabled
+            self.displayPreviews = displayPreviews
+            self.sound = sound
+        }
+    }
+    
+    public var privateChats: CategorySettings
+    public var groupChats: CategorySettings
+    public var channels: CategorySettings
+    public var contactsJoined: Bool
+    
+    public init(
+        privateChats: CategorySettings,
+        groupChats: CategorySettings,
+        channels: CategorySettings,
+        contactsJoined: Bool
+    ) {
+        self.privateChats = privateChats
+        self.groupChats = groupChats
+        self.channels = channels
+        self.contactsJoined = contactsJoined
+    }
+}
+
 public extension EnginePeer.NotificationSettings.MuteState {
     init(_ muteState: PeerMuteState) {
         switch muteState {
@@ -493,5 +524,34 @@ public extension EngineRenderedPeer {
 
     convenience init(message: EngineMessage) {
         self.init(RenderedPeer(message: message._asMessage()))
+    }
+}
+
+public extension EngineGlobalNotificationSettings.CategorySettings {
+    init(_ categorySettings: MessageNotificationSettings) {
+        self.init(
+            enabled: categorySettings.enabled,
+            displayPreviews: categorySettings.displayPreviews,
+            sound: EnginePeer.NotificationSettings.MessageSound(categorySettings.sound)
+        )
+    }
+    
+    func _asMessageNotificationSettings() -> MessageNotificationSettings {
+        return MessageNotificationSettings(
+            enabled: self.enabled,
+            displayPreviews: self.displayPreviews,
+            sound: self.sound._asMessageSound()
+        )
+    }
+}
+
+public extension EngineGlobalNotificationSettings {
+    init(_ globalNotificationSettings: GlobalNotificationSettingsSet) {
+        self.init(
+            privateChats: CategorySettings(globalNotificationSettings.privateChats),
+            groupChats: CategorySettings(globalNotificationSettings.groupChats),
+            channels: CategorySettings(globalNotificationSettings.channels),
+            contactsJoined: globalNotificationSettings.contactsJoined
+        )
     }
 }

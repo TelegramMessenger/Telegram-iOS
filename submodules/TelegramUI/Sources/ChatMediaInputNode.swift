@@ -913,9 +913,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 return
             }
             
-            let _ = (context.account.postbox.transaction { transaction -> StickerPackCollectionInfo? in
-                return (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.stickerPack
-            }
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StickerPack(id: peerId))
             |> deliverOnMainQueue).start(next: { info in
                 guard let strongSelf = self else {
                     return

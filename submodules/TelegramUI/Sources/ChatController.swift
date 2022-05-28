@@ -899,9 +899,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 
-                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
-                    return transaction.getMessage(messageId)
-                } |> deliverOnMainQueue).start(next: { [weak self] message in
+                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+                |> deliverOnMainQueue).start(next: { [weak self] message in
                     guard let strongSelf = self, let message = message else {
                         return
                     }
@@ -973,7 +972,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let _ = combineLatest(queue: .mainQueue(),
                     strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId)),
-                    contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction),
+                    contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction, messageNode: node as? ChatMessageItemView),
                     strongSelf.context.engine.stickers.availableReactions(),
                     peerAllowedReactions(context: strongSelf.context, peerId: topMessage.id.peerId),
                     ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
@@ -1646,9 +1645,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
-                return transaction.getMessage(messageId)
-            }
+            let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
             |> deliverOnMainQueue).start(next: { message in
                 guard let strongSelf = self, let message = message else {
                     return
@@ -1695,7 +1692,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                     
                                     strongSelf.chatDisplayNode.dismissInput()
-                                    strongSelf.effectiveNavigationController?.pushViewController(GameController(context: strongSelf.context, url: url, message: EngineMessage(message)))
+                                    strongSelf.effectiveNavigationController?.pushViewController(GameController(context: strongSelf.context, url: url, message: message))
                                 }
 
                                 var botPeer: TelegramUser?
@@ -1707,7 +1704,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }
                                 if botPeer == nil {
-                                    if let peer = message.author as? TelegramUser, peer.botInfo != nil {
+                                    if case let .user(peer) = message.author, peer.botInfo != nil {
                                         botPeer = peer
                                     } else if let peer = message.peers[message.id.peerId] as? TelegramUser, peer.botInfo != nil {
                                         botPeer = peer
@@ -2530,9 +2527,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             strongSelf.commitPurposefulAction()
             
-            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
-                return transaction.getMessage(messageId)
-            }
+            let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
             |> deliverOnMainQueue).start(next: { message in
                 guard let strongSelf = self, let message = message else {
                     return
@@ -2613,9 +2608,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if id.namespace == Namespaces.Message.ScheduledCloud {
-                let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Message] in
-                    return transaction.getMessageGroup(id) ?? []
-                } |> deliverOnMainQueue).start(next: { messages in
+                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.MessageGroup(id: id))
+                |> deliverOnMainQueue).start(next: { messages in
                     guard let strongSelf = self, let message = messages.filter({ $0.id == id }).first else {
                         return
                     }
@@ -2641,13 +2635,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
                     }, action: { [weak self] controller, f in
                         if let strongSelf = self {
-                            strongSelf.interfaceInteraction?.deleteMessages(messages, controller, f)
+                            strongSelf.interfaceInteraction?.deleteMessages(messages.map { $0._asMessage() }, controller, f)
                         }
                     })))
                     
                     strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                     
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, postbox: strongSelf.context.account.postbox, message: message, selectAll: true)), items: .single(ContextController.Items(content: .list(actions))), recognizer: nil)
+                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, postbox: strongSelf.context.account.postbox, message: message._asMessage(), selectAll: true)), items: .single(ContextController.Items(content: .list(actions))), recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.forEachController({ controller in
                         if let controller = controller as? TooltipScreen {
@@ -2658,9 +2652,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             } else {
-                let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Message] in
-                    return transaction.getMessageFailedGroup(id) ?? []
-                } |> deliverOnMainQueue).start(next: { messages in
+                let _ = (strongSelf.context.engine.messages.failedMessageGroup(id: id)
+                |> deliverOnMainQueue).start(next: { messages in
                     guard let strongSelf = self else {
                         return
                     }
@@ -2671,9 +2664,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if groups[groupInfo.stableId] == nil {
                                 groups[groupInfo.stableId] = []
                             }
-                            groups[groupInfo.stableId]?.append(message)
+                            groups[groupInfo.stableId]?.append(message._asMessage())
                         } else {
-                            notGrouped.append(message)
+                            notGrouped.append(message._asMessage())
                         }
                     }
                     
@@ -2861,9 +2854,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
-                    return transaction.getMessage(messageId)
-                }
+                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
                 |> deliverOnMainQueue).start(next: { message in
                     guard let message = message else {
                         return
@@ -2962,9 +2953,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, editScheduledMessagesTime: { [weak self] messageIds in
             if let strongSelf = self, let messageId = messageIds.first {
                 let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
-                        return transaction.getMessage(messageId)
-                    } |> deliverOnMainQueue).start(next: { [weak self] message in
+                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+                    |> deliverOnMainQueue).start(next: { [weak self] message in
                         guard let strongSelf = self, let message = message else {
                             return
                         }
@@ -3090,9 +3080,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
-                    return transaction.getMessage(messageId)
-                }
+                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
                 |> deliverOnMainQueue).start(next: { message in
                     guard let message = message else {
                         return
@@ -3145,21 +3133,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.dismissAllTooltips()
             
             let context = strongSelf.context
-            let _ = (context.account.postbox.transaction { transaction -> (Peer?, Message?) in
-                return (transaction.getPeer(peer.id), messageId.flatMap { transaction.getMessage($0) })
+            
+            let dataSignal: Signal<(EnginePeer?, EngineMessage?), NoError>
+            if let messageId = messageId {
+                dataSignal = context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id),
+                    TelegramEngine.EngineData.Item.Messages.Message(id: messageId)
+                )
+            } else {
+                dataSignal = context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id)
+                )
+                |> map { peer -> (EnginePeer?, EngineMessage?) in
+                    return (peer, nil)
+                }
             }
+            
+            let _ = (dataSignal
             |> deliverOnMainQueue).start(next: { [weak self] peer, message in
                 guard let strongSelf = self, let peer = peer, peer.smallProfileImage != nil else {
                     return
                 }
               
-                let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
+                let galleryController = AvatarGalleryController(context: context, peer: peer._asPeer(), remoteEntries: nil, replaceRootController: { controller, ready in
                 }, synchronousLoad: true)
                 galleryController.setHintWillBePresentedInPreviewingContext(true)
                 
                 let items: Signal<[ContextMenuItem], NoError> = context.account.postbox.transaction { transaction -> [ContextMenuItem] in
                     var isChannel = false
-                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                    if case let .channel(peer) = peer, case .broadcast = peer.info {
                         isChannel = true
                     }
                     var items: [ContextMenuItem] = [
@@ -3192,7 +3194,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     if inputMode == .none {
                                         inputMode = .text
                                     }
-                                    return (chatTextInputAddMentionAttribute(current, peer: peer), inputMode)
+                                    return (chatTextInputAddMentionAttribute(current, peer: peer._asPeer()), inputMode)
                                 }
                             }, delay: true)
                         })))
@@ -3240,17 +3242,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                let _ = (context.account.postbox.transaction { transaction -> (MessageId, CachedPeerData?)? in
-                    if let message = transaction.getMessage(id), let sourceMessageId = message.forwardInfo?.sourceMessageId {
-                        return (sourceMessageId, transaction.getPeerCachedData(peerId: sourceMessageId.peerId))
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: id))
+                |> mapToSignal { message -> Signal<(EngineMessage.Id, Int32?)?, NoError> in
+                    if let message = message, let sourceMessageId = message.forwardInfo?.sourceMessageId {
+                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: sourceMessageId.peerId))
+                        |> map { statsDatacenterId -> (EngineMessage.Id, Int32?)? in
+                            return (sourceMessageId, statsDatacenterId)
+                        }
                     } else {
-                        return (id, transaction.getPeerCachedData(peerId: id.peerId))
+                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: id.peerId))
+                        |> map { statsDatacenterId -> (EngineMessage.Id, Int32?)? in
+                            return (id, statsDatacenterId)
+                        }
                     }
-                } |> deliverOnMainQueue).start(next: { [weak self] messageIdAndCachedPeerData in
-                    guard let strongSelf = self, let (id, cachedPeerDataValue) = messageIdAndCachedPeerData, let cachedPeerData = cachedPeerDataValue else {
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] messageIdAndStatsDatacenterId in
+                    guard let strongSelf = self, let (id, statsDatacenterId) = messageIdAndStatsDatacenterId, let statsDatacenterId = statsDatacenterId else {
                         return
                     }
-                    strongSelf.push(messageStatsController(context: context, messageId: id, cachedPeerData: cachedPeerData))
+                    strongSelf.push(messageStatsController(context: context, messageId: id, statsDatacenterId: statsDatacenterId))
                 })
             }, delay: true)
         }, editMessageMedia: { [weak self] messageId, draw in
@@ -3261,9 +3271,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.chatDisplayNode.dismissInput()
             
             if draw {
-                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
-                    return transaction.getMessage(messageId)
-                } |> deliverOnMainQueue).start(next: { [weak self] message in
+                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+                |> deliverOnMainQueue).start(next: { [weak self] message in
                     guard let strongSelf = self, let message = message else {
                         return
                     }
@@ -6122,9 +6131,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if let messageId = strongSelf.presentationInterfaceState.interfaceState.editMessage?.messageId {
-                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
-                    return transaction.getMessage(messageId)
-                } |> deliverOnMainQueue).start(next: { message in
+                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+                |> deliverOnMainQueue).start(next: { message in
                     guard let strongSelf = self, let editMessageState = strongSelf.presentationInterfaceState.editMessageState, case let .media(options) = editMessageState.content else {
                         return
                     }
@@ -6132,10 +6140,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let message = message {
                         for media in message.media {
                             if let image = media as? TelegramMediaImage {
-                                originalMediaReference = .message(message: MessageReference(message), media: image)
+                                originalMediaReference = .message(message: MessageReference(message._asMessage()), media: image)
                             } else if let file = media as? TelegramMediaFile {
                                 if file.isVideo || file.isAnimated {
-                                    originalMediaReference = .message(message: MessageReference(message), media: file)
+                                    originalMediaReference = .message(message: MessageReference(message._asMessage()), media: file)
                                 }
                             }
                         }
@@ -6892,21 +6900,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, shareSelectedMessages: { [weak self] in
             if let strongSelf = self, let selectedIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
                 strongSelf.commitPurposefulAction()
-                let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Message] in
-                    var messages: [Message] = []
-                    for id in selectedIds {
-                        if let message = transaction.getMessage(id) {
-                            messages.append(message)
-                        }
-                    }
-                    return messages
-                } |> deliverOnMainQueue).start(next: { messages in
+                let _ = (strongSelf.context.engine.data.get(EngineDataMap(
+                    selectedIds.map(TelegramEngine.EngineData.Item.Messages.Message.init)
+                ))
+                |> map { messages -> [EngineMessage] in
+                    return messages.values.compactMap { $0 }
+                }
+                |> deliverOnMainQueue).start(next: { messages in
                     if let strongSelf = self, !messages.isEmpty {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                         
                         let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
                             return lhs.index < rhs.index
-                        })), externalShare: true, immediateExternalShare: true, updatedPresentationData: strongSelf.updatedPresentationData)
+                        }).map { $0._asMessage() }), externalShare: true, immediateExternalShare: true, updatedPresentationData: strongSelf.updatedPresentationData)
                         strongSelf.chatDisplayNode.dismissInput()
                         strongSelf.present(shareController, in: .window(.root))
                     }
@@ -8477,14 +8483,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.presentChatRequestAdminInfo()
         }, displayCopyProtectionTip: { [weak self] node, save in
             if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer, let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds {
-                let _ = (strongSelf.context.account.postbox.transaction { transaction -> [EngineMessage] in
-                    var messages: [EngineMessage] = []
-                    for id in messageIds {
-                        if let message = transaction.getMessage(id) {
-                            messages.append(EngineMessage(message))
-                        }
-                    }
-                    return messages
+                let _ = (strongSelf.context.engine.data.get(EngineDataMap(
+                    messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init)
+                ))
+                |> map { messages -> [EngineMessage] in
+                    return messages.values.compactMap { $0 }
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] messages in
                     guard let strongSelf = self else {
@@ -11751,7 +11754,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         
                     configureLegacyAssetPicker(controller, context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, initialCaption: inputText, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, presentWebSearch: editingMedia ? nil : { [weak self, weak legacyController] in
                         if let strongSelf = self {
-                            let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: EnginePeer(peer), chatLocation: strongSelf.chatLocation, configuration: searchBotsConfiguration, mode: .media(attachment: false, completion: { results, selectionState, editingState, silentPosting in
+                            let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: EnginePeer(peer), chatLocation: strongSelf.chatLocation, configuration: EngineConfiguration.SearchBots(searchBotsConfiguration), mode: .media(attachment: false, completion: { results, selectionState, editingState, silentPosting in
                                 if let legacyController = legacyController {
                                     legacyController.dismiss()
                                 }
@@ -11854,13 +11857,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let _ = (self.context.account.postbox.transaction { transaction -> SearchBotsConfiguration in
-            if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.searchBotsConfiguration)?.get(SearchBotsConfiguration.self) {
-                return entry
-            } else {
-                return SearchBotsConfiguration.defaultValue
-            }
-        }
+        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
         |> deliverOnMainQueue).start(next: { [weak self] configuration in
             if let strongSelf = self {
                 let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: EnginePeer(peer), chatLocation: strongSelf.chatLocation, configuration: configuration, mode: .media(attachment: attachment, completion: { [weak self] results, selectionState, editingState, silentPosting in
@@ -13985,11 +13982,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func forwardMessages(messageIds: [MessageId], options: ChatInterfaceForwardOptionsState? = nil, resetCurrent: Bool = false) {
-        let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
-            return messageIds.compactMap(transaction.getMessage)
-        }
+        let _ = (self.context.engine.data.get(EngineDataMap(
+            messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init)
+        ))
         |> deliverOnMainQueue).start(next: { [weak self] messages in
-            self?.forwardMessages(messages: messages, options: options, resetCurrent: resetCurrent)
+            self?.forwardMessages(messages: messages.values.compactMap { $0?._asMessage() }, options: options, resetCurrent: resetCurrent)
         })
     }
     

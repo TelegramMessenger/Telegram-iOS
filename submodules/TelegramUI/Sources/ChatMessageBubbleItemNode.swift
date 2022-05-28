@@ -2697,6 +2697,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     
                     contentNode.updateIsTextSelectionActive = { [weak contextSourceNode] value in
                         contextSourceNode?.updateDistractionFreeMode?(value)
+                        
                     }
                     contentNode.updateIsExtractedToContextPreview(contextSourceNode.isExtractedToContextPreview)
                 }
@@ -2829,8 +2830,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
                     strongSelf.clippingNode.clipsToBounds = true
                     animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
-                        let _ = strongSelf
-                        //strongSelf?.clippingNode.clipsToBounds = false
+                        strongSelf?.clippingNode.clipsToBounds = false
                     })
 
                     strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
@@ -4025,5 +4025,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             return statusNode
         }
         return nil
+    }
+    
+    func hasExpandedAudioTranscription() -> Bool {
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageFileBubbleContentNode {
+                return contentNode.interactiveFileNode.hasExpandedAudioTranscription
+            }
+        }
+        return false
     }
 }

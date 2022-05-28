@@ -376,6 +376,30 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     private let waitingForNodesDisposable = MetaDisposable()
     
+    private var auxiliaryDisplayLink: CADisplayLink?
+    private var isAuxiliaryDisplayLinkEnabled: Bool = false {
+        didSet {
+            /*if self.isAuxiliaryDisplayLinkEnabled != oldValue {
+                if self.isAuxiliaryDisplayLinkEnabled {
+                    if self.auxiliaryDisplayLink == nil {
+                        let displayLink = CADisplayLink(target: DisplayLinkTarget({
+                        }), selector: #selector(DisplayLinkTarget.event))
+                        if #available(iOS 15.0, *) {
+                            displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+                        }
+                        displayLink.add(to: RunLoop.main, forMode: .common)
+                        self.auxiliaryDisplayLink = displayLink
+                    }
+                } else {
+                    if let auxiliaryDisplayLink = self.auxiliaryDisplayLink {
+                        self.auxiliaryDisplayLink = nil
+                        auxiliaryDisplayLink.invalidate()
+                    }
+                }
+            }*/
+        }
+    }
+    
     /*override open var accessibilityElements: [Any]? {
         get {
             var accessibilityElements: [Any] = []
@@ -783,12 +807,20 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if #available(iOS 15.0, *) {
+            if let scrollDisplayLink = self.scroller.value(forKey: "_scrollHeartbeat") as? CADisplayLink {
+                let _ = scrollDisplayLink
+            }
+        }
+        
         self.isDragging = false
         if decelerate {
             self.lastContentOffsetTimestamp = CACurrentMediaTime()
             self.isDeceleratingAfterTracking = true
             self.updateHeaderItemsFlashing(animated: true)
             self.resetScrollIndicatorFlashTimer(start: false)
+            
+            self.isAuxiliaryDisplayLinkEnabled = true
         } else {
             self.isDeceleratingAfterTracking = false
             self.resetHeaderItemsFlashTimer(start: true)
@@ -797,6 +829,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             
             self.lastContentOffsetTimestamp = 0.0
             self.didEndScrolling?(false)
+            self.isAuxiliaryDisplayLinkEnabled = false
         }
         self.endedInteractiveDragging(self.touchesPosition)
     }
@@ -807,6 +840,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.resetHeaderItemsFlashTimer(start: true)
         self.updateHeaderItemsFlashing(animated: true)
         self.resetScrollIndicatorFlashTimer(start: true)
+        self.isAuxiliaryDisplayLinkEnabled = false
         if !scrollView.isTracking {
             self.didEndScrolling?(true)
         }
@@ -858,6 +892,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         self.updateScrollViewDidScroll(scrollView, synchronous: self.defaultToSynchronousTransactionWhileScrolling)
+        scrollView.fixScrollDisplayLink()
     }
     
     private var generalAccumulatedDeltaY: CGFloat = 0.0
@@ -3192,6 +3227,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             springAnimation.isRemovedOnCompletion = true
                             springAnimation.isAdditive = true
                             springAnimation.fillMode = CAMediaTimingFillMode.forwards
+                            if #available(iOS 15.0, *) {
+                                springAnimation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+                            }
                             
                             let k = Float(UIView.animationDurationFactor())
                             var speed: Float = 1.0
@@ -3223,6 +3261,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                             basicAnimation.isRemovedOnCompletion = true
                             basicAnimation.isAdditive = true
+                            if #available(iOS 15.0, *) {
+                                basicAnimation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+                            }
 
                             let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
                             reverseBasicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: cp1x, cp1y, cp2x, cp2y)
@@ -3231,6 +3272,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                             reverseBasicAnimation.isRemovedOnCompletion = true
                             reverseBasicAnimation.isAdditive = true
+                            if #available(iOS 15.0, *) {
+                                reverseBasicAnimation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+                            }
 
                             animation = basicAnimation
                             reverseAnimation = reverseBasicAnimation
@@ -3245,6 +3289,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                                 basicAnimation.isRemovedOnCompletion = true
                                 basicAnimation.isAdditive = true
+                                if #available(iOS 15.0, *) {
+                                    basicAnimation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+                                }
                                 
                                 let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
                                 reverseBasicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
@@ -3253,6 +3300,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                                 reverseBasicAnimation.isRemovedOnCompletion = true
                                 reverseBasicAnimation.isAdditive = true
+                                if #available(iOS 15.0, *) {
+                                    reverseBasicAnimation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+                                }
                                 
                                 animation = basicAnimation
                                 reverseAnimation = reverseBasicAnimation
@@ -3267,6 +3317,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                                 basicAnimation.isRemovedOnCompletion = true
                                 basicAnimation.isAdditive = true
+                                if #available(iOS 15.0, *) {
+                                    basicAnimation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+                                }
                                 
                                 let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
                                 reverseBasicAnimation.timingFunction = ContainedViewLayoutTransitionCurve.slide.mediaTimingFunction
@@ -3275,6 +3328,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                                 reverseBasicAnimation.isRemovedOnCompletion = true
                                 reverseBasicAnimation.isAdditive = true
+                                if #available(iOS 15.0, *) {
+                                    reverseBasicAnimation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+                                }
                                 
                                 animation = basicAnimation
                                 reverseAnimation = reverseBasicAnimation

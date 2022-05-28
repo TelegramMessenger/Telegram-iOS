@@ -1664,7 +1664,7 @@ public func internalMediaGridMessageVideo(postbox: Postbox, videoReference: File
     }
 }
 
-public func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId, photoReference: ImageMediaReference, displayAtSize: Int = 1000) -> Signal<MediaResourceStatus, NoError> {
+public func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId, photoReference: ImageMediaReference, displayAtSize: Int? = nil) -> Signal<MediaResourceStatus, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         if let range = representationFetchRangeForDisplayAtSize(representation: largestRepresentation, dimension: displayAtSize) {
             return combineLatest(

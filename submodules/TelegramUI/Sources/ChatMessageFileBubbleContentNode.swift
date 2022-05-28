@@ -72,6 +72,10 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             
             item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
         }
+        
+        self.interactiveFileNode.updateIsTextSelectionActive = { [weak self] value in
+            self?.updateIsTextSelectionActive?(value)
+        }
     }
     
     override func accessibilityActivate() -> Bool {
@@ -136,7 +140,8 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 displayReactions: true,
                 messageSelection: item.message.groupingKey != nil ? selection : nil,
                 layoutConstants: layoutConstants,
-                constrainedSize: CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height)
+                constrainedSize: CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height),
+                controllerInteraction: item.controllerInteraction
             ))
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
@@ -195,6 +200,14 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.interactiveFileNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+    }
+    
+    override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+        self.interactiveFileNode.willUpdateIsExtractedToContextPreview(value)
+    }
+    
+    override func updateIsExtractedToContextPreview(_ value: Bool) {
+        self.interactiveFileNode.updateIsExtractedToContextPreview(value)
     }
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {

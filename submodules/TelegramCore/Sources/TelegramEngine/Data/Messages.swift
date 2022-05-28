@@ -81,6 +81,27 @@ public extension TelegramEngine.EngineData.Item {
                 return EngineMessage(message)
             }
         }
+        
+        public struct MessageGroup: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = [EngineMessage]
+
+            fileprivate var id: EngineMessage.Id
+
+            public init(id: EngineMessage.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .messageGroup(id: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? MessageGroupView else {
+                    preconditionFailure()
+                }
+                return view.messages.map(EngineMessage.init)
+            }
+        }
 
         public struct Messages: TelegramEngineDataItem, PostboxViewDataItem {
             public typealias Result = [EngineMessage.Id: EngineMessage]

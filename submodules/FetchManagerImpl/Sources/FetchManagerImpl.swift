@@ -186,6 +186,9 @@ private final class FetchManagerCategoryContext {
                 if self.topEntryIdAndPriority?.0 == id {
                     self.topEntryIdAndPriority = nil
                 }
+                if let entry = self.entries[id] {
+                    Logger.shared.log("FetchManager", "Canceled fetching \(entry.resourceReference.resource.id.stringRepresentation)")
+                }
                 self.entries.removeValue(forKey: id)
                 removedEntries = true
             }
@@ -232,6 +235,7 @@ private final class FetchManagerCategoryContext {
                     }
                     activeContext.disposable?.dispose()
                     let postbox = self.postbox
+                    Logger.shared.log("FetchManager", "Begin fetching \(entry.resourceReference.resource.id.stringRepresentation) ranges: \(String(describing: parsedRanges))")
                     activeContext.disposable = (fetchedMediaResource(mediaBox: postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
                     |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
                         if filterDownloadStatsEntry(entry: entry), case let .message(message, _) = entry.mediaReference, let messageId = message.id, case .remote = type {
@@ -248,6 +252,7 @@ private final class FetchManagerCategoryContext {
                         return .single(type)
                     }
                     |> deliverOnMainQueue).start(next: { _ in
+                        Logger.shared.log("FetchManager", "Completed fetching \(entry.resourceReference.resource.id.stringRepresentation)")
                         entryCompleted(id)
                     })
                 } else {
@@ -356,6 +361,7 @@ private final class FetchManagerCategoryContext {
                     } else if ranges.isEmpty {
                     } else {
                         let postbox = self.postbox
+                        Logger.shared.log("FetchManager", "Begin fetching \(entry.resourceReference.resource.id.stringRepresentation) ranges: \(String(describing: parsedRanges))")
                         activeContext.disposable = (fetchedMediaResource(mediaBox: postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
                         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
                             if filterDownloadStatsEntry(entry: entry), case let .message(message, _) = entry.mediaReference, let messageId = message.id, case .remote = type {
@@ -372,6 +378,7 @@ private final class FetchManagerCategoryContext {
                             return .single(type)
                         }
                         |> deliverOnMainQueue).start(next: { _ in
+                            Logger.shared.log("FetchManager", "Completed fetching \(entry.resourceReference.resource.id.stringRepresentation)")
                             entryCompleted(topEntryId)
                         })
                     }
@@ -411,7 +418,8 @@ private final class FetchManagerCategoryContext {
         var entriesRemoved = false
         let _ = entriesRemoved
         
-        if let _ = self.entries[id] {
+        if let entry = self.entries[id] {
+            Logger.shared.log("FetchManager", "Cancel fetching \(entry.resourceReference.resource.id.stringRepresentation)")
             self.entries.removeValue(forKey: id)
             entriesRemoved = true
             

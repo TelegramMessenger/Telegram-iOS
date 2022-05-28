@@ -1,14 +1,14 @@
 import Foundation
 import UIKit
 
-private final class DisplayLinkTarget: NSObject {
+public final class DisplayLinkTarget: NSObject {
     private let f: () -> Void
     
-    init(_ f: @escaping () -> Void) {
+    public init(_ f: @escaping () -> Void) {
         self.f = f
     }
     
-    @objc func event() {
+    @objc public func event() {
         self.f()
     }
 }

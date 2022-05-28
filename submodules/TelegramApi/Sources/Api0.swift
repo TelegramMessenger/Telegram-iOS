@@ -360,7 +360,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1678949555] = { return Api.InputWebDocument.parse_inputWebDocument($0) }
     dict[-1625153079] = { return Api.InputWebFileLocation.parse_inputWebFileGeoPointLocation($0) }
     dict[-1036396922] = { return Api.InputWebFileLocation.parse_inputWebFileLocation($0) }
-    dict[215516896] = { return Api.Invoice.parse_invoice($0) }
+    dict[1475721060] = { return Api.Invoice.parse_invoice($0) }
     dict[-1059185703] = { return Api.JSONObjectValue.parse_jsonObjectValue($0) }
     dict[-146520221] = { return Api.JSONValue.parse_jsonArray($0) }
     dict[-952869270] = { return Api.JSONValue.parse_jsonBool($0) }
@@ -808,6 +808,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1135492588] = { return Api.Update.parse_updateStickerSets($0) }
     dict[196268545] = { return Api.Update.parse_updateStickerSetsOrder($0) }
     dict[-2112423005] = { return Api.Update.parse_updateTheme($0) }
+    dict[-2006880112] = { return Api.Update.parse_updateTranscribeAudio($0) }
     dict[-1007549728] = { return Api.Update.parse_updateUserName($0) }
     dict[88680979] = { return Api.Update.parse_updateUserPhone($0) }
     dict[-232290676] = { return Api.Update.parse_updateUserPhoto($0) }
@@ -917,6 +918,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[415997816] = { return Api.help.InviteText.parse_inviteText($0) }
     dict[-1600596305] = { return Api.help.PassportConfig.parse_passportConfig($0) }
     dict[-1078332329] = { return Api.help.PassportConfig.parse_passportConfigNotModified($0) }
+    dict[1065019118] = { return Api.help.PremiumPromo.parse_premiumPromo($0) }
     dict[-1942390465] = { return Api.help.PromoData.parse_promoData($0) }
     dict[-1728664459] = { return Api.help.PromoData.parse_promoDataEmpty($0) }
     dict[235081943] = { return Api.help.RecentMeUrls.parse_recentMeUrls($0) }
@@ -987,7 +989,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[816245886] = { return Api.messages.Stickers.parse_stickers($0) }
     dict[-244016606] = { return Api.messages.Stickers.parse_stickersNotModified($0) }
-    dict[-1077051894] = { return Api.messages.TranscribedAudio.parse_transcribedAudio($0) }
+    dict[-1821037486] = { return Api.messages.TranscribedAudio.parse_transcribedAudio($0) }
     dict[1741309751] = { return Api.messages.TranslatedText.parse_translateNoResult($0) }
     dict[-1575684144] = { return Api.messages.TranslatedText.parse_translateResultText($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
@@ -1645,6 +1647,8 @@ public extension Api {
             case let _1 as Api.help.InviteText:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.PassportConfig:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.PremiumPromo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.PromoData:
                 _1.serialize(buffer, boxed)

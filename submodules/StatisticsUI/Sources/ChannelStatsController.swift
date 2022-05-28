@@ -505,7 +505,11 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         controller?.clearItemNodesHighlight(animated: true)
     }
     openMessageStatsImpl = { [weak controller] messageId in
-        controller?.push(messageStatsController(context: context, messageId: messageId, cachedPeerData: cachedPeerData))
+        var statsDatacenterId: Int32?
+        if let cachedData = cachedPeerData as? CachedChannelData {
+            statsDatacenterId = cachedData.statsDatacenterId
+        }
+        controller?.push(messageStatsController(context: context, messageId: messageId, statsDatacenterId: statsDatacenterId))
     }
     contextActionImpl = { [weak controller] messageId, sourceNode, gesture in
         guard let controller = controller, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {

@@ -4,6 +4,29 @@ import Postbox
 public typealias EngineExportedPeerInvitation = ExportedInvitation
 
 public extension TelegramEngine.EngineData.Item {
+    enum NotificationSettings {
+        public struct Global: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EngineGlobalNotificationSettings
+
+            public init() {
+            }
+
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.globalNotifications]))
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let notificationSettings = view.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) else {
+                    return EngineGlobalNotificationSettings(GlobalNotificationSettings.defaultSettings.effective)
+                }
+                return EngineGlobalNotificationSettings(notificationSettings.effective)
+            }
+        }
+    }
+    
     enum Peer {
         public struct Peer: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = Optional<EnginePeer>
@@ -101,7 +124,7 @@ public extension TelegramEngine.EngineData.Item {
         }
 
         public struct NotificationSettings: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
-            public typealias Result = Optional<EnginePeer.NotificationSettings>
+            public typealias Result = EnginePeer.NotificationSettings
 
             fileprivate var id: EnginePeer.Id
             public var mapKey: EnginePeer.Id {
@@ -121,7 +144,7 @@ public extension TelegramEngine.EngineData.Item {
                     preconditionFailure()
                 }
                 guard let notificationSettings = view.notificationSettings as? TelegramPeerNotificationSettings else {
-                    return nil
+                    return EnginePeer.NotificationSettings(TelegramPeerNotificationSettings.defaultSettings)
                 }
                 return EnginePeer.NotificationSettings(notificationSettings)
             }
@@ -226,6 +249,124 @@ public extension TelegramEngine.EngineData.Item {
                 default:
                     return nil
                 }
+            }
+        }
+        
+        public struct StatsDatacenterId: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<Int32>
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                guard let cachedPeerData = view.cachedPeerData else {
+                    return nil
+                }
+                switch cachedPeerData {
+                case let channel as CachedChannelData:
+                    return channel.statsDatacenterId
+                default:
+                    return nil
+                }
+            }
+        }
+        
+        public struct ThemeEmoticon: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<String>
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                guard let cachedPeerData = view.cachedPeerData else {
+                    return nil
+                }
+                if let cachedData = cachedPeerData as? CachedUserData {
+                    return cachedData.themeEmoticon
+                } else if let cachedData = cachedPeerData as? CachedGroupData {
+                    return cachedData.themeEmoticon
+                } else if let cachedData = cachedPeerData as? CachedChannelData {
+                    return cachedData.themeEmoticon
+                } else {
+                    return nil
+                }
+            }
+        }
+        
+        public struct IsContact: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Bool
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .isContact(id: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? IsContactView else {
+                    preconditionFailure()
+                }
+                return view.isContact
+            }
+        }
+        
+        public struct StickerPack: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = StickerPackCollectionInfo?
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                guard let cachedData = view.cachedPeerData as? CachedChannelData else {
+                    return nil
+                }
+                return cachedData.stickerPack
             }
         }
     }

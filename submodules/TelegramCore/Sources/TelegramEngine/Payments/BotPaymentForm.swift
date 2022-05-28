@@ -124,7 +124,7 @@ public enum BotPaymentFormRequestError {
 extension BotPaymentInvoice {
     init(apiInvoice: Api.Invoice) {
         switch apiInvoice {
-            case let .invoice(flags, currency, prices, maxTipAmount, suggestedTipAmounts):
+            case let .invoice(flags, currency, prices, maxTipAmount, suggestedTipAmounts, _):
                 var fields = BotPaymentInvoiceFields()
                 if (flags & (1 << 1)) != 0 {
                     fields.insert(.name)

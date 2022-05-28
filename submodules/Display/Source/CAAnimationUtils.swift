@@ -24,6 +24,7 @@ import UIKitRuntimeUtils
         }
         if let completion = self.completion {
             completion(flag)
+            self.completion = nil
         }
     }
 }
@@ -83,6 +84,9 @@ public extension CALayer {
                 animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
                 animation.fillMode = .both
             }
+            if #available(iOS 15.0, *) {
+                animation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+            }
             return animation
         } else if timingFunction == kCAMediaTimingFunctionSpring {
             let animation = makeSpringAnimation(keyPath)
@@ -106,6 +110,10 @@ public extension CALayer {
             if !delay.isZero {
                 animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
                 animation.fillMode = .both
+            }
+            
+            if #available(iOS 15.0, *) {
+                animation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
             }
             
             return animation
@@ -136,6 +144,10 @@ public extension CALayer {
             if !delay.isZero {
                 animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
                 animation.fillMode = .both
+            }
+            
+            if #available(iOS 15.0, *) {
+                animation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
             }
             
             return animation
@@ -196,6 +208,10 @@ public extension CALayer {
             animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
         }
         
+        if #available(iOS 15.0, *) {
+            animation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+        }
+        
         self.add(animation, forKey: keyPath)
     }
     
@@ -224,6 +240,10 @@ public extension CALayer {
         
         animation.speed = speed * Float(animation.duration / duration)
         animation.isAdditive = additive
+        
+        if #available(iOS 15.0, *) {
+            animation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+        }
         
         return animation
     }
@@ -257,6 +277,10 @@ public extension CALayer {
         animation.speed = speed * Float(animation.duration / duration)
         animation.isAdditive = additive
         
+        if #available(iOS 15.0, *) {
+            animation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+        }
+        
         self.add(animation, forKey: keyPath)
     }
     
@@ -282,6 +306,10 @@ public extension CALayer {
         animation.isAdditive = true
         if let completion = completion {
             animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
+        }
+        
+        if #available(iOS 15.0, *) {
+            animation.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
         }
         
         self.add(animation, forKey: key)

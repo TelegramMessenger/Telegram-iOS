@@ -705,11 +705,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     } else {
                         switch peer {
                             case let .peer(peer, _, _):
-                                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Peer? in
-                                    return transaction.getPeer(peer.id)
-                                } |> deliverOnMainQueue).start(next: { peer in
+                                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id))
+                                |> deliverOnMainQueue).start(next: { peer in
                                     if let strongSelf = self, let peer = peer {
-                                        strongSelf.requestOpenPeerFromSearch?(peer)
+                                        strongSelf.requestOpenPeerFromSearch?(peer._asPeer())
                                     }
                                 })
                             case .deviceContact:

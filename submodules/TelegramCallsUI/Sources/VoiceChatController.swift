@@ -6119,9 +6119,10 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 return
             }
             
-            let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
-                return (transaction.getPeer(peerId), currentSearchBotsConfiguration(transaction: transaction))
-            }
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Configuration.SearchBots()
+            )
             |> deliverOnMainQueue).start(next: { [weak self] peer, searchBotsConfiguration in
                 guard let strongSelf = self, let peer = peer else {
                     return
@@ -6167,7 +6168,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     guard let strongSelf = self else {
                         return
                     }
-                    let controller = WebSearchController(context: strongSelf.context, peer: EnginePeer(peer), chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.id.namespace == Namespaces.Peer.CloudUser ? nil : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
+                    let controller = WebSearchController(context: strongSelf.context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.id.namespace == Namespaces.Peer.CloudUser ? nil : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
                         assetsController?.dismiss()
                         self?.updateProfilePhoto(result)
                     }))

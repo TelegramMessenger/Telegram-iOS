@@ -2473,7 +2473,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         var attributes: [MessageAttribute] = []
                         attributes.append(ForwardOptionsMessageAttribute(hideNames: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideNames == true, hideCaptions: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideCaptions == true))
 
-                        for id in forwardMessageIds {
+                        for id in forwardMessageIds.sorted() {
                             messages.append(.forward(source: id, grouping: .auto, attributes: attributes, correlationId: nil))
                         }
                     }

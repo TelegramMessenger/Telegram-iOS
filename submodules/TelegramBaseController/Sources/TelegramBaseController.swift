@@ -48,9 +48,8 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
         }
     }
     if let id = context.liveLocationManager?.internalMessageForPeerId(peerId) {
-        let _ = (context.account.postbox.transaction { transaction -> EngineMessage? in
-            return transaction.getMessage(id).flatMap(EngineMessage.init)
-        } |> deliverOnMainQueue).start(next: presentImpl)
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: id))
+        |> deliverOnMainQueue).start(next: presentImpl)
     } else if let liveLocationManager = context.liveLocationManager {
         let _ = (liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId)
         |> take(1)

@@ -1183,13 +1183,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 //                params.openPeer(peer, .info)
             })
             
-            let _ = ((context.account.postbox.transaction { transaction -> Message? in
-                return transaction.getMessage(messageId)
-            }) |> deliverOnMainQueue).start(next: { message in
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+            |> deliverOnMainQueue).start(next: { message in
                 guard let message = message else {
                     return
                 }
-                let controller = LocationViewController(context: context, subject: message, params: controllerParams)
+                let controller = LocationViewController(context: context, subject: message._asMessage(), params: controllerParams)
                 controller.navigationPresentation = .modal
                 navigationController.pushViewController(controller)
             })

@@ -24,10 +24,22 @@ import AudioWaveformComponent
 import ShimmerEffect
 import ConvertOpusToAAC
 import LocalAudioTranscription
+import TextSelectionNode
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
     let cancel: () -> Void
+}
+
+private func transcribedText(message: Message) -> EngineAudioTranscriptionResult? {
+    for attribute in message.attributes {
+        if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+            if !attribute.text.isEmpty || !attribute.isPending {
+                return .success(EngineAudioTranscriptionResult.Success(id: attribute.id, text: attribute.text))
+            }
+        }
+    }
+    return nil
 }
 
 final class ChatMessageInteractiveFileNode: ASDisplayNode {
@@ -51,6 +63,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let messageSelection: Bool?
         let layoutConstants: ChatMessageItemLayoutConstants
         let constrainedSize: CGSize
+        let controllerInteraction: ChatControllerInteraction
         
         init(
             context: AccountContext,
@@ -71,7 +84,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             displayReactions: Bool,
             messageSelection: Bool?,
             layoutConstants: ChatMessageItemLayoutConstants,
-            constrainedSize: CGSize
+            constrainedSize: CGSize,
+            controllerInteraction: ChatControllerInteraction
         ) {
             self.context = context
             self.presentationData = presentationData
@@ -92,6 +106,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             self.messageSelection = messageSelection
             self.layoutConstants = layoutConstants
             self.constrainedSize = constrainedSize
+            self.controllerInteraction = controllerInteraction
         }
     }
     
@@ -113,6 +128,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private var audioTranscriptionButton: ComponentHostView<Empty>?
     private let textNode: TextNode
+    private var textSelectionNode: TextSelectionNode?
+    
+    var updateIsTextSelectionActive: ((Bool) -> Void)?
+    
     let dateAndStatusNode: ChatMessageDateAndStatusNode
     private let consumableContentNode: ASImageNode
     
@@ -168,15 +187,22 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private var context: AccountContext?
     private var message: Message?
+    private var arguments: Arguments?
     private var presentationData: ChatPresentationData?
     private var file: TelegramMediaFile?
     private var progressFrame: CGRect?
     private var streamingCacheStatusFrame: CGRect?
     private var fileIconImage: UIImage?
     
-    private var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .possible
-    private var transcribedText: EngineAudioTranscriptionResult?
+    private var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
     private var transcribeDisposable: Disposable?
+    var hasExpandedAudioTranscription: Bool {
+        if case .expanded = audioTranscriptionState {
+            return true
+        } else {
+            return false
+        }
+    }
     
     override init() {
         self.titleNode = TextNode()
@@ -306,17 +332,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             return
         }
         
-        if self.transcribedText == nil {
-            for attribute in message.attributes {
-                if let attribute = attribute as? AudioTranscriptionMessageAttribute {
-                    self.transcribedText = .success(EngineAudioTranscriptionResult.Success(id: attribute.id, text: attribute.text))
-                    self.audioTranscriptionState = .collapsed
-                    break
-                }
-            }
-        }
-        
-        if self.transcribedText == nil {
+        if transcribedText(message: message) == nil {
             if self.transcribeDisposable == nil {
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
@@ -324,9 +340,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if context.sharedContext.immediateExperimentalUISettings.localTranscription {
                     let appLocale = presentationData.strings.baseLanguageCode
                     
-                    let signal: Signal<String?, NoError> = context.account.postbox.transaction { transaction -> Message? in
-                        return transaction.getMessage(message.id)
-                    }
+                    let signal: Signal<String?, NoError> = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: message.id))
                     |> mapToSignal { message -> Signal<String?, NoError> in
                         guard let message = message else {
                             return .single(nil)
@@ -363,7 +377,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             return
                         }
                         strongSelf.transcribeDisposable = nil
-                        if let result = result {
+                        /*if let result = result {
                             strongSelf.transcribedText = .success(EngineAudioTranscriptionResult.Success(id: 0, text: result))
                         } else {
                             strongSelf.transcribedText = .error
@@ -373,7 +387,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         } else {
                             strongSelf.audioTranscriptionState = .collapsed
                         }
-                        strongSelf.requestUpdateLayout(true)
+                        strongSelf.requestUpdateLayout(true)*/
                     })
                 } else {
                     self.transcribeDisposable = (context.engine.messages.transcribeAudio(messageId: message.id)
@@ -382,9 +396,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             return
                         }
                         strongSelf.transcribeDisposable = nil
-                        strongSelf.audioTranscriptionState = .expanded
+                        /*strongSelf.audioTranscriptionState = .expanded
                         strongSelf.transcribedText = result
-                        strongSelf.requestUpdateLayout(true)
+                        strongSelf.requestUpdateLayout(true)*/
                     })
                 }
             }
@@ -412,7 +426,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         
         let currentMessage = self.message
-        let transcribedText = self.transcribedText
         let audioTranscriptionState = self.audioTranscriptionState
         
         return { arguments in
@@ -587,7 +600,22 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let descriptionMaxWidth = max(descriptionLayout.size.width, descriptionMeasuringLayout.size.width)
                 let textFont = arguments.presentationData.messageFont
                 let textString: NSAttributedString?
-                if let transcribedText = transcribedText, case .expanded = audioTranscriptionState {
+                var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
+                
+                let transcribedText = transcribedText(message: arguments.message)
+                
+                switch audioTranscriptionState {
+                case .inProgress:
+                    if transcribedText != nil {
+                        updatedAudioTranscriptionState = .expanded
+                    }
+                default:
+                    break
+                }
+                
+                let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? audioTranscriptionState
+                
+                if let transcribedText = transcribedText, case .expanded = effectiveAudioTranscriptionState {
                     switch transcribedText {
                     case let .success(success):
                         textString = NSAttributedString(string: success.text, font: textFont, textColor: messageTheme.primaryTextColor)
@@ -786,6 +814,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.context = arguments.context
                             strongSelf.presentationData = arguments.presentationData
                             strongSelf.message = arguments.message
+                            strongSelf.arguments = arguments
                             strongSelf.file = arguments.file
                             
                             let _ = titleApply()
@@ -795,6 +824,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.titleNode.frame = titleFrame
                             strongSelf.descriptionNode.frame = descriptionFrame
                             strongSelf.descriptionMeasuringNode.frame = CGRect(origin: CGPoint(), size: descriptionMeasuringLayout.size)
+                            
+                            if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
+                                strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
+                            }
                             
                             if let consumableContentIcon = consumableContentIcon {
                                 if strongSelf.consumableContentNode.supernode == nil {
@@ -839,6 +872,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             } else {
                                 if strongSelf.textNode.supernode != nil {
                                     strongSelf.textNode.removeFromSupernode()
+                                }
+                            }
+                            
+                            if let textSelectionNode = strongSelf.textSelectionNode {
+                                let shouldUpdateLayout = textSelectionNode.frame.size != textFrame.size
+                                textSelectionNode.frame = textFrame
+                                textSelectionNode.highlightAreaNode.frame = textFrame
+                                if shouldUpdateLayout {
+                                    textSelectionNode.updateLayout()
                                 }
                             }
                             
@@ -972,7 +1014,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 }
                                 
                                 var isTranscriptionInProgress = false
-                                if case .inProgress = audioTranscriptionState {
+                                if case .inProgress = effectiveAudioTranscriptionState {
                                     isTranscriptionInProgress = true
                                 }
                                 
@@ -1011,7 +1053,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
                                         component: AnyComponent(AudioTranscriptionButtonComponent(
                                             theme: arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing,
-                                            transcriptionState: audioTranscriptionState,
+                                            transcriptionState: effectiveAudioTranscriptionState,
                                             pressed: {
                                                 guard let strongSelf = self else {
                                                     return
@@ -1519,6 +1561,61 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     })
                 })
             })
+        }
+    }
+    
+    func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+        if !value {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
+        }
+    }
+    
+    func updateIsExtractedToContextPreview(_ value: Bool) {
+        if value {
+            if self.textSelectionNode == nil, self.textNode.supernode != nil, let item = self.arguments, !item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected(), let rootNode = item.controllerInteraction.chatControllerNode() {
+                let selectionColor: UIColor
+                let knobColor: UIColor
+                if item.message.effectivelyIncoming(item.context.account.peerId) {
+                    selectionColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionColor
+                    knobColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionKnobColor
+                } else {
+                    selectionColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionColor
+                    knobColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionKnobColor
+                }
+                
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor), strings: item.presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
+                    self?.updateIsTextSelectionActive?(value)
+                }, present: { [weak self] c, a in
+                    self?.arguments?.controllerInteraction.presentGlobalOverlayController(c, a)
+                }, rootNode: rootNode, performAction: { [weak self] text, action in
+                    guard let strongSelf = self, let item = strongSelf.arguments else {
+                        return
+                    }
+                    item.controllerInteraction.performTextSelectionAction(item.message.stableId, text, action)
+                })
+                self.textSelectionNode = textSelectionNode
+                self.addSubnode(textSelectionNode)
+                self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)
+                textSelectionNode.frame = self.textNode.frame
+                textSelectionNode.highlightAreaNode.frame = self.textNode.frame
+            }
+        } else {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                self.updateIsTextSelectionActive?(false)
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
         }
     }
     

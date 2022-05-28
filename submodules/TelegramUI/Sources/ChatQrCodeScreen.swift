@@ -995,11 +995,9 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         let sharedData = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
         |> take(1)
         if case let .peer(peer) = controller.subject, peer.id != self.context.account.peerId {
-            let cachedData = self.context.account.postbox.transaction { transaction in
-                return transaction.getPeerCachedData(peerId: peer.id)
-            }
-            initiallySelectedEmoticon = combineLatest(cachedData, sharedData)
-            |> map { cachedData, sharedData -> String in
+            let themeEmoticon = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThemeEmoticon(id: peer.id))
+            initiallySelectedEmoticon = combineLatest(themeEmoticon, sharedData)
+            |> map { themeEmoticon, sharedData -> String in
                 let themeSettings: PresentationThemeSettings
                 if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
                     themeSettings = current
@@ -1008,15 +1006,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
                 }
                 let currentDefaultEmoticon = themeSettings.theme.emoticon ?? defaultEmoticon
                 
-                if let cachedData = cachedData as? CachedUserData {
-                    return cachedData.themeEmoticon ?? currentDefaultEmoticon
-                } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.themeEmoticon ?? currentDefaultEmoticon
-                } else if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.themeEmoticon ?? currentDefaultEmoticon
-                } else {
-                    return currentDefaultEmoticon
-                }
+                return themeEmoticon ?? currentDefaultEmoticon
             }
         } else {
             initiallySelectedEmoticon = sharedData
