@@ -51,10 +51,6 @@ public struct BadPasscodeAttempts: Codable, Equatable {
         self.init(entry)
     }
     
-    public static func ==(lhs: BadPasscodeAttempts, rhs: BadPasscodeAttempts) -> Bool {
-        return lhs.badPasscodeAttempts == rhs.badPasscodeAttempts
-    }
-    
     public func withUpdatedBadPasscodeAttempts(_ badPasscodeAttempts: [BadPasscodeAttempt]) -> BadPasscodeAttempts {
         return BadPasscodeAttempts(badPasscodeAttempts: badPasscodeAttempts)
     }

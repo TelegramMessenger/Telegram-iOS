@@ -23,6 +23,7 @@ swift_library(
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/LocalMediaResources:LocalMediaResources",
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
+        "//submodules/AccountUtils:AccountUtils",
     ],
     visibility = [
         "//visibility:public",

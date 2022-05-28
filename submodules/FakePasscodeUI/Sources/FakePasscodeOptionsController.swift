@@ -15,6 +15,7 @@ import PasscodeUI
 import FakePasscode
 import AvatarNode
 import LocalMediaResources
+import AccountUtils
 
 public class ItemListControllerReactiveToPasscodeSwitch: ItemListController, ReactiveToPasscodeSwitch {
     private let onPasscodeSwitch: ((ViewController) -> Void)
@@ -36,7 +37,6 @@ public class ItemListControllerReactiveToPasscodeSwitch: ItemListController, Rea
 }
 
 private final class FakePasscodeOptionsControllerArguments {
-    let account: Account
     let changeName: (String) -> Void
     let commitName: () -> Void
     let changePasscode: () -> Void
@@ -49,12 +49,11 @@ private final class FakePasscodeOptionsControllerArguments {
     let smsActions: () -> Void
     let clearCache: (Bool) -> Void
     let clearProxies: (Bool) -> Void
-    let accountActions: () -> Void
+    let accountActions: (FakePasscodeActionsAccount) -> Void
     let deletePasscode: () -> Void
     let dismissInput: () -> Void
 
-    init(account: Account, changeName: @escaping (String) -> Void, commitName: @escaping () -> Void,  changePasscode: @escaping () -> Void, allowLogin: @escaping (Bool) -> Void, clearAfterActivation: @escaping (Bool) -> Void, deleteOtherPasscodes: @escaping (Bool) -> Void, activationMessage: @escaping (String) -> Void, commitActivationMessage: @escaping () -> Void, badPasscodeActivation: @escaping () -> Void, smsActions: @escaping () -> Void, clearCache: @escaping (Bool) -> Void, clearProxies: @escaping (Bool) -> Void, accountActions: @escaping () -> Void, deletePasscode: @escaping () -> Void, dismissInput: @escaping () -> Void) {
-        self.account = account
+    init(changeName: @escaping (String) -> Void, commitName: @escaping () -> Void,  changePasscode: @escaping () -> Void, allowLogin: @escaping (Bool) -> Void, clearAfterActivation: @escaping (Bool) -> Void, deleteOtherPasscodes: @escaping (Bool) -> Void, activationMessage: @escaping (String) -> Void, commitActivationMessage: @escaping () -> Void, badPasscodeActivation: @escaping () -> Void, smsActions: @escaping () -> Void, clearCache: @escaping (Bool) -> Void, clearProxies: @escaping (Bool) -> Void, accountActions: @escaping (FakePasscodeActionsAccount) -> Void, deletePasscode: @escaping () -> Void, dismissInput: @escaping () -> Void) {
         self.changeName = changeName
         self.commitName = commitName
         self.changePasscode = changePasscode
@@ -116,7 +115,7 @@ private enum FakePasscodeOptionsEntry: ItemListNodeEntry, Equatable {
     case clearProxies(PresentationTheme, String, Bool)
     case actionsInfo(PresentationTheme, String)
     case accountsHeader(PresentationTheme, String)
-    case accountActions(PresentationTheme, String, UIImage?)
+    case accountActions(PresentationTheme, FakePasscodeActionsAccount, Int)
     case accountsInfo(PresentationTheme, String)
     case deletePasscode(PresentationTheme, String)
     case deletePasscodeInfo(PresentationTheme, String)
@@ -184,14 +183,14 @@ private enum FakePasscodeOptionsEntry: ItemListNodeEntry, Equatable {
                 return 18
             case .accountsHeader:
                 return 19
-            case .accountActions:
-                return 20
+            case let .accountActions(_, _, index):
+                return 20 + Int32(index)
             case .accountsInfo:
-                return 21
+                return 1000
             case .deletePasscode:
-                return 22
+                return 1001
             case .deletePasscodeInfo:
-                return 23
+                return 1002
          }
      }
 
@@ -256,9 +255,9 @@ private enum FakePasscodeOptionsEntry: ItemListNodeEntry, Equatable {
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.clearProxies(updatedValue)
                 })
-            case let .accountActions(_, username, avatar):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: avatar, title: username, label: "", sectionId: self.section, style: .blocks, action: {
-                    arguments.accountActions()
+            case let .accountActions(_, account, _):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: account.avatar, title: account.displayName, label: "", sectionId: self.section, style: .blocks, action: {
+                    arguments.accountActions(account)
                 })
             case let .deletePasscode(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -271,14 +270,6 @@ private enum FakePasscodeOptionsEntry: ItemListNodeEntry, Equatable {
 private struct FakePasscodeOptionsData: Equatable {
     let settings: FakePasscodeSettings
 
-    init(settings: FakePasscodeSettings) {
-        self.settings = settings
-    }
-
-    static func ==(lhs: FakePasscodeOptionsData, rhs: FakePasscodeOptionsData) -> Bool {
-        return lhs.settings == rhs.settings
-    }
-
     func withUpdatedSettings(_ settings: FakePasscodeSettings) -> FakePasscodeOptionsData {
         return FakePasscodeOptionsData(settings: settings)
     }
@@ -289,8 +280,15 @@ private struct FakePasscodeOptionsControllerState: Equatable {
     var activationMessage: String?
 }
 
-private func fakePasscodeOptionsControllerEntries(presentationData: PresentationData, settings: FakePasscodeSettings, displayName: String, avatar: UIImage?) -> [FakePasscodeOptionsEntry] {
-    let entries: [FakePasscodeOptionsEntry] = [
+internal struct FakePasscodeActionsAccount: Equatable {
+    let peerId: PeerId
+    let recordId: AccountRecordId
+    let displayName: String
+    let avatar: UIImage?
+}
+
+private func fakePasscodeOptionsControllerEntries(presentationData: PresentationData, settings: FakePasscodeSettings, accounts: [FakePasscodeActionsAccount]) -> [FakePasscodeOptionsEntry] {
+    var entries: [FakePasscodeOptionsEntry] = [
         .changeName(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeChangeName, settings.name),
         .changePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeChange, settings.passcode ?? ""),
         .changeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeChangeHelp),
@@ -310,12 +308,18 @@ private func fakePasscodeOptionsControllerEntries(presentationData: Presentation
         // .clearCache(presentationData.theme, presentationData.strings.PasscodeSettings_ClearTelegramCache, settings.clearCache),
         // .clearProxies(presentationData.theme, presentationData.strings.PasscodeSettings_ClearTelegramCache, settings.clearProxies),
         // .actionsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActionsHelp),
-        // .accountsHeader(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAccountsTitle),
-        // .accountActions(presentationData.theme, displayName, avatar),
-        // .accountsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAccountsHelp),
+        .accountsHeader(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAccountsTitle.uppercased()),
+    ]
+    
+    for (index, account) in accounts.enumerated() {
+        entries.append(.accountActions(presentationData.theme, account, index))
+    }
+    
+    entries.append(contentsOf: [
+        .accountsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAccountsHelp),
         .deletePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeDelete),
         .deletePasscodeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeDeleteHelp)
-    ]
+    ])
 
     return entries
 }
@@ -338,7 +342,7 @@ public func fakePasscodeOptionsController(context: AccountContext, uuid: UUID, u
 
     let passcodeOptionsDataPromise = Promise<FakePasscodeOptionsData>()
     passcodeOptionsDataPromise.set(context.sharedContext.accountManager.transaction { transaction -> FakePasscodeSettings in
-        let passcodeSettings = FakePasscodeSettingsHolder(transaction).settings.first(where: { $0.uuid == uuid }) ?? .defaultSettings
+        let passcodeSettings = FakePasscodeSettingsHolder(transaction).settings.first(where: { $0.uuid == uuid })!
         return passcodeSettings
     }
     |> map { passcodeSettings -> FakePasscodeOptionsData in
@@ -351,7 +355,7 @@ public func fakePasscodeOptionsController(context: AccountContext, uuid: UUID, u
         return FakePasscodeOptionsData(settings: passcodeSettings)
     })
 
-    let arguments = FakePasscodeOptionsControllerArguments(account: context.account, changeName: { value in
+    let arguments = FakePasscodeOptionsControllerArguments(changeName: { value in
         updateState { state in
             var state = state
             state.name = value
@@ -369,7 +373,7 @@ public func fakePasscodeOptionsController(context: AccountContext, uuid: UUID, u
             })
         }
     }, changePasscode: {
-        pushFakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl, challengeDataUpdate: { transaction, newPasscode, numerical in
+        pushFakePasscodeSetupController(context: context, currentFakePasscodeUuid: uuid, pushController: pushControllerImpl, popController: popControllerImpl, challengeDataUpdate: { transaction, newPasscode, numerical in
             updateSettings(context: context, passcodeOptionsDataPromise, updateParentDataPromise) { settings in
                 let newPasscodeData = PostboxAccessChallengeData(passcode: newPasscode, numerical: numerical)
                 let newSettings = settings.withUpdatedPasscode(newPasscodeData.normalizedString())
@@ -417,8 +421,9 @@ public func fakePasscodeOptionsController(context: AccountContext, uuid: UUID, u
         updateSettings(context: context, passcodeOptionsDataPromise, updateParentDataPromise) { settings in
             return settings.withUpdatedClearProxies(enabled)
         }
-    }, accountActions: {
-        // TODO implement Account Actions screen and open it here
+    }, accountActions: { account in
+        let controller = fakePasscodeAccountActionsController(context: context, uuid: uuid, account: account)
+        pushControllerImpl?(controller)
     }, deletePasscode: {
         let actionSheet = ActionSheetController(presentationData: presentationData)
 
@@ -445,29 +450,26 @@ public func fakePasscodeOptionsController(context: AccountContext, uuid: UUID, u
         dismissInputImpl?()
     })
 
-    let accountPeerSignal = context.account.postbox.loadedPeerWithId(context.account.peerId)
-    |> take(1)
-
-    let accountAvatarSignal = accountPeerSignal |> deliverOnMainQueue |> mapToSignal { accountPeer -> Signal<(UIImage, UIImage)?, NoError> in
-        let peer = EnginePeer(accountPeer)
-        let peerRef = PeerReference(peer._asPeer())
-        let avatarSignal = peerAvatarImage(account: context.account, peerReference: peerRef, authorOfMessage: nil, representation: peer.profileImageRepresentations.last) ?? .single(nil)
-
-        return avatarSignal
+    let accountsSignal = combineLatest(context.sharedContext.presentationData, activeAccountsAndPeers(context: context, includePrimary: true)) |> mapToSignal { presentationData, accountsAndPeers -> Signal<[FakePasscodeActionsAccount], NoError> in
+        let (_, accounts) = accountsAndPeers
+        let avatarSize = CGSize(width: 28.0, height: 28.0)
+        let avatarSignals = accounts.map { account in
+            return peerAvatarCompleteImage(account: account.0.account, peer: account.1, size: avatarSize)
+        }
+        return combineLatest(avatarSignals) |> take(1) |> map { avatars in
+            return avatars.enumerated().map { (index, avatar) in
+                let account = accounts[index]
+                return FakePasscodeActionsAccount(peerId: account.0.account.peerId, recordId: account.0.account.id, displayName: account.1.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), avatar: avatar)
+            }
+        }
     }
 
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), passcodeOptionsDataPromise.get(), accountPeerSignal, accountAvatarSignal) |> deliverOnMainQueue
-        |> map { presentationData, state, optionsData, accountPeer, accountAvatar -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), passcodeOptionsDataPromise.get(), accountsSignal) |> deliverOnMainQueue
+        |> map { presentationData, state, optionsData, accounts -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let title = optionsData.settings.name
 
-            let peer = EnginePeer(accountPeer)
-            let displayName = peer.compactDisplayTitle
-
-            let avatarSize: CGFloat = 32.0
-            let avatar = resizedImage(accountAvatar?.1, for: CGSize(width: avatarSize, height: avatarSize))
-
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: fakePasscodeOptionsControllerEntries(presentationData: presentationData, settings: optionsData.settings, displayName: displayName, avatar: avatar), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: fakePasscodeOptionsControllerEntries(presentationData: presentationData, settings: optionsData.settings, accounts: accounts), style: .blocks, emptyStateItem: nil, animateChanges: false)
 
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
@@ -503,9 +505,9 @@ public func fakePasscodeOptionsController(context: AccountContext, uuid: UUID, u
     return controller
 }
 
-public func pushFakePasscodeSetupController(context: AccountContext, pushController: ((ViewController) -> Void)?, popController: (() -> Void)?, challengeDataUpdate: @escaping ((AccountManagerModifier<TelegramAccountManagerTypes>, String, Bool) -> Void), completed: (() -> Void)? = nil) {
+public func pushFakePasscodeSetupController(context: AccountContext, currentFakePasscodeUuid: UUID?, pushController: ((ViewController) -> Void)?, popController: (() -> Void)?, challengeDataUpdate: @escaping ((AccountManagerModifier<TelegramAccountManagerTypes>, String, Bool) -> Void), completed: (() -> Void)? = nil) {
     let _ = (context.sharedContext.accountManager.transaction({ transaction -> (PasscodeEntryFieldType, [String?]) in
-        let existingFakePasscodes = FakePasscodeSettingsHolder(transaction).settings.map({ $0.passcode })
+        let existingFakePasscodes = FakePasscodeSettingsHolder(transaction).settings.filter({ $0.uuid != currentFakePasscodeUuid }).map({ $0.passcode })
         
         let data = transaction.getAccessChallengeData()
         switch data {
@@ -518,10 +520,10 @@ public func pushFakePasscodeSetupController(context: AccountContext, pushControl
                 return (.alphanumeric, existingFakePasscodes + [passcode])
         }
     })
-    |> deliverOnMainQueue).start(next: { (fieldType, reserved) in
+    |> deliverOnMainQueue).start(next: { (fieldType, existingPasscodes) in
         let setupController = PasscodeSetupController(context: context, mode: .setup(change: true, allowChangeType: false, fieldType))
         setupController.validate = { newPasscode in
-            if reserved.contains(newPasscode) {
+            if existingPasscodes.contains(newPasscode) {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 return presentationData.strings.PasscodeSettings_PasscodeInUse
             }

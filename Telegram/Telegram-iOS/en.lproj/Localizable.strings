@@ -7570,3 +7570,6 @@ Sorry for the inconvenience.";
 "PasscodeSettings.BadAttempts.FakePasscode" = "Fake Passcode";
 "PasscodeSettings.BadAttempts.Clear" = "Clear";
 "PasscodeSettings.BadAttempts.ClearConfirmation" = "Clear Bad Passcode Attempts";
+
+"FakePasscodes.AccountActions.LogOut" = "Log Out";
+"FakePasscodes.AccountActions.MiscActionsInfo" = "When a fake passcode is entered, selected actions are performed.";

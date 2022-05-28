@@ -158,20 +158,23 @@ public final class PasscodeEntryController: ViewController {
                 return
             }
     
-            let _ = (strongSelf.accountManager.transaction { transaction -> (Bool, Bool, Bool) in
+            let _ = (strongSelf.accountManager.transaction { transaction -> (Bool, Bool, FakePasscodeSettings?) in
                 let fakePasscodeHolder = FakePasscodeSettingsHolder(transaction)
-                var passcodeSwitched = false // true -> fake, fake -> true, or fake -> another fake
-                var unlockedWithFakePasscode = false
                 
-                let succeed = ptgCheckPasscode(passcode: passcode, secondaryUnlock: false, accessChallenge: strongSelf.challengeData, fakePasscodeHolder: fakePasscodeHolder, updateAccessChallenge: { updatedAccessChallenge in
+                let (succeed, updatedAccessChallenge, updatedFakePasscodeHolder) = ptgCheckPasscode(passcode: passcode, secondaryUnlock: false, accessChallenge: strongSelf.challengeData, fakePasscodeHolder: fakePasscodeHolder)
+                
+                if let updatedAccessChallenge = updatedAccessChallenge {
                     transaction.setAccessChallengeData(updatedAccessChallenge)
-                }, updateFakePasscodeSettings: { updatedFakePasscodeSettingsHolder in
+                }
+                
+                if let updatedFakePasscodeHolder = updatedFakePasscodeHolder {
                     updateFakePasscodeSettingsInternal(transaction: transaction) { _ in
-                        return updatedFakePasscodeSettingsHolder
+                        return updatedFakePasscodeHolder
                     }
-                    passcodeSwitched = true
-                    unlockedWithFakePasscode = updatedFakePasscodeSettingsHolder.unlockedWithFakePasscode()
-                })
+                }
+                
+                let passcodeSwitched = updatedFakePasscodeHolder != nil // true -> fake, fake -> true, or fake -> another fake
+                let unlockedWithFakePasscode = updatedFakePasscodeHolder?.unlockedWithFakePasscode() ?? (succeed && fakePasscodeHolder.unlockedWithFakePasscode())
                 
                 if succeed {
                     if unlockedWithFakePasscode {
@@ -181,9 +184,11 @@ public final class PasscodeEntryController: ViewController {
                     addBadPasscodeAttempt(accountManager: strongSelf.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.AppUnlockType, isFakePasscode: false))
                 }
                 
-                return (succeed, passcodeSwitched, unlockedWithFakePasscode)
+                let fakePasscodeToActivate = (passcodeSwitched && unlockedWithFakePasscode) ? updatedFakePasscodeHolder!.activeFakePasscodeSettings()! : nil
+                
+                return (succeed, passcodeSwitched, fakePasscodeToActivate)
             }
-            |> deliverOnMainQueue).start(next: { succeed, passcodeSwitched, unlockedWithFakePasscode in
+            |> deliverOnMainQueue).start(next: { succeed, passcodeSwitched, fakePasscodeToActivate in
                 if succeed {
                     if let completed = strongSelf.completed {
                         completed()
@@ -212,6 +217,10 @@ public final class PasscodeEntryController: ViewController {
                                 actionSheet.dismiss(animated: false)
                             }
                         }
+                    }
+                    
+                    if let fakePasscodeToActivate = fakePasscodeToActivate {
+                        fakePasscodeToActivate.activate(accountManager: strongSelf.accountManager, applicationBindings: strongSelf.applicationBindings)
                     }
                 } else {
                     strongSelf.appLockContext.failedUnlockAttempt()

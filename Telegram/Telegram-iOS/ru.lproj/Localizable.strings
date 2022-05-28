@@ -43,3 +43,6 @@
 "PasscodeSettings.BadAttempts.FakePasscode" = "Ложный код-пароль";
 "PasscodeSettings.BadAttempts.Clear" = "Очистить";
 "PasscodeSettings.BadAttempts.ClearConfirmation" = "Очистить неудачные попытки разблокировки";
+
+"FakePasscodes.AccountActions.LogOut" = "Выходить из аккаунта";
+"FakePasscodes.AccountActions.MiscActionsInfo" = "При вводе ложного код-пароля выполняются выбранные действия.";

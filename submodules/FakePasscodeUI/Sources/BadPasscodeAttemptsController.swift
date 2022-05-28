@@ -106,7 +106,7 @@ public final class BadPasscodeAttemptsController: ViewController, ReactiveToPass
                         } else {
                             transition = .immediate
                         }
-                        strongSelf.navigationBar?.updateBackgroundAlpha(min(30.0, max(0.0, value - 54.0)) / 30.0, transition: transition)
+                        strongSelf.navigationBar?.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
                     case .unknown, .none:
                         strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
                 }
