@@ -1487,9 +1487,32 @@ final class ChatMediaInputNode: ChatInputNode {
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: file.file).start()
                     
-                    strongSelf.controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                    let context = strongSelf.context
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controllerInteraction = strongSelf.controllerInteraction
+                    let _ = (toggleGifSaved(account: context.account, fileReference: file.file, saved: true)
+                    |> deliverOnMainQueue).start(next: { result in
+                        switch result {
+                            case .generic:
+                                controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                            case let .limitExceeded(limit, premiumLimit):
+                                let text: String
+                                if limit == premiumLimit {
+                                    text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                } else {
+                                    text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
+                                }
+                                controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
+                                    if case .info = action {
+                                        let controller = PremiumIntroScreen(context: context, source: .savedGifs)
+                                        controllerInteraction.navigationController()?.pushViewController(controller)
+                                        return true
+                                    }
+                                    return false
+                                }), nil)
+                        }
+                    })
                 })))
             }
             
@@ -1581,7 +1604,13 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         case .generic:
                                                             strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                         case let .limitExceeded(limit, premiumLimit):
-                                                            strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                            let text: String
+                                                            if limit == premiumLimit {
+                                                                text = strongSelf.strings.Premium_MaxFavedStickersFinalText
+                                                            } else {
+                                                                text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
+                                                            }
+                                                            strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
                                                                 if let strongSelf = self {
                                                                     if case .info = action {
                                                                         let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
@@ -1727,7 +1756,13 @@ final class ChatMediaInputNode: ChatInputNode {
                                                             case .generic:
                                                                 strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                             case let .limitExceeded(limit, premiumLimit):
-                                                                strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                                let text: String
+                                                                if limit == premiumLimit {
+                                                                    text = strongSelf.strings.Premium_MaxFavedStickersFinalText
+                                                                } else {
+                                                                    text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
+                                                                }
+                                                                strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
                                                                     if let strongSelf = self {
                                                                         if case .info = action {
                                                                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)

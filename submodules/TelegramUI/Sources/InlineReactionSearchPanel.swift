@@ -145,7 +145,13 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                                 case .generic:
                                                     strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                 case let .limitExceeded(limit, premiumLimit):
-                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                    let text: String
+                                                    if limit == premiumLimit {
+                                                        text = strongSelf.strings.Premium_MaxFavedStickersFinalText
+                                                    } else {
+                                                        text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
+                                                    }
+                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
                                                         if let strongSelf = self {
                                                             if case .info = action {
                                                                 let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)

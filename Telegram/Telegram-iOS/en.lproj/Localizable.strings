@@ -7530,8 +7530,6 @@ Sorry for the inconvenience.";
 
 "StickerPack.Share" = "Share Stickers";
 "StickerPack.CopyLink" = "Copy Link";
-"StickerPack.PremiumStickers_1" = "+%@ PREMIUM STICKER";
-"StickerPack.PremiumStickers_any" = "+%@ PREMIUM STICKERS";
 
 "Stickers.PremiumStickers" = "Premium Stickers";
 
@@ -7546,11 +7544,11 @@ Sorry for the inconvenience.";
 "Chat.MultipleTypingPair" = "%@ and %@";
 "Chat.MultipleTypingMore" = "%@ and %@ others";
 
-"DialogList.ExtendedPinLimitError" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
-
 "Group.Username.RemoveExistingUsernamesOrExtendInfo" = "You have reserved too many public links. Try revoking a link from an older group or channel, or upgrade to **Telegram Premium** to double the limit to **%@** public links.";
+"Group.Username.RemoveExistingUsernamesFinalInfo" = "You have reserved too many public links. Try revoking the link from an older group or channel, or create a private one instead.";
 
 "OldChannels.TooManyCommunitiesText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
+"OldChannels.TooManyCommunitiesFinalText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one.";
 "OldChannels.LeaveCommunities_1" = "Leave %@ Community";
 "OldChannels.LeaveCommunities_any" = "Leave %@ Communities";
 
@@ -7559,11 +7557,19 @@ Sorry for the inconvenience.";
 "Premium.IncreaseLimit" = "Increase Limit";
 
 "Premium.MaxFoldersCountText" = "You have reached the limit of **%1$@** folders. You can double the limit to **%2$@** folders by subscribing to **Telegram Premium**.";
-"Premium.MaxChatsInFolderCountText" = "Sorry, you can't add more than **%1$@** chats to a folder. You can increase this limit to **%2$@** by upgrading to **Telegram Premium**.";
+"Premium.MaxChatsInFolderText" = "Sorry, you can't add more than **%1$@** chats to a folder. You can increase this limit to **%2$@** by upgrading to **Telegram Premium**.";
+"Premium.MaxChatsInFolderFinalText" = "Sorry, you can't add more than **%@** chats to a folder.";
 "Premium.MaxFileSizeText" = "Double this limit to %@ per file by subscribing to **Telegram Premium**.";
+"Premium.MaxFileSizeFinalText" = "The document can't be sent, because it is larger than **%@**.";
 "Premium.MaxPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
+"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **@** chats to the top. Unpin some of the currently pinned ones.";
+"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **@** chats to the top.";
 "Premium.MaxFavedStickersTitle" = "The Limit of %@ Stickers Reached";
 "Premium.MaxFavedStickersText" = "An older sticker was replaced with this one. You can [increase the limit]() to %@ stickers.";
+"Premium.MaxFavedStickersFinalText" = "An older sticker was replaced with this one.";
+"Premium.MaxSavedGifsTitle" = "The Limit of %@ GIFs Reached";
+"Premium.MaxSavedGifsText" = "An older GIF was replaced with this one. You can [increase the limit]() to %@ GIFS.";
+"Premium.MaxSavedGifsFinalText" = "An older GIF was replaced with this one.";
 "Premium.MaxAccountsText" = "You have reached the limit of **%@** connected accounts. You can free one place by subscribing to **Telegram Premium**.";
 
 "Premium.Free" = "Free";
@@ -7636,3 +7642,5 @@ Sorry for the inconvenience.";
 "SponsoredMessageMenu.Hide" = "Hide";
 
 "ChatListFolder.MaxChatsInFolder" = "Sorry, you can't add more than %d chats to a folder.";
+
+"Conversation.SaveGif" = "Save GIF";

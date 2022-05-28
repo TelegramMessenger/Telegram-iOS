@@ -1213,10 +1213,33 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     if let file = media as? TelegramMediaFile, !chatPresentationInterfaceState.copyProtectionEnabled && !message.isCopyProtected() {
                         if file.isVideo {
                             if file.isAnimated && !file.isVideoSticker {
-                                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_LinkDialogSave, icon: { theme in
+                                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_SaveGif, icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
                                 }, action: { _, f in
-                                    let _ = addSavedGif(postbox: context.account.postbox, fileReference: .message(message: MessageReference(message), media: file)).start()
+                                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                    let _ = (toggleGifSaved(account: context.account, fileReference: .message(message: MessageReference(message), media: file), saved: true)
+                                    |> deliverOnMainQueue).start(next: { result in
+                                        switch result {
+                                            case .generic:
+                                                controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                                            case let .limitExceeded(limit, premiumLimit):
+                                                let text: String
+                                                if limit == premiumLimit {
+                                                    text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                                } else {
+                                                    text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
+                                                }
+                                                controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
+                                                    if case .info = action {
+                                                        let controller = PremiumIntroScreen(context: context, source: .savedGifs)
+                                                        controllerInteraction.navigationController()?.pushViewController(controller)
+                                                        return true
+                                                    }
+                                                    return false
+                                                }), nil)
+                                        }
+                                    })
+
                                     f(.default)
                                 })))
                             }

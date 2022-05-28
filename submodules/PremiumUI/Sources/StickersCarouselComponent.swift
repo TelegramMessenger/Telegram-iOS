@@ -223,7 +223,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     
     init(context: AccountContext, stickers: [TelegramMediaFile]) {
         self.context = context
-        self.stickers = Array(stickers.shuffled().prefix(14))
+        self.stickers = stickers
         
         self.scrollNode = ASScrollNode()
         self.tapNode = ASDisplayNode()

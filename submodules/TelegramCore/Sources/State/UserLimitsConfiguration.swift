@@ -9,8 +9,9 @@ public struct UserLimitsConfiguration: Equatable {
     public let maxFavedStickerCount: Int32
     public let maxFoldersCount: Int32
     public let maxFolderChatsCount: Int32
-    public let maxCaptionLengthCount: Int32
+    public let maxCaptionLength: Int32
     public let maxUploadFileParts: Int32
+    public let maxAboutLength: Int32
     public let maxAnimatedEmojisInText: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
@@ -22,8 +23,9 @@ public struct UserLimitsConfiguration: Equatable {
             maxFavedStickerCount: 5,
             maxFoldersCount: 10,
             maxFolderChatsCount: 100,
-            maxCaptionLengthCount: 1024,
+            maxCaptionLength: 1024,
             maxUploadFileParts: 4000,
+            maxAboutLength: 70,
             maxAnimatedEmojisInText: 10
         )
     }
@@ -36,8 +38,9 @@ public struct UserLimitsConfiguration: Equatable {
         maxFavedStickerCount: Int32,
         maxFoldersCount: Int32,
         maxFolderChatsCount: Int32,
-        maxCaptionLengthCount: Int32,
+        maxCaptionLength: Int32,
         maxUploadFileParts: Int32,
+        maxAboutLength: Int32,
         maxAnimatedEmojisInText: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
@@ -47,8 +50,9 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxFavedStickerCount = maxFavedStickerCount
         self.maxFoldersCount = maxFoldersCount
         self.maxFolderChatsCount = maxFolderChatsCount
-        self.maxCaptionLengthCount = maxCaptionLengthCount
+        self.maxCaptionLength = maxCaptionLength
         self.maxUploadFileParts = maxUploadFileParts
+        self.maxAboutLength = maxAboutLength
         self.maxAnimatedEmojisInText = maxAnimatedEmojisInText
     }
 }
@@ -81,8 +85,9 @@ extension UserLimitsConfiguration {
         self.maxFavedStickerCount = getValue("stickers_faved_limit", orElse: defaultValue.maxFavedStickerCount)
         self.maxFoldersCount = getValue("dialog_filters_limit", orElse: defaultValue.maxFoldersCount)
         self.maxFolderChatsCount = getValue("dialog_filters_chats_limit", orElse: defaultValue.maxFolderChatsCount)
-        self.maxCaptionLengthCount = getValue("caption_length_limit", orElse: defaultValue.maxCaptionLengthCount)
+        self.maxCaptionLength = getValue("caption_length_limit", orElse: defaultValue.maxCaptionLength)
         self.maxUploadFileParts = getValue("upload_max_fileparts", orElse: defaultValue.maxUploadFileParts)
+        self.maxAboutLength = getValue("about_length_limit", orElse: defaultValue.maxAboutLength)
         self.maxAnimatedEmojisInText = getGeneralValue("message_animated_emoji_max", orElse: defaultValue.maxAnimatedEmojisInText)
     }
 }

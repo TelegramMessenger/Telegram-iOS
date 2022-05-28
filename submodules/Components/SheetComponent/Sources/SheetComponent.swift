@@ -6,9 +6,9 @@ import ViewControllerComponent
 
 public final class SheetComponentEnvironment: Equatable {
     public let isDisplaying: Bool
-    public let dismiss: () -> Void
+    public let dismiss: (Bool) -> Void
     
-    public init(isDisplaying: Bool, dismiss: @escaping () -> Void) {
+    public init(isDisplaying: Bool, dismiss: @escaping (Bool) -> Void) {
         self.isDisplaying = isDisplaying
         self.dismiss = dismiss
     }
@@ -55,7 +55,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         private let contentView: ComponentHostView<ChildEnvironmentType>
         
         private var previousIsDisplaying: Bool = false
-        private var dismiss: (() -> Void)?
+        private var dismiss: ((Bool) -> Void)?
         
         override init(frame: CGRect) {
             self.dimView = UIView()
@@ -78,8 +78,9 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             
             super.init(frame: frame)
             
-            self.addSubview(self.dimView)
+            self.scrollView.delegate = self
             
+            self.addSubview(self.dimView)
             self.scrollView.addSubview(self.backgroundView)
             self.scrollView.addSubview(self.contentView)
             self.addSubview(self.scrollView)
@@ -93,17 +94,39 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         
         @objc private func dimViewTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                self.dismiss?()
+                self.dismiss?(true)
             }
         }
         
-        public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        }
-        
+        private var scrollingOut = false
         public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+            let contentOffset = (scrollView.contentOffset.y + scrollView.contentInset.top - scrollView.contentSize.height) * -1.0
+            let dismissalOffset = scrollView.contentSize.height - scrollView.contentInset.top  + scrollView.contentSize.height
+            let delta = dismissalOffset - contentOffset
+            
+            let initialVelocity = !delta.isZero ? velocity.y / delta : 0.0
+            
+            targetContentOffset.pointee = scrollView.contentOffset
+            if velocity.y > 300.0 {
+                self.animateOut(initialVelocity: initialVelocity, completion: {
+                    self.dismiss?(false)
+                })
+            } else {
+                if contentOffset < scrollView.contentSize.height * 0.333 {
+                    scrollView.setContentOffset(CGPoint(x: 0.0, y: scrollView.contentSize.height - scrollView.contentInset.top), animated: true)
+                } else {
+                    self.animateOut(initialVelocity: initialVelocity, completion: {
+                        self.dismiss?(false)
+                    })
+                }
+            }
         }
-        
-        public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+                
+        public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            let contentOffset = (scrollView.contentOffset.y + scrollView.contentInset.top - scrollView.contentSize.height) * -1.0
+            if contentOffset >= scrollView.contentSize.height {
+                self.dismiss?(false)
+            }
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -114,12 +137,36 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             return super.hitTest(point, with: event)
         }
         
-        private func animateOut(completion: @escaping () -> Void) {
-            self.isUserInteractionEnabled = false
-            self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
-            self.scrollView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.bounds.height - self.scrollView.contentInset.top), duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
-                completion()
+        private func animateIn() {
+            self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+            let targetPosition = self.scrollView.center
+            self.scrollView.center = targetPosition.offsetBy(dx: 0.0, dy: self.scrollView.contentSize.height)
+            transition.animateView(allowUserInteraction: true, {
+                self.scrollView.center = targetPosition
             })
+        }
+        
+        private func animateOut(initialVelocity: CGFloat? = nil, completion: @escaping () -> Void) {
+            self.isUserInteractionEnabled = false
+            self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            
+            if let initialVelocity = initialVelocity {
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.35, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
+                
+                let contentOffset = (self.scrollView.contentOffset.y + self.scrollView.contentInset.top - self.scrollView.contentSize.height) * -1.0
+                let dismissalOffset = self.scrollView.contentSize.height
+                let delta = dismissalOffset - contentOffset
+                
+                transition.updatePosition(layer: self.scrollView.layer, position: CGPoint(x: self.scrollView.center.x, y: self.scrollView.center.y + delta), completion: { _ in
+                    completion()
+                })
+            } else {
+                self.scrollView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.scrollView.contentSize.height), duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
+                    completion()
+                })
+            }
         }
         
         func update(component: SheetComponent<ChildEnvironmentType>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -147,15 +194,14 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                 containerSize: CGSize(width: availableSize.width, height: .greatestFiniteMagnitude)
             )
             
-            transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: contentSize), completion: nil)
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: contentSize.width, height: contentSize.height + 1000.0)), completion: nil)
+            transition.setFrame(view: self.contentView, frame: CGRect(origin: .zero, size: contentSize), completion: nil)
+            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: contentSize.width, height: contentSize.height + 1000.0)), completion: nil)
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)
             self.scrollView.contentSize = contentSize
-            self.scrollView.contentInset = UIEdgeInsets(top: max(0.0, availableSize.height - contentSize.height), left: 0.0, bottom: 0.0, right: 0.0)
+            self.scrollView.contentInset = UIEdgeInsets(top: max(0.0, availableSize.height - contentSize.height) + contentSize.height, left: 0.0, bottom: 0.0, right: 0.0)
             
             if environment[SheetComponentEnvironment.self].value.isDisplaying, !self.previousIsDisplaying, let _ = transition.userData(ViewControllerComponentContainer.AnimateInTransition.self) {
-                self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                self.scrollView.layer.animatePosition(from: CGPoint(x: 0.0, y: availableSize.height - self.scrollView.contentInset.top), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true, completion: nil)
+                self.animateIn()
             } else if !environment[SheetComponentEnvironment.self].value.isDisplaying, self.previousIsDisplaying, let _ = transition.userData(ViewControllerComponentContainer.AnimateOutTransition.self) {
                 self.animateOut(completion: {})
             }

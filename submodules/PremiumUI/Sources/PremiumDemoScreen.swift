@@ -855,7 +855,7 @@ private final class DemoSheetContent: CombinedComponent {
                 transition: context.transition
             )
         
-            var contentHeight: CGFloat = context.availableSize.width + 154.0
+            var contentHeight: CGFloat = context.availableSize.width + 146.0
             if case .other = component.source {
                 contentHeight -= 40.0
             }
@@ -865,7 +865,9 @@ private final class DemoSheetContent: CombinedComponent {
                 .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
             )
         
-            let contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + 5.0 + environment.safeInsets.bottom)
+            let bottomPanelPadding: CGFloat = 12.0
+            let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
+            let contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + bottomInset)
             
             return contentSize
         }
@@ -933,12 +935,18 @@ private final class DemoSheetComponent: CombinedComponent {
                     environment
                     SheetComponentEnvironment(
                         isDisplaying: environment.value.isVisible,
-                        dismiss: {
-                            animateOut.invoke(Action { _ in
+                        dismiss: { animated in
+                            if animated {
+                                animateOut.invoke(Action { _ in
+                                    if let controller = controller() {
+                                        controller.dismiss(completion: nil)
+                                    }
+                                })
+                            } else {
                                 if let controller = controller() {
                                     controller.dismiss(completion: nil)
                                 }
-                            })
+                            }
                         }
                     )
                 },

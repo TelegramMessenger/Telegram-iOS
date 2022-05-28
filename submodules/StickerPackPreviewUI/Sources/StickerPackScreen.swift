@@ -18,13 +18,10 @@ import PremiumUI
 
 private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
     case sticker(index: Int, stableId: Int, stickerItem: StickerPackItem?, isEmpty: Bool, isPremium: Bool, isLocked: Bool)
-    case premiumHeader(index: Int, stableId: Int, count: Int32)
     
     var stableId: Int {
         switch self {
             case let .sticker(_, stableId, _, _, _, _):
-                return stableId
-            case let .premiumHeader(_, stableId, _):
                 return stableId
         }
     }
@@ -32,8 +29,6 @@ private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
     var index: Int {
         switch self {
             case let .sticker(index, _, _, _, _, _):
-                return index
-            case let .premiumHeader(index, _, _):
                 return index
         }
     }
@@ -46,8 +41,6 @@ private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
         switch self {
             case let .sticker(_, _, stickerItem, isEmpty, isPremium, isLocked):
                 return StickerPackPreviewGridItem(account: account, stickerItem: stickerItem, interaction: interaction, theme: theme, isPremium: isPremium, isLocked: isLocked, isEmpty: isEmpty)
-            case let .premiumHeader(_, _, count):
-                return StickerPackPreviewPremiumHeaderItem(theme: theme, strings: strings, count: count)
         }
     }
 }

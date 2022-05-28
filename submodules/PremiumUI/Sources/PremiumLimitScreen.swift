@@ -698,7 +698,7 @@ private final class LimitSheetContent: CombinedComponent {
                     let premiumLimit = state.premiumLimits.maxFolderChatsCount
                     iconName = "Premium/Chat"
                     badgeText = "\(component.count)"
-                    string = strings.Premium_MaxChatsInFolderCountText("\(limit)", "\(premiumLimit)").string
+                    string = strings.Premium_MaxChatsInFolderText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
@@ -909,12 +909,18 @@ private final class LimitSheetComponent: CombinedComponent {
                     environment
                     SheetComponentEnvironment(
                         isDisplaying: environment.value.isVisible,
-                        dismiss: {
-                            animateOut.invoke(Action { _ in
+                        dismiss: { animated in
+                            if animated {
+                                animateOut.invoke(Action { _ in
+                                    if let controller = controller() {
+                                        controller.dismiss(completion: nil)
+                                    }
+                                })
+                            } else {
                                 if let controller = controller() {
                                     controller.dismiss(completion: nil)
                                 }
-                            })
+                            }
                         }
                     )
                 },
