@@ -247,7 +247,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return self.presentationInterfaceState.interfaceState.selectionState?.selectedIds
     }
     
-    private var cachedDataPromise = Promise<CachedPeerData?>()
+    private var themeEmoticonPromise = Promise<String?>()
     
     private var chatTitleView: ChatTitleView?
     private var leftNavigationButton: ChatNavigationButton?
@@ -4664,18 +4664,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }
         
-        let themeEmoticon: Signal<String?, NoError> = self.cachedDataPromise.get()
-        |> map { cachedData -> String? in
-            if let cachedData = cachedData as? CachedUserData {
-                return cachedData.themeEmoticon
-            } else if let cachedData = cachedData as? CachedGroupData {
-                return cachedData.themeEmoticon
-            } else if let cachedData = cachedData as? CachedChannelData {
-                return cachedData.themeEmoticon
-            } else {
-                return nil
-            }
-        }
+        let themeEmoticon: Signal<String?, NoError> = self.themeEmoticonPromise.get()
         |> distinctUntilChanged
         
         let themeSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
@@ -5569,15 +5558,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let topPinnedMessage: Signal<ChatPinnedMessage?, NoError> = self.topPinnedMessageSignal(latest: false)
         
         if let peerId = self.chatLocation.peerId {
-            let _ = (self.context.account.postbox.transaction { transaction -> CachedPeerData? in
-                return transaction.getPeerCachedData(peerId: peerId)
-            }).start(next: { [weak self] cachedData in
-                if let strongSelf = self {
-                    strongSelf.cachedDataPromise.set(.single(cachedData))
-                }
-            })
+            self.themeEmoticonPromise.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThemeEmoticon(id: peerId)))
         } else {
-            self.cachedDataPromise.set(.single(nil))
+            self.themeEmoticonPromise.set(.single(nil))
         }
         
         if let peerId = self.chatLocation.peerId {
@@ -5586,7 +5569,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let (cachedData, messages) = cachedDataAndMessages
                     
                     if cachedData != nil {
-                        strongSelf.cachedDataPromise.set(.single(cachedData))
+                        var themeEmoticon: String? = nil
+                        if let cachedData = cachedData as? CachedUserData {
+                            themeEmoticon = cachedData.themeEmoticon
+                        } else if let cachedData = cachedData as? CachedGroupData {
+                            themeEmoticon = cachedData.themeEmoticon
+                        } else if let cachedData = cachedData as? CachedChannelData {
+                            themeEmoticon = cachedData.themeEmoticon
+                        }
+                        
+                        strongSelf.themeEmoticonPromise.set(.single(themeEmoticon))
                     }
                     
                     var pinnedMessageId: MessageId?
@@ -15944,22 +15936,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return animatedEmojiStickers
         }
         
-        let _ = (combineLatest(queue: Queue.mainQueue(), self.cachedDataPromise.get(), animatedEmojiStickers)
-        |> take(1)).start(next: { [weak self] cachedData, animatedEmojiStickers in
+        let _ = (combineLatest(queue: Queue.mainQueue(), self.themeEmoticonPromise.get(), animatedEmojiStickers)
+        |> take(1)).start(next: { [weak self] themeEmoticon, animatedEmojiStickers in
             guard let strongSelf = self else {
                 return
             }
                 
-            let selectedEmoticon: String?
-            if let cachedData = cachedData as? CachedUserData {
-                selectedEmoticon = cachedData.themeEmoticon
-            } else if let cachedData = cachedData as? CachedGroupData {
-                selectedEmoticon = cachedData.themeEmoticon
-            } else if let cachedData = cachedData as? CachedChannelData {
-                selectedEmoticon = cachedData.themeEmoticon
-            } else {
-                selectedEmoticon = nil
-            }
+            let selectedEmoticon: String? = themeEmoticon
             
             let controller = ChatThemeScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, animatedEmojiStickers: animatedEmojiStickers, initiallySelectedEmoticon: selectedEmoticon, peerName: strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "", previewTheme: { [weak self] emoticon, dark in
                 if let strongSelf = self {

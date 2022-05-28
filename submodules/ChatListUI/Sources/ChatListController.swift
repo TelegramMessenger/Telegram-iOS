@@ -1968,7 +1968,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         let filterItems = chatListFilterItems(context: self.context)
         var notifiedFirstUpdate = false
         self.filterDisposable.set((combineLatest(queue: .mainQueue(),
-                self.context.account.postbox.combinedView(keys: [
+            self.context.account.postbox.combinedView(keys: [
                 preferencesKey
             ]),
             filterItems,
@@ -2421,18 +2421,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if case .left = action {
             let signal: Signal<Never, NoError>
             var completion: (() -> Void)?
-            let context = self.context
             if !peerIds.isEmpty {
                 self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
                 completion = { [weak self] in
                     self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
                 }
-                signal = self.context.account.postbox.transaction { transaction -> Void in
-                    for peerId in peerIds {
-                        togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: context.account.viewTracker, peerId: peerId, setToValue: false)
-                    }
-                }
-                |> ignoreValues
+                signal = self.context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: Array(peerIds), setToValue: false)
             } else {
                 let groupId = self.groupId
                 let filterPredicate: ChatListFilterPredicate?

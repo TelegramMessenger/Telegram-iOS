@@ -406,5 +406,14 @@ public extension TelegramEngine {
                 return transaction.getRelativeUnreadChatListIndex(filtered: filtered, position: position._asPosition(), groupId: groupId._asGroup())
             }
         }
+        
+        public func togglePeersUnreadMarkInteractively(peerIds: [EnginePeer.Id], setToValue: Bool?) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    _internal_togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: self.account.viewTracker, peerId: peerId, setToValue: setToValue)
+                }
+            }
+            |> ignoreValues
+        }
     }
 }

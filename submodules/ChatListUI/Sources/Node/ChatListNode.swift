@@ -885,7 +885,7 @@ public final class ChatListNode: ListView {
                 return
             }
             self?.setCurrentRemovingPeerId(peerId)
-            let _ = (togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId)
+            let _ = (context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
                     var state = state
