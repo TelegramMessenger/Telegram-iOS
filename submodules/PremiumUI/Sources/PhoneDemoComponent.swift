@@ -231,22 +231,26 @@ final class PhoneDemoComponent: Component {
             var mappedPosition = environment[DemoPageEnvironment.self].position
             mappedPosition *= abs(mappedPosition)
             
+            let scale: CGFloat = availableSize.width / 390.0
+            
+            let phoneX = mappedPosition * 50.0 * scale
             let phoneY: CGFloat
             switch component.position {
                 case .top:
-                    phoneY = phoneSize.height / 2.0 + 24.0 + abs(mappedPosition) * 24.0
+                    phoneY = availableSize.height + (-phoneSize.height / 2.0 + 24.0 + 149.0 + abs(mappedPosition) * 24.0) * scale
                 case .bottom:
-                    phoneY = availableSize.height - phoneSize.height / 2.0 - 24.0 - abs(mappedPosition) * 24.0
+                    phoneY = (-149.0 + phoneSize.height / 2.0 - 24.0 - abs(mappedPosition) * 24.0) * scale
             }
+            
             
             let isVisible = environment[DemoPageEnvironment.self].isDisplaying
             let isCentral = environment[DemoPageEnvironment.self].isCentral
             self.isCentral = isCentral
             
-            self.phoneView.center = CGPoint(x: availableSize.width / 2.0 + mappedPosition * 50.0, y: phoneY)
+            self.phoneView.center = CGPoint(x: availableSize.width / 2.0 + phoneX, y: phoneY)
             self.phoneView.screenRotation = mappedPosition * -0.7
             
-            var perspective = CATransform3DIdentity
+            var perspective = CATransform3DMakeScale(scale, scale, 1.0)
             perspective.m34 = mappedPosition / 50.0
             self.phoneView.layer.transform = CATransform3DRotate(perspective, 0.1, 0, 1, 0)
             
