@@ -291,7 +291,7 @@ class WebSearchControllerNode: ASDisplayNode {
                     }
                     
                     let header = ChatListSearchItemHeader(type: .recentPeers, theme: interfaceState.presentationData.theme, strings: interfaceState.presentationData.strings, actionTitle: interfaceState.presentationData.strings.WebSearch_RecentSectionClear, action: {
-                        _ = clearRecentWebSearchQueries(postbox: strongSelf.context.account.postbox).start()
+                        let _ = clearRecentWebSearchQueries(engine: strongSelf.context.engine).start()
                     })
                     
                     let previousEntries = previousRecentItems.swap(entries)

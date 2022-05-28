@@ -135,7 +135,7 @@ public func _internal_cachedNotificationSoundList(transaction: Transaction) -> N
 
 func _internal_setCachedNotificationSoundList(transaction: Transaction, notificationSoundList: NotificationSoundList) {
     if let entry = CodableEntry(notificationSoundList) {
-        transaction.putItemCacheEntry(id: _internal_cachedNotificationSoundListCacheKey(), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 10))
+        transaction.putItemCacheEntry(id: _internal_cachedNotificationSoundListCacheKey(), entry: entry)
     }
 }
 

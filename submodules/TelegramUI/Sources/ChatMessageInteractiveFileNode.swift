@@ -292,9 +292,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             switch resourceStatus.mediaStatus {
             case let .fetchStatus(fetchStatus):
                 if let context = self.context, let message = self.message, message.flags.isSending {
-                    let _ = context.account.postbox.transaction({ transaction -> Void in
-                        context.engine.messages.deleteMessages(transaction: transaction, ids: [message.id])
-                    }).start()
+                    let _ = context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).start()
                 } else {
                     switch fetchStatus {
                     case .Fetching:

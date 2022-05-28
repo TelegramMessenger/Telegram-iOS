@@ -1708,17 +1708,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     |> distinctUntilChanged
                     |> runOn(.mainQueue())
                 } else {
-                    peerAdminIds = strongSelf.account.postbox.transaction { transaction -> [PeerId] in
-                        var result: [PeerId] = []
-                        if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedGroupData {
-                            if let participants = cachedData.participants {
-                                for participant in participants.participants {
-                                    if case .creator = participant {
-                                        result.append(participant.peerId)
-                                    } else if case .admin = participant {
-                                        result.append(participant.peerId)
-                                    }
-                                }
+                    peerAdminIds = strongSelf.accountContext.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.LegacyGroupParticipants(id: peerId)
+                    )
+                    |> map { participants -> [EnginePeer.Id] in
+                        guard case let .known(participants) = participants else {
+                            return []
+                        }
+                        var result: [EnginePeer.Id] = []
+                        for participant in participants {
+                            if case .creator = participant {
+                                result.append(participant.peerId)
+                            } else if case .admin = participant {
+                                result.append(participant.peerId)
                             }
                         }
                         return result
@@ -1801,17 +1803,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     } else if case .invalidJoinAsPeer = error {
                         let peerId = strongSelf.peerId
                         let _ = strongSelf.accountContext.engine.calls.clearCachedGroupCallDisplayAsAvailablePeers(peerId: peerId).start()
-                        let _ = (strongSelf.accountContext.account.postbox.transaction { transaction -> Void in
-                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                                if let current = current as? CachedChannelData {
-                                    return current.withUpdatedCallJoinPeerId(nil)
-                                } else if let current = current as? CachedGroupData {
-                                    return current.withUpdatedCallJoinPeerId(nil)
-                                } else {
-                                    return current
-                                }
-                            })
-                        }).start()
                     }
                     strongSelf.markAsCanBeRemoved()
                 }))

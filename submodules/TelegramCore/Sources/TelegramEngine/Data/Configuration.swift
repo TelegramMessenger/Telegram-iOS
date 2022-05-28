@@ -11,6 +11,7 @@ public enum EngineConfiguration {
         public var maxSupergroupMemberCount: Int32
         public var maxMessageForwardBatchSize: Int32
         public var maxSavedGifCount: Int32
+        public var maxFavedStickerCount: Int32
         public var maxRecentStickerCount: Int32
         public var maxMessageEditingInterval: Int32
         public var maxMediaCaptionLength: Int32
@@ -25,6 +26,7 @@ public enum EngineConfiguration {
             maxSupergroupMemberCount: Int32,
             maxMessageForwardBatchSize: Int32,
             maxSavedGifCount: Int32,
+            maxFavedStickerCount: Int32,
             maxRecentStickerCount: Int32,
             maxMessageEditingInterval: Int32,
             maxMediaCaptionLength: Int32,
@@ -38,6 +40,7 @@ public enum EngineConfiguration {
             self.maxSupergroupMemberCount = maxSupergroupMemberCount
             self.maxMessageForwardBatchSize = maxMessageForwardBatchSize
             self.maxSavedGifCount = maxSavedGifCount
+            self.maxFavedStickerCount = maxFavedStickerCount
             self.maxRecentStickerCount = maxRecentStickerCount
             self.maxMessageEditingInterval = maxMessageEditingInterval
             self.maxMediaCaptionLength = maxMediaCaptionLength
@@ -89,7 +92,9 @@ public enum EngineConfiguration {
     }
 }
 
-extension EngineConfiguration.Limits {
+public typealias EngineContentSettings = ContentSettings
+
+public extension EngineConfiguration.Limits {
     init(_ limitsConfiguration: LimitsConfiguration) {
         self.init(
             maxPinnedChatCount: limitsConfiguration.maxPinnedChatCount,
@@ -98,12 +103,31 @@ extension EngineConfiguration.Limits {
             maxSupergroupMemberCount: limitsConfiguration.maxSupergroupMemberCount,
             maxMessageForwardBatchSize: limitsConfiguration.maxMessageForwardBatchSize,
             maxSavedGifCount: limitsConfiguration.maxSavedGifCount,
+            maxFavedStickerCount: limitsConfiguration.maxFavedStickerCount,
             maxRecentStickerCount: limitsConfiguration.maxRecentStickerCount,
             maxMessageEditingInterval: limitsConfiguration.maxMessageEditingInterval,
             maxMediaCaptionLength: limitsConfiguration.maxMediaCaptionLength,
             canRemoveIncomingMessagesInPrivateChats: limitsConfiguration.canRemoveIncomingMessagesInPrivateChats,
             maxMessageRevokeInterval: limitsConfiguration.maxMessageRevokeInterval,
             maxMessageRevokeIntervalInPrivateChats: limitsConfiguration.maxMessageRevokeIntervalInPrivateChats
+        )
+    }
+    
+    func _asLimits() -> LimitsConfiguration {
+        return LimitsConfiguration(
+            maxPinnedChatCount: self.maxPinnedChatCount,
+            maxArchivedPinnedChatCount: self.maxArchivedPinnedChatCount,
+            maxGroupMemberCount: self.maxGroupMemberCount,
+            maxSupergroupMemberCount: self.maxSupergroupMemberCount,
+            maxMessageForwardBatchSize: self.maxMessageForwardBatchSize,
+            maxSavedGifCount: self.maxSavedGifCount,
+            maxRecentStickerCount: self.maxRecentStickerCount,
+            maxFavedStickerCount: self.maxFavedStickerCount,
+            maxMessageEditingInterval: self.maxMessageEditingInterval,
+            maxMediaCaptionLength: self.maxMediaCaptionLength,
+            canRemoveIncomingMessagesInPrivateChats: self.canRemoveIncomingMessagesInPrivateChats,
+            maxMessageRevokeInterval: self.maxMessageRevokeInterval,
+            maxMessageRevokeIntervalInPrivateChats: self.maxMessageRevokeIntervalInPrivateChats
         )
     }
 }
@@ -155,6 +179,27 @@ public extension EngineConfiguration.SearchBots {
 
 public extension TelegramEngine.EngineData.Item {
     enum Configuration {
+        public struct App: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = AppConfiguration
+
+            public init() {
+            }
+
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.appConfiguration]))
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
+                    return AppConfiguration.defaultValue
+                }
+                return appConfiguration
+            }
+        }
+        
         public struct Limits: TelegramEngineDataItem, PostboxViewDataItem {
             public typealias Result = EngineConfiguration.Limits
 
@@ -238,6 +283,50 @@ public extension TelegramEngine.EngineData.Item {
                     return EngineConfiguration.SearchBots(SearchBotsConfiguration.defaultValue)
                 }
                 return EngineConfiguration.SearchBots(value)
+            }
+        }
+        
+        public struct ApplicationSpecificPreference: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = PreferencesEntry?
+            
+            private let itemKey: ValueBoxKey
+            public init(key: ValueBoxKey) {
+                self.itemKey = key
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([self.itemKey]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[self.itemKey] else {
+                    return nil
+                }
+                return value
+            }
+        }
+        
+        public struct ContentSettings: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EngineContentSettings
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.appConfiguration]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
+                    return EngineContentSettings(appConfiguration: AppConfiguration.defaultValue)
+                }
+                return EngineContentSettings(appConfiguration: appConfiguration)
             }
         }
     }

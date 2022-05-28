@@ -476,9 +476,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             if let searchNode = strongSelf.searchNode, searchNode.isActive {
                 if let (itemNode, item) = searchNode.itemAt(point: strongSelf.view.convert(point, to: searchNode.view)) {
                     if let item = item as? StickerPreviewPeekItem {
-                        return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                            return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                        }
+                        return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                         |> deliverOnMainQueue
                         |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                             if let strongSelf = self {
@@ -563,9 +561,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             
             let itemNodeAndItem: (ASDisplayNode, StickerPackItem)? = strongSelf.itemAt(point: point)
             if let (itemNode, item) = itemNodeAndItem {
-                return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                    return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                }
+                return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                 |> deliverOnMainQueue
                 |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                     if let strongSelf = self {

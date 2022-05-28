@@ -299,20 +299,19 @@ public class ShareRootControllerImpl {
             
             let applicationInterface = account
             |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContext, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
-                let limitsConfigurationAndContentSettings = account.postbox.transaction { transaction -> (LimitsConfiguration, ContentSettings, AppConfiguration) in
-                    return (
-                        transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue,
-                        getContentSettings(transaction: transaction),
-                        getAppConfiguration(transaction: transaction)
-                    )
-                }
+                let limitsConfigurationAndContentSettings = TelegramEngine(account: account).data.get(
+                    TelegramEngine.EngineData.Item.Configuration.Limits(),
+                    TelegramEngine.EngineData.Item.Configuration.ContentSettings(),
+                    TelegramEngine.EngineData.Item.Configuration.App()
+                )
+                
                 return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), limitsConfigurationAndContentSettings, sharedContext.accountManager.accessChallengeData())
                 |> take(1)
                 |> deliverOnMainQueue
                 |> castError(ShareAuthorizationError.self)
                 |> map { sharedData, limitsConfigurationAndContentSettings, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
                     updateLegacyLocalization(strings: sharedContext.currentPresentationData.with({ $0 }).strings)
-                    let context = AccountContextImpl(sharedContext: sharedContext, account: account, limitsConfiguration: limitsConfigurationAndContentSettings.0, contentSettings: limitsConfigurationAndContentSettings.1, appConfiguration: limitsConfigurationAndContentSettings.2)
+                    let context = AccountContextImpl(sharedContext: sharedContext, account: account, limitsConfiguration: limitsConfigurationAndContentSettings.0._asLimits(), contentSettings: limitsConfigurationAndContentSettings.1, appConfiguration: limitsConfigurationAndContentSettings.2)
                     return (context, data.data, otherAccounts)
                 }
             }

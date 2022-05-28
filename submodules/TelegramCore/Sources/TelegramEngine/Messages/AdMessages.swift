@@ -304,8 +304,6 @@ private class AdMessagesHistoryContextImpl {
             }, forKey: "messages")
         }
 
-        private static let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 5, highWaterItemCount: 10)
-
         public static func getCached(postbox: Postbox, peerId: PeerId) -> Signal<CachedState?, NoError> {
             return postbox.transaction { transaction -> CachedState? in
                 let key = ValueBoxKey(length: 8)
@@ -323,7 +321,7 @@ private class AdMessagesHistoryContextImpl {
             key.setInt64(0, value: peerId.toInt64())
             let id = ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAdMessageStates, key: key)
             if let state = state, let entry = CodableEntry(state) {
-                transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
+                transaction.putItemCacheEntry(id: id, entry: entry)
             } else {
                 transaction.removeItemCacheEntry(id: id)
             }

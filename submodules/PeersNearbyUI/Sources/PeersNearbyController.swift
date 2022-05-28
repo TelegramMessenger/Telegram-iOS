@@ -387,11 +387,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 }
 
 private func peerNearbyContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, present: @escaping (ViewController) -> Void) -> Signal<[ContextMenuItem], NoError> {
-    return context.account.postbox.transaction { _ -> [ContextMenuItem] in
-        let items: [ContextMenuItem] = []
-        
-        return items
-    }
+    return .single([])
 }
 
 private class PeersNearbyControllerImpl: ItemListController {

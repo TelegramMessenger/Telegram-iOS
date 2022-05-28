@@ -893,7 +893,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let timestamp = timestamp {
                     storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: AudioPlaybackRate(playbackRate))
                 }
-                let _ = updateMediaPlaybackStoredStateInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, state: storedState).start()
+                let _ = updateMediaPlaybackStoredStateInteractively(engine: strongSelf.context.engine, messageId: messageId, state: storedState).start()
             }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
                 guard let strongSelf = self else {
                     return
@@ -6517,7 +6517,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
-                    strongSelf.messageContextDisposable.set((strongSelf.context.sharedContext.chatAvailableMessageActions(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds)
+                    strongSelf.messageContextDisposable.set((strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds)
                     |> deliverOnMainQueue).start(next: { actions in
                         if let strongSelf = self, !actions.options.isEmpty {
                             if let banAuthor = actions.banAuthor {
@@ -6633,7 +6633,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, deleteMessages: { [weak self] messages, contextController, completion in
             if let strongSelf = self, !messages.isEmpty {
                 let messageIds = Set(messages.map { $0.id })
-                strongSelf.messageContextDisposable.set((strongSelf.context.sharedContext.chatAvailableMessageActions(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds)
+                strongSelf.messageContextDisposable.set((strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds)
                 |> deliverOnMainQueue).start(next: { actions in
                     if let strongSelf = self, !actions.options.isEmpty {
                         if let banAuthor = actions.banAuthor {
@@ -7968,20 +7968,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 if let stickerFile = stickerFile {
                     let context = strongSelf.context
-                    let _ = (context.account.postbox.transaction { transaction -> Signal<(SavedStickerResult, Bool), AddSavedStickerError> in
-                        let isSaved: Bool
-                        if getIsStickerSaved(transaction: transaction, fileId: stickerFile.fileId) {
-                            isSaved = true
-                        } else {
-                            isSaved = false
-                        }
+                    let _ = (context.engine.stickers.isStickerSaved(id: stickerFile.fileId)
+                    |> castError(AddSavedStickerError.self)
+                    |> mapToSignal { isSaved -> Signal<(SavedStickerResult, Bool), AddSavedStickerError> in
                         return context.engine.stickers.toggleStickerSaved(file: stickerFile, saved: !isSaved)
                         |> map { result -> (SavedStickerResult, Bool) in
                             return (result, !isSaved)
                         }
                     }
-                    |> castError(AddSavedStickerError.self)
-                    |> switchToLatest
                     |> deliverOnMainQueue).start(next: { [weak self] result, added in
                         if let strongSelf = self {
                             switch result {
@@ -8185,9 +8179,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 })
             })
-            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Void in
-                updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
-            }
+            let _ = (strongSelf.context.engine.peers.updatePeersGroupIdInteractively(peerIds: [peerId], groupId: .root)
             |> deliverOnMainQueue).start()
         }, openLinkEditing: { [weak self] in
             if let strongSelf = self {
@@ -15068,9 +15060,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
                             if actions.contains(3) {
                                 let context = strongSelf.context
-                                let _ = context.account.postbox.transaction({ transaction -> Void in
-                                    context.engine.messages.deleteAllMessagesWithAuthor(transaction: transaction, peerId: peerId, authorId: author.id, namespace: Namespaces.Message.Cloud)
-                                }).start()
+                                let _ = context.engine.messages.deleteAllMessagesWithAuthor(peerId: peerId, authorId: author.id, namespace: Namespaces.Message.Cloud).start()
                                 let _ = strongSelf.context.engine.messages.clearAuthorHistory(peerId: peerId, memberId: author.id).start()
                             } else if actions.contains(0) {
                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()

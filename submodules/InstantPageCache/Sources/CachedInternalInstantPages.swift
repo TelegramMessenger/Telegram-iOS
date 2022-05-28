@@ -51,18 +51,18 @@ public func cachedPrivacyPage(context: AccountContext) -> Signal<ResolvedUrl, No
 
 private func cachedInternalInstantPage(context: AccountContext, url: String) -> Signal<ResolvedUrl, NoError> {
     let (cachedUrl, anchor) = extractAnchor(string: url)
-    return cachedInstantPage(postbox: context.account.postbox, url: cachedUrl)
+    return cachedInstantPage(engine: context.engine, url: cachedUrl)
     |> mapToSignal { cachedInstantPage -> Signal<ResolvedUrl, NoError> in
         let updated = resolveInstantViewUrl(account: context.account, url: url)
         |> afterNext { result in
             if case let .instantView(webPage, _) = result, case let .Loaded(content) = webPage.content, let instantPage = content.instantPage {
                 if instantPage.isComplete {
-                    let _ = updateCachedInstantPage(postbox: context.account.postbox, url: cachedUrl, webPage: webPage).start()
+                    let _ = updateCachedInstantPage(engine: context.engine, url: cachedUrl, webPage: webPage).start()
                 } else {
                     let _ = (actualizedWebpage(postbox: context.account.postbox, network: context.account.network, webpage: webPage)
-                    |> mapToSignal { webPage -> Signal<Void, NoError> in
+                    |> mapToSignal { webPage -> Signal<Never, NoError> in
                         if case let .Loaded(content) = webPage.content, let instantPage = content.instantPage, instantPage.isComplete {
-                            return updateCachedInstantPage(postbox: context.account.postbox, url: cachedUrl, webPage: webPage)
+                            return updateCachedInstantPage(engine: context.engine, url: cachedUrl, webPage: webPage)
                         } else {
                             return .complete()
                         }

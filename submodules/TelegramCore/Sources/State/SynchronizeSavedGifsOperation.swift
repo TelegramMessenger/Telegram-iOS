@@ -23,7 +23,7 @@ func addSynchronizeSavedGifsOperation(transaction: Transaction, operation: Synch
     transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeSavedGifsOperation(content: .sync))
 }
 
-public func isGifSaved(transaction: Transaction, mediaId: MediaId) -> Bool {
+public func getIsGifSaved(transaction: Transaction, mediaId: MediaId) -> Bool {
     if transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, itemId: RecentMediaItemId(mediaId).rawValue) != nil {
         return true
     }

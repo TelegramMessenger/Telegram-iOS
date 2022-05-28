@@ -928,9 +928,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 var items: [ActionSheetItem] = []
                 items.append(ActionSheetButtonItem(title: strongSelf.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
-                    let _ = (context.account.postbox.transaction { transaction in
-                        clearRecentlyUsedStickers(transaction: transaction)
-                    }).start()
+                    let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
                 }))
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -1407,15 +1405,14 @@ final class ChatMediaInputNode: ChatInputNode {
             canSaveGif = false
         }
         
-        let _ = (self.context.account.postbox.transaction { transaction -> Bool in
-            if !canSaveGif {
-                return false
-            }
-            return isGifSaved(transaction: transaction, mediaId: file.file.media.fileId)
-        }
+        let _ = (self.context.engine.stickers.isGifSaved(id: file.file.media.fileId)
         |> deliverOnMainQueue).start(next: { [weak self] isGifSaved in
             guard let strongSelf = self else {
                 return
+            }
+            var isGifSaved = isGifSaved
+            if !canSaveGif {
+                isGifSaved = false
             }
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             
@@ -1530,9 +1527,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     
                     if let (itemNode, item) = searchContainerNode.itemAt(point: point.offsetBy(dx: -searchContainerNode.frame.minX, dy: -searchContainerNode.frame.minY)) {
                         if let item = item as? StickerPreviewPeekItem {
-                            return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                                return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                                }
+                            return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                             |> deliverOnMainQueue
                             |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                                 if let strongSelf = self {

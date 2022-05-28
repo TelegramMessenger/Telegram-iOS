@@ -42,11 +42,11 @@ private struct MessageContextMenuData {
     let messageActions: ChatAvailableMessageActions
 }
 
-func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfiguration, message: Message) -> Bool {
+func canEditMessage(context: AccountContext, limitsConfiguration: EngineConfiguration.Limits, message: Message) -> Bool {
     return canEditMessage(accountPeerId: context.account.peerId, limitsConfiguration: limitsConfiguration, message: message)
 }
 
-private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsConfiguration, message: Message, reschedule: Bool = false) -> Bool {
+private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: EngineConfiguration.Limits, message: Message, reschedule: Bool = false) -> Bool {
     var hasEditRights = false
     var unlimitedInterval = reschedule
     
@@ -153,7 +153,7 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
         }
         
         if !hasUneditableAttributes || reschedule {
-            if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message, unlimitedInterval: unlimitedInterval) {
+            if canPerformEditingActions(limits: limitsConfiguration._asLimits(), accountPeerId: accountPeerId, message: message, unlimitedInterval: unlimitedInterval) {
                 return true
             }
         }
@@ -161,7 +161,7 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
     return false
 }
 
-private func canViewReadStats(message: Message, cachedData: CachedPeerData?, isMessageRead: Bool, appConfig: AppConfiguration) -> Bool {
+private func canViewReadStats(message: Message, participantCount: Int?, isMessageRead: Bool, appConfig: AppConfiguration) -> Bool {
     guard let peer = message.peers[message.id.peerId] else {
         return false
     }
@@ -210,12 +210,8 @@ private func canViewReadStats(message: Message, cachedData: CachedPeerData?, isM
     case let channel as TelegramChannel:
         if case .broadcast = channel.info {
             return false
-        } else if let cachedData = cachedData as? CachedChannelData {
-            if let memberCount = cachedData.participantsSummary.memberCount {
-                if Int(memberCount) > maxParticipantCount {
-                    return false
-                }
-            } else {
+        } else if let participantCount = participantCount {
+            if participantCount > maxParticipantCount {
                 return false
             }
         } else {
@@ -555,36 +551,47 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         |> map(Optional.init)
     }
     
-    let loadLimits = context.account.postbox.transaction { transaction -> (LimitsConfiguration, AppConfiguration) in
-        let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
-        let appConfig = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
-        return (limitsConfiguration, appConfig)
+    let loadLimits = context.engine.data.get(
+        TelegramEngine.EngineData.Item.Configuration.Limits(),
+        TelegramEngine.EngineData.Item.Configuration.App()
+    )
+    
+    struct InfoSummaryData {
+        var linkedDiscusionPeerId: EnginePeerCachedInfoItem<EnginePeer.Id?>
+        var canViewStats: Bool
+        var participantCount: Int?
     }
     
-    let cachedData = context.account.postbox.transaction { transaction -> CachedPeerData? in
-        return transaction.getPeerCachedData(peerId: messages[0].id.peerId)
+    let infoSummaryData = context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.LinkedDiscussionPeerId(id: messages[0].id.peerId),
+        TelegramEngine.EngineData.Item.Peer.CanViewStats(id: messages[0].id.peerId),
+        TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: messages[0].id.peerId)
+    )
+    |> map { linkedDiscusionPeerId, canViewStats, participantCount -> InfoSummaryData in
+        return InfoSummaryData(
+            linkedDiscusionPeerId: linkedDiscusionPeerId,
+            canViewStats: canViewStats,
+            participantCount: participantCount
+        )
     }
 
-    //let readState = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.PeerUnreadCount)
-    let readState = context.account.postbox.transaction { transaction -> CombinedPeerReadState? in
-        return transaction.getCombinedPeerReadState(messages[0].id.peerId)
-    }
+    let readState = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.ReadState(id: messages[0].id.peerId))
     
-    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?), NoError> = combineLatest(
+    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?), NoError> = combineLatest(
         loadLimits,
         loadStickerSaveStatusSignal,
         loadResourceStatusSignal,
-        context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })),
+        context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })),
         context.account.pendingUpdateMessageManager.updatingMessageMedia
         |> take(1),
-        cachedData,
+        infoSummaryData,
         readState,
         ApplicationSpecificNotice.getMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager),
         context.engine.stickers.availableReactions(),
         context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings, SharedDataKeys.loggingSettings]),
         context.engine.peers.notificationSoundList() |> take(1)
     )
-    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData, readState, messageViewsPrivacyTips, availableReactions, sharedData, notificationSoundList -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?) in
+    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, infoSummaryData, readState, messageViewsPrivacyTips, availableReactions, sharedData, notificationSoundList -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?) in
         let (limitsConfiguration, appConfig) = limitsAndAppConfig
         var canEdit = false
         if !isAction {
@@ -611,12 +618,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             loggingSettings = LoggingSettings.defaultSettings
         }
         
-        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList)
+        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList)
     }
     
     return dataSignal
     |> deliverOnMainQueue
-    |> map { data, updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList -> ContextController.Items in
+    |> map { data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList -> ContextController.Items in
         var actions: [ContextMenuItem] = []
         
         var isPinnedMessages = false
@@ -988,7 +995,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         var threadId: Int64?
         var threadMessageCount: Int = 0
         if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .group = channel.info {
-            if let cachedData = cachedData as? CachedChannelData, case let .known(maybeValue) = cachedData.linkedDiscussionPeerId, let _ = maybeValue {
+            if case let .known(maybeValue) = infoSummaryData.linkedDiscusionPeerId, let _ = maybeValue {
                 if let value = messages[0].threadId {
                     threadId = value
                 } else {
@@ -1265,7 +1272,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
             }
             
-            if let cachedData = cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats), views >= 100 {
+            if infoSummaryData.canViewStats, views >= 100 {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextViewStats, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.actionSheet.primaryTextColor)
                 }, action: { c, _ in
@@ -1359,7 +1366,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        let canViewStats = canViewReadStats(message: message, cachedData: cachedData, isMessageRead: isMessageRead, appConfig: appConfig)
+        let canViewStats = canViewReadStats(message: message, participantCount: infoSummaryData.participantCount, isMessageRead: isMessageRead, appConfig: appConfig)
         var reactionCount = 0
         for reaction in mergedMessageReactionsAndPeers(message: message).reactions {
             reactionCount += Int(reaction.count)
@@ -1467,9 +1474,13 @@ private func canPerformDeleteActions(limits: LimitsConfiguration, accountPeerId:
     return false
 }
 
-func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message] = [:], peers: [PeerId: Peer] = [:]) -> Signal<ChatAvailableMessageActions, NoError> {
-    return postbox.transaction { transaction -> ChatAvailableMessageActions in
-        let limitsConfiguration: LimitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
+func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message] = [:], peers: [PeerId: Peer] = [:]) -> Signal<ChatAvailableMessageActions, NoError> {
+    return engine.data.get(
+        TelegramEngine.EngineData.Item.Configuration.Limits(),
+        EngineDataMap(Set(messageIds.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
+        EngineDataMap(Set(messageIds).map(TelegramEngine.EngineData.Item.Messages.Message.init))
+    )
+    |> map { limitsConfiguration, peerMap, messageMap -> ChatAvailableMessageActions in
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
         var banPeer: Peer?
         var hadPersonalIncoming = false
@@ -1478,8 +1489,8 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
         var isCopyProtected = false
         
         func getPeer(_ peerId: PeerId) -> Peer? {
-            if let peer = transaction.getPeer(peerId) {
-                return peer
+            if let maybePeer = peerMap[peerId], let peer = maybePeer {
+                return peer._asPeer()
             } else if let peer = peers[peerId] {
                 return peer
             } else {
@@ -1488,8 +1499,8 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
         }
         
         func getMessage(_ messageId: MessageId) -> Message? {
-            if let message = transaction.getMessage(messageId) {
-                return message
+            if let maybeMessage = messageMap[messageId], let message = maybeMessage {
+                return message._asMessage()
             } else if let message = messages[messageId] {
                 return message
             } else {
@@ -1638,7 +1649,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         }
                         optionsMap[id]!.insert(.deleteLocally)
                         var canDeleteGlobally = false
-                        if canPerformDeleteActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) {
+                        if canPerformDeleteActions(limits: limitsConfiguration._asLimits(), accountPeerId: accountPeerId, message: message) {
                             canDeleteGlobally = true
                         } else if limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
                             canDeleteGlobally = true

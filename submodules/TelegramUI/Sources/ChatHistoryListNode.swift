@@ -1583,129 +1583,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.loadStateUpdated = f
     }
 
-    /*private func updateHistoryScrollingArea(transition: ContainedViewLayoutTransition) {
-        guard let historyScrollingArea = self.historyScrollingArea else {
-            return
-        }
-        guard let transactionState = self.opaqueTransactionState as? ChatHistoryTransactionOpaqueState else {
-            return
-        }
-
-        let historyView = transactionState.historyView
-
-        var updatedScrollingState = self.scrollingState
-        if var scrollingState = updatedScrollingState {
-            let convertedIndex = historyView.filteredEntries.count - scrollingState.topItem.index - 1
-            if convertedIndex < 0 || convertedIndex >= historyView.filteredEntries.count {
-                return
-            }
-            let firstItem = historyView.filteredEntries[convertedIndex]
-            var location: MessageHistoryEntryLocation?
-            switch firstItem {
-            case let .MessageEntry(_, _, _, locationValue, _, _):
-                location = locationValue
-            case let .MessageGroupEntry(_, group, _):
-                if let locationValue = group.last?.4 {
-                    location = locationValue
-                }
-            default:
-                break
-            }
-
-            if let location = location {
-                let locationDelta = (location.count - location.index - 1) - scrollingState.topItem.index
-                scrollingState.topItem.index += locationDelta
-                scrollingState.bottomItem.index += locationDelta
-                scrollingState.itemCount = max(scrollingState.itemCount, location.count)
-            }
-
-            updatedScrollingState = scrollingState
-        }
-
-        historyScrollingArea.update(
-            containerSize: self.bounds.size,
-            containerInsets: UIEdgeInsets(top: self.scrollIndicatorInsets.top, left: 0.0, bottom: self.scrollIndicatorInsets.bottom, right: 0.0),
-            scrollingState: updatedScrollingState,
-            isScrolling: self.isDragging || self.isDeceleratingAfterTracking,
-            theme: self.currentPresentationData.theme.theme,
-            transition: transition
-        )
-    }
-
-    private func navigateToAbsolutePosition(position: Float) {
-        guard let transactionState = self.opaqueTransactionState as? ChatHistoryTransactionOpaqueState else {
-            return
-        }
-
-        let historyView = transactionState.historyView
-
-        let convertedIndex = 0
-        if convertedIndex < 0 || convertedIndex >= historyView.filteredEntries.count {
-            self.historyScrollingArea?.resetNavigatingToPosition()
-            return
-        }
-        let firstItem = historyView.filteredEntries[convertedIndex]
-        var location: MessageHistoryEntryLocation?
-        switch firstItem {
-        case let .MessageEntry(_, _, _, locationValue, _, _):
-            location = locationValue
-        case let .MessageGroupEntry(_, group, _):
-            if let locationValue = group.last?.4 {
-                location = locationValue
-            }
-        default:
-            break
-        }
-
-        if let location = location {
-            var absoluteIndex = Int(Float(location.count) * position)
-            if absoluteIndex >= location.count {
-                absoluteIndex = location.count - 1
-            }
-            if absoluteIndex < 0 {
-                absoluteIndex = 0
-            }
-            if case let .peer(peerId) = self.chatLocation {
-                let _ = (self.context.account.postbox.transaction { transaction -> MessageIndex? in
-                    return transaction.findMessageAtAbsoluteIndex(peerId: peerId, namespace: Namespaces.Message.Cloud, index: absoluteIndex)
-                }
-                |> deliverOnMainQueue).start(next: { [weak self] index in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let index = index {
-                        let content: ChatHistoryLocation = .Scroll(index: .message(index), anchorIndex: .message(index), sourceIndex: .message(index), scrollPosition: .top(0.0), animated: false, highlight: false)
-
-                        strongSelf.scrollNavigationDisposable.set((preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: content, id: 0), context: strongSelf.context, chatLocation: strongSelf.chatLocation, subject: strongSelf.subject, chatLocationContextHolder: strongSelf.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
-                        |> map { historyView -> Bool in
-                            switch historyView {
-                            case .Loading:
-                                return false
-                            case .HistoryView:
-                                return true
-                            }
-                        }
-                        |> filter { $0 }
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { _ in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: content, id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
-                            Queue.mainQueue().after(0.5, {
-                                self?.historyScrollingArea?.resetNavigatingToPosition()
-                            })
-                        }))
-                    } else {
-                        strongSelf.historyScrollingArea?.resetNavigatingToPosition()
-                    }
-                })
-            }
-        } else {
-            self.historyScrollingArea?.resetNavigatingToPosition()
-        }
-    }*/
-
     private func maybeUpdateOverscrollAction(offset: CGFloat?) {
         if self.freezeOverscrollControl {
             return
@@ -2304,7 +2181,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             if historyView.originalView.laterId == nil {
                 for entry in historyView.filteredEntries.reversed()  {
                     if case let .MessageEntry(message, _, _, _, _, _) = entry {
-                        if canEditMessage(context: context, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, message: message) {
+                        if canEditMessage(context: context, limitsConfiguration: context.currentLimitsConfiguration.with { EngineConfiguration.Limits($0) }, message: message) {
                             return message
                         }
                     }

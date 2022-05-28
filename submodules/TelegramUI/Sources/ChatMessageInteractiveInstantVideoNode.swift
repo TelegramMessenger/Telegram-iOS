@@ -846,10 +846,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     switch fetchStatus {
                         case .Fetching:
                             if item.message.flags.isSending {
-                                let messageId = item.message.id
-                                let _ = item.context.account.postbox.transaction({ transaction -> Void in
-                                    item.context.engine.messages.deleteMessages(transaction: transaction, ids: [messageId])
-                                }).start()
+                                let _ = item.context.engine.messages.deleteMessagesInteractively(messageIds: [item.message.id], type: .forEveryone).start()
                             } else {
                                 messageMediaFileCancelInteractiveFetch(context: item.context, messageId: item.message.id, file: file)
                             }

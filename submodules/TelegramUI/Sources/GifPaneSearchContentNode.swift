@@ -25,11 +25,9 @@ class PaneGifSearchForQueryResult {
 }
 
 func paneGifSearchForQuery(context: AccountContext, query: String, offset: String?, incompleteResults: Bool = false, staleCachedResults: Bool = false, delayRequest: Bool = true, updateActivity: ((Bool) -> Void)?) -> Signal<PaneGifSearchForQueryResult?, NoError> {
-    let contextBot = context.account.postbox.transaction { transaction -> String in
-        let configuration = currentSearchBotsConfiguration(transaction: transaction)
-        return configuration.gifBotUsername ?? "gif"
-    }
-    |> mapToSignal { botName -> Signal<EnginePeer?, NoError> in
+    let contextBot = context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
+    |> mapToSignal { searchBots -> Signal<EnginePeer?, NoError> in
+        let botName = searchBots.gifBotUsername ?? "gif"
         return context.engine.peers.resolvePeerByName(name: botName)
     }
     |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError> in

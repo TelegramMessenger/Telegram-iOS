@@ -719,7 +719,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     }
 
                     let (peers, messages) = strongSelf.currentMessages
-                    return strongSelf.context.sharedContext.chatAvailableMessageActions(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
+                    return strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
                 }
                 self.selectionPanelNode = selectionPanelNode
                 self.addSubnode(selectionPanelNode)
@@ -825,7 +825,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
             
             let items = combineLatest(queue: .mainQueue(),
-                context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: [message.id], messages: [message.id: message], peers: [:]),
+                context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: [message.id], messages: [message.id: message], peers: [:]),
                 isCachedValue |> take(1)
             )
             |> deliverOnMainQueue
@@ -934,7 +934,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         let context = self.context
         let (peers, messages) = self.currentMessages
-        let items = context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: [message.id], messages: messages, peers: peers)
+        let items = context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: [message.id], messages: messages, peers: peers)
         |> map { [weak self] actions -> [ContextMenuItem] in
             guard let strongSelf = self else {
                 return []
@@ -1000,7 +1000,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     let strings = strongSelf.presentationData.strings
                     
                     let (peers, messages) = strongSelf.currentMessages
-                    let items = context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: [message.id], messages: messages, peers: peers)
+                    let items = context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: [message.id], messages: messages, peers: peers)
                     |> map { actions -> [ContextMenuItem] in
                         var items: [ContextMenuItem] = []
                         
@@ -1129,7 +1129,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 
                 self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: messages.values.filter { messageIds.contains($0.id) })
                 
-                self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
+                self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(engine: self.context.engine, accountPeerId: self.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
                 |> deliverOnMainQueue).start(next: { [weak self] actions in
                     if let strongSelf = self, !actions.options.isEmpty {
                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)

@@ -222,7 +222,7 @@ private func setCachedAttachMenuBots(transaction: Transaction, attachMenuBots: A
     
     let entryId = ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.attachMenuBots, key: key)
     if let entry = CodableEntry(attachMenuBots) {
-        transaction.putItemCacheEntry(id: entryId, entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 10))
+        transaction.putItemCacheEntry(id: entryId, entry: entry)
     } else {
         transaction.removeItemCacheEntry(id: entryId)
     }

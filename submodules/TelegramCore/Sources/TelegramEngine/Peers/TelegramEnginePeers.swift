@@ -756,6 +756,22 @@ public extension TelegramEngine {
                 }
             }
         }
+        
+        public func updatePeersGroupIdInteractively(peerIds: [EnginePeer.Id], groupId: EngineChatList.Group) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    _internal_updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: groupId._asGroup())
+                }
+            }
+            |> ignoreValues
+        }
+        
+        public func resetAllPeerNotificationSettings() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.resetAllPeerNotificationSettings(TelegramPeerNotificationSettings.defaultSettings)
+            }
+            |> ignoreValues
+        }
     }
 }
 

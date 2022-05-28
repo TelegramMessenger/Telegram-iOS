@@ -127,9 +127,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                 if let stickersNode = stickersNode {
                     let point = strongSelf.listView.view.convert(point, to: stickersNode.view)
                     if let (item, itemNode) = stickersNode.stickerItem(at: point) {
-                        return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                            return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                        }
+                        return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                         |> deliverOnMainQueue
                         |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {

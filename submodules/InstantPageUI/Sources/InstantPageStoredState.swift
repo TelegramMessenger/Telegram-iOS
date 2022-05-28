@@ -57,29 +57,23 @@ public final class InstantPageStoredState: Codable {
     }
 }
 
-public func instantPageStoredState(postbox: Postbox, webPage: TelegramMediaWebpage) -> Signal<InstantPageStoredState?, NoError> {
-    return postbox.transaction { transaction -> InstantPageStoredState? in
-        let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: webPage.webpageId.id)
-        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.instantPageStoredState, key: key))?.get(InstantPageStoredState.self) {
-            return entry
-        } else {
-            return nil
-        }
+public func instantPageStoredState(engine: TelegramEngine, webPage: TelegramMediaWebpage) -> Signal<InstantPageStoredState?, NoError> {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: webPage.webpageId.id)
+    
+    return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.instantPageStoredState, id: key))
+    |> map { entry -> InstantPageStoredState? in
+        return entry?.get(InstantPageStoredState.self)
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
-
-public func updateInstantPageStoredStateInteractively(postbox: Postbox, webPage: TelegramMediaWebpage, state: InstantPageStoredState?) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: webPage.webpageId.id)
-        let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.instantPageStoredState, key: key)
-        if let state = state, let entry = CodableEntry(state) {
-            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
-        } else {
-            transaction.removeItemCacheEntry(id: id)
-        }
+public func updateInstantPageStoredStateInteractively(engine: TelegramEngine, webPage: TelegramMediaWebpage, state: InstantPageStoredState?) -> Signal<Never, NoError> {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: webPage.webpageId.id)
+    
+    if let state = state {
+        return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.instantPageStoredState, id: key, item: state)
+    } else {
+        return engine.itemCache.remove(collectionId: ApplicationSpecificItemCacheCollectionId.instantPageStoredState, id: key)
     }
 }

@@ -94,16 +94,10 @@ public final class CachedChannelAdminRanks: Codable {
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
-
 public func cachedChannelAdminRanksEntryId(peerId: PeerId) -> ItemCacheEntryId {
     return ItemCacheEntryId(collectionId: 100, key: CachedChannelAdminRanks.cacheKey(peerId: peerId))
 }
 
-func updateCachedChannelAdminRanks(postbox: Postbox, peerId: PeerId, ranks: Dictionary<PeerId, CachedChannelAdminRank>) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        if let entry = CodableEntry(CachedChannelAdminRanks(ranks: ranks)) {
-            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: 100, key: CachedChannelAdminRanks.cacheKey(peerId: peerId)), entry: entry, collectionSpec: collectionSpec)
-        }
-    }
+func updateCachedChannelAdminRanks(engine: TelegramEngine, peerId: PeerId, ranks: Dictionary<PeerId, CachedChannelAdminRank>) -> Signal<Never, NoError> {
+    return engine.itemCache.put(collectionId: 100, id: CachedChannelAdminRanks.cacheKey(peerId: peerId), item: CachedChannelAdminRanks(ranks: ranks))
 }

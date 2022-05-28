@@ -51,12 +51,15 @@ public extension TelegramEngine {
             return _internal_searchMessageIdByTimestamp(account: self.account, peerId: peerId, threadId: threadId, timestamp: timestamp)
         }
 
-        public func deleteMessages(transaction: Transaction, ids: [MessageId], deleteMedia: Bool = true, manualAddMessageThreadStatsDifference: ((MessageId, Int, Int) -> Void)? = nil) {
-            return _internal_deleteMessages(transaction: transaction, mediaBox: self.account.postbox.mediaBox, ids: ids, deleteMedia: deleteMedia, manualAddMessageThreadStatsDifference: manualAddMessageThreadStatsDifference)
+        public func deleteMessages(transaction: Transaction, ids: [MessageId]) {
+            return _internal_deleteMessages(transaction: transaction, mediaBox: self.account.postbox.mediaBox, ids: ids, deleteMedia: true, manualAddMessageThreadStatsDifference: nil)
         }
 
-        public func deleteAllMessagesWithAuthor(transaction: Transaction, peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
-            return _internal_deleteAllMessagesWithAuthor(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, authorId: authorId, namespace: namespace)
+        public func deleteAllMessagesWithAuthor(peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_deleteAllMessagesWithAuthor(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, authorId: authorId, namespace: namespace)
+            }
+            |> ignoreValues
         }
 
         public func deleteAllMessagesWithForwardAuthor(transaction: Transaction, peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace) {
@@ -376,6 +379,28 @@ public extension TelegramEngine {
         public func failedMessageGroup(id: EngineMessage.Id) -> Signal<[EngineMessage], NoError> {
             return self.account.postbox.transaction { transaction -> [EngineMessage] in
                 return transaction.getMessageFailedGroup(id)?.map(EngineMessage.init) ?? []
+            }
+        }
+        
+        public func unreadChatListPeerIds(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?) -> Signal<[EnginePeer.Id], NoError> {
+            return self.account.postbox.transaction { transaction -> [EnginePeer.Id] in
+                return transaction.getUnreadChatListPeerIds(groupId: groupId._asGroup(), filterPredicate: filterPredicate)
+            }
+        }
+        
+        public func markAllChatsAsReadInteractively(items: [(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?)]) -> Signal<Never, NoError> {
+            let account = self.account
+            return self.account.postbox.transaction { transaction -> Void in
+                for (groupId, filterPredicate) in items {
+                    _internal_markAllChatsAsReadInteractively(transaction: transaction, viewTracker: account.viewTracker, groupId: groupId._asGroup(), filterPredicate: filterPredicate)
+                }
+            }
+            |> ignoreValues
+        }
+        
+        public func getRelativeUnreadChatListIndex(filtered: Bool, position: EngineChatList.RelativePosition, groupId: EngineChatList.Group) -> Signal<EngineChatList.Item.Index?, NoError> {
+            return self.account.postbox.transaction { transaction -> EngineChatList.Item.Index? in
+                return transaction.getRelativeUnreadChatListIndex(filtered: filtered, position: position._asPosition(), groupId: groupId._asGroup())
             }
         }
     }
