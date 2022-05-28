@@ -332,7 +332,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 if let peer = peer {
                     return self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.UserLimits.init(isPremium: peer.isPremium))
                     |> map { limits in
-                        return limits.maxCaptionLengthCount
+                        return limits.maxCaptionLength
                     }
                 } else {
                     return .complete()

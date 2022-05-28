@@ -504,7 +504,13 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                                     case .generic:
                                                         strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), with: nil)
                                                     case let .limitExceeded(limit, premiumLimit):
-                                                        strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                        let text: String
+                                                        if limit == premiumLimit {
+                                                            text = strongSelf.presentationData.strings.Premium_MaxFavedStickersFinalText
+                                                        } else {
+                                                            text = strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
+                                                        }
+                                                        strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
                                                             if let strongSelf = self {
                                                                 if case .info = action {
                                                                     let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
@@ -587,7 +593,13 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                             case .generic:
                                             strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), with: nil)
                                             case let .limitExceeded(limit, premiumLimit):
-                                                strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                let text: String
+                                                if limit == premiumLimit {
+                                                    text = strongSelf.presentationData.strings.Premium_MaxFavedStickersFinalText
+                                                } else {
+                                                    text = strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
+                                                }
+                                                strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
                                                     if let strongSelf = self {
                                                         if case .info = action {
                                                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)

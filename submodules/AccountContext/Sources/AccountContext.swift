@@ -712,6 +712,8 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeChatQrCodeScreen(context: AccountContext, peer: Peer) -> ViewController
     
+    func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
+    
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }
     var immediateHasOngoingCall: Bool { get }
@@ -721,6 +723,24 @@ public protocol SharedAccountContext: AnyObject {
     
     func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController?, withChatListController chatListController: ViewController?)
     func beginNewAuth(testingEnvironment: Bool)
+}
+
+public enum PremiumIntroSource {
+    case settings
+    case stickers
+    case reactions
+    case ads
+    case upload
+    case groupsAndChannels
+    case pinnedChats
+    case publicLinks
+    case savedGifs
+    case savedStickers
+    case folders
+    case chatsPerFolder
+    case accounts
+    case deeplink(String?)
+    case profile(PeerId)
 }
 
 #if ENABLE_WALLET

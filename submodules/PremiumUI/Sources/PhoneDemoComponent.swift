@@ -60,6 +60,7 @@ private final class PhoneView: UIView {
         self.contentContainerView.clipsToBounds = true
         self.contentContainerView.backgroundColor = .darkGray
         self.contentContainerView.layer.cornerRadius = 10.0
+        self.contentContainerView.layer.allowsGroupOpacity = true
         
         self.overlayView = UIView()
         self.overlayView.backgroundColor = .black

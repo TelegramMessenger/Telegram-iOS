@@ -1249,9 +1249,32 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                     preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
                                         if let strongSelf = self {
                                             let message = messages[0]
-                                            let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .message(message: MessageReference(message._asMessage()), media: file)).start()
                                             
-                                            strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                                            let context = strongSelf.context
+                                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                            let controllerInteraction = strongSelf.controllerInteraction
+                                            let _ = (toggleGifSaved(account: context.account, fileReference: .message(message: MessageReference(message._asMessage()), media: file), saved: true)
+                                            |> deliverOnMainQueue).start(next: { result in
+                                                switch result {
+                                                    case .generic:
+                                                    controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                                                    case let .limitExceeded(limit, premiumLimit):
+                                                        let text: String
+                                                        if limit == premiumLimit {
+                                                            text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                                        } else {
+                                                            text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
+                                                        }
+                                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: true, animateInAsReplacement: true, action: { action in
+                                                            if case .info = action {
+                                                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs)
+                                                                controllerInteraction?.pushController(controller)
+                                                                return true
+                                                            }
+                                                            return false
+                                                        }), nil)
+                                                }
+                                            })
                                         }
                                     }))
                                 } else if file.mimeType.hasPrefix("image/") {
@@ -1425,9 +1448,31 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 if file.isAnimated {
                     preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
                         if let strongSelf = self {
-                            let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .webPage(webPage: WebpageReference(webPage), media: file)).start()
-                            
-                            strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                            let context = strongSelf.context
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let controllerInteraction = strongSelf.controllerInteraction
+                            let _ = (toggleGifSaved(account: context.account, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), saved: true)
+                            |> deliverOnMainQueue).start(next: { result in
+                                switch result {
+                                    case .generic:
+                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                                    case let .limitExceeded(limit, premiumLimit):
+                                        let text: String
+                                        if limit == premiumLimit {
+                                            text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                        } else {
+                                            text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
+                                        }
+                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: true, animateInAsReplacement: true, action: { action in
+                                            if case .info = action {
+                                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs)
+                                                controllerInteraction?.pushController(controller)
+                                                return true
+                                            }
+                                            return false
+                                        }), nil)
+                                }
+                            })
                         }
                     }))
                 } else if file.mimeType.hasPrefix("image/") || file.mimeType.hasPrefix("video/") {

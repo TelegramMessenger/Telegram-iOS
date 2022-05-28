@@ -829,9 +829,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
             
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
+                self.originalRemainingSeconds = isUserInteractionEnabled ? 5 : 3
+            
                 self.textNode.maximumNumberOfLines = 5
                 displayUndo = false
-                self.originalRemainingSeconds = 3
             case let .image(image, text):
                 self.avatarNode = nil
                 self.iconNode = ASImageNode()

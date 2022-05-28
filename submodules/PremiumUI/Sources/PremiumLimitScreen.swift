@@ -698,7 +698,7 @@ private final class LimitSheetContent: CombinedComponent {
                     let premiumLimit = state.premiumLimits.maxFolderChatsCount
                     iconName = "Premium/Chat"
                     badgeText = "\(component.count)"
-                    string = strings.Premium_MaxChatsInFolderCountText("\(limit)", "\(premiumLimit)").string
+                    string = strings.Premium_MaxChatsInFolderText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)

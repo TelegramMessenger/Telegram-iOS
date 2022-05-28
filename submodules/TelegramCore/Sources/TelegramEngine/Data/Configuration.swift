@@ -55,8 +55,9 @@ public enum EngineConfiguration {
         public let maxFavedStickerCount: Int32
         public let maxFoldersCount: Int32
         public let maxFolderChatsCount: Int32
-        public let maxCaptionLengthCount: Int32
+        public let maxCaptionLength: Int32
         public let maxUploadFileParts: Int32
+        public let maxAboutLength: Int32
         public let maxAnimatedEmojisInText: Int32
         
         public static var defaultValue: UserLimits {
@@ -71,8 +72,9 @@ public enum EngineConfiguration {
             maxFavedStickerCount: Int32,
             maxFoldersCount: Int32,
             maxFolderChatsCount: Int32,
-            maxCaptionLengthCount: Int32,
+            maxCaptionLength: Int32,
             maxUploadFileParts: Int32,
+            maxAboutLength: Int32,
             maxAnimatedEmojisInText: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
@@ -82,8 +84,9 @@ public enum EngineConfiguration {
             self.maxFavedStickerCount = maxFavedStickerCount
             self.maxFoldersCount = maxFoldersCount
             self.maxFolderChatsCount = maxFolderChatsCount
-            self.maxCaptionLengthCount = maxCaptionLengthCount
+            self.maxCaptionLength = maxCaptionLength
             self.maxUploadFileParts = maxUploadFileParts
+            self.maxAboutLength = maxAboutLength
             self.maxAnimatedEmojisInText = maxAnimatedEmojisInText
         }
     }
@@ -118,8 +121,9 @@ public extension EngineConfiguration.UserLimits {
             maxFavedStickerCount: userLimitsConfiguration.maxFavedStickerCount,
             maxFoldersCount: userLimitsConfiguration.maxFoldersCount,
             maxFolderChatsCount: userLimitsConfiguration.maxFolderChatsCount,
-            maxCaptionLengthCount: userLimitsConfiguration.maxCaptionLengthCount,
+            maxCaptionLength: userLimitsConfiguration.maxCaptionLength,
             maxUploadFileParts: userLimitsConfiguration.maxUploadFileParts,
+            maxAboutLength: userLimitsConfiguration.maxAboutLength,
             maxAnimatedEmojisInText: userLimitsConfiguration.maxAnimatedEmojisInText
         )
     }

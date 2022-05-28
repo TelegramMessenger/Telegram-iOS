@@ -25,6 +25,7 @@ import LocationUI
 import AppLock
 import WallpaperBackgroundNode
 import InAppPurchaseManager
+import PremiumUI
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1458,6 +1459,43 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
         return SettingsUI.makePrivacyAndSecurityController(context: context)
+    }
+    
+    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {
+        let mappedSource: PremiumSource
+        switch source {
+            case .settings:
+                mappedSource = .settings
+            case .stickers:
+                mappedSource = .stickers
+            case .reactions:
+                mappedSource = .reactions
+            case .ads:
+                mappedSource = .ads
+            case .upload:
+                mappedSource = .upload
+            case .groupsAndChannels:
+                mappedSource = .groupsAndChannels
+            case .pinnedChats:
+                mappedSource = .pinnedChats
+            case .publicLinks:
+                mappedSource = .publicLinks
+            case .savedGifs:
+                mappedSource = .savedGifs
+            case .savedStickers:
+                mappedSource = .savedStickers
+            case .folders:
+                mappedSource = .folders
+            case .chatsPerFolder:
+                mappedSource = .chatsPerFolder
+            case .accounts:
+                mappedSource = .accounts
+            case let .deeplink(reference):
+                mappedSource = .deeplink(reference)
+            case let .profile(peerId):
+                mappedSource = .profile(peerId)
+        }
+        return PremiumIntroScreen(context: context, source: mappedSource)
     }
 }
 
