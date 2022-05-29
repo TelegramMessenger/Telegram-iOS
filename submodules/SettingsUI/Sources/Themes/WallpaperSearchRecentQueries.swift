@@ -55,15 +55,13 @@ func clearRecentWallpaperSearchQueries(engine: TelegramEngine) -> Signal<Never, 
     return engine.orderedLists.clear(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries)
 }
 
-func wallpaperSearchRecentQueries(postbox: Postbox) -> Signal<[String], NoError> {
-    return postbox.combinedView(keys: [.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries)])
-    |> map { view -> [String] in
+func wallpaperSearchRecentQueries(engine: TelegramEngine) -> Signal<[String], NoError> {
+    return engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries))
+    |> map { items -> [String] in
         var result: [String] = []
-        if let view = view.views[.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries)] as? OrderedItemListView {
-            for item in view.items {
-                let value = WallpaperSearchRecentQueryItemId(item.id).value
-                result.append(value)
-            }
+        for item in items {
+            let value = WallpaperSearchRecentQueryItemId(item.id).value
+            result.append(value)
         }
         return result
     }

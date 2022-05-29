@@ -59,10 +59,9 @@ private final class DeviceSpecificContactImportContexts {
             if context.reference != reference {
                 context.reference = reference
                 
-                let key: PostboxViewKey = .basicPeer(peerId)
-                let signal = account.postbox.combinedView(keys: [key])
-                |> map { view -> String? in
-                    if let user = (view.views[key] as? BasicPeerView)?.peer as? TelegramUser {
+                let signal = TelegramEngine(account: account).data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> map { peer -> String? in
+                    if case let .user(user) = peer {
                         return user.phone
                     } else {
                         return nil

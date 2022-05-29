@@ -333,5 +333,26 @@ public extension TelegramEngine.EngineData.Item {
                 return EngineContentSettings(appConfiguration: appConfiguration)
             }
         }
+        
+        public struct LocalizationList: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = LocalizationListState
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.localizationListState]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let localizationListState = view.values[PreferencesKeys.localizationListState]?.get(LocalizationListState.self) else {
+                    return LocalizationListState.defaultSettings
+                }
+                return localizationListState
+            }
+        }
     }
 }

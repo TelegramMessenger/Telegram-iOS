@@ -91,13 +91,13 @@ final class ShareControllerPeerGridItem: GridItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let peer: EngineRenderedPeer?
-    let presence: PeerPresence?
+    let presence: EnginePeer.Presence?
     let controllerInteraction: ShareControllerInteraction
     let search: Bool
     
     let section: GridSection?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer?, presence: PeerPresence?, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil, search: Bool = false) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer?, presence: EnginePeer.Presence?, controllerInteraction: ShareControllerInteraction, sectionTitle: String? = nil, search: Bool = false) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -131,7 +131,7 @@ final class ShareControllerPeerGridItem: GridItem {
 }
 
 final class ShareControllerPeerGridItemNode: GridItemNode {
-    private var currentState: (AccountContext, PresentationTheme, PresentationStrings, EngineRenderedPeer?, Bool, PeerPresence?)?
+    private var currentState: (AccountContext, PresentationTheme, PresentationStrings, EngineRenderedPeer?, Bool, EnginePeer.Presence?)?
     private let peerNode: SelectablePeerNode
     private var presenceManager: PeerPresenceStatusManager?
     
@@ -171,14 +171,14 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         }
     }
     
-    func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer?, presence: PeerPresence?, search: Bool, synchronousLoad: Bool, force: Bool) {
-        if force || self.currentState == nil || self.currentState!.0 !== context || self.currentState!.3 != peer || !arePeerPresencesEqual(self.currentState!.5, presence) {
+    func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer?, presence: EnginePeer.Presence?, search: Bool, synchronousLoad: Bool, force: Bool) {
+        if force || self.currentState == nil || self.currentState!.0 !== context || self.currentState!.3 != peer || self.currentState!.5 != presence {
             let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: theme.chatList.secretTitleColor, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.checkContentColor, avatarPlaceholderColor: theme.list.mediaPlaceholderColor)
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             var online = false
-            if case let .user(peer) = peer?.peer, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != context.account.peerId  {
-                let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(presence), relativeTo: timestamp)
+            if case let .user(peer) = peer?.peer, let presence = presence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != context.account.peerId  {
+                let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: timestamp)
                 if case .online = relativeStatus {
                     online = true
                 }
@@ -220,8 +220,8 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             }
             self.currentState = (context, theme, strings, peer, search, presence)
             self.setNeedsLayout()
-            if let presence = presence as? TelegramUserPresence {
-                self.presenceManager?.reset(presence: EnginePeer.Presence(presence))
+            if let presence = presence {
+                self.presenceManager?.reset(presence: presence)
             }
         }
         self.updateSelection(animated: false)

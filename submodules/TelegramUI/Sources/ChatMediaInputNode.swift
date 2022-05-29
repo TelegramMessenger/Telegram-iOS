@@ -730,27 +730,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     break
                 }
             }
-            let _ = (context.account.postbox.transaction { transaction -> Void in
-                let namespace = Namespaces.ItemCollection.CloudStickerPacks
-                let infos = transaction.getItemCollectionsInfos(namespace: namespace)
-                
-                var packDict: [ItemCollectionId: Int] = [:]
-                for i in 0 ..< infos.count {
-                    packDict[infos[i].0] = i
-                }
-                var tempSortedPacks: [(ItemCollectionId, ItemCollectionInfo)] = []
-                var processedPacks = Set<ItemCollectionId>()
-                for id in currentIds {
-                    if let index = packDict[id] {
-                        tempSortedPacks.append(infos[index])
-                        processedPacks.insert(id)
-                    }
-                }
-                let restPacks = infos.filter { !processedPacks.contains($0.0) }
-                let sortedPacks = restPacks + tempSortedPacks
-                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: .sync, noDelay: false)
-                transaction.replaceItemCollectionInfos(namespace: namespace, itemCollectionInfos: sortedPacks)
-            }
+            let _ = (context.engine.stickers.reorderStickerPacks(namespace: Namespaces.ItemCollection.CloudStickerPacks, itemIds: currentIds)
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 temporaryPackOrder.set(.single(nil))
                 
@@ -1091,16 +1071,10 @@ final class ChatMediaInputNode: ChatInputNode {
         })
         self.trendingInteraction = trendingInteraction
         
-        let preferencesViewKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
-        let reactions: Signal<[String], NoError> = context.account.postbox.combinedView(keys: [preferencesViewKey])
-        |> map { views -> [String] in
+        let reactions: Signal<[String], NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
+        |> map { appConfiguration -> [String] in
             let defaultReactions: [String] = ["👍", "👎", "😍", "😂", "😯", "😕", "😢", "😡", "💪", "👏", "🙈", "😒"]
-            guard let view = views.views[preferencesViewKey] as? PreferencesView else {
-                return defaultReactions
-            }
-            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
-                return defaultReactions
-            }
+            
             guard let data = appConfiguration.data, let emojis = data["gif_search_emojies"] as? [String] else {
                 return defaultReactions
             }

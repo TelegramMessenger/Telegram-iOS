@@ -931,20 +931,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let customChannelDiscussionReadState: Signal<MessageId?, NoError>
         if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
-            let cachedDataKey = PostboxViewKey.cachedPeerData(peerId: peerId)
-            let peerKey = PostboxViewKey.basicPeer(peerId)
-            customChannelDiscussionReadState = context.account.postbox.combinedView(keys: [cachedDataKey, peerKey])
-            |> mapToSignal { views -> Signal<PeerId?, NoError> in
-                guard let view = views.views[cachedDataKey] as? CachedPeerDataView else {
+            customChannelDiscussionReadState = context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.LinkedDiscussionPeerId(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+            )
+            |> mapToSignal { linkedDiscussionPeerId, peer -> Signal<PeerId?, NoError> in
+                guard case let .channel(peer) = peer, case .broadcast = peer.info else {
                     return .single(nil)
                 }
-                guard let peer = (views.views[peerKey] as? BasicPeerView)?.peer as? TelegramChannel, case .broadcast = peer.info else {
-                    return .single(nil)
-                }
-                guard let cachedData = view.cachedPeerData as? CachedChannelData else {
-                    return .single(nil)
-                }
-                guard case let .known(value) = cachedData.linkedDiscussionPeerId else {
+                guard case let .known(value) = linkedDiscussionPeerId else {
                     return .single(nil)
                 }
                 return .single(value)
@@ -954,13 +949,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 guard let discussionPeerId = discussionPeerId else {
                     return .single(nil)
                 }
-                let key = PostboxViewKey.combinedReadState(peerId: discussionPeerId)
-                return context.account.postbox.combinedView(keys: [key])
-                |> map { views -> MessageId? in
-                    guard let view = views.views[key] as? CombinedReadStateView else {
-                        return nil
-                    }
-                    guard let state = view.state else {
+                
+                return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: discussionPeerId))
+                |> map { readCounters -> MessageId? in
+                    guard let state = readCounters._asReadCounters() else {
                         return nil
                     }
                     for (namespace, namespaceState) in state.states {

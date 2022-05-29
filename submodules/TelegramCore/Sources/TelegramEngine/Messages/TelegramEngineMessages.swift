@@ -415,5 +415,19 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func debugAddHoles() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)
+            }
+            |> ignoreValues
+        }
+        
+        public func debugReindexUnreadCounters() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.reindexUnreadCounters()
+            }
+            |> ignoreValues
+        }
     }
 }

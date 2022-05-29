@@ -52,16 +52,14 @@ func clearRecentSettingsSearchItems(engine: TelegramEngine) {
     let _ = engine.orderedLists.clear(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems).start()
 }
 
-func settingsSearchRecentItems(postbox: Postbox) -> Signal<[SettingsSearchableItemId], NoError> {
-    return postbox.combinedView(keys: [.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems)])
-    |> map { view -> [SettingsSearchableItemId] in
+func settingsSearchRecentItems(engine: TelegramEngine) -> Signal<[SettingsSearchableItemId], NoError> {
+    return engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems))
+    |> map { items -> [SettingsSearchableItemId] in
         var result: [SettingsSearchableItemId] = []
-        if let view = view.views[.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems)] as? OrderedItemListView {
-            for item in view.items {
-                let index = SettingsSearchRecentQueryItemId(item.id).value
-                if let itemId = SettingsSearchableItemId(index: index) {
-                    result.append(itemId)
-                }
+        for item in items {
+            let index = SettingsSearchRecentQueryItemId(item.id).value
+            if let itemId = SettingsSearchableItemId(index: index) {
+                result.append(itemId)
             }
         }
         return result

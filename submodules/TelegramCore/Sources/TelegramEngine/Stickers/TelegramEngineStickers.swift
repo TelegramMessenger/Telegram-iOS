@@ -131,5 +131,29 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func reorderStickerPacks(namespace: ItemCollectionId.Namespace, itemIds: [ItemCollectionId]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                let infos = transaction.getItemCollectionsInfos(namespace: namespace)
+                
+                var packDict: [ItemCollectionId: Int] = [:]
+                for i in 0 ..< infos.count {
+                    packDict[infos[i].0] = i
+                }
+                var tempSortedPacks: [(ItemCollectionId, ItemCollectionInfo)] = []
+                var processedPacks = Set<ItemCollectionId>()
+                for id in itemIds {
+                    if let index = packDict[id] {
+                        tempSortedPacks.append(infos[index])
+                        processedPacks.insert(id)
+                    }
+                }
+                let restPacks = infos.filter { !processedPacks.contains($0.0) }
+                let sortedPacks = restPacks + tempSortedPacks
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: .sync, noDelay: false)
+                transaction.replaceItemCollectionInfos(namespace: namespace, itemCollectionInfos: sortedPacks)
+            }
+            |> ignoreValues
+        }
     }
 }

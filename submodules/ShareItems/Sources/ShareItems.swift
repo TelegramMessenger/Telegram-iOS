@@ -464,15 +464,14 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
     return enqueueMessagesToMultiplePeers(account: account, peerIds: peerIds, messages: messages)
     |> castError(Void.self)
     |> mapToSignal { messageIds -> Signal<Float, Void> in
-        let key: PostboxViewKey = .messages(Set(messageIds))
-        return account.postbox.combinedView(keys: [key])
+        return TelegramEngine(account: account).data.subscribe(EngineDataMap(
+            messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init)
+        ))
         |> castError(Void.self)
-        |> mapToSignal { view -> Signal<Float, Void> in
-            if let messagesView = view.views[key] as? MessagesView {
-                for (_, message) in messagesView.messages {
-                    if message.flags.contains(.Unsent) {
-                        return .complete()
-                    }
+        |> mapToSignal { messages -> Signal<Float, Void> in
+            for (_, message) in messages {
+                if let message = message, message.flags.contains(.Unsent) {
+                    return .complete()
                 }
             }
             return .single(1.0)

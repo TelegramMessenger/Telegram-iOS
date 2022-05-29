@@ -400,7 +400,7 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
         self.recentListNode.isHidden = false
         
         let previousRecentlySearchedItemOrder = Atomic<[SettingsSearchableItemId]>(value: [])
-        let fixedRecentlySearchedItems = settingsSearchRecentItems(postbox: context.account.postbox)
+        let fixedRecentlySearchedItems = settingsSearchRecentItems(engine: context.engine)
         |> map { recentIds -> [SettingsSearchableItemId] in
             var result: [SettingsSearchableItemId] = []
             let _ = previousRecentlySearchedItemOrder.modify { current in

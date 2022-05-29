@@ -94,9 +94,9 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                 return context.engine.data.get(
                     TelegramEngine.EngineData.Item.Peer.IsContact(id: peer.id),
                     TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peer.id),
-                    TelegramEngine.EngineData.Item.Messages.ReadState(id: peer.id)
+                    TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: peer.id)
                 )
-                |> map { [weak chatListController] isContact, notificationSettings, readState -> [ContextMenuItem] in
+                |> map { [weak chatListController] isContact, notificationSettings, readCounters -> [ContextMenuItem] in
                     if promoInfo != nil {
                         return []
                     }
@@ -160,7 +160,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     }
 
                     var isUnread = false
-                    if let readState = readState, readState.isUnread {
+                    if readCounters.isUnread {
                         isUnread = true
                     }
 

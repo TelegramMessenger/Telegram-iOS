@@ -740,39 +740,34 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         let updateNotificationsView: (@escaping () -> Void) -> Void = { completion in
             updateState { current in
                 peerIds = peerIds.union(current.mode.peerIds)
-                let key: PostboxViewKey = .peerNotificationSettings(peerIds: peerIds)
-                updateNotificationsDisposable.set((context.account.postbox.combinedView(keys: [key])
-                |> deliverOnMainQueue).start(next: { view in
-                    if let view = view.views[key] as? PeerNotificationSettingsView {
-                        let _ = (context.engine.data.get(
-                            EngineDataMap(view.notificationSettings.keys.map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
-                            EngineDataMap(view.notificationSettings.keys.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init))
-                        )
-                        |> deliverOnMainQueue).start(next: { peerMap, notificationSettingsMap in
-                            updateState { current in
-                                var current = current
-                                for (key, value) in view.notificationSettings {
-                                    if let value = value as? TelegramPeerNotificationSettings {
-                                        if let local = current.mode.settings[key]  {
-                                            if !value.isEqual(to: local.settings), let maybePeer = peerMap[key], let peer = maybePeer, let settings = notificationSettingsMap[key], !settings._asNotificationSettings().isEqual(to: local.settings) {
-                                                current = current.withUpdatedPeerSound(peer._asPeer(), settings.messageSound._asMessageSound()).withUpdatedPeerMuteInterval(peer._asPeer(), settings.muteState.timeInterval).withUpdatedPeerDisplayPreviews(peer._asPeer(), settings.displayPreviews._asDisplayPreviews())
-                                            }
-                                        } else if let maybePeer = peerMap[key], let peer = maybePeer {
-                                            if case .default = value.messageSound, case .unmuted = value.muteState, case .default = value.displayPreviews {
-                                            } else {
-                                                current = current.withUpdatedPeerSound(peer._asPeer(), value.messageSound).withUpdatedPeerMuteInterval(peer._asPeer(), EnginePeer.NotificationSettings.MuteState(value.muteState).timeInterval).withUpdatedPeerDisplayPreviews(peer._asPeer(), value.displayPreviews)
-                                            }
-                                        }
+                updateNotificationsDisposable.set((context.engine.data.subscribe(EngineDataMap(
+                    peerIds.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init)
+                ))
+                |> deliverOnMainQueue).start(next: { notificationSettingsMap in
+                    let _ = (context.engine.data.get(
+                        EngineDataMap(notificationSettingsMap.keys.map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
+                        EngineDataMap(notificationSettingsMap.keys.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init))
+                    )
+                    |> deliverOnMainQueue).start(next: { peerMap, notificationSettingsMap in
+                        updateState { current in
+                            var current = current
+                            for (key, value) in notificationSettingsMap {
+                                if let local = current.mode.settings[key]  {
+                                    if !value._asNotificationSettings().isEqual(to: local.settings), let maybePeer = peerMap[key], let peer = maybePeer, let settings = notificationSettingsMap[key], !settings._asNotificationSettings().isEqual(to: local.settings) {
+                                        current = current.withUpdatedPeerSound(peer._asPeer(), settings.messageSound._asMessageSound()).withUpdatedPeerMuteInterval(peer._asPeer(), settings.muteState.timeInterval).withUpdatedPeerDisplayPreviews(peer._asPeer(), settings.displayPreviews._asDisplayPreviews())
+                                    }
+                                } else if let maybePeer = peerMap[key], let peer = maybePeer {
+                                    if case .default = value.messageSound, case .unmuted = value.muteState, case .default = value.displayPreviews {
+                                    } else {
+                                        current = current.withUpdatedPeerSound(peer._asPeer(), value.messageSound._asMessageSound()).withUpdatedPeerMuteInterval(peer._asPeer(), value.muteState.timeInterval).withUpdatedPeerDisplayPreviews(peer._asPeer(), value.displayPreviews._asDisplayPreviews())
                                     }
                                 }
-                                return current
                             }
-                            
-                            completion()
-                        })
-                    } else {
+                            return current
+                        }
+                        
                         completion()
-                    }
+                    })
                 }))
                 return current
             }
@@ -1175,32 +1170,28 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         let updateNotificationsDisposable = self.updateNotificationsDisposable
         
         let updateNotificationsView: (@escaping () -> Void) -> Void = { completion in
-            let key: PostboxViewKey = .peerNotificationSettings(peerIds: Set(mode.peerIds))
-            
-            updateNotificationsDisposable.set(context.account.postbox.combinedView(keys: [key]).start(next: { view in
-                if let view = view.views[key] as? PeerNotificationSettingsView {
-                    let _ = (context.engine.data.get(
-                        EngineDataMap(view.notificationSettings.keys.map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
-                        EngineDataMap(view.notificationSettings.keys.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init))
-                    )
-                    |> deliverOnMainQueue).start(next: { peerMap, notificationSettingsMap in
-                        updateState { current in
-                            var current = current
-                            for (key, value) in view.notificationSettings {
-                                if let value = value as? TelegramPeerNotificationSettings,let local = current.mode.settings[key] {
-                                    if !value.isEqual(to: local.settings), let maybePeer = peerMap[key], let peer = maybePeer, let settings = notificationSettingsMap[key], !settings._asNotificationSettings().isEqual(to: local.settings) {
-                                        current = current.withUpdatedPeerSound(peer._asPeer(), settings.messageSound._asMessageSound()).withUpdatedPeerMuteInterval(peer._asPeer(), settings.muteState.timeInterval)
-                                    }
+            updateNotificationsDisposable.set(context.engine.data.subscribe(EngineDataMap(
+                mode.peerIds.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init)
+            )).start(next: { notificationSettingsMap in
+                let _ = (context.engine.data.get(
+                    EngineDataMap(notificationSettingsMap.keys.map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
+                    EngineDataMap(notificationSettingsMap.keys.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init))
+                )
+                |> deliverOnMainQueue).start(next: { peerMap, notificationSettingsMap in
+                    updateState { current in
+                        var current = current
+                        for (key, value) in notificationSettingsMap {
+                            if let local = current.mode.settings[key] {
+                                if !value._asNotificationSettings().isEqual(to: local.settings), let maybePeer = peerMap[key], let peer = maybePeer, let settings = notificationSettingsMap[key], !settings._asNotificationSettings().isEqual(to: local.settings) {
+                                    current = current.withUpdatedPeerSound(peer._asPeer(), settings.messageSound._asMessageSound()).withUpdatedPeerMuteInterval(peer._asPeer(), settings.muteState.timeInterval)
                                 }
                             }
-                            return current
                         }
-                        
-                        completion()
-                    })
-                } else {
+                        return current
+                    }
+                    
                     completion()
-                }
+                })
             }))
         }
         

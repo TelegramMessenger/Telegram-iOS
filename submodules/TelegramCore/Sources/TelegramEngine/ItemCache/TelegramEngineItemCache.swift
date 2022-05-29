@@ -25,5 +25,14 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func clear(collectionIds: [Int8]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for id in collectionIds {
+                    transaction.clearItemCacheCollection(collectionId: id)
+                }
+            }
+            |> ignoreValues
+        }
     }
 }

@@ -569,7 +569,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         }
         
         let previousRecentItems = Atomic<[ThemeGridRecentEntry]?>(value: nil)
-        self.recentDisposable = (combineLatest(wallpaperSearchRecentQueries(postbox: self.context.account.postbox), self.presentationDataPromise.get())
+        self.recentDisposable = (combineLatest(wallpaperSearchRecentQueries(engine: self.context.engine), self.presentationDataPromise.get())
         |> deliverOnMainQueue).start(next: { [weak self] queries, presentationData in
             if let strongSelf = self {
                 var entries: [ThemeGridRecentEntry] = []

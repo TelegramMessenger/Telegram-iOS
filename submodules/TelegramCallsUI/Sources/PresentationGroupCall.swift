@@ -1391,15 +1391,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             |> distinctUntilChanged
             |> runOn(.mainQueue())
         } else {
-            rawAdminIds = accountContext.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peerId)])
-            |> map { views -> Set<PeerId> in
-                guard let view = views.views[.cachedPeerData(peerId: peerId)] as? CachedPeerDataView else {
+            rawAdminIds = accountContext.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.LegacyGroupParticipants(id: peerId)
+            )
+            |> map { participants -> Set<PeerId> in
+                guard case let .known(participants) = participants else {
                     return Set()
                 }
-                guard let cachedData = view.cachedPeerData as? CachedGroupData, let participants = cachedData.participants else {
-                    return Set()
-                }
-                return Set(participants.participants.compactMap { item -> PeerId? in
+                return Set(participants.compactMap { item -> PeerId? in
                     switch item {
                     case .creator, .admin:
                         return item.peerId
@@ -1413,11 +1412,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         let adminIds = combineLatest(queue: .mainQueue(),
             rawAdminIds,
-            accountContext.account.postbox.combinedView(keys: [.basicPeer(peerId)])
+            accountContext.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
         )
-        |> map { rawAdminIds, view -> Set<PeerId> in
+        |> map { rawAdminIds, peer -> Set<PeerId> in
             var rawAdminIds = rawAdminIds
-            if let peerView = view.views[.basicPeer(peerId)] as? BasicPeerView, let peer = peerView.peer as? TelegramChannel {
+            if case let .channel(peer) = peer {
                 if peer.hasPermission(.manageCalls) {
                     rawAdminIds.insert(accountContext.account.peerId)
                 } else {
@@ -1969,15 +1968,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     |> distinctUntilChanged
                     |> runOn(.mainQueue())
                 } else {
-                    rawAdminIds = accountContext.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peerId)])
-                    |> map { views -> Set<PeerId> in
-                        guard let view = views.views[.cachedPeerData(peerId: peerId)] as? CachedPeerDataView else {
+                    rawAdminIds = accountContext.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Peer.LegacyGroupParticipants(id: peerId)
+                    )
+                    |> map { participants -> Set<PeerId> in
+                        guard case let .known(participants) = participants else {
                             return Set()
                         }
-                        guard let cachedData = view.cachedPeerData as? CachedGroupData, let participants = cachedData.participants else {
-                            return Set()
-                        }
-                        return Set(participants.participants.compactMap { item -> PeerId? in
+                        return Set(participants.compactMap { item -> PeerId? in
                             switch item {
                             case .creator, .admin:
                                 return item.peerId
@@ -1991,11 +1989,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 
                 let adminIds = combineLatest(queue: .mainQueue(),
                     rawAdminIds,
-                    accountContext.account.postbox.combinedView(keys: [.basicPeer(peerId)])
+                    accountContext.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 )
-                |> map { rawAdminIds, view -> Set<PeerId> in
+                |> map { rawAdminIds, peer -> Set<PeerId> in
                     var rawAdminIds = rawAdminIds
-                    if let peerView = view.views[.basicPeer(peerId)] as? BasicPeerView, let peer = peerView.peer as? TelegramChannel {
+                    if case let .channel(peer) = peer {
                         if peer.hasPermission(.manageCalls) {
                             rawAdminIds.insert(accountContext.account.peerId)
                         } else {

@@ -20,7 +20,7 @@ private let subtitleFont = Font.regular(12.0)
 private struct SharePeerEntry: Comparable, Identifiable {
     let index: Int32
     let peer: EngineRenderedPeer
-    let presence: PeerPresence?
+    let presence: EnginePeer.Presence?
     let theme: PresentationTheme
     let strings: PresentationStrings
     
@@ -35,13 +35,10 @@ private struct SharePeerEntry: Comparable, Identifiable {
         if lhs.peer != rhs.peer {
             return false
         }
-        if let lhsPresence = lhs.presence, let rhsPresence = rhs.presence {
-            if !lhsPresence.isEqual(to: rhsPresence) {
-                return false
-            }
-        } else if (lhs.presence != nil) != (rhs.presence != nil) {
+        if lhs.presence != rhs.presence {
             return false
         }
+        
         return true
     }
     
@@ -115,9 +112,9 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
-    let peersValue = Promise<[(EngineRenderedPeer, PeerPresence?)]>()
+    let peersValue = Promise<[(EngineRenderedPeer, EnginePeer.Presence?)]>()
     
-    init(sharedContext: SharedAccountContext, context: AccountContext, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(EngineRenderedPeer, PeerPresence?)], accountPeer: EnginePeer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?) {
+    init(sharedContext: SharedAccountContext, context: AccountContext, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(EngineRenderedPeer, EnginePeer.Presence?)], accountPeer: EnginePeer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?) {
         self.sharedContext = sharedContext
         self.context = context
         self.theme = theme

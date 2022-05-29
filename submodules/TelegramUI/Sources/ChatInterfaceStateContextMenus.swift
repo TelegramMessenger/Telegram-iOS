@@ -575,7 +575,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         )
     }
 
-    let readState = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.ReadState(id: messages[0].id.peerId))
+    let readCounters = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: messages[0].id.peerId))
     
     let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?), NoError> = combineLatest(
         loadLimits,
@@ -585,13 +585,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         context.account.pendingUpdateMessageManager.updatingMessageMedia
         |> take(1),
         infoSummaryData,
-        readState,
+        readCounters,
         ApplicationSpecificNotice.getMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager),
         context.engine.stickers.availableReactions(),
         context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings, SharedDataKeys.loggingSettings]),
         context.engine.peers.notificationSoundList() |> take(1)
     )
-    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, infoSummaryData, readState, messageViewsPrivacyTips, availableReactions, sharedData, notificationSoundList -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?) in
+    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, infoSummaryData, readCounters, messageViewsPrivacyTips, availableReactions, sharedData, notificationSoundList -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?) in
         let (limitsConfiguration, appConfig) = limitsAndAppConfig
         var canEdit = false
         if !isAction {
@@ -599,10 +599,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             canEdit = canEditMessage(context: context, limitsConfiguration: limitsConfiguration, message: message)
         }
 
-        var isMessageRead = false
-        if let readState = readState {
-            isMessageRead = readState.isOutgoingMessageIndexRead(message.index)
-        }
+        let isMessageRead = readCounters.isOutgoingMessageIndexRead(message.index)
         
         let translationSettings: TranslationSettings
         if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {

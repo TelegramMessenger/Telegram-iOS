@@ -56,16 +56,14 @@ func clearRecentWebSearchQueries(engine: TelegramEngine) -> Signal<Never, NoErro
     return engine.orderedLists.clear(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries)
 }
 
-func webSearchRecentQueries(postbox: Postbox) -> Signal<[String], NoError> {
-    return postbox.combinedView(keys: [.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries)])
-    |> mapToSignal { view -> Signal<[String], NoError> in
+func webSearchRecentQueries(engine: TelegramEngine) -> Signal<[String], NoError> {
+    return engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries))
+    |> map { items -> [String] in
         var result: [String] = []
-        if let view = view.views[.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries)] as? OrderedItemListView {
-            for item in view.items {
-                let value = WebSearchRecentQueryItemId(item.id).value
-                result.append(value)
-            }
+        for item in items {
+            let value = WebSearchRecentQueryItemId(item.id).value
+            result.append(value)
         }
-        return .single(result)
+        return result
     }
 }
