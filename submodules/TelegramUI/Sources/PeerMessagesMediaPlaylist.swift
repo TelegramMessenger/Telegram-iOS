@@ -444,15 +444,13 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         if item?.message.id != self.currentlyObservedMessageId {
             self.currentlyObservedMessageId = item?.message.id
             if let id = item?.message.id {
-                let key: PostboxViewKey = .messages(Set([id]))
-                self.currentlyObservedMessageDisposable.set((self.context.account.postbox.combinedView(keys: [key])
-                |> filter { views in
-                    if let view = views.views[key] as? MessagesView {
-                        if !view.messages.isEmpty {
-                            return false
-                        }
+                self.currentlyObservedMessageDisposable.set((self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: id))
+                |> filter { message in
+                    if let _ = message {
+                        return false
+                    } else {
+                        return true
                     }
-                    return true
                 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] _ in

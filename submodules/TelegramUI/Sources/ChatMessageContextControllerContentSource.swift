@@ -3,6 +3,7 @@ import UIKit
 import Display
 import ContextUI
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 final class ChatMessageContextExtractedContentSource: ContextExtractedContentSource {
@@ -11,7 +12,7 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
     let blurBackground: Bool = true
     
     private weak var chatNode: ChatControllerNode?
-    private let postbox: Postbox
+    private let engine: TelegramEngine
     private let message: Message
     private let selectAll: Bool
     
@@ -19,24 +20,21 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
         if self.message.adAttribute != nil {
             return .single(false)
         }
-        let viewKey = PostboxViewKey.messages(Set([self.message.id]))
-        return self.postbox.combinedView(keys: [viewKey])
-        |> map { views -> Bool in
-            guard let view = views.views[viewKey] as? MessagesView else {
+    
+        return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: self.message.id))
+        |> map { message -> Bool in
+            if let _ = message {
                 return false
-            }
-            if view.messages.isEmpty {
-                return true
             } else {
-                return false
+                return true
             }
         }
         |> distinctUntilChanged
     }
     
-    init(chatNode: ChatControllerNode, postbox: Postbox, message: Message, selectAll: Bool) {
+    init(chatNode: ChatControllerNode, engine: TelegramEngine, message: Message, selectAll: Bool) {
         self.chatNode = chatNode
-        self.postbox = postbox
+        self.engine = engine
         self.message = message
         self.selectAll = selectAll
     }
@@ -89,7 +87,7 @@ final class ChatMessageReactionContextExtractedContentSource: ContextExtractedCo
     let centerActionsHorizontally: Bool = true
     
     private weak var chatNode: ChatControllerNode?
-    private let postbox: Postbox
+    private let engine: TelegramEngine
     private let message: Message
     private let contentView: ContextExtractedContentContainingView
     
@@ -97,24 +95,21 @@ final class ChatMessageReactionContextExtractedContentSource: ContextExtractedCo
         if self.message.adAttribute != nil {
             return .single(false)
         }
-        let viewKey = PostboxViewKey.messages(Set([self.message.id]))
-        return self.postbox.combinedView(keys: [viewKey])
-        |> map { views -> Bool in
-            guard let view = views.views[viewKey] as? MessagesView else {
+        
+        return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: self.message.id))
+        |> map { message -> Bool in
+            if let _ = message {
                 return false
-            }
-            if view.messages.isEmpty {
-                return true
             } else {
-                return false
+                return true
             }
         }
         |> distinctUntilChanged
     }
     
-    init(chatNode: ChatControllerNode, postbox: Postbox, message: Message, contentView: ContextExtractedContentContainingView) {
+    init(chatNode: ChatControllerNode, engine: TelegramEngine, message: Message, contentView: ContextExtractedContentContainingView) {
         self.chatNode = chatNode
-        self.postbox = postbox
+        self.engine = engine
         self.message = message
         self.contentView = contentView
     }

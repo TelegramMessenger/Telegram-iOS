@@ -282,7 +282,7 @@ class WebSearchControllerNode: ASDisplayNode {
         
         if !attachment {
             let previousRecentItems = Atomic<[WebSearchRecentQueryEntry]?>(value: nil)
-            self.recentDisposable = (combineLatest(webSearchRecentQueries(postbox: self.context.account.postbox), self.webSearchInterfaceStatePromise.get())
+            self.recentDisposable = (combineLatest(webSearchRecentQueries(engine: self.context.engine), self.webSearchInterfaceStatePromise.get())
             |> deliverOnMainQueue).start(next: { [weak self] queries, interfaceState in
                 if let strongSelf = self {
                     var entries: [WebSearchRecentQueryEntry] = []

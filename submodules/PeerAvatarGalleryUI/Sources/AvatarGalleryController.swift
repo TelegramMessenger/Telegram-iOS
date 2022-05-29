@@ -21,13 +21,13 @@ public enum AvatarGalleryEntryId: Hashable {
     case resource(String)
 }
 
-public func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> Signal<Any, NoError> {
-    return context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
-    |> mapToSignal { view -> Signal<[AvatarGalleryEntry]?, NoError> in
-        guard let peer = (view.views[.basicPeer(peerId)] as? BasicPeerView)?.peer else {
+public func peerInfoProfilePhotos(context: AccountContext, peerId: EnginePeer.Id) -> Signal<Any, NoError> {
+    return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+    |> mapToSignal { peer -> Signal<[AvatarGalleryEntry]?, NoError> in
+        guard let peer = peer else {
             return .single(nil)
         }
-        return initialAvatarGalleryEntries(account: context.account, engine: context.engine, peer: peer)
+        return initialAvatarGalleryEntries(account: context.account, engine: context.engine, peer: peer._asPeer())
     }
     |> distinctUntilChanged
     |> mapToSignal { entries -> Signal<(Bool, [AvatarGalleryEntry])?, NoError> in

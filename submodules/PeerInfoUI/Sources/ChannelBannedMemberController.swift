@@ -47,7 +47,7 @@ private enum ChannelBannedMemberEntryStableId: Hashable {
 }
 
 private enum ChannelBannedMemberEntry: ItemListNodeEntry {
-    case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, TelegramUserPresence?)
+    case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, EnginePeer, EnginePeer.Presence?)
     case rightsHeader(PresentationTheme, String)
     case rightItem(PresentationTheme, Int, String, TelegramChatBannedRightsFlags, Bool, Bool)
     case timeout(PresentationTheme, String, String)
@@ -97,7 +97,7 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
                     if lhsDateTimeFormat != rhsDateTimeFormat {
                         return false
                     }
-                    if !arePeersEqual(lhsPeer, rhsPeer) {
+                    if lhsPeer != rhsPeer {
                         return false
                     }
                     if lhsPresence != rhsPresence {
@@ -207,7 +207,7 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelBannedMemberControllerArguments
         switch self {
             case let .info(_, _, dateTimeFormat, peer, presence):
-                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: EnginePeer(peer), presence: presence.flatMap(EnginePeer.Presence.init), memberCount: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, memberCount: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rightsHeader(_, text):
@@ -256,11 +256,11 @@ func completeRights(_ flags: TelegramChatBannedRightsFlags) -> TelegramChatBanne
     return result
 }
 
-private func channelBannedMemberControllerEntries(presentationData: PresentationData, state: ChannelBannedMemberControllerState, accountPeerId: PeerId, channelView: PeerView, memberView: PeerView, initialParticipant: ChannelParticipant?, initialBannedBy: Peer?) -> [ChannelBannedMemberEntry] {
+private func channelBannedMemberControllerEntries(presentationData: PresentationData, state: ChannelBannedMemberControllerState, accountPeerId: PeerId, channelPeer: EnginePeer?, memberPeer: EnginePeer?, memberPresence: EnginePeer.Presence?, initialParticipant: ChannelParticipant?, initialBannedBy: EnginePeer?) -> [ChannelBannedMemberEntry] {
     var entries: [ChannelBannedMemberEntry] = []
     
-    if let channel = channelView.peers[channelView.peerId] as? TelegramChannel, let _ = channelView.cachedData as? CachedChannelData, let defaultBannedRights = channel.defaultBannedRights, let member = memberView.peers[memberView.peerId] {
-        entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, member, memberView.peerPresences[member.id] as? TelegramUserPresence))
+    if case let .channel(channel) = channelPeer, let defaultBannedRights = channel.defaultBannedRights, let member = memberPeer {
+        entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, member, memberPresence))
             
         let currentRightsFlags: TelegramChatBannedRightsFlags
         if let updatedFlags = state.updatedFlags {
@@ -300,13 +300,13 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         entries.append(.timeout(presentationData.theme, presentationData.strings.GroupPermission_Duration, currentTimeoutString))
         
         if let initialParticipant = initialParticipant, case let .member(_, _, _, banInfo?, _) = initialParticipant, let initialBannedBy = initialBannedBy {
-            entries.append(.exceptionInfo(presentationData.theme, presentationData.strings.GroupPermission_AddedInfo(EnginePeer(initialBannedBy).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), stringForRelativeSymbolicTimestamp(strings: presentationData.strings, relativeTimestamp: banInfo.timestamp, relativeTo: state.referenceTimestamp, dateTimeFormat: presentationData.dateTimeFormat)).string))
+            entries.append(.exceptionInfo(presentationData.theme, presentationData.strings.GroupPermission_AddedInfo(initialBannedBy.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), stringForRelativeSymbolicTimestamp(strings: presentationData.strings, relativeTimestamp: banInfo.timestamp, relativeTo: state.referenceTimestamp, dateTimeFormat: presentationData.dateTimeFormat)).string))
             entries.append(.delete(presentationData.theme, presentationData.strings.GroupPermission_Delete))
         }
-    } else if let group = channelView.peers[channelView.peerId] as? TelegramGroup, let member = memberView.peers[memberView.peerId] {
+    } else if case let .legacyGroup(group) = channelPeer, let member = memberPeer {
         let defaultBannedRightsFlags = group.defaultBannedRights?.flags ?? []
         
-        entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, member, memberView.peerPresences[member.id] as? TelegramUserPresence))
+        entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, member, memberPresence))
         
         let currentRightsFlags: TelegramChatBannedRightsFlags
         if let updatedFlags = state.updatedFlags {
@@ -346,7 +346,7 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         entries.append(.timeout(presentationData.theme, presentationData.strings.GroupPermission_Duration, currentTimeoutString))
         
         if let initialParticipant = initialParticipant, case let .member(_, _, _, banInfo?, _) = initialParticipant, let initialBannedBy = initialBannedBy {
-            entries.append(.exceptionInfo(presentationData.theme, presentationData.strings.GroupPermission_AddedInfo(EnginePeer(initialBannedBy).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), stringForRelativeSymbolicTimestamp(strings: presentationData.strings, relativeTimestamp: banInfo.timestamp, relativeTo: state.referenceTimestamp, dateTimeFormat: presentationData.dateTimeFormat)).string))
+            entries.append(.exceptionInfo(presentationData.theme, presentationData.strings.GroupPermission_AddedInfo(initialBannedBy.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), stringForRelativeSymbolicTimestamp(strings: presentationData.strings, relativeTimestamp: banInfo.timestamp, relativeTo: state.referenceTimestamp, dateTimeFormat: presentationData.dateTimeFormat)).string))
             entries.append(.delete(presentationData.theme, presentationData.strings.GroupPermission_Delete))
         }
     }
@@ -504,24 +504,31 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
         presentControllerImpl?(actionSheet, nil)
     })
     
-    var keys: [PostboxViewKey] = [.peer(peerId: peerId, components: .all), .peer(peerId: memberId, components: .all)]
+    var peerDataItems: [TelegramEngine.EngineData.Item.Peer.Peer] = []
+    peerDataItems.append(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+    peerDataItems.append(TelegramEngine.EngineData.Item.Peer.Peer(id: memberId))
     if let banInfo = initialParticipant?.banInfo {
-        keys.append(.peer(peerId: banInfo.restrictedBy, components: []))
+        peerDataItems.append(TelegramEngine.EngineData.Item.Peer.Peer(id: banInfo.restrictedBy))
     }
-    let combinedView = context.account.postbox.combinedView(keys: keys)
+    
+    let peersMap = context.engine.data.subscribe(
+        EngineDataMap(peerDataItems),
+        TelegramEngine.EngineData.Item.Peer.Presence(id: memberId)
+    )
     
     let canEdit = true
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
-    let signal = combineLatest(presentationData, statePromise.get(), combinedView)
+    let signal = combineLatest(presentationData, statePromise.get(), peersMap)
     |> deliverOnMainQueue
-    |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let channelView = combinedView.views[.peer(peerId: peerId, components: .all)] as! PeerView
-        let memberView = combinedView.views[.peer(peerId: memberId, components: .all)] as! PeerView
-        var initialBannedByPeer: Peer?
+    |> map { presentationData, state, peersMap -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let channelPeer = peersMap.0[peerId].flatMap { $0 }
+        let memberPeer = peersMap.0[memberId].flatMap { $0 }
+        var initialBannedByPeer: EnginePeer?
         if let banInfo = initialParticipant?.banInfo {
-            initialBannedByPeer = (combinedView.views[.peer(peerId: banInfo.restrictedBy, components: [])] as? PeerView)?.peers[banInfo.restrictedBy]
+            initialBannedByPeer = peersMap.0[banInfo.restrictedBy].flatMap { $0 }
         }
+        let memberPresence = peersMap.1
         
         let leftNavigationButton: ItemListNavigationButton
         leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
@@ -590,7 +597,7 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
                             
                             resolvedRights = TelegramChatBannedRights(flags: completeRights(currentRightsFlags), untilDate: currentTimeout)
                         }
-                    } else if canEdit, let _ = channelView.peers[channelView.peerId] as? TelegramChannel {
+                    } else if canEdit, case .channel = channelPeer {
                         var updateFlags: TelegramChatBannedRightsFlags?
                         var updateTimeout: Int32?
                         updateState { state in
@@ -723,7 +730,7 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelBannedMemberControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelView: channelView, memberView: memberView, initialParticipant: initialParticipant, initialBannedBy: initialBannedByPeer), style: .blocks, emptyStateItem: nil, animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelBannedMemberControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelPeer: channelPeer, memberPeer: memberPeer, memberPresence: memberPresence, initialParticipant: initialParticipant, initialBannedBy: initialBannedByPeer), style: .blocks, emptyStateItem: nil, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     }

@@ -69,11 +69,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         
         super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), emptyAreaColor: .black))
         
-        self.stateDisposable = (account.postbox.stateView()
-        |> map { view -> InnerState in
-            if let _ = view.state as? AuthorizedAccountState {
+        self.stateDisposable = (TelegramEngineUnauthorized(account: self.account).auth.state()
+        |> map { state -> InnerState in
+            if case .authorized = state {
                 return .authorized
-            } else if let state = view.state as? UnauthorizedAccountState {
+            } else if case let .unauthorized(state) = state {
                 return .state(state.contents)
             } else {
                 return .state(.empty)
@@ -489,11 +489,16 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     if let strongSelf = self, let strongController = controller {
                         strongController.inProgress = false
 
-                        let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                            if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordEntry(hint, number, code, _, syncContacts) = state.contents {
-                                transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern, syncContacts: syncContacts)))
+                        let _ = (TelegramEngineUnauthorized(account: strongSelf.account).auth.state()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { state in
+                            guard let strongSelf = self else {
+                                return
                             }
-                        }).start()
+                            if case let .unauthorized(state) = state, case let .passwordEntry(hint, number, code, _, syncContacts) = state.contents {
+                                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern, syncContacts: syncContacts))).start()
+                            }
+                        })
                     }
                 }, error: { error in
                     guard let strongController = controller else {
@@ -560,11 +565,16 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 return
             }
 
-            let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _, syncContacts) = state.contents {
-                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: true, syncContacts: syncContacts)))
+            let _ = (TelegramEngineUnauthorized(account: strongSelf.account).auth.state()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { state in
+                guard let strongSelf = self else {
+                    return
                 }
-            }).start()
+                if case let .unauthorized(state) = state, case let .passwordRecovery(hint, number, code, _, syncContacts) = state.contents {
+                    let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: true, syncContacts: syncContacts))).start()
+                }
+            })
         }
         return controller
     }

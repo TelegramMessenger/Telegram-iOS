@@ -575,13 +575,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.activeAccountsWithInfoPromise.set(self.activeAccountContexts
         |> mapToSignal { primary, accounts, _ -> Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> in
             return combineLatest(accounts.map { _, context, _ -> Signal<AccountWithInfo?, NoError> in
-                let peerViewKey: PostboxViewKey = .peer(peerId: context.account.peerId, components: [])
-                return context.account.postbox.combinedView(keys: [peerViewKey])
-                |> map { view -> AccountWithInfo? in
-                    guard let peerView = view.views[peerViewKey] as? PeerView, let peer = peerView.peers[peerView.peerId] else {
+                return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                |> map { peer -> AccountWithInfo? in
+                    guard let peer = peer else {
                         return nil
                     }
-                    return AccountWithInfo(account: context.account, peer: peer)
+                    return AccountWithInfo(account: context.account, peer: peer._asPeer())
                 }
                 |> distinctUntilChanged
             })

@@ -851,12 +851,23 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         updatedBlockedPeers?(blockedPeersContext)
     }))
     
-    let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
-    
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.engine.peers.recentPeers(), blockedPeersState.get(), webSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()), context.account.postbox.combinedView(keys: [preferencesKey]))
-    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(
+        queue: .mainQueue(),
+        context.sharedContext.presentationData,
+        statePromise.get(),
+        privacySettingsPromise.get(),
+        context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()),
+        context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]),
+        context.engine.peers.recentPeers(),
+        blockedPeersState.get(),
+        webSessionsContext.state,
+        context.sharedContext.accountManager.accessChallengeData(),
+        combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()),
+        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
+    )
+    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth, appConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var canAutoarchive = false
-        if let view = preferences.views[preferencesKey] as? PreferencesView, let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self), let data = appConfiguration.data, let hasAutoarchive = data["autoarchive_setting_available"] as? Bool {
+        if let data = appConfiguration.data, let hasAutoarchive = data["autoarchive_setting_available"] as? Bool {
             canAutoarchive = hasAutoarchive
         }
         

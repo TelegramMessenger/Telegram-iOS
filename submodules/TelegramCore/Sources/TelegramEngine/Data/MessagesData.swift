@@ -14,9 +14,9 @@ public final class EngineTotalReadCounters {
 }
 
 public struct EnginePeerReadCounters: Equatable {
-    private let state: CombinedPeerReadState
+    private let state: CombinedPeerReadState?
 
-    public init(state: CombinedPeerReadState) {
+    public init(state: CombinedPeerReadState?) {
         self.state = state
     }
 
@@ -25,24 +25,38 @@ public struct EnginePeerReadCounters: Equatable {
     }
 
     public var count: Int32 {
-        return self.state.count
+        guard let state = self.state else {
+            return 0
+        }
+        return state.count
     }
 
     public var markedUnread: Bool {
-        return self.state.markedUnread
+        guard let state = self.state else {
+            return false
+        }
+        return state.markedUnread
     }
 
-
     public var isUnread: Bool {
-        return self.state.isUnread
+        guard let state = self.state else {
+            return false
+        }
+        return state.isUnread
     }
 
     public func isOutgoingMessageIndexRead(_ index: EngineMessage.Index) -> Bool {
-        return self.state.isOutgoingMessageIndexRead(index)
+        guard let state = self.state else {
+            return false
+        }
+        return state.isOutgoingMessageIndexRead(index)
     }
 
     public func isIncomingMessageIndexRead(_ index: EngineMessage.Index) -> Bool {
-        return self.state.isIncomingMessageIndexRead(index)
+        guard let state = self.state else {
+            return false
+        }
+        return state.isIncomingMessageIndexRead(index)
     }
 }
 
@@ -128,8 +142,8 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
-        public struct ReadState: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
-            public typealias Result = CombinedPeerReadState?
+        public struct PeerReadCounters: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = EnginePeerReadCounters
 
             fileprivate let id: EnginePeer.Id
             public var mapKey: EnginePeer.Id {
@@ -149,7 +163,7 @@ public extension TelegramEngine.EngineData.Item {
                     preconditionFailure()
                 }
 
-                return view.state
+                return EnginePeerReadCounters(state: view.state)
             }
         }
 

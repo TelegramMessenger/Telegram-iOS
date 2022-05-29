@@ -1954,29 +1954,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private var initializedFilters = false
     private func reloadFilters(firstUpdate: (() -> Void)? = nil) {
-        let preferencesKey: PostboxViewKey = .preferences(keys: Set([
-            ApplicationSpecificPreferencesKeys.chatListFilterSettings
-        ]))
-        let experimentalUISettingsKey: ValueBoxKey = ApplicationSpecificSharedDataKeys.experimentalUISettings
-        let displayTabsAtBottom = self.context.sharedContext.accountManager.sharedData(keys: Set([experimentalUISettingsKey]))
-        |> map { sharedData -> Bool in
-            let settings: ExperimentalUISettings = sharedData.entries[experimentalUISettingsKey]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-            return settings.foldersTabAtBottom
-        }
-        |> distinctUntilChanged
-        
         let filterItems = chatListFilterItems(context: self.context)
         var notifiedFirstUpdate = false
         self.filterDisposable.set((combineLatest(queue: .mainQueue(),
-            self.context.account.postbox.combinedView(keys: [
-                preferencesKey
-            ]),
             filterItems,
-            displayTabsAtBottom,
             self.context.account.postbox.peerView(id: self.context.account.peerId),
             self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false))
         )
-        |> deliverOnMainQueue).start(next: { [weak self] _, countAndFilterItems, displayTabsAtBottom, peerView, limits in
+        |> deliverOnMainQueue).start(next: { [weak self] countAndFilterItems, peerView, limits in
             guard let strongSelf = self else {
                 return
             }
@@ -2044,7 +2029,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
             }
             let filtersLimit = isPremium == false ? limits.maxFoldersCount : nil
-            strongSelf.tabContainerData = (resolvedItems, displayTabsAtBottom, filtersLimit)
+            strongSelf.tabContainerData = (resolvedItems, false, filtersLimit)
             var availableFilters: [ChatListContainerNodeFilter] = []
             var hasAllChats = false
             for item in items {
@@ -2080,7 +2065,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 strongSelf.initializedFilters = true
             }
             
-            let isEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
+            let isEmpty = resolvedItems.count <= 1
             
             let animated = strongSelf.didSetupTabs
             strongSelf.didSetupTabs = true
