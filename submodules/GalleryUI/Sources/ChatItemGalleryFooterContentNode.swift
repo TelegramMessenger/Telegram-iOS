@@ -1257,7 +1257,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                             |> deliverOnMainQueue).start(next: { result in
                                                 switch result {
                                                     case .generic:
-                                                    controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                                                    controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
                                                     case let .limitExceeded(limit, premiumLimit):
                                                         let text: String
                                                         if limit == premiumLimit {
@@ -1265,7 +1265,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                                         } else {
                                                             text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
                                                         }
-                                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: true, animateInAsReplacement: true, action: { action in
+                                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: true, animateInAsReplacement: false, action: { action in
                                                             if case .info = action {
                                                                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs)
                                                                 controllerInteraction?.pushController(controller)
@@ -1451,7 +1451,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             |> deliverOnMainQueue).start(next: { result in
                                 switch result {
                                     case .generic:
-                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
                                     case let .limitExceeded(limit, premiumLimit):
                                         let text: String
                                         if limit == premiumLimit {
@@ -1459,7 +1459,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                         } else {
                                             text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
                                         }
-                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: true, animateInAsReplacement: true, action: { action in
+                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: true, animateInAsReplacement: false, action: { action in
                                             if case .info = action {
                                                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs)
                                                 controllerInteraction?.pushController(controller)

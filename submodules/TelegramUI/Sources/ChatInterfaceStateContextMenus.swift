@@ -957,8 +957,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }, action: { _, f in
                         let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference)
                         |> deliverOnMainQueue).start(completed: {
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: isVideo ? presentationData.strings.Gallery_VideoSaved : presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
+                            Queue.mainQueue().after(0.2) {
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: isVideo ? presentationData.strings.Gallery_VideoSaved : presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
+                            }
                         })
                         f(.default)
                     })))
@@ -1219,24 +1221,26 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                     let _ = (toggleGifSaved(account: context.account, fileReference: .message(message: MessageReference(message), media: file), saved: true)
                                     |> deliverOnMainQueue).start(next: { result in
-                                        switch result {
-                                            case .generic:
-                                                controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
-                                            case let .limitExceeded(limit, premiumLimit):
-                                                let text: String
-                                                if limit == premiumLimit {
-                                                    text = presentationData.strings.Premium_MaxSavedGifsFinalText
-                                                } else {
-                                                    text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
-                                                }
-                                                controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
-                                                    if case .info = action {
-                                                        let controller = PremiumIntroScreen(context: context, source: .savedGifs)
-                                                        controllerInteraction.navigationController()?.pushViewController(controller)
-                                                        return true
+                                        Queue.mainQueue().after(0.2) {
+                                            switch result {
+                                                case .generic:
+                                                    controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                                case let .limitExceeded(limit, premiumLimit):
+                                                    let text: String
+                                                    if limit == premiumLimit {
+                                                        text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                                    } else {
+                                                        text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
                                                     }
-                                                    return false
-                                                }), nil)
+                                                    controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                                        if case .info = action {
+                                                            let controller = PremiumIntroScreen(context: context, source: .savedGifs)
+                                                            controllerInteraction.navigationController()?.pushViewController(controller)
+                                                            return true
+                                                        }
+                                                        return false
+                                                    }), nil)
+                                            }
                                         }
                                     })
 

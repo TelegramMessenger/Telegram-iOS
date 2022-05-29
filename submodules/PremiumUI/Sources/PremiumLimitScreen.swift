@@ -38,7 +38,7 @@ func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor
 }
 
 private class PremiumLimitAnimationComponent: Component {
-    private let iconName: String
+    private let iconName: String?
     private let inactiveColor: UIColor
     private let activeColors: [UIColor]
     private let textColor: UIColor
@@ -46,7 +46,7 @@ private class PremiumLimitAnimationComponent: Component {
     private let badgePosition: CGFloat
     
     init(
-        iconName: String,
+        iconName: String?,
         inactiveColor: UIColor,
         activeColors: [UIColor],
         textColor: UIColor,
@@ -231,9 +231,10 @@ private class PremiumLimitAnimationComponent: Component {
             self.inactiveBackground.backgroundColor = component.inactiveColor.cgColor
             self.activeBackground.backgroundColor = component.activeColors.last?.cgColor
             
-            self.badgeIcon.image = UIImage(bundleImageName: component.iconName)?.withRenderingMode(.alwaysTemplate)
+            self.badgeIcon.image = component.iconName.flatMap { UIImage(bundleImageName: $0)?.withRenderingMode(.alwaysTemplate) }
             self.badgeIcon.tintColor = component.textColor
-
+            self.badgeView.isHidden = self.badgeIcon.image == nil
+            
             let lineHeight: CGFloat = 30.0
             let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - lineHeight), size: CGSize(width: availableSize.width, height: lineHeight))
             self.container.frame = containerFrame
@@ -380,17 +381,17 @@ private class PremiumLimitAnimationComponent: Component {
 }
 
 public final class PremiumLimitDisplayComponent: CombinedComponent {
-    public let inactiveColor: UIColor
-    public let activeColors: [UIColor]
-    public let inactiveTitle: String
-    public let inactiveValue: String
-    public let inactiveTitleColor: UIColor
-    public let activeTitle: String
-    public let activeValue: String
-    public let activeTitleColor: UIColor
-    public let badgeIconName: String
-    public let badgeText: String?
-    public let badgePosition: CGFloat
+    let inactiveColor: UIColor
+    let activeColors: [UIColor]
+    let inactiveTitle: String
+    let inactiveValue: String
+    let inactiveTitleColor: UIColor
+    let activeTitle: String
+    let activeValue: String
+    let activeTitleColor: UIColor
+    let badgeIconName: String?
+    let badgeText: String?
+    let badgePosition: CGFloat
     
     public init(
         inactiveColor: UIColor,
@@ -401,7 +402,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         activeTitle: String,
         activeValue: String,
         activeTitleColor: UIColor,
-        badgeIconName: String,
+        badgeIconName: String?,
         badgeText: String?,
         badgePosition: CGFloat
     ) {
@@ -677,6 +678,7 @@ private final class LimitSheetContent: CombinedComponent {
             )
              
             var titleText = strings.Premium_LimitReached
+            var buttonIconName = "Premium/X2"
             let iconName: String
             let badgeText: String
             let string: String
@@ -734,6 +736,7 @@ private final class LimitSheetContent: CombinedComponent {
                     } else {
                         badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                     }
+                    buttonIconName = "Premium/AddOne"
             }
             var reachedMaximumLimit = badgePosition >= 1.0
             if case .folders = subject, !state.isPremium {
@@ -819,7 +822,7 @@ private final class LimitSheetContent: CombinedComponent {
                     height: 50.0,
                     cornerRadius: 10.0,
                     gloss: !reachedMaximumLimit,
-                    iconName: !reachedMaximumLimit ? "Premium/X2" : nil,
+                    iconName: !reachedMaximumLimit ? buttonIconName : nil,
                     iconPosition: .right,
                     action: { [weak component] in
                         guard let component = component else {

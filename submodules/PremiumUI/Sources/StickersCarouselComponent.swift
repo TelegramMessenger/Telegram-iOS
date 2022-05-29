@@ -410,6 +410,11 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             self.previousInteractionTimestamp = CACurrentMediaTime()
         }
         
+        if let animator = self.animator {
+            animator.invalidate()
+            self.animator = nil
+        }
+        
         guard !self.ignoreContentOffsetChange, let (startContentOffset, startPosition) = self.scrollStartPosition else {
             return
         }

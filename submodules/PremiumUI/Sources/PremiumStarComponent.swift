@@ -114,12 +114,19 @@ class PremiumStarComponent: Component {
             self.timer?.invalidate()
         }
         
+        private let hapticFeedback = HapticFeedback()
+        
+        private var delayTapsTill: Double?
         @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
                 return
             }
             
-            self.previousInteractionTimestamp = CACurrentMediaTime()
+            let currentTime = CACurrentMediaTime()
+            self.previousInteractionTimestamp = currentTime
+            if let delayTapsTill = self.delayTapsTill, currentTime < delayTapsTill {
+                return
+            }
             
             var left: Bool?
             var top: Bool?
@@ -140,6 +147,8 @@ class PremiumStarComponent: Component {
             
             if node.animationKeys.contains("tapRotate"), let left = left {
                 self.playAppearanceAnimation(velocity: nil, mirror: left, explode: true)
+                
+                self.hapticFeedback.impact(.medium)
                 return
             }
             
@@ -175,6 +184,8 @@ class PremiumStarComponent: Component {
                 springAnimation.duration = springAnimation.settlingDuration * 0.8
                 node.addAnimation(springAnimation, forKey: "tapRotate")
             }
+            
+            self.hapticFeedback.tap()
         }
         
         private var previousYaw: Float = 0.0
@@ -387,21 +398,33 @@ class PremiumStarComponent: Component {
                 return
             }
             
-            self.previousInteractionTimestamp = CACurrentMediaTime()
+            let currentTime = CACurrentMediaTime()
+            self.previousInteractionTimestamp = currentTime
+            self.delayTapsTill = currentTime + 0.85
             
             if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particles = scene.rootNode.childNode(withName: "particles", recursively: false) {
-                let particleSystem = particles.particleSystems?.first
-                particleSystem?.particleColorVariation = SCNVector4(0.15, 0.2, 0.35, 0.3)
-                particleSystem?.particleVelocity = 2.2
-                particleSystem?.birthRate = 4.5
-                particleSystem?.particleLifeSpan = 2.0
-                
-                node.physicsField?.isActive = true
-                Queue.mainQueue().after(1.0) {
-                    node.physicsField?.isActive = false
-                    particles.particleSystems?.first?.birthRate = 1.2
-                    particleSystem?.particleVelocity = 1.0
-                    particleSystem?.particleLifeSpan = 4.0
+                if let particleSystem = particles.particleSystems?.first {
+                    particleSystem.particleColorVariation = SCNVector4(0.15, 0.2, 0.35, 0.3)
+                    particleSystem.speedFactor = 2.0
+                    particleSystem.particleVelocity = 2.2
+                    particleSystem.birthRate = 4.0
+                    particleSystem.particleLifeSpan = 2.0
+                    
+                    node.physicsField?.isActive = true
+                    Queue.mainQueue().after(1.0) {
+                        node.physicsField?.isActive = false
+                        particles.particleSystems?.first?.birthRate = 1.2
+                        particleSystem.particleVelocity = 1.0
+                        particleSystem.particleLifeSpan = 4.0
+                        particleSystem.speedFactor = 1.0
+                        
+                        let animation = CABasicAnimation(keyPath: "speedFactor")
+                        animation.fromValue = 2.0
+                        animation.toValue = 1.0
+                        animation.duration = 0.5
+                        animation.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                        particleSystem.addAnimation(animation, forKey: "speedFactor")
+                    }
                 }
             }
         

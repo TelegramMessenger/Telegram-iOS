@@ -78,18 +78,21 @@ final class IncreaseLimitFooterItemNode: ItemListControllerFooterItemNode {
         self.backgroundNode.updateColor(color: self.item.theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = self.item.theme.rootController.tabBar.separatorColor
         
+        let textColor: UIColor
         let backgroundColor = self.item.theme.list.itemCheckColors.fillColor
         let backgroundColors: [UIColor]
         let icon: UIImage?
         if self.item.colorful {
+            textColor = .white
             backgroundColors = [UIColor(rgb: 0x407af0), UIColor(rgb: 0x9551e8), UIColor(rgb: 0xbf499a), UIColor(rgb: 0xf17b30)]
             icon = UIImage(bundleImageName: "Premium/X2")
         } else {
+            textColor = self.item.theme.list.itemCheckColors.foregroundColor
             backgroundColors = []
             icon = nil
         }
         
-        self.buttonNode.updateTheme(SolidRoundedButtonTheme(backgroundColor: backgroundColor, backgroundColors: backgroundColors, foregroundColor: self.item.theme.list.itemCheckColors.foregroundColor), animated: true)
+        self.buttonNode.updateTheme(SolidRoundedButtonTheme(backgroundColor: backgroundColor, backgroundColors: backgroundColors, foregroundColor: textColor), animated: true)
         self.buttonNode.title = self.item.title
         self.buttonNode.icon = icon
         

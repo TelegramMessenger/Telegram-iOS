@@ -60,7 +60,12 @@ public final class List<ChildEnvironment: Equatable>: CombinedComponent {
                 )
             }
 
-            return context.availableSize
+            switch context.component.direction {
+                case .horizontal:
+                    return CGSize(width: min(context.availableSize.width, nextOrigin), height: context.availableSize.height)
+                case.vertical:
+                    return CGSize(width: context.availableSize.width, height: min(context.availableSize.height, nextOrigin))
+            }
         }
     }
 }

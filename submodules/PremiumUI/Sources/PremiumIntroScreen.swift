@@ -65,8 +65,8 @@ public enum PremiumSource: Equatable {
                 return "double_limits__dialog_filters_chats"
             case .accounts:
                 return "double_limits__accounts"
-            case .profile:
-                return "profile"
+            case let .profile(id):
+                return "profile__\(id.id._internalGetInt64Value())"
             case let .deeplink(reference):
                 if let reference = reference {
                     return "deeplink_\(reference)"
@@ -576,16 +576,16 @@ private final class ScrollComponent<ChildEnvironment: Equatable>: Component {
     }
 }
 
-final class PerkComponent: CombinedComponent {
-    public let iconName: String
-    public let iconBackgroundColors: [UIColor]
-    public let title: String
-    public let titleColor: UIColor
-    public let subtitle: String
-    public let subtitleColor: UIColor
-    public let arrowColor: UIColor
+private final class PerkComponent: CombinedComponent {
+    let iconName: String
+    let iconBackgroundColors: [UIColor]
+    let title: String
+    let titleColor: UIColor
+    let subtitle: String
+    let subtitleColor: UIColor
+    let arrowColor: UIColor
     
-    public init(
+    init(
         iconName: String,
         iconBackgroundColors: [UIColor],
         title: String,
@@ -603,7 +603,7 @@ final class PerkComponent: CombinedComponent {
         self.arrowColor = arrowColor
     }
     
-    public static func ==(lhs: PerkComponent, rhs: PerkComponent) -> Bool {
+    static func ==(lhs: PerkComponent, rhs: PerkComponent) -> Bool {
         if lhs.iconName != rhs.iconName {
             return false
         }
@@ -962,8 +962,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         var demoSubject: PremiumDemoScreen.Subject
                         switch perk {
                         case .doubleLimits:
-//                            let controller = PremimLimitsListScreen(context: accountContext)
-//                            present(controller)
+                            let controller = PremimLimitsListScreen(context: accountContext, buttonText: isPremium ? strings.Common_OK : strings.Premium_SubscribeFor(state?.price ?? "–").string, isPremium: isPremium)
+                            present(controller)
                             return
                         case .moreUpload:
                             demoSubject = .moreUpload
