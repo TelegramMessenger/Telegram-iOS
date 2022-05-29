@@ -154,7 +154,7 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                             ],
                             inactiveTitle: item.strings.Premium_Free,
                             inactiveValue: "",
-                            inactiveTitleColor: .black,
+                            inactiveTitleColor: item.theme.list.itemPrimaryTextColor,
                             activeTitle: item.strings.Premium_Premium,
                             activeValue: "\(item.premiumCount)",
                             activeTitleColor: .white,

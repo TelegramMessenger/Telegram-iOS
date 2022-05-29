@@ -242,27 +242,27 @@ private enum Limit: CaseIterable {
         }
     }
     
-    func limit(_ configuration: EngineConfiguration.UserLimits) -> String {
+    func limit(_ configuration: EngineConfiguration.UserLimits, isPremium: Bool) -> String {
         let value: Int32
         switch self {
             case .groups:
                 value = configuration.maxChannelsCount
             case .pins:
-                value =  configuration.maxPinnedChatCount
+                value = configuration.maxPinnedChatCount
             case .publicLinks:
-                value =  configuration.maxPublicLinksCount
+                value = configuration.maxPublicLinksCount
             case .savedGifs:
-                value =  configuration.maxSavedGifCount
+                value = configuration.maxSavedGifCount
             case .favedStickers:
-                value =  configuration.maxFavedStickerCount
+                value = configuration.maxFavedStickerCount
             case .captions:
-                value =  configuration.maxCaptionLength
+                value = configuration.maxCaptionLength
             case .folders:
-                value =  configuration.maxFoldersCount
+                value = configuration.maxFoldersCount
             case .chatsPerFolder:
-                value =  configuration.maxFolderChatsCount
+                value = configuration.maxFolderChatsCount
             case .account:
-                value =  3
+                value = isPremium ? 4 : 3
         }
         return "\(value)"
     }
@@ -355,11 +355,11 @@ private final class PremimLimitsListScreenComponent: CombinedComponent {
                             inactiveColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5),
                             inactiveTextColor: theme.list.itemPrimaryTextColor,
                             inactiveTitle: strings.Premium_Free,
-                            inactiveValue: value.limit(state.limits),
+                            inactiveValue: value.limit(state.limits, isPremium: false),
                             activeColor: colors[index],
                             activeTextColor: .white,
                             activeTitle: strings.Premium_Premium,
-                            activeValue: value.limit(state.premiumLimits)
+                            activeValue: value.limit(state.premiumLimits, isPremium: true)
                         )
                     )
                 )

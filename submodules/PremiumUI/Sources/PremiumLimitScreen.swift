@@ -202,7 +202,9 @@ private class PremiumLimitAnimationComponent: Component {
             rotateAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
             
             Queue.mainQueue().after(0.5, {
-                self.hapticFeedback.impact(.light)
+                if !self.badgeView.isHidden {
+                    self.hapticFeedback.impact(.light)
+                }
             })
             
             let returnAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
@@ -736,7 +738,7 @@ private final class LimitSheetContent: CombinedComponent {
                     } else {
                         badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                     }
-                    buttonIconName = "Premium/AddOne"
+                    buttonIconName = "Premium/PlusOne"
             }
             var reachedMaximumLimit = badgePosition >= 1.0
             if case .folders = subject, !state.isPremium {

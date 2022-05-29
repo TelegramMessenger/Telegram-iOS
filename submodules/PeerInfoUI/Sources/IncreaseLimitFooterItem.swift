@@ -84,7 +84,12 @@ final class IncreaseLimitFooterItemNode: ItemListControllerFooterItemNode {
         let icon: UIImage?
         if self.item.colorful {
             textColor = .white
-            backgroundColors = [UIColor(rgb: 0x407af0), UIColor(rgb: 0x9551e8), UIColor(rgb: 0xbf499a), UIColor(rgb: 0xf17b30)]
+            backgroundColors = [
+                UIColor(rgb: 0x0077ff),
+                UIColor(rgb: 0x6b93ff),
+                UIColor(rgb: 0x8878ff),
+                UIColor(rgb: 0xe46ace)
+            ]
             icon = UIImage(bundleImageName: "Premium/X2")
         } else {
             textColor = self.item.theme.list.itemCheckColors.foregroundColor
