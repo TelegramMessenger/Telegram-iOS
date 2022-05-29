@@ -32,6 +32,13 @@ public extension TelegramEngine {
         public func downloadAndApplyLocalization(accountManager: AccountManager<TelegramAccountManagerTypes>, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
             return _internal_downloadAndApplyLocalization(accountManager: accountManager, postbox: self.account.postbox, network: self.account.network, languageCode: languageCode)
         }
+        
+        public func removeSavedLocalization(languageCode: String) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_removeSavedLocalization(transaction: transaction, languageCode: languageCode)
+            }
+            |> ignoreValues
+        }
     }
 }
 

@@ -393,10 +393,6 @@ public final class SharedNotificationManager {
             
             if let readMessageId = readMessageId {
                 self.clearNotificationsManager?.append(readMessageId)
-                
-                let _ = account.postbox.transaction(ignoreDisabled: true, { transaction -> Void in
-                    transaction.applyIncomingReadMaxId(readMessageId)
-                }).start()
             }
             
             for messageId in messagesDeleted {
@@ -404,9 +400,6 @@ public final class SharedNotificationManager {
             }
             
             if !messagesDeleted.isEmpty {
-                let _ = account.postbox.transaction(ignoreDisabled: true, { transaction -> Void in
-                    TelegramEngine(account: account).messages.deleteMessages(transaction: transaction, ids: messagesDeleted)
-                }).start()
             }
             
             if readMessageId != nil || !messagesDeleted.isEmpty {

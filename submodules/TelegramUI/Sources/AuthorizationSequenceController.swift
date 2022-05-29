@@ -122,9 +122,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     
                     let countryCode = defaultCountryCode()
                     
-                    let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: isTestingEnvironment, masterDatacenterId: masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
-                    }).start()
+                    let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: isTestingEnvironment, masterDatacenterId: masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
                 }
             }
         }
@@ -154,9 +152,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         transaction.removeAuth()
                     }).start()
                 } else {
-                    let _ = strongSelf.account.postbox.transaction({ transaction -> Void in
-                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .empty))
-                    }).start()
+                    let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .empty)).start()
                 }
             })
             controller.accountUpdated = { [weak self] updatedAccount in
@@ -282,9 +278,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 }
                 let countryCode = defaultCountryCode()
                 
-                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
-                }).start()
+                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             })
             controller.loginWithCode = { [weak self, weak controller] code in
                 if let strongSelf = self {
@@ -331,9 +325,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                                         return
                                                     }
                                                     let account = strongSelf.account
-                                                    let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                                                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
-                                                    }).start()
+                                                    let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
                                                 })]), on: .root, blockInteraction: false, completion: {})
                                             })
                                         ], actionLayout: .vertical, dismissOnOutsideTap: true)
@@ -378,9 +370,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                     case .codeExpired:
                                         text = strongSelf.presentationData.strings.Login_CodeExpired
                                         let account = strongSelf.account
-                                        let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                                            transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
-                                        }).start()
+                                    let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
                                 }
                                 
                                 if resetCode {
@@ -437,9 +427,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         controller.reset = { [weak self] in
             if let strongSelf = self {
                 let account = strongSelf.account
-                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
-                }).start()
+                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
             }
         }
         controller.updateData(number: formatPhoneNumber(number), codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)
@@ -464,9 +452,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 }
                 let countryCode = defaultCountryCode()
                 
-                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
-                }).start()
+                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             })
             controller.loginWithPassword = { [weak self, weak controller] password in
                 if let strongSelf = self {
@@ -601,9 +587,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 }
                 let countryCode = defaultCountryCode()
                 
-                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
-                }).start()
+                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             })
             controller.reset = { [weak self, weak controller] in
                 if let strongSelf = self, let strongController = controller {
@@ -637,9 +621,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             controller.logout = { [weak self] in
                 if let strongSelf = self {
                     let account = strongSelf.account
-                    let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
-                    }).start()
+                    let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
                 }
             }
         }
@@ -665,9 +647,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 }
                 let countryCode = defaultCountryCode()
                 
-                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
-                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
-                }).start()
+                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             }, displayCancel: displayCancel)
             controller.signUpWithName = { [weak self, weak controller] firstName, lastName, avatarData, avatarAsset, avatarAdjustments in
                 if let strongSelf = self {

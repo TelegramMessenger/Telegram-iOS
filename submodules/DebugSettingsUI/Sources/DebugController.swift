@@ -762,11 +762,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     transaction.clearNotices()
                 }).start()
                 if let context = arguments.context {
-                    let _ = (context.account.postbox.transaction { transaction -> Void in
-                        transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedPollResults)
-                        
-                        transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks)
-                    }).start()
+                    let _ = context.engine.itemCache.clear(collectionIds: [
+                        Namespaces.CachedItemCollection.cachedPollResults,
+                        Namespaces.CachedItemCollection.cachedStickerPacks
+                    ]).start()
 
                     let _ = context.engine.peers.unmarkChatListFeaturedFiltersAsSeen()
                 }
@@ -846,12 +845,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                 let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 arguments.presentController(controller, nil)
-                let _ = (context.account.postbox.transaction { transaction -> Void in
-                    transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)
-                    }
-                    |> deliverOnMainQueue).start(completed: {
-                        controller.dismiss()
-                    })
+                let _ = (context.engine.messages.debugAddHoles()
+                |> deliverOnMainQueue).start(completed: {
+                    controller.dismiss()
+                })
             })
         case .reindexUnread:
             return ItemListActionItem(presentationData: presentationData, title: "Reindex Unread Counters", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -861,9 +858,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                 let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 arguments.presentController(controller, nil)
-                let _ = (context.account.postbox.transaction { transaction -> Void in
-                    transaction.reindexUnreadCounters()
-                }
+                let _ = (context.engine.messages.debugReindexUnreadCounters()
                 |> deliverOnMainQueue).start(completed: {
                     controller.dismiss()
                 })

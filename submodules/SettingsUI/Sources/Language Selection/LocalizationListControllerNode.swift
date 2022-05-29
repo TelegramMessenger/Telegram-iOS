@@ -389,11 +389,12 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         }
         
         let removeItem: (String) -> Void = { id in
-            let _ = (context.account.postbox.transaction { transaction -> Signal<LocalizationInfo?, NoError> in
-                removeSavedLocalization(transaction: transaction, languageCode: id)
-                let state = transaction.getPreferencesEntry(key: PreferencesKeys.localizationListState)?.get(LocalizationListState.self)
+            let _ = context.engine.localization.removeSavedLocalization(languageCode: id).start()
+            
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.LocalizationList())
+            |> mapToSignal { state -> Signal<LocalizationInfo?, NoError> in
                 return context.sharedContext.accountManager.transaction { transaction -> LocalizationInfo? in
-                    if let settings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self), let state = state {
+                    if let settings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) {
                         if settings.primaryComponent.languageCode == id {
                             for item in state.availableOfficialLocalizations {
                                 if item.languageCode == "en" {
@@ -405,7 +406,6 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                     return nil
                 }
             }
-            |> switchToLatest
             |> deliverOnMainQueue).start(next: { [weak self] info in
                 if revealedCodeValue == id {
                     revealedCodeValue = nil

@@ -42,6 +42,13 @@ public extension TelegramEngineUnauthorized {
         public func uploadedPeerVideo(resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
             return _internal_uploadedPeerVideo(postbox: self.account.postbox, network: self.account.network, messageMediaPreuploadManager: nil, resource: resource)
         }
+        
+        public func setState(state: UnauthorizedAccountState) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.setState(state)
+            }
+            |> ignoreValues
+        }
     }
 }
 
