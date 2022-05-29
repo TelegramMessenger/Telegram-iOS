@@ -95,6 +95,37 @@ public final class EngineDataList<Item: TelegramEngineDataItem & TelegramEngineM
     }
 }
 
+public final class EngineDataOptional<Item: TelegramEngineDataItem>: TelegramEngineDataItem, AnyPostboxViewDataItem {
+    public typealias Result = Item.Result?
+
+    private let item: Item?
+
+    public init(_ item: Item?) {
+        self.item = item
+    }
+
+    var keys: [PostboxViewKey] {
+        var keys = Set<PostboxViewKey>()
+        if let item = self.item {
+            for key in (item as! AnyPostboxViewDataItem).keys {
+                keys.insert(key)
+            }
+        }
+        return Array(keys)
+    }
+
+    func _extract(views: [PostboxViewKey: PostboxView]) -> Any {
+        var result: [Item.Result] = []
+
+        if let item = self.item {
+            let itemResult = (item as! AnyPostboxViewDataItem)._extract(views: views)
+            result.append(itemResult as! Item.Result)
+        }
+
+        return result
+    }
+}
+
 public extension TelegramEngine {
     final class EngineData {
         public struct Item {

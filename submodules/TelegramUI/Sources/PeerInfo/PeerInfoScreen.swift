@@ -6766,24 +6766,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
 
     private func displayMediaGalleryContextMenu(source: ContextReferenceContentNode, gesture: ContextGesture?) {
-        let summaryTags: [MessageTags] = [.photo, .video]
         let peerId = self.peerId
-        let _ = (context.account.postbox.combinedView(keys: summaryTags.map { tag in
-            return PostboxViewKey.historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)
-        })
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] views in
+        
+        let _ = (self.context.engine.data.get(EngineDataMap([
+            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: .photo),
+            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: .video)
+        ]))
+        |> deliverOnMainQueue).start(next: { [weak self] messageCounts in
             guard let strongSelf = self else {
                 return
             }
 
             var mediaCount: [MessageTags: Int32] = [:]
-            for tag in summaryTags {
-                if let view = views.views[PostboxViewKey.historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)] as? MessageHistoryTagSummaryView {
-                    mediaCount[tag] = view.count ?? 0
-                } else {
-                    mediaCount[tag] = 0
-                }
+            for (key, count) in messageCounts {
+                mediaCount[key.tag] = count.flatMap(Int32.init) ?? 0
             }
 
             let photoCount: Int32 = mediaCount[.photo] ?? 0

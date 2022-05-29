@@ -775,11 +775,12 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         return settings.servers
     }
     
-    let localizationPreferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.localizationListState]))
-    let localizations = combineLatest(context.account.postbox.combinedView(keys: [localizationPreferencesKey]), context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings]))
-    |> map { view, sharedData -> [LocalizationInfo] in
-        if let localizationListState = (view.views[localizationPreferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState]?.get(LocalizationListState.self), !localizationListState.availableOfficialLocalizations.isEmpty {
-            
+    let localizations = combineLatest(
+        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.LocalizationList()),
+        context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings])
+    )
+    |> map { localizationListState, sharedData -> [LocalizationInfo] in
+        if !localizationListState.availableOfficialLocalizations.isEmpty {
             var existingIds = Set<String>()
             let availableSavedLocalizations = localizationListState.availableSavedLocalizations.filter({ info in !localizationListState.availableOfficialLocalizations.contains(where: { $0.languageCode == info.languageCode }) })
             

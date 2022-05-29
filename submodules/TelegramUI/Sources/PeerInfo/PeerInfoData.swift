@@ -565,25 +565,20 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 return disposable
             }
             |> distinctUntilChanged
-            var combinedKeys: [PostboxViewKey] = []
+            
+            var secretChatKeyFingerprint: Signal<EngineSecretChatKeyFingerprint?, NoError> = .single(nil)
             if let secretChatId = secretChatId {
-                combinedKeys.append(.peerChatState(peerId: secretChatId))
+                secretChatKeyFingerprint = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.SecretChatKeyFingerprint(id: secretChatId))
             }
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
-                context.account.postbox.combinedView(keys: combinedKeys),
+                secretChatKeyFingerprint,
                 status
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, combinedView, status -> PeerInfoScreenData in
-                var encryptionKeyFingerprint: SecretChatKeyFingerprint?
-                if let secretChatId = secretChatId, let peerChatStateView = combinedView.views[.peerChatState(peerId: secretChatId)] as? PeerChatStateView {
-                    if let peerChatState = peerChatStateView.chatState?.getLegacy() as? SecretChatState {
-                        encryptionKeyFingerprint = peerChatState.keyFingerprint
-                    }
-                }
-                
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
                     if cachedData.commonGroupCount != 0 {

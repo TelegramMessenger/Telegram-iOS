@@ -2015,34 +2015,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             case .music:
                 summaries.append(.music)
             }
-            return context.account.postbox.combinedView(keys: summaries.map { tag in
-                return PostboxViewKey.historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)
-            })
-            |> map { views -> (ContentType, [MessageTags: Int32]) in
-                switch contentType {
-                case .photoOrVideo:
-                    summaries.append(.photo)
-                    summaries.append(.video)
-                case .photo:
-                    summaries.append(.photo)
-                case .video:
-                    summaries.append(.video)
-                case .gifs:
-                    summaries.append(.gif)
-                case .files:
-                    summaries.append(.file)
-                case .voiceAndVideoMessages:
-                    summaries.append(.voiceOrInstantVideo)
-                case .music:
-                    summaries.append(.music)
-                }
+            
+            return context.engine.data.subscribe(EngineDataMap(
+                summaries.map { TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: $0) }
+            ))
+            |> map { summaries -> (ContentType, [MessageTags: Int32]) in
                 var result: [MessageTags: Int32] = [:]
-                for tag in summaries {
-                    if let view = views.views[PostboxViewKey.historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)] as? MessageHistoryTagSummaryView {
-                        result[tag] = view.count ?? 0
-                    } else {
-                        result[tag] = 0
-                    }
+                for (key, count) in summaries {
+                    result[key.tag] = count.flatMap(Int32.init) ?? 0
                 }
                 return (contentType, result)
             }

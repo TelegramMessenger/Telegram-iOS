@@ -36,7 +36,7 @@ private enum ShareSearchRecentEntryStableId: Hashable {
 
 private enum ShareSearchRecentEntry: Comparable, Identifiable {
     case topPeers(PresentationTheme, PresentationStrings)
-    case peer(index: Int, theme: PresentationTheme, peer: Peer, associatedPeer: Peer?, presence: PeerPresence?, PresentationStrings)
+    case peer(index: Int, theme: PresentationTheme, peer: Peer, associatedPeer: Peer?, presence: EnginePeer.Presence?, PresentationStrings)
     
     var stableId: ShareSearchRecentEntryStableId {
         switch self {
@@ -62,7 +62,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                     return false
                 }
             case let .peer(lhsIndex, lhsTheme, lhsPeer, lhsAssociatedPeer, lhsPresence, lhsStrings):
-                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && arePeerPresencesEqual(lhsPresence, rhsPresence) {
+                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && lhsPresence == rhsPresence {
                     return true
                 } else {
                     return false
@@ -102,7 +102,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
 private struct ShareSearchPeerEntry: Comparable, Identifiable {
     let index: Int32
     let peer: EngineRenderedPeer?
-    let presence: PeerPresence?
+    let presence: EnginePeer.Presence?
     let theme: PresentationTheme
     let strings: PresentationStrings
     

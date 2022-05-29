@@ -1968,15 +1968,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     |> distinctUntilChanged
                     |> runOn(.mainQueue())
                 } else {
-                    rawAdminIds = accountContext.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peerId)])
-                    |> map { views -> Set<PeerId> in
-                        guard let view = views.views[.cachedPeerData(peerId: peerId)] as? CachedPeerDataView else {
+                    rawAdminIds = accountContext.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Peer.LegacyGroupParticipants(id: peerId)
+                    )
+                    |> map { participants -> Set<PeerId> in
+                        guard case let .known(participants) = participants else {
                             return Set()
                         }
-                        guard let cachedData = view.cachedPeerData as? CachedGroupData, let participants = cachedData.participants else {
-                            return Set()
-                        }
-                        return Set(participants.participants.compactMap { item -> PeerId? in
+                        return Set(participants.compactMap { item -> PeerId? in
                             switch item {
                             case .creator, .admin:
                                 return item.peerId

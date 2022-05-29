@@ -2,6 +2,7 @@ import SwiftSignalKit
 import Postbox
 
 public typealias EngineExportedPeerInvitation = ExportedInvitation
+public typealias EngineSecretChatKeyFingerprint = SecretChatKeyFingerprint
 
 public enum EnginePeerCachedInfoItem<T> {
     case known(T)
@@ -779,6 +780,35 @@ public extension TelegramEngine.EngineData.Item {
                     }
                 } else {
                     return .unknown
+                }
+            }
+        }
+        
+        public struct SecretChatKeyFingerprint: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = EngineSecretChatKeyFingerprint?
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .peerChatState(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PeerChatStateView else {
+                    preconditionFailure()
+                }
+                
+                if let peerChatState = view.chatState?.getLegacy() as? SecretChatState {
+                    return peerChatState.keyFingerprint
+                } else {
+                    return nil
                 }
             }
         }

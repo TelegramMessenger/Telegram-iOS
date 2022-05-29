@@ -8567,41 +8567,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
 
                 if case let .peer(peerId) = self.chatLocation {
-                    let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
-                    let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
-                    self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey, notificationSettingsKey])
-                    |> deliverOnMainQueue).start(next: { [weak self] views in
-                        if let strongSelf = self {
-                            var unreadCount: Int32 = 0
-                            var totalChatCount: Int32 = 0
-                            
-                            let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                            if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
-                                if let count = view.count(for: .peer(peerId)) {
-                                    unreadCount = count
-                                }
-                                if let (_, state) = view.total() {
-                                    let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
-                                    totalChatCount = count
-                                }
+                    self.chatUnreadCountDisposable = (self.context.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Messages.PeerUnreadCount(id: peerId),
+                        TelegramEngine.EngineData.Item.Messages.TotalReadCounters(),
+                        TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId)
+                    )
+                    |> deliverOnMainQueue).start(next: { [weak self] peerUnreadCount, totalReadCounters, notificationSettings in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let unreadCount: Int32 = Int32(peerUnreadCount)
+                        
+                        let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
+                        let totalChatCount: Int32 = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: totalReadCounters._asCounters()).0
+                        
+                        var globalRemainingUnreadChatCount = totalChatCount
+                        if !notificationSettings._asNotificationSettings().isRemovedFromTotalUnreadCount(default: false) && unreadCount > 0 {
+                            if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
+                                globalRemainingUnreadChatCount -= unreadCount
+                            } else {
+                                globalRemainingUnreadChatCount -= 1
                             }
-                            
-                            if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
-                                var globalRemainingUnreadChatCount = totalChatCount
-                                if !notificationSettings.isRemovedFromTotalUnreadCount(default: false) && unreadCount > 0 {
-                                    if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
-                                        globalRemainingUnreadChatCount -= unreadCount
-                                    } else {
-                                        globalRemainingUnreadChatCount -= 1
-                                    }
-                                }
-                                
-                                if globalRemainingUnreadChatCount > 0 {
-                                    strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
-                                } else {
-                                    strongSelf.navigationItem.badge = ""
-                                }
-                            }
+                        }
+                        
+                        if globalRemainingUnreadChatCount > 0 {
+                            strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
+                        } else {
+                            strongSelf.navigationItem.badge = ""
                         }
                     })
                 

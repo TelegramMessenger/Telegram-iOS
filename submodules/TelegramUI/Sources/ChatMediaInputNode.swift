@@ -1071,16 +1071,10 @@ final class ChatMediaInputNode: ChatInputNode {
         })
         self.trendingInteraction = trendingInteraction
         
-        let preferencesViewKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
-        let reactions: Signal<[String], NoError> = context.account.postbox.combinedView(keys: [preferencesViewKey])
-        |> map { views -> [String] in
+        let reactions: Signal<[String], NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
+        |> map { appConfiguration -> [String] in
             let defaultReactions: [String] = ["👍", "👎", "😍", "😂", "😯", "😕", "😢", "😡", "💪", "👏", "🙈", "😒"]
-            guard let view = views.views[preferencesViewKey] as? PreferencesView else {
-                return defaultReactions
-            }
-            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
-                return defaultReactions
-            }
+            
             guard let data = appConfiguration.data, let emojis = data["gif_search_emojies"] as? [String] else {
                 return defaultReactions
             }

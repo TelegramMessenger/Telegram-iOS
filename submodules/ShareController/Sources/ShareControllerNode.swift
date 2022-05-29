@@ -804,7 +804,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
-    func updatePeers(context: AccountContext, switchableAccounts: [AccountWithInfo], peers: [(EngineRenderedPeer, PeerPresence?)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
+    func updatePeers(context: AccountContext, switchableAccounts: [AccountWithInfo], peers: [(EngineRenderedPeer, EnginePeer.Presence?)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
         self.context = context
         
         if let peersContentNode = self.peersContentNode, peersContentNode.accountPeer.id == accountPeer.id {

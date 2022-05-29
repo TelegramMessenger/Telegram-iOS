@@ -313,7 +313,7 @@ public final class ShareController: ViewController {
     private let segmentedValues: [ShareControllerSegmentedValue]?
     private let fromForeignApp: Bool
     
-    private let peers = Promise<([(EngineRenderedPeer, PeerPresence?)], EnginePeer)>()
+    private let peers = Promise<([(EngineRenderedPeer, EnginePeer.Presence?)], EnginePeer)>()
     private let peersDisposable = MetaDisposable()
     private let readyDisposable = MetaDisposable()
     private let accountActiveDisposable = MetaDisposable()
@@ -966,7 +966,7 @@ public final class ShareController: ViewController {
             self.currentAccount.viewTracker.tailChatListView(groupId: .root, count: 150)
             |> take(1)
         )
-        |> mapToSignal { maybeAccountPeer, view -> Signal<([(EngineRenderedPeer, PeerPresence?)], EnginePeer), NoError> in
+        |> mapToSignal { maybeAccountPeer, view -> Signal<([(EngineRenderedPeer, EnginePeer.Presence?)], EnginePeer), NoError> in
             let accountPeer = maybeAccountPeer!
             
             var peers: [EngineRenderedPeer] = []
@@ -980,14 +980,14 @@ public final class ShareController: ViewController {
                         break
                 }
             }
-            let key = PostboxViewKey.peerPresences(peerIds: Set(peers.map { $0.peerId }))
-            return account.postbox.combinedView(keys: [key])
-            |> map { views -> ([(EngineRenderedPeer, PeerPresence?)], EnginePeer) in
-                var resultPeers: [(EngineRenderedPeer, PeerPresence?)] = []
-                if let presencesView = views.views[key] as? PeerPresencesView {
-                    for peer in peers {
-                        resultPeers.append((peer, presencesView.presences[peer.peerId]))
-                    }
+
+            return TelegramEngine(account: account).data.subscribe(EngineDataMap(
+                peers.map { TelegramEngine.EngineData.Item.Peer.Presence(id: $0.peerId) }
+            ))
+            |> map { presenceMap -> ([(EngineRenderedPeer, EnginePeer.Presence?)], EnginePeer) in
+                var resultPeers: [(EngineRenderedPeer, EnginePeer.Presence?)] = []
+                for peer in peers {
+                    resultPeers.append((peer, presenceMap[peer.peerId].flatMap { $0 }))
                 }
                 return (resultPeers, accountPeer)
             }
