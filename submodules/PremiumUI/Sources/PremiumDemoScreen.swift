@@ -460,13 +460,15 @@ private final class DemoSheetContent: CombinedComponent {
     let context: AccountContext
     let subject: PremiumDemoScreen.Subject
     let source: PremiumDemoScreen.Source
+    let order: [PremiumPerk]
     let action: () -> Void
     let dismiss: () -> Void
     
-    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source, action: @escaping () -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source, order: [PremiumPerk]?, action: @escaping () -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.subject = subject
         self.source = source
+        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .advancedChatManagement, .profileBadge, .animatedUserpics]
         self.action = action
         self.dismiss = dismiss
     }
@@ -479,6 +481,9 @@ private final class DemoSheetContent: CombinedComponent {
             return false
         }
         if lhs.source != rhs.source {
+            return false
+        }
+        if lhs.order != rhs.order {
             return false
         }
         return true
@@ -598,164 +603,166 @@ private final class DemoSheetContent: CombinedComponent {
             if let reactions = state.reactions, let stickers = state.stickers {
                 let textColor = theme.actionSheet.primaryTextColor
                 
-                var items: [DemoPagerComponent.Item] = [
-                    DemoPagerComponent.Item(
-                        AnyComponentWithIdentity(
-                            id: PremiumDemoScreen.Subject.moreUpload,
-                            component: AnyComponent(
-                                PageComponent(
-                                    content: AnyComponent(PhoneDemoComponent(
-                                        context: component.context,
-                                        position: .bottom,
-                                        videoName: "4gb"
-                                    )),
-                                    title: strings.Premium_UploadSize,
-                                    text: strings.Premium_UploadSizeInfo,
-                                    textColor: textColor
-                                )
-                            )
-                        )
-                    ),
-                    DemoPagerComponent.Item(
-                        AnyComponentWithIdentity(
-                            id: PremiumDemoScreen.Subject.fasterDownload,
-                            component: AnyComponent(
-                                PageComponent(
-                                    content: AnyComponent(PhoneDemoComponent(
-                                        context: component.context,
-                                        position: .top,
-                                        videoName: "fastdownload"
-                                    )),
-                                    title: strings.Premium_FasterSpeed,
-                                    text: strings.Premium_FasterSpeedInfo,
-                                    textColor: textColor
-                                )
-                            )
-                        )
-                    ),
-                    DemoPagerComponent.Item(
-                        AnyComponentWithIdentity(
-                            id: PremiumDemoScreen.Subject.voiceToText,
-                            component: AnyComponent(
-                                PageComponent(
-                                    content: AnyComponent(PhoneDemoComponent(
-                                        context: component.context,
-                                        position: .top,
-                                        videoName: "voice"
-                                    )),
-                                    title: strings.Premium_VoiceToText,
-                                    text: strings.Premium_VoiceToTextInfo,
-                                    textColor: textColor
-                                )
-                            )
-                        )
-                    ),
-                    DemoPagerComponent.Item(
-                        AnyComponentWithIdentity(
-                            id: PremiumDemoScreen.Subject.noAds,
-                            component: AnyComponent(
-                                PageComponent(
-                                    content: AnyComponent(PhoneDemoComponent(
-                                        context: component.context,
-                                        position: .bottom,
-                                        videoName: "noads"
-                                    )),
-                                    title: strings.Premium_NoAds,
-                                    text: strings.Premium_NoAdsInfo,
-                                    textColor: textColor
-                                )
-                            )
-                        )
-                    ),
-                    DemoPagerComponent.Item(
-                        AnyComponentWithIdentity(
-                            id: PremiumDemoScreen.Subject.uniqueReactions,
-                            component: AnyComponent(
-                                PageComponent(
-                                    content: AnyComponent(
-                                        ReactionsCarouselComponent(
-                                            context: component.context,
-                                            theme: environment.theme,
-                                            reactions: reactions
-                                        )
-                                    ),
-                                    title: isStandalone ? strings.Premium_ReactionsStandalone : strings.Premium_Reactions,
-                                    text: isStandalone ? strings.Premium_ReactionsStandaloneInfo : strings.Premium_ReactionsInfo,
-                                    textColor: textColor
-                                )
-                            )
-                        )
-                    ),
-                    DemoPagerComponent.Item(
-                        AnyComponentWithIdentity(
-                            id: PremiumDemoScreen.Subject.premiumStickers,
-                            component: AnyComponent(
-                                PageComponent(
-                                    content: AnyComponent(
-                                        StickersCarouselComponent(
-                                            context: component.context,
-                                            stickers: stickers
-                                        )
-                                    ),
-                                    title: strings.Premium_Stickers,
-                                    text: strings.Premium_StickersInfo,
-                                    textColor: textColor
-                                )
-                            )
-                        )
-                    ),
-                    DemoPagerComponent.Item(
-                        AnyComponentWithIdentity(
-                            id: PremiumDemoScreen.Subject.advancedChatManagement,
-                            component: AnyComponent(
-                                PageComponent(
-                                    content: AnyComponent(PhoneDemoComponent(
-                                        context: component.context,
-                                        position: .top,
-                                        videoName: "fastdownload"
-                                    )),
-                                    title: strings.Premium_ChatManagement,
-                                    text: strings.Premium_ChatManagementInfo,
-                                    textColor: textColor
-                                )
-                            )
-                        )
-                    ),
-                    DemoPagerComponent.Item(
-                        AnyComponentWithIdentity(
-                            id: PremiumDemoScreen.Subject.profileBadge,
-                            component: AnyComponent(
-                                PageComponent(
-                                    content: AnyComponent(PhoneDemoComponent(
-                                        context: component.context,
-                                        position: .top,
-                                        videoName: "badge"
-                                    )),
-                                    title: strings.Premium_Badge,
-                                    text: strings.Premium_BadgeInfo,
-                                    textColor: textColor
-                                )
-                            )
-                        )
-                    ),
-                    DemoPagerComponent.Item(
-                        AnyComponentWithIdentity(
-                            id: PremiumDemoScreen.Subject.animatedUserpics,
-                            component: AnyComponent(
-                                PageComponent(
-                                    content: AnyComponent(PhoneDemoComponent(
-                                        context: component.context,
-                                        position: .top,
-                                        videoName: "badge"
-                                    )),
-                                    title: strings.Premium_Avatar,
-                                    text: strings.Premium_AvatarInfo,
-                                    textColor: textColor
-                                )
+                var availableItems: [PremiumPerk: DemoPagerComponent.Item] = [:]
+                
+                availableItems[.moreUpload] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.moreUpload,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .bottom,
+                                    videoName: "4gb"
+                                )),
+                                title: strings.Premium_UploadSize,
+                                text: strings.Premium_UploadSizeInfo,
+                                textColor: textColor
                             )
                         )
                     )
-                ]
+                )
+                availableItems[.fasterDownload] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.fasterDownload,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoName: "fastdownload"
+                                )),
+                                title: strings.Premium_FasterSpeed,
+                                text: strings.Premium_FasterSpeedInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.voiceToText] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.voiceToText,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoName: "voice"
+                                )),
+                                title: strings.Premium_VoiceToText,
+                                text: strings.Premium_VoiceToTextInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.noAds] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.noAds,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .bottom,
+                                    videoName: "noads"
+                                )),
+                                title: strings.Premium_NoAds,
+                                text: strings.Premium_NoAdsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.uniqueReactions] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.uniqueReactions,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(
+                                    ReactionsCarouselComponent(
+                                        context: component.context,
+                                        theme: environment.theme,
+                                        reactions: reactions
+                                    )
+                                ),
+                                title: isStandalone ? strings.Premium_ReactionsStandalone : strings.Premium_Reactions,
+                                text: isStandalone ? strings.Premium_ReactionsStandaloneInfo : strings.Premium_ReactionsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.premiumStickers] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.premiumStickers,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(
+                                    StickersCarouselComponent(
+                                        context: component.context,
+                                        stickers: stickers
+                                    )
+                                ),
+                                title: strings.Premium_Stickers,
+                                text: strings.Premium_StickersInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.advancedChatManagement] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.advancedChatManagement,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoName: "fastdownload"
+                                )),
+                                title: strings.Premium_ChatManagement,
+                                text: strings.Premium_ChatManagementInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.profileBadge] =  DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.profileBadge,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoName: "badge"
+                                )),
+                                title: strings.Premium_Badge,
+                                text: strings.Premium_BadgeInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.animatedUserpics] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.animatedUserpics,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoName: "badge"
+                                )),
+                                title: strings.Premium_Avatar,
+                                text: strings.Premium_AvatarInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
                 let index: Int
                 switch component.source {
                     case .intro:
@@ -881,12 +888,14 @@ private final class DemoSheetComponent: CombinedComponent {
     let context: AccountContext
     let subject: PremiumDemoScreen.Subject
     let source: PremiumDemoScreen.Source
+    let order: [PremiumPerk]?
     let action: () -> Void
     
-    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source, action: @escaping () -> Void) {
+    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source, order: [PremiumPerk]?, action: @escaping () -> Void) {
         self.context = context
         self.subject = subject
         self.source = source
+        self.order = order
         self.action = action
     }
     
@@ -898,6 +907,9 @@ private final class DemoSheetComponent: CombinedComponent {
             return false
         }
         if lhs.source != rhs.source {
+            return false
+        }
+        if lhs.order != rhs.order {
             return false
         }
         
@@ -919,6 +931,7 @@ private final class DemoSheetComponent: CombinedComponent {
                         context: context.component.context,
                         subject: context.component.subject,
                         source: context.component.source,
+                        order: context.component.order,
                         action: context.component.action,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -989,8 +1002,12 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         return self._ready
     }
         
-    public init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, action: @escaping () -> Void) {
-        super.init(context: context, component: DemoSheetComponent(context: context, subject: subject, source: source, action: action), navigationBarAppearance: .none)
+    public convenience init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, action: @escaping () -> Void) {
+        self.init(context: context, subject: subject, source: source, order: nil, action: action)
+    }
+    
+    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, order: [PremiumPerk]?, action: @escaping () -> Void) {
+        super.init(context: context, component: DemoSheetComponent(context: context, subject: subject, source: source, order: order, action: action), navigationBarAppearance: .none)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         

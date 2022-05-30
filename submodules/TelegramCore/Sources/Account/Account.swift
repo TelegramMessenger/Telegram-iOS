@@ -1150,6 +1150,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedConfigurationUpdates(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedVoipConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedAppConfigurationUpdates(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedPremiumPromoConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedAutodownloadSettingsUpdates(accountManager: accountManager, network: self.network).start())
         self.managedOperationsDisposable.add(managedTermsOfServiceUpdates(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAppUpdateInfo(network: self.network, stateManager: self.stateManager).start())

@@ -1491,6 +1491,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 mappedSource = .chatsPerFolder
             case .accounts:
                 mappedSource = .accounts
+            case .about:
+                mappedSource = .about
             case let .deeplink(reference):
                 mappedSource = .deeplink(reference)
             case let .profile(peerId):

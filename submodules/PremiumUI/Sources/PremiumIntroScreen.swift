@@ -34,6 +34,7 @@ public enum PremiumSource: Equatable {
     case folders
     case chatsPerFolder
     case accounts
+    case about
     case deeplink(String?)
     case profile(PeerId)
     
@@ -65,6 +66,8 @@ public enum PremiumSource: Equatable {
                 return "double_limits__dialog_filters_chats"
             case .accounts:
                 return "double_limits__accounts"
+            case .about:
+                return "double_limits__about"
             case let .profile(id):
                 return "profile__\(id.id._internalGetInt64Value())"
             case let .deeplink(reference):
@@ -77,7 +80,7 @@ public enum PremiumSource: Equatable {
     }
 }
 
-private enum PremiumPerk: CaseIterable {
+enum PremiumPerk: CaseIterable {
     case doubleLimits
     case moreUpload
     case fasterDownload
@@ -990,6 +993,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             context: accountContext,
                             subject: demoSubject,
                             source: .intro(state?.price),
+                            order: state?.configuration.perks,
                             action: {
                                 dismissImpl?()
                                 if !isPremium {
