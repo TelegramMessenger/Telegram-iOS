@@ -603,7 +603,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             var updatedLabelBadgeImage: UIImage?
             var currentCredibilityIconImage: UIImage?
             
-            if item.peer.id != item.context.account.peerId {
+            if case .threatSelfAsSaved = item.aliasHandling, item.peer.id == item.context.account.peerId {
+                
+            } else {
                 if item.peer.isScam {
                     currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                 } else if item.peer.isFake {

@@ -548,11 +548,11 @@ private enum AdditionalExcludeCategoryId: Int {
     case archived
 }
 
-func chatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter, allFilters: [ChatListFilter]) -> ViewController {
-    return internalChatListFilterAddChatsController(context: context, filter: filter, allFilters: allFilters, applyAutomatically: true, updated: { _ in })
+func chatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter, allFilters: [ChatListFilter], limit: Int32, premiumLimit: Int32, isPremium: Bool) -> ViewController {
+    return internalChatListFilterAddChatsController(context: context, filter: filter, allFilters: allFilters, applyAutomatically: true, limit: limit, premiumLimit: premiumLimit, isPremium: isPremium, updated: { _ in })
 }
     
-private func internalChatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter, allFilters: [ChatListFilter], applyAutomatically: Bool, updated: @escaping (ChatListFilter) -> Void) -> ViewController {
+private func internalChatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter, allFilters: [ChatListFilter], applyAutomatically: Bool, limit: Int32, premiumLimit: Int32, isPremium: Bool, updated: @escaping (ChatListFilter) -> Void) -> ViewController {
     guard case let .filter(_, _, _, filterData) = filter else {
         return ViewController(navigationBarPresentationData: nil)
     }
@@ -599,8 +599,33 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         }
     }
     
-    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_IncludeChatsTitle, selectedChats: Set(filterData.includePeers.peers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories), chatListFilters: allFilters), options: [], filters: [], alwaysEnabled: true, limit: 100))
+    var pushImpl: ((ViewController) -> Void)?
+    
+    let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_IncludeChatsTitle, selectedChats: Set(filterData.includePeers.peers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories), chatListFilters: allFilters), options: [], filters: [], alwaysEnabled: true, limit: isPremium ? premiumLimit : limit, reachedLimit: { count in
+        if count >= premiumLimit {
+            let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: min(premiumLimit, count), action: {})
+            pushImpl?(limitController)
+            return
+        } else if count >= limit && !isPremium {
+            var replaceImpl: ((ViewController) -> Void)?
+            let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: count, action: {
+                let introController = PremiumIntroScreen(context: context, source: .chatsPerFolder)
+                replaceImpl?(introController)
+            })
+            replaceImpl = { [weak limitController] c in
+                limitController?.replace(with: c)
+            }
+            pushImpl?(limitController)
+            
+            return
+        }
+    }))
     controller.navigationPresentation = .modal
+    
+    pushImpl = { [weak controller] c in
+        controller?.push(c)
+    }
+    
     let _ = combineLatest(
         queue: Queue.mainQueue(),
         controller.result |> take(1),
@@ -616,8 +641,8 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
             return
         }
         
-        let (accountPeer, limits, premiumLimits) = data
-        let isPremium = accountPeer?.isPremium ?? false
+//        let (accountPeer, limits, premiumLimits) = data
+//        let isPremium = accountPeer?.isPremium ?? false
         
         var includePeers: [PeerId] = []
         for peerId in peerIds {
@@ -630,23 +655,23 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         }
         includePeers.sort()
         
-        if includePeers.count > premiumLimits.maxFolderChatsCount {
-            let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(includePeers.count), action: {})
-            controller?.push(limitController)
-            return
-        } else if includePeers.count > limits.maxFolderChatsCount && !isPremium {
-            var replaceImpl: ((ViewController) -> Void)?
-            let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(includePeers.count), action: {
-                let introController = PremiumIntroScreen(context: context, source: .chatsPerFolder)
-                replaceImpl?(introController)
-            })
-            replaceImpl = { [weak controller] c in
-                controller?.replace(with: c)
-            }
-            controller?.push(limitController)
-            
-            return
-        }
+//        if includePeers.count > premiumLimits.maxFolderChatsCount {
+//            let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(includePeers.count), action: {})
+//            controller?.push(limitController)
+//            return
+//        } else if includePeers.count > limits.maxFolderChatsCount && !isPremium {
+//            var replaceImpl: ((ViewController) -> Void)?
+//            let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(includePeers.count), action: {
+//                let introController = PremiumIntroScreen(context: context, source: .chatsPerFolder)
+//                replaceImpl?(introController)
+//            })
+//            replaceImpl = { [weak controller] c in
+//                controller?.replace(with: c)
+//            }
+//            controller?.push(limitController)
+//
+//            return
+//        }
         
         var categories: ChatListFilterPeerCategories = []
         for id in additionalCategoryIds {
@@ -1011,7 +1036,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 
                 let _ = (context.engine.peers.currentChatListFilters()
                 |> deliverOnMainQueue).start(next: { filters in
-                    let controller = internalChatListFilterAddChatsController(context: context, filter: filter, allFilters: filters, applyAutomatically: false, updated: { filter in
+                    let controller = internalChatListFilterAddChatsController(context: context, filter: filter, allFilters: filters, applyAutomatically: false, limit: limits.maxFolderChatsCount, premiumLimit: premiumLimits.maxFolderChatsCount, isPremium: isPremium, updated: { filter in
                         skipStateAnimation = true
                         updateState { state in
                             var state = state

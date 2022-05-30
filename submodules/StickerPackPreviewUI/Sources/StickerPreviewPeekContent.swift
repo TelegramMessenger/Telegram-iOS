@@ -181,12 +181,19 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
         }
             
         if let dimensitons = self.item.file.dimensions {
-            let textSpacing: CGFloat = 50.0
+            var topOffset: CGFloat = 0.0
+            var textSpacing: CGFloat = 50.0
+            
+            if size.width == 292.0 {
+                topOffset = 60.0
+                textSpacing -= 10.0
+            }
+            
             let textSize = self.textNode.measure(CGSize(width: 100.0, height: 100.0))
             
             let imageSize = dimensitons.cgSize.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            var imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: textSize.height + textSpacing), size: imageSize)
+            var imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: textSize.height + textSpacing - topOffset), size: imageSize)
             var centerOffset: CGFloat = 0.0
             if self.item.file.isPremiumSticker {
                 let originalImageFrame = imageFrame
@@ -263,14 +270,21 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         let sideInset: CGFloat = 16.0
         
+        var bottomOffset: CGFloat = 0.0
+        if size.width == 320.0 {
+            bottomOffset = 30.0
+        }
+        
         let cancelSize = self.cancelButton.measure(size)
-        self.cancelButton.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - cancelSize.width) / 2.0), y: size.height - cancelSize.height - 49.0), size: cancelSize)
+        self.cancelButton.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - cancelSize.width) / 2.0), y: size.height - cancelSize.height - 49.0 + bottomOffset), size: cancelSize)
         
         let buttonWidth = size.width - sideInset * 2.0
         let buttonHeight = self.proceedButton.updateLayout(width: buttonWidth, transition: transition)
-        self.proceedButton.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - buttonWidth) / 2.0), y: size.height - cancelSize.height - 49.0 - buttonHeight - 23.0), size: CGSize(width: buttonWidth, height: buttonHeight))
+        self.proceedButton.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - buttonWidth) / 2.0), y: size.height - cancelSize.height - 49.0 - buttonHeight - 23.0 + bottomOffset), size: CGSize(width: buttonWidth, height: buttonHeight))
         
-        let textSize = self.textNode.updateLayout(CGSize(width: size.width - sideInset * 4.0, height: CGFloat.greatestFiniteMagnitude))
-        self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: size.height - cancelSize.height - 48.0 - buttonHeight - 20.0 - textSize.height - 31.0), size: textSize)
+        let textSideInset = size.width == 320.0 ? sideInset : sideInset * 2.0
+        
+        let textSize = self.textNode.updateLayout(CGSize(width: size.width - textSideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: size.height - cancelSize.height - 48.0 - buttonHeight - 20.0 - textSize.height - 31.0 + bottomOffset), size: textSize)
     }
 }

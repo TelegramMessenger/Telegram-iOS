@@ -566,7 +566,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             var currentCredibilityIconImage: UIImage?
             switch item.peer {
             case let .peer(peer, _):
-                if let peer = peer {
+                if let peer = peer, peer.id != item.context.account.peerId {
                     if peer.isScam {
                         currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                     } else if peer.isFake {
