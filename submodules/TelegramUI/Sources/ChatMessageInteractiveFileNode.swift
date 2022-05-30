@@ -31,11 +31,18 @@ private struct FetchControls {
     let cancel: () -> Void
 }
 
-private func transcribedText(message: Message) -> EngineAudioTranscriptionResult? {
+private enum TranscribedText {
+    case success(String)
+    case error
+}
+
+private func transcribedText(message: Message) -> TranscribedText? {
     for attribute in message.attributes {
         if let attribute = attribute as? AudioTranscriptionMessageAttribute {
-            if !attribute.text.isEmpty || !attribute.isPending {
-                return .success(EngineAudioTranscriptionResult.Success(id: attribute.id, text: attribute.text))
+            if !attribute.text.isEmpty {
+                return .success(attribute.text)
+            } else {
+                return .error
             }
         }
     }
@@ -499,7 +506,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var isVoice = false
                 var audioDuration: Int32 = 0
                 
-                let canTranscribe = arguments.associatedData.isPremium || arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription
+                let canTranscribe = arguments.associatedData.isPremium
                 
                 let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
                 
@@ -608,8 +615,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 if let transcribedText = transcribedText, case .expanded = effectiveAudioTranscriptionState {
                     switch transcribedText {
-                    case let .success(success):
-                        textString = NSAttributedString(string: success.text, font: textFont, textColor: messageTheme.primaryTextColor)
+                    case let .success(text):
+                        textString = NSAttributedString(string: text, font: textFont, textColor: messageTheme.primaryTextColor)
                     case .error:
                         let errorTextFont = Font.regular(floor(arguments.presentationData.fontSize.baseDisplaySize * 15.0 / 17.0))
                         //TODO:localize

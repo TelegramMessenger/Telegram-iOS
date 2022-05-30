@@ -30,17 +30,7 @@ func _internal_translate(network: Network, text: String, fromLang: String?, toLa
 }
 
 public enum EngineAudioTranscriptionResult {
-    public struct Success {
-        public var id: Int64
-        public var text: String
-        
-        public init(id: Int64, text: String) {
-            self.id = id
-            self.text = text
-        }
-    }
-    
-    case success(Success)
+    case success
     case error
 }
 
@@ -73,31 +63,38 @@ func _internal_transcribeAudio(postbox: Postbox, network: Network, audioTranscri
             return .single(nil)
         }
         |> mapToSignal { result -> Signal<EngineAudioTranscriptionResult, NoError> in
-            guard let result = result else {
-                return .single(.error)
-            }
-            
             return postbox.transaction { transaction -> EngineAudioTranscriptionResult in
-                switch result {
-                case let .transcribedAudio(flags, transcriptionId, text):
-                    let isPending = (flags & (1 << 0)) != 0
-                    
-                    if isPending {
-                        audioTranscriptionManager.with { audioTranscriptionManager in
-                            audioTranscriptionManager.addPendingMapping(transcriptionId: transcriptionId, messageId: messageId)
+                let updatedAttribute: AudioTranscriptionMessageAttribute
+                if let result = result {
+                    switch result {
+                    case let .transcribedAudio(flags, transcriptionId, text):
+                        let isPending = (flags & (1 << 0)) != 0
+                        
+                        if isPending {
+                            audioTranscriptionManager.with { audioTranscriptionManager in
+                                audioTranscriptionManager.addPendingMapping(transcriptionId: transcriptionId, messageId: messageId)
+                            }
                         }
+                        
+                        updatedAttribute = AudioTranscriptionMessageAttribute(id: transcriptionId, text: text, isPending: isPending, didRate: false)
                     }
+                } else {
+                    updatedAttribute = AudioTranscriptionMessageAttribute(id: 0, text: "", isPending: false, didRate: false)
+                }
                     
-                    transaction.updateMessage(messageId, update: { currentMessage in
-                        let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
-                        var attributes = currentMessage.attributes.filter { !($0 is AudioTranscriptionMessageAttribute) }
-                        
-                        attributes.append(AudioTranscriptionMessageAttribute(id: transcriptionId, text: text, isPending: isPending, didRate: false))
-                        
-                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
-                    })
+                transaction.updateMessage(messageId, update: { currentMessage in
+                    let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                    var attributes = currentMessage.attributes.filter { !($0 is AudioTranscriptionMessageAttribute) }
                     
-                    return .success(EngineAudioTranscriptionResult.Success(id: transcriptionId, text: text))
+                    attributes.append(updatedAttribute)
+                    
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                })
+                
+                if let _ = result {
+                    return .success
+                } else {
+                    return .error
                 }
             }
         }
