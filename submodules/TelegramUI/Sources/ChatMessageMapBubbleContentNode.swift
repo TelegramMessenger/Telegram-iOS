@@ -64,7 +64,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeImageLayout = self.imageNode.asyncLayout()
         let makePinLayout = self.pinNode.asyncLayout()
         let statusLayout = self.dateAndStatusNode.asyncLayout()
@@ -302,7 +302,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     let imageApply = makeImageLayout(arguments)
                     
-                    return (layoutSize, { [weak self] animation, _ in
+                    return (layoutSize, { [weak self] animation, _, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             strongSelf.media = selectedMedia

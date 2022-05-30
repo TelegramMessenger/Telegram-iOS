@@ -44,7 +44,22 @@ public enum EngineAudioTranscriptionResult {
     case error
 }
 
-func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
+class AudioTranscriptionManager {
+    private var pendingMapping: [Int64: MessageId] = [:]
+    
+    init() {
+    }
+    
+    func addPendingMapping(transcriptionId: Int64, messageId: MessageId) {
+        self.pendingMapping[transcriptionId] = messageId
+    }
+    
+    func getPendingMapping(transcriptionId: Int64) -> MessageId? {
+        return self.pendingMapping[transcriptionId]
+    }
+}
+
+func _internal_transcribeAudio(postbox: Postbox, network: Network, audioTranscriptionManager: Atomic<AudioTranscriptionManager>, messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -65,13 +80,19 @@ func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: Me
             return postbox.transaction { transaction -> EngineAudioTranscriptionResult in
                 switch result {
                 case let .transcribedAudio(flags, transcriptionId, text):
+                    let isPending = (flags & (1 << 0)) != 0
+                    
+                    if isPending {
+                        audioTranscriptionManager.with { audioTranscriptionManager in
+                            audioTranscriptionManager.addPendingMapping(transcriptionId: transcriptionId, messageId: messageId)
+                        }
+                    }
+                    
                     transaction.updateMessage(messageId, update: { currentMessage in
                         let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                         var attributes = currentMessage.attributes.filter { !($0 is AudioTranscriptionMessageAttribute) }
                         
-                        let isPending = (flags & (1 << 0)) != 0
-                        
-                        attributes.append(AudioTranscriptionMessageAttribute(id: transcriptionId, text: text, isPending: isPending))
+                        attributes.append(AudioTranscriptionMessageAttribute(id: transcriptionId, text: text, isPending: isPending, didRate: false))
                         
                         return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                     })
@@ -85,6 +106,35 @@ func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: Me
 
 func _internal_rateAudioTranscription(postbox: Postbox, network: Network, messageId: MessageId, id: Int64, isGood: Bool) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
+        transaction.updateMessage(messageId, update: { currentMessage in
+            var storeForwardInfo: StoreMessageForwardInfo?
+            if let forwardInfo = currentMessage.forwardInfo {
+                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+            }
+            var attributes = currentMessage.attributes
+            for i in 0 ..< attributes.count {
+                if let attribute = attributes[i] as? AudioTranscriptionMessageAttribute {
+                    attributes[i] = attribute.withDidRate()
+                }
+            }
+            return .update(StoreMessage(
+                id: currentMessage.id,
+                globallyUniqueId: currentMessage.globallyUniqueId,
+                groupingKey: currentMessage.groupingKey,
+                threadId: currentMessage.threadId,
+                timestamp: currentMessage.timestamp,
+                flags: StoreMessageFlags(currentMessage.flags),
+                tags: currentMessage.tags,
+                globalTags: currentMessage.globalTags,
+                localTags: currentMessage.localTags,
+                forwardInfo: storeForwardInfo,
+                authorId: currentMessage.author?.id,
+                text: currentMessage.text,
+                attributes: attributes,
+                media: currentMessage.media
+            ))
+        })
+        
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
     |> mapToSignal { inputPeer -> Signal<Never, NoError> in

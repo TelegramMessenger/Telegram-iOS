@@ -696,15 +696,17 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         var audioTranscription: AudioTranscriptionMessageAttribute?
+        var didRateAudioTranscription = false
         for attribute in message.attributes {
             if let attribute = attribute as? AudioTranscriptionMessageAttribute {
                 audioTranscription = attribute
+                didRateAudioTranscription = attribute.didRate
                 break
             }
         }
         
         var hasRateTranscription = false
-        if hasExpandedAudioTranscription, let audioTranscription = audioTranscription {
+        if hasExpandedAudioTranscription, let audioTranscription = audioTranscription, !didRateAudioTranscription {
             hasRateTranscription = true
             actions.insert(.custom(ChatRateTranscriptionContextItem(context: context, message: message, action: { [weak context] value in
                 guard let context = context else {

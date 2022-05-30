@@ -514,7 +514,7 @@ public final class AudioWaveformComponent: Component {
                     
                     let colorMixFraction: CGFloat
                     if startFraction < playbackProgress {
-                        colorMixFraction = max(0.0, min(1.0, (playbackProgress - startFraction) / (playbackProgress - nextStartFraction)))
+                        colorMixFraction = max(0.0, min(1.0, (playbackProgress - startFraction) / (nextStartFraction - startFraction)))
                     } else {
                         colorMixFraction = 0.0
                     }

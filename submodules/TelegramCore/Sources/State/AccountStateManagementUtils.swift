@@ -1101,8 +1101,9 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                             updatedState.updateMedia(webpage.webpageId, media: webpage)
                         }
                 }
-            /*case let .updateTranscribeAudio(flags, transcriptionId, text):
-                break*/
+            case let .updateTranscribeAudio(flags, transcriptionId, text):
+                let isPending = (flags & (1 << 0)) != 0
+                updatedState.updateAudioTranscription(id: transcriptionId, isPending: isPending, text: text)
             case let .updateNotifySettings(apiPeer, apiNotificationSettings):
                 switch apiPeer {
                     case let .notifyPeer(peer):
@@ -2321,7 +2322,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2402,7 +2403,8 @@ func replayFinalState(
     auxiliaryMethods: AccountAuxiliaryMethods,
     finalState: AccountFinalState,
     removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId],
-    ignoreDate: Bool
+    ignoreDate: Bool,
+    audioTranscriptionManager: Atomic<AudioTranscriptionManager>?
 ) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(transaction, finalState: finalState.state)
     if !verified {
@@ -3342,6 +3344,48 @@ func replayFinalState(
                 })
             case .UpdateAttachMenuBots:
                 syncAttachMenuBots = true
+            case let .UpdateAudioTranscription(id, isPending, text):
+                if let audioTranscriptionManager = audioTranscriptionManager {
+                    if let messageId = audioTranscriptionManager.with({ audioTranscriptionManager in
+                        return audioTranscriptionManager.getPendingMapping(transcriptionId: id)
+                    }) {
+                        transaction.updateMessage(messageId, update: { currentMessage in
+                            var storeForwardInfo: StoreMessageForwardInfo?
+                            if let forwardInfo = currentMessage.forwardInfo {
+                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+                            }
+                            var attributes = currentMessage.attributes
+                            var found = false
+                            loop: for j in 0 ..< attributes.count {
+                                if let attribute = attributes[j] as? AudioTranscriptionMessageAttribute {
+                                    attributes[j] = AudioTranscriptionMessageAttribute(id: id, text: text, isPending: isPending, didRate: attribute.didRate)
+                                    found = true
+                                    break loop
+                                }
+                            }
+                            if !found {
+                                attributes.append(AudioTranscriptionMessageAttribute(id: id, text: text, isPending: isPending, didRate: false))
+                            }
+                            
+                            return .update(StoreMessage(
+                                id: currentMessage.id,
+                                globallyUniqueId: currentMessage.globallyUniqueId,
+                                groupingKey: currentMessage.groupingKey,
+                                threadId: currentMessage.threadId,
+                                timestamp: currentMessage.timestamp,
+                                flags: StoreMessageFlags(currentMessage.flags),
+                                tags: currentMessage.tags,
+                                globalTags: currentMessage.globalTags,
+                                localTags: currentMessage.localTags,
+                                forwardInfo: storeForwardInfo,
+                                authorId: currentMessage.author?.id,
+                                text: currentMessage.text,
+                                attributes: attributes,
+                                media: currentMessage.media
+                            ))
+                        })
+                    }
+                }
         }
     }
     

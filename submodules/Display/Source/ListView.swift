@@ -2692,7 +2692,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var apparentFrame = node.apparentFrame
                     apparentFrame.size.height = updatedApparentHeight
                     
-                    apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(apparentFrame), timestamp: timestamp))
+                    let applyContext = ListViewItemApply(isOnScreen: visibleBounds.intersects(apparentFrame), timestamp: timestamp)
+                    apply().1(applyContext)
+                    let invertOffsetDirection = applyContext.invertOffsetDirection
                     
                     var offsetRanges = OffsetRanges()
                     
@@ -2714,7 +2716,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             } else {
                                 node.apparentHeight = previousApparentHeight
                                 node.animateFrameTransition(0.0, previousApparentHeight)
-                                node.addApparentHeightAnimation(updatedApparentHeight, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
+                                node.addApparentHeightAnimation(updatedApparentHeight, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, invertOffsetDirection: invertOffsetDirection, update: { [weak node] progress, currentValue in
                                     if let node = node {
                                         node.animateFrameTransition(progress, currentValue)
                                     }
@@ -4224,7 +4226,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             let itemNode = self.itemNodes[index]
             
             let previousApparentHeight = itemNode.apparentHeight
-            if itemNode.animate(timestamp) {
+            var invertOffsetDirection = false
+            if itemNode.animate(timestamp: timestamp, invertOffsetDirection: &invertOffsetDirection) {
                 continueAnimations = true
             }
             let updatedApparentHeight = itemNode.apparentHeight
@@ -4236,6 +4239,26 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 if itemNode.apparentFrame.maxY <= visualInsets.top {
                     offsetRanges.offset(IndexRange(first: 0, last: index), offset: -apparentHeightDelta)
+                } else if invertOffsetDirection {
+                    if itemNode.apparentFrame.minY - apparentHeightDelta < visualInsets.top {
+                        let overflowOffset = visualInsets.top - (itemNode.apparentFrame.minY - apparentHeightDelta)
+                        let remainingOffset = apparentHeightDelta - overflowOffset
+                        offsetRanges.offset(IndexRange(first: 0, last: index), offset: -remainingOffset)
+                        
+                        var offsetDelta = overflowOffset
+                        if offsetDelta < 0.0 {
+                            let maxDelta = visualInsets.top - itemNode.apparentFrame.maxY
+                            if maxDelta > offsetDelta {
+                                let remainingOffset = maxDelta - offsetDelta
+                                offsetRanges.offset(IndexRange(first: 0, last: index), offset: remainingOffset)
+                                offsetDelta = maxDelta
+                            }
+                        }
+                        
+                        offsetRanges.offset(IndexRange(first: index + 1, last: Int.max), offset: offsetDelta)
+                    } else {
+                        offsetRanges.offset(IndexRange(first: 0, last: index), offset: -apparentHeightDelta)
+                    }
                 } else {
                     var offsetDelta = apparentHeightDelta
                     if offsetDelta < 0.0 {

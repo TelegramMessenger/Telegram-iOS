@@ -334,7 +334,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         }
     }
     
-    public func animate(_ timestamp: Double) -> Bool {
+    public func animate(timestamp: Double, invertOffsetDirection: inout Bool) -> Bool {
         var continueAnimations = false
         
         if let _ = self.spring {
@@ -377,6 +377,10 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         while i < animationCount {
             let (_, animation) = self.animations[i]
             animation.applyAt(timestamp)
+            
+            if animation.invertOffsetDirection {
+                invertOffsetDirection = true
+            }
             
             if animation.completeAt(timestamp) {
                 self.animations.remove(at: i)
@@ -521,9 +525,9 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         }
     }
     
-    public func addApparentHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat, CGFloat) -> Void)? = nil) {
+    public func addApparentHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, invertOffsetDirection: Bool = false, update: ((CGFloat, CGFloat) -> Void)? = nil) {
         self.apparentHeightTransition = (self.apparentHeight, value)
-        let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: self.preferredAnimationCurve, beginAt: beginAt, update: { [weak self] progress, currentValue in
+        let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, invertOffsetDirection: invertOffsetDirection, curve: self.preferredAnimationCurve, beginAt: beginAt, update: { [weak self] progress, currentValue in
             if let strongSelf = self {
                 strongSelf.apparentHeight = currentValue
                 if let update = update {

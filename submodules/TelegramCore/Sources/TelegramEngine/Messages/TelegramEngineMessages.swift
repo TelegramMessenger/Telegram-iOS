@@ -329,7 +329,7 @@ public extension TelegramEngine {
         }
         
         public func transcribeAudio(messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
-            return _internal_transcribeAudio(postbox: self.account.postbox, network: self.account.network, messageId: messageId)
+            return _internal_transcribeAudio(postbox: self.account.postbox, network: self.account.network, audioTranscriptionManager: self.account.stateManager.audioTranscriptionManager, messageId: messageId)
         }
         
         public func rateAudioTranscription(messageId: MessageId, id: Int64, isGood: Bool) -> Signal<Never, NoError> {
