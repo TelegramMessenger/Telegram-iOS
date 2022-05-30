@@ -7644,3 +7644,24 @@ Sorry for the inconvenience.";
 "ChatListFolder.MaxChatsInFolder" = "Sorry, you can't add more than %d chats to a folder.";
 
 "Conversation.SaveGif" = "Save GIF";
+
+"Premium.Limits.Title" = "Doubled Limits";
+"Premium.Limits.GroupsAndChannels" = "Groups and Channels";
+"Premium.Limits.PinnedChats" = "Pinned Chats";
+"Premium.Limits.PublicLinks" = "Public Links";
+"Premium.Limits.SavedGifs" = "Saved GIFs";
+"Premium.Limits.FavedStickers" = "Favorite Stickers";
+"Premium.Limits.Captions" = "Captions";
+"Premium.Limits.Folders" = "Folders";
+"Premium.Limits.ChatsPerFolder" = "Chats per Folder";
+"Premium.Limits.Accounts" = "Connected Accounts";
+
+"Premium.Limits.GroupsAndChannelsInfo" = "Join up to 1000 channels and large groups";
+"Premium.Limits.PinnedChatsInfo" = "Pin up to 10 chats in your main chat list";
+"Premium.Limits.PublicLinksInfo" = "Reserve up to 20 [t.me/name]() links";
+"Premium.Limits.SavedGifsInfo" = "Save up to 400 GIFs in your Favorite GIFs";
+"Premium.Limits.FavedStickersInfo" = "Save up to 10 stickers in your Favorite stickers";
+"Premium.Limits.CaptionsInfo" = "Use longer descriptions for your photos and videos";
+"Premium.Limits.FoldersInfo" = "Organize your chats into 20 folders";
+"Premium.Limits.ChatsPerFolderInfo" = "Add up to 200 chats into each of your folders";
+"Premium.Limits.AccountsInfo" = "Connect 4 accounts with different mobile numbers";

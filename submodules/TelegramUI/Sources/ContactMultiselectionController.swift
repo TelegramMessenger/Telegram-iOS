@@ -218,7 +218,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, options: self.options, filters: self.filters)
+        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, options: self.options, filters: self.filters, limit: self.limit, reachedSelectionLimit: self.params.reachedLimit)
         switch self.contactsNode.contentNode {
         case let .contacts(contactsNode):
             self._listReady.set(contactsNode.ready)
@@ -266,6 +266,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                         }
                     }
                 case let .chats(chatsNode):
+                    let reachedLimit = strongSelf.params.reachedLimit
                     chatsNode.updateState { initialState in
                         var state = initialState
                         if state.selectedPeerIds.contains(peer.id) {
@@ -277,6 +278,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                         }
                         updatedCount = state.selectedPeerIds.count
                         if let limit = limit, let count = updatedCount, count > limit {
+                            reachedLimit?(Int32(count))
                             updatedCount = nil
                             removedTokenId = nil
                             addedToken = nil

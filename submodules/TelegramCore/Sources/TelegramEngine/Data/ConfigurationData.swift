@@ -354,5 +354,26 @@ public extension TelegramEngine.EngineData.Item {
                 return localizationListState
             }
         }
+        
+        public struct PremiumPromo: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = PremiumPromoConfiguration
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.premiumPromo]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let premiumPromoConfiguration = view.values[PreferencesKeys.premiumPromo]?.get(PremiumPromoConfiguration.self) else {
+                    return PremiumPromoConfiguration.defaultValue
+                }
+                return premiumPromoConfiguration
+            }
+        }
     }
 }

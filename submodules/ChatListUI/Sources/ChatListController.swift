@@ -1377,7 +1377,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
-                                                strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter, allFilters: filters))
+                                                strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter, allFilters: filters, limit: limits.maxFolderChatsCount, premiumLimit: premiumLimits.maxFolderChatsCount, isPremium: isPremium))
                                                 f(.dismissWithoutContent)
                                             })
                                             found = true

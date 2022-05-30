@@ -705,6 +705,9 @@ public final class ChatListNode: ListView {
     
     var isSelectionGestureEnabled = true
     
+    public var selectionLimit: Int32 = 100
+    public var reachedSelectionLimit: ((Int32) -> Void)?
+    
     public init(context: AccountContext, groupId: EngineChatList.Group, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
         self.groupId = groupId
@@ -743,27 +746,32 @@ public final class ChatListNode: ListView {
                 disabledPeerSelected(peer)
             }
         }, togglePeerSelected: { [weak self] peer in
+            guard let strongSelf = self else {
+                return
+            }
             var didBeginSelecting = false
             var count = 0
-            self?.updateState { state in
+            strongSelf.updateState { [weak self] state in
                 var state = state
                 if state.selectedPeerIds.contains(peer.id) {
                     state.selectedPeerIds.remove(peer.id)
                 } else {
-                    if state.selectedPeerIds.count < 100 {
+                    if state.selectedPeerIds.count < strongSelf.selectionLimit {
                         if state.selectedPeerIds.isEmpty {
                             didBeginSelecting = true
                         }
                         state.selectedPeerIds.insert(peer.id)
                         state.selectedPeerMap[peer.id] = peer
+                    } else {
+                        self?.reachedSelectionLimit?(Int32(state.selectedPeerIds.count))
                     }
                 }
                 count = state.selectedPeerIds.count
                 return state
             }
-            self?.selectionCountChanged?(count)
+            strongSelf.selectionCountChanged?(count)
             if didBeginSelecting {
-                self?.didBeginSelectingChats?()
+                strongSelf.didBeginSelectingChats?()
             }
         }, togglePeersSelection: { [weak self] peers, selected in
             self?.updateState { state in

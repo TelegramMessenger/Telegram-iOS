@@ -135,6 +135,9 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         let expandedAnimationFrame = animationFrame
         
         if isExpanded && !self.hasAppearAnimation {
+            self.staticAnimationNode.completed = { [weak self] _ in
+                self?.mainAnimationCompletion?()
+            }
             self.staticAnimationNode.play(fromIndex: 0)
         } else if isExpanded, self.animationNode == nil {
             let animationNode = AnimatedStickerNode()

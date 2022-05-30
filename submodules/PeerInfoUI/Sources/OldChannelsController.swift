@@ -322,14 +322,19 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
             buttonText = presentationData.strings.Premium_IncreaseLimit
             colorful = true
         }
-        let footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: buttonText, colorful: colorful, action: {
-            if state.selectedPeers.count > 0 {
-                leaveActionImpl?()
-            } else {
-                let controller = PremiumIntroScreen(context: context, source: .groupsAndChannels)
-                pushImpl?(controller)
-            }
-        })
+        let footerItem: IncreaseLimitFooterItem?
+        if state.isSearching && state.selectedPeers.count == 0 {
+            footerItem = nil
+        } else {
+            footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: buttonText, colorful: colorful, action: {
+                if state.selectedPeers.count > 0 {
+                    leaveActionImpl?()
+                } else {
+                    let controller = PremiumIntroScreen(context: context, source: .groupsAndChannels)
+                    pushImpl?(controller)
+                }
+            })
+        }
         
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: oldChannelsEntries(presentationData: presentationData, state: state, limit: limits.maxChannelsCount, premiumLimit: premiumLimits.maxChannelsCount, peers: peers, intent: intent), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, footerItem: footerItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up), crossfadeState: peersAreEmptyUpdated, animateChanges: false)
         
@@ -353,7 +358,7 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
             let ensureStoredPeersSignal: Signal<Never, NoError> = context.engine.peers.ensurePeersAreLocallyAvailable(peers: ensureStoredPeers.map(EnginePeer.init))
             
             return ensureStoredPeersSignal
-            |> then(context.engine.peers.removePeerChats(peerIds: Array(peers.map(\.peer.id))))
+            |> then(context.engine.peers.removePeerChats(peerIds: Array(ensureStoredPeers.map(\.id))))
         }
         |> deliverOnMainQueue).start(completed: {
             completed(true)

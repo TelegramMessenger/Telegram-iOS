@@ -56,8 +56,9 @@ public final class ContactMultiselectionControllerParams {
     public let filters: [ContactListFilter]
     public let alwaysEnabled: Bool
     public let limit: Int32?
+    public let reachedLimit: ((Int32) -> Void)?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf], alwaysEnabled: Bool = false, limit: Int32? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf], alwaysEnabled: Bool = false, limit: Int32? = nil, reachedLimit: ((Int32) -> Void)? = nil) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.mode = mode
@@ -65,6 +66,7 @@ public final class ContactMultiselectionControllerParams {
         self.filters = filters
         self.alwaysEnabled = alwaysEnabled
         self.limit = limit
+        self.reachedLimit = reachedLimit
     }
 }
 

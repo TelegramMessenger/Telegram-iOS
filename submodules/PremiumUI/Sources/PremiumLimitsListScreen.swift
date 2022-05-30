@@ -12,6 +12,261 @@ import ComponentFlow
 import ViewControllerComponent
 import MultilineTextComponent
 import BundleIconComponent
+import Markdown
+import SolidRoundedButtonNode
+
+private final class LimitComponent: CombinedComponent {
+    let title: String
+    let titleColor: UIColor
+    let text: String
+    let textColor: UIColor
+    let accentColor: UIColor
+    let inactiveColor: UIColor
+    let inactiveTextColor: UIColor
+    let inactiveTitle: String
+    let inactiveValue: String
+    let activeColor: UIColor
+    let activeTextColor: UIColor
+    let activeTitle: String
+    let activeValue: String
+    
+    public init(
+        title: String,
+        titleColor: UIColor,
+        text: String,
+        textColor: UIColor,
+        accentColor: UIColor,
+        inactiveColor: UIColor,
+        inactiveTextColor: UIColor,
+        inactiveTitle: String,
+        inactiveValue: String,
+        activeColor: UIColor,
+        activeTextColor: UIColor,
+        activeTitle: String,
+        activeValue: String
+    ) {
+        self.title = title
+        self.titleColor = titleColor
+        self.text = text
+        self.textColor = textColor
+        self.accentColor = accentColor
+        self.inactiveColor = inactiveColor
+        self.inactiveTextColor = inactiveTextColor
+        self.inactiveTitle = inactiveTitle
+        self.inactiveValue = inactiveValue
+        self.activeColor = activeColor
+        self.activeTextColor = activeTextColor
+        self.activeTitle = activeTitle
+        self.activeValue = activeValue
+    }
+    
+    static func ==(lhs: LimitComponent, rhs: LimitComponent) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.titleColor != rhs.titleColor {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.textColor != rhs.textColor {
+            return false
+        }
+        if lhs.accentColor != rhs.accentColor {
+            return false
+        }
+        if lhs.inactiveColor != rhs.inactiveColor {
+            return false
+        }
+        if lhs.inactiveTextColor != rhs.inactiveTextColor {
+            return false
+        }
+        if lhs.inactiveTitle != rhs.inactiveTitle {
+            return false
+        }
+        if lhs.inactiveValue != rhs.inactiveValue {
+            return false
+        }
+        if lhs.activeColor != rhs.activeColor {
+            return false
+        }
+        if lhs.activeTextColor != rhs.activeTextColor {
+            return false
+        }
+        if lhs.activeTitle != rhs.activeTitle {
+            return false
+        }
+        if lhs.activeValue != rhs.activeValue {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let title = Child(MultilineTextComponent.self)
+        let text = Child(MultilineTextComponent.self)
+        let limit = Child(PremiumLimitDisplayComponent.self)
+        
+        return { context in
+            let component = context.component
+            
+            let sideInset: CGFloat = 16.0
+            let textSideInset: CGFloat = sideInset + 8.0
+            let spacing: CGFloat = 4.0
+            
+            let textTopInset: CGFloat = 9.0
+            
+            let title = title.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: component.title,
+                        font: Font.regular(17.0),
+                        textColor: component.titleColor,
+                        paragraphAlignment: .natural
+                    )),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 1
+                ),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude),
+                transition: .immediate
+            )
+            
+            let textFont = Font.regular(13.0)
+            let boldTextFont = Font.semibold(13.0)
+            let textColor = component.textColor
+            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: component.accentColor), linkAttribute: { _ in
+                return nil
+            })
+                        
+            let text = text.update(
+                component: MultilineTextComponent(
+                    text: .markdown(text: component.text, attributes: markdownAttributes),
+                    horizontalAlignment: .natural,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.0
+                ),
+                availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                transition: .immediate
+            )
+            
+            let limit = limit.update(
+                component: PremiumLimitDisplayComponent(
+                    inactiveColor: component.inactiveColor,
+                    activeColors: [component.activeColor],
+                    inactiveTitle: component.inactiveTitle,
+                    inactiveValue: component.inactiveValue,
+                    inactiveTitleColor: component.inactiveTextColor,
+                    activeTitle: component.activeTitle,
+                    activeValue: component.activeValue,
+                    activeTitleColor: component.activeTextColor,
+                    badgeIconName: "",
+                    badgeText: nil,
+                    badgePosition: 0.0
+                ),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+                transition: .immediate
+            )
+         
+            context.add(title
+                .position(CGPoint(x: textSideInset + title.size.width / 2.0, y: textTopInset + title.size.height / 2.0))
+            )
+            
+            context.add(text
+                .position(CGPoint(x: textSideInset + text.size.width / 2.0, y: textTopInset + title.size.height + spacing + text.size.height / 2.0))
+            )
+            
+            context.add(limit
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: textTopInset + title.size.height + spacing + text.size.height - 20.0))
+            )
+        
+            return CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + text.size.height + 56.0)
+        }
+    }
+}
+
+private enum Limit: CaseIterable {
+    case groups
+    case pins
+    case publicLinks
+    case savedGifs
+    case favedStickers
+    case captions
+    case folders
+    case chatsPerFolder
+    case account
+    
+    func title(strings: PresentationStrings) -> String {
+        switch self {
+            case .groups:
+                return strings.Premium_Limits_GroupsAndChannels
+            case .pins:
+                return strings.Premium_Limits_PinnedChats
+            case .publicLinks:
+                return strings.Premium_Limits_PublicLinks
+            case .savedGifs:
+                return strings.Premium_Limits_SavedGifs
+            case .favedStickers:
+                return strings.Premium_Limits_FavedStickers
+            case .captions:
+                return strings.Premium_Limits_Captions
+            case .folders:
+                return strings.Premium_Limits_Folders
+            case .chatsPerFolder:
+                return strings.Premium_Limits_ChatsPerFolder
+            case .account:
+                return strings.Premium_Limits_Accounts
+        }
+    }
+    
+    func text(strings: PresentationStrings) -> String {
+        switch self {
+            case .groups:
+                return strings.Premium_Limits_GroupsAndChannelsInfo
+            case .pins:
+                return strings.Premium_Limits_PinnedChatsInfo
+            case .publicLinks:
+                return strings.Premium_Limits_PublicLinksInfo
+            case .savedGifs:
+                return strings.Premium_Limits_SavedGifsInfo
+            case .favedStickers:
+                return strings.Premium_Limits_FavedStickersInfo
+            case .captions:
+                return strings.Premium_Limits_CaptionsInfo
+            case .folders:
+                return strings.Premium_Limits_FoldersInfo
+            case .chatsPerFolder:
+                return strings.Premium_Limits_ChatsPerFolderInfo
+            case .account:
+                return strings.Premium_Limits_AccountsInfo
+        }
+    }
+    
+    func limit(_ configuration: EngineConfiguration.UserLimits, isPremium: Bool) -> String {
+        let value: Int32
+        switch self {
+            case .groups:
+                value = configuration.maxChannelsCount
+            case .pins:
+                value = configuration.maxPinnedChatCount
+            case .publicLinks:
+                value = configuration.maxPublicLinksCount
+            case .savedGifs:
+                value = configuration.maxSavedGifCount
+            case .favedStickers:
+                value = configuration.maxFavedStickerCount
+            case .captions:
+                value = configuration.maxCaptionLength
+            case .folders:
+                value = configuration.maxFoldersCount
+            case .chatsPerFolder:
+                value = configuration.maxFolderChatsCount
+            case .account:
+                value = isPremium ? 4 : 3
+        }
+        return "\(value)"
+    }
+}
 
 private final class PremimLimitsListScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -19,6 +274,8 @@ private final class PremimLimitsListScreenComponent: CombinedComponent {
     let context: AccountContext
     let expand: () -> Void
     
+    var disposable: Disposable?
+
     init(context: AccountContext, expand: @escaping () -> Void) {
         self.context = context
         self.expand = expand
@@ -33,12 +290,31 @@ private final class PremimLimitsListScreenComponent: CombinedComponent {
     
     final class State: ComponentState {
         private let context: AccountContext
-                
+        
+        private var disposable: Disposable?
+        var limits: EngineConfiguration.UserLimits = .defaultValue
+        var premiumLimits: EngineConfiguration.UserLimits = .defaultValue
+        
         init(context: AccountContext) {
             self.context = context
           
             super.init()
             
+            self.disposable = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] limits, premiumLimits in
+                if let strongSelf = self {
+                    strongSelf.limits = limits
+                    strongSelf.premiumLimits = premiumLimits
+                    strongSelf.updated(transition: .immediate)
+                }
+            })
+        }
+        
+        deinit {
+            self.disposable?.dispose()
         }
     }
     
@@ -47,13 +323,59 @@ private final class PremimLimitsListScreenComponent: CombinedComponent {
     }
     
     static var body: Body {
+        let list = Child(List<Empty>.self)
+        
         return { context in
-//            let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
-//            let state = context.state
-//            let theme = environment.theme
-//            let strings = environment.strings
-//            return CGSize(width: context.availableSize.width, height: environment.navigationHeight + image.size.height + environment.safeInsets.bottom)
-            return context.availableSize
+            let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
+            let state = context.state
+            let theme = environment.theme
+            let strings = environment.strings
+            
+            let colors = [
+                UIColor(rgb: 0x5ba0ff),
+                UIColor(rgb: 0x798aff),
+                UIColor(rgb: 0x9377ff),
+                UIColor(rgb: 0xac64f3),
+                UIColor(rgb: 0xc456ae),
+                UIColor(rgb: 0xdb5887),
+                UIColor(rgb: 0xdb496f),
+                UIColor(rgb: 0xe95d44),
+                UIColor(rgb: 0xf2822a)
+            ]
+            
+            let items: [AnyComponentWithIdentity<Empty>] = Limit.allCases.enumerated().map { index, value in
+                AnyComponentWithIdentity(
+                    id: value, component: AnyComponent(
+                        LimitComponent(
+                            title: value.title(strings: strings),
+                            titleColor: theme.list.itemPrimaryTextColor,
+                            text: value.text(strings: strings),
+                            textColor: theme.list.itemSecondaryTextColor,
+                            accentColor: theme.list.itemAccentColor,
+                            inactiveColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5),
+                            inactiveTextColor: theme.list.itemPrimaryTextColor,
+                            inactiveTitle: strings.Premium_Free,
+                            inactiveValue: value.limit(state.limits, isPremium: false),
+                            activeColor: colors[index],
+                            activeTextColor: .white,
+                            activeTitle: strings.Premium_Premium,
+                            activeValue: value.limit(state.premiumLimits, isPremium: true)
+                        )
+                    )
+                )
+            }
+                        
+            let list = list.update(
+                component: List(items),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
+            context.add(list
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: environment.navigationHeight + list.size.height / 2.0))
+            )
+            
+            return CGSize(width: context.availableSize.width, height: environment.navigationHeight + list.size.height + environment.safeInsets.bottom)
         }
     }
 }
@@ -72,6 +394,8 @@ public class PremimLimitsListScreen: ViewController {
         let scrollView: UIScrollView
         let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
         
+        fileprivate let footerNode: FooterNode
+        
         private(set) var isExpanded = false
         private var panGestureRecognizer: UIPanGestureRecognizer?
         private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
@@ -81,7 +405,7 @@ public class PremimLimitsListScreen: ViewController {
         
         fileprivate var temporaryDismiss = false
         
-        init(context: AccountContext, controller: PremimLimitsListScreen, component: AnyComponent<ViewControllerComponentContainer.Environment>, theme: PresentationTheme?) {
+        init(context: AccountContext, controller: PremimLimitsListScreen, component: AnyComponent<ViewControllerComponentContainer.Environment>, theme: PresentationTheme?, buttonTitle: String, gloss: Bool) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             self.controller = controller
@@ -98,6 +422,8 @@ public class PremimLimitsListScreen: ViewController {
             self.scrollView = UIScrollView()
             self.hostView = ComponentHostView()
             
+            self.footerNode = FooterNode(theme: self.presentationData.theme, title: buttonTitle, gloss: gloss)
+            
             super.init()
             
             self.scrollView.delegate = self
@@ -111,6 +437,7 @@ public class PremimLimitsListScreen: ViewController {
             self.view.addSubview(self.wrappingView)
             self.wrappingView.addSubview(self.containerView)
             self.containerView.addSubview(self.scrollView)
+            self.containerView.addSubnode(self.footerNode)
             self.scrollView.addSubview(self.hostView)
         }
         
@@ -267,10 +594,16 @@ public class PremimLimitsListScreen: ViewController {
             transition.setFrame(view: self.containerView, frame: clipFrame)
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: clipFrame.size), completion: nil)
             
+            let clipLayout = layout.withUpdatedSize(clipFrame.size)
+            let footerHeight = self.footerNode.updateLayout(layout: clipLayout, transition: .immediate)
+            
+            let convertedFooterFrame = self.view.convert(CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - footerHeight), size: CGSize(width: clipFrame.width, height: footerHeight)), to: self.containerView)
+            transition.setFrame(view: self.footerNode.view, frame: convertedFooterFrame)
+            
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: 0.0,
                 navigationHeight: navigationHeight,
-                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right),
+                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: footerHeight, right: layout.safeInsets.right),
                 isVisible: self.currentIsVisible,
                 theme: self.theme ?? self.presentationData.theme,
                 strings: self.presentationData.strings,
@@ -537,19 +870,25 @@ public class PremimLimitsListScreen: ViewController {
     
     private var currentLayout: ContainerViewLayout?
         
-    public convenience init(context: AccountContext) {
+    private let buttonText: String
+    private let buttonGloss: Bool
+    
+    public convenience init(context: AccountContext, buttonText: String, isPremium: Bool) {
         var expandImpl: (() -> Void)?
         self.init(context: context, component: PremimLimitsListScreenComponent(context: context, expand: {
             expandImpl?()
-        }))
+        }), buttonText: buttonText, buttonGloss: !isPremium)
                         
-        self.title = "Doubled Limits"
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.title = presentationData.strings.Premium_Limits_Title
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         
         let rightBarButtonNode = ASImageNode()
-        rightBarButtonNode.image = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0xededed), foregroundColor: UIColor(rgb: 0x7f8084))
+        rightBarButtonNode.image = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0x808084, alpha: 0.1), foregroundColor: presentationData.theme.actionSheet.inputClearButtonColor)
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: rightBarButtonNode)
+        self.navigationItem.rightBarButtonItem?.target = self
+        self.navigationItem.rightBarButtonItem?.action = #selector(self.cancelPressed)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
                 
@@ -561,10 +900,12 @@ public class PremimLimitsListScreen: ViewController {
         }
     }
     
-    private init<C: Component>(context: AccountContext, component: C, theme: PresentationTheme? = nil) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
+    private init<C: Component>(context: AccountContext, component: C, theme: PresentationTheme? = nil, buttonText: String, buttonGloss: Bool) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
         self.context = context
         self.component = AnyComponent(component)
         self.theme = nil
+        self.buttonText = buttonText
+        self.buttonGloss = buttonGloss
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: context.sharedContext.currentPresentationData.with { $0 }))
         
@@ -580,7 +921,7 @@ public class PremimLimitsListScreen: ViewController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, controller: self, component: self.component, theme: self.theme)
+        self.displayNode = Node(context: self.context, controller: self, component: self.component, theme: self.theme, buttonTitle: self.buttonText, gloss: self.buttonGloss)
         if self.isInitiallyExpanded {
             (self.displayNode as! Node).update(isExpanded: true, transition: .immediate)
         }
@@ -648,464 +989,93 @@ public class PremimLimitsListScreen: ViewController {
     }
 }
 
-
-//import Foundation
-//import UIKit
-//import Display
-//import AsyncDisplayKit
-//import Postbox
-//import TelegramCore
-//import SwiftSignalKit
-//import AccountContext
-//import TelegramPresentationData
-//import PresentationDataUtils
-//import ComponentFlow
-//import ViewControllerComponent
-//import SheetComponent
-//import MultilineTextComponent
-//import BundleIconComponent
-//import SolidRoundedButtonComponent
-//import Markdown
-//
-//private final class PremiumLimitsListContent: CombinedComponent {
-//    typealias EnvironmentType = ViewControllerComponentContainer.Environment
-//    
-//    let context: AccountContext
-//    let subject: PremiumDemoScreen.Subject
-//    let source: PremiumDemoScreen.Source
-//    let action: () -> Void
-//    let dismiss: () -> Void
-//    
-//    init(context: AccountContext, action: @escaping () -> Void, dismiss: @escaping () -> Void) {
-//        self.context = context
-//        self.action = action
-//        self.dismiss = dismiss
-//    }
-//    
-//    static func ==(lhs: PremiumLimitsListContent, rhs: PremiumLimitsListContent) -> Bool {
-//        if lhs.context !== rhs.context {
-//            return false
-//        }
-//        return true
-//    }
-//    
-//    final class State: ComponentState {
-//        private let context: AccountContext
-//        var cachedCloseImage: UIImage?
-//        
-//        var limits: EngineConfiguration.UserLimits = .defaultValue
-//        var premiumLimits: EngineConfiguration.UserLimits = .defaultValue
-//        var disposable: Disposable?
-//        
-//        init(context: AccountContext) {
-//            self.context = context
-//            
-//            super.init()
-//            
-//            self.disposable = (self.context.engine.data.get(
-//                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
-//                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
-//            )
-//            |> deliverOnMainQueue).start(next: { [weak self] limits, premiumLimits in
-//                guard let strongSelf = self else {
-//                    return
-//                }
-//                strongSelf.limits = limits
-//                strongSelf.premiumLimits = premiumLimits
-//                strongSelf.updated(transition: .immediate)
-//            })
-//        }
-//        
-//        deinit {
-//            self.disposable?.dispose()
-//        }
-//    }
-//    
-//    func makeState() -> State {
-//        return State(context: self.context)
-//    }
-//    
-//    static var body: Body {
-//        let closeButton = Child(Button.self)
-//        let button = Child(SolidRoundedButtonComponent.self)
-//        
-//        return { context in
-//            let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
-//            let component = context.component
-////            let theme = environment.theme
-//            let strings = environment.strings
-//            
-//            let state = context.state
-//            
-//            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-//                                
-//            let closeImage: UIImage
-//            if let image = state.cachedCloseImage {
-//                closeImage = image
-//            } else {
-//                closeImage = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.1), foregroundColor: UIColor(rgb: 0xffffff))!
-//                state.cachedCloseImage = closeImage
-//            }
-//            
-//            let closeButton = closeButton.update(
-//                component: Button(
-//                    content: AnyComponent(Image(image: closeImage)),
-//                    action: { [weak component] in
-//                        component?.dismiss()
-//                    }
-//                ),
-//                availableSize: CGSize(width: 30.0, height: 30.0),
-//                transition: .immediate
-//            )
-//            context.add(closeButton
-//                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
-//            )
-//                         
-//            let buttonText: String
-//            switch component.source {
-//                case let .intro(price):
-//                    buttonText = strings.Premium_SubscribeFor(price ?? "–").string
-//                case .other:
-//                    buttonText = strings.Premium_MoreAboutPremium
-//            }
-//            
-//            let button = button.update(
-//                component: SolidRoundedButtonComponent(
-//                    title: buttonText,
-//                    theme: SolidRoundedButtonComponent.Theme(
-//                        backgroundColor: .black,
-//                        backgroundColors: [
-//                            UIColor(rgb: 0x0077ff),
-//                            UIColor(rgb: 0x6b93ff),
-//                            UIColor(rgb: 0x8878ff),
-//                            UIColor(rgb: 0xe46ace)
-//                        ],
-//                        foregroundColor: .white
-//                    ),
-//                    font: .bold,
-//                    fontSize: 17.0,
-//                    height: 50.0,
-//                    cornerRadius: 10.0,
-//                    gloss: true,
-//                    iconPosition: .right,
-//                    action: { [weak component] in
-//                        guard let component = component else {
-//                            return
-//                        }
-//                        component.dismiss()
-//                        component.action()
-//                    }
-//                ),
-//                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
-//                transition: context.transition
-//            )
-//              
-//            let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: context.availableSize.width + 154.0 + 20.0), size: button.size)
-//            context.add(button
-//                .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
-//            )
-//            
-//            let contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + 5.0 + environment.safeInsets.bottom)
-//            
-//            return contentSize
-//        }
-//    }
-//}
-//
-//
-//private final class PremiumLimitsListComponent: CombinedComponent {
-//    typealias EnvironmentType = ViewControllerComponentContainer.Environment
-//    
-//    let context: AccountContext
-//    let action: () -> Void
-//    
-//    init(context: AccountContext, action: @escaping () -> Void) {
-//        self.context = context
-//        self.action = action
-//    }
-//    
-//    static func ==(lhs: PremiumLimitsListComponent, rhs: PremiumLimitsListComponent) -> Bool {
-//        if lhs.context !== rhs.context {
-//            return false
-//        }
-//        
-//        return true
-//    }
-//    
-//    static var body: Body {
-//        let sheet = Child(SheetComponent<EnvironmentType>.self)
-//        let animateOut = StoredActionSlot(Action<Void>.self)
-//        
-//        return { context in
-//            let environment = context.environment[EnvironmentType.self]
-//            
-//            let controller = environment.controller
-//            
-//            let sheet = sheet.update(
-//                component: SheetComponent<EnvironmentType>(
-//                    content: AnyComponent<EnvironmentType>(PremiumLimitsListContent(
-//                        context: context.component.context,
-//                        action: context.component.action,
-//                        dismiss: {
-//                            animateOut.invoke(Action { _ in
-//                                if let controller = controller() {
-//                                    controller.dismiss(completion: nil)
-//                                }
-//                            })
-//                        }
-//                    )),
-//                    backgroundColor: environment.theme.actionSheet.opaqueItemBackgroundColor,
-//                    animateOut: animateOut
-//                ),
-//                environment: {
-//                    environment
-//                    SheetComponentEnvironment(
-//                        isDisplaying: environment.value.isVisible,
-//                        dismiss: {
-//                            animateOut.invoke(Action { _ in
-//                                if let controller = controller() {
-//                                    controller.dismiss(completion: nil)
-//                                }
-//                            })
-//                        }
-//                    )
-//                },
-//                availableSize: context.availableSize,
-//                transition: context.transition
-//            )
-//            
-//            context.add(sheet
-//                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
-//            )
-//            
-//            return context.availableSize
-//        }
-//    }
-//}
-//
-//public class PremiumLimitsListScreen: ViewControllerComponentContainer {
-//    var disposed: () -> Void = {}
-//    
-//    public init(context: AccountContext, action: @escaping () -> Void) {
-//        super.init(context: context, component: PremiumLimitsListComponent(context: context, action: action), navigationBarAppearance: .none)
-//        
-//        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
-//        
-//        self.navigationPresentation = .flatModal
-//    }
-//    
-//    required public init(coder aDecoder: NSCoder) {
-//        fatalError("init(coder:) has not been implemented")
-//    }
-//    
-//    deinit {
-//        self.disposed()
-//    }
-//    
-//    public override func viewDidLoad() {
-//        super.viewDidLoad()
-//        
-//        self.view.disablesInteractiveModalDismiss = true
-//    }
-//}
-//
-//
-//
-//
-//
-//public final class ExpandingSheetEnvironment: Equatable {
-//    public let isDisplaying: Bool
-//    public let dismiss: () -> Void
-//    
-//    public init(isDisplaying: Bool, dismiss: @escaping () -> Void) {
-//        self.isDisplaying = isDisplaying
-//        self.dismiss = dismiss
-//    }
-//    
-//    public static func ==(lhs: ExpandingSheetEnvironment, rhs: ExpandingSheetEnvironment) -> Bool {
-//        if lhs.isDisplaying != rhs.isDisplaying {
-//            return false
-//        }
-//        return true
-//    }
-//}
-//
-//public final class ExpandingSheetComponent<ChildEnvironmentType: Equatable>: Component {
-//    public typealias EnvironmentType = (ChildEnvironmentType, SheetComponentEnvironment)
-//    
-//    public let content: AnyComponent<ChildEnvironmentType>
-//    public let backgroundColor: UIColor
-//    public let animateOut: ActionSlot<Action<()>>
-//    
-//    public init(content: AnyComponent<ChildEnvironmentType>, backgroundColor: UIColor, animateOut: ActionSlot<Action<()>>) {
-//        self.content = content
-//        self.backgroundColor = backgroundColor
-//        self.animateOut = animateOut
-//    }
-//    
-//    public static func ==(lhs: ExpandingSheetComponent, rhs: ExpandingSheetComponent) -> Bool {
-//        if lhs.content != rhs.content {
-//            return false
-//        }
-//        if lhs.backgroundColor != rhs.backgroundColor {
-//            return false
-//        }
-//        if lhs.animateOut != rhs.animateOut {
-//            return false
-//        }
-//        
-//        return true
-//    }
-//    
-//    public final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
-//        private let dimView: UIView
-//        private let wrappingView: UIView
-//        private let containerView: UIView
-//        private let scrollView: UIScrollView
-//        private let contentView: ComponentHostView<ChildEnvironmentType>
-//        
-//        private(set) var isExpanded = false
-//        private var panGestureRecognizer: UIPanGestureRecognizer?
-//        private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
-//        
-//        private var previousIsDisplaying: Bool = false
-//        private var dismiss: (() -> Void)?
-//        
-//        override init(frame: CGRect) {
-//            self.dimView = UIView()
-//            self.dimView.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
-//            
-//            self.wrappingView = UIView()
-//            self.containerView = UIView()
-//            self.scrollView = UIScrollView()
-//            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-//                self.scrollView.contentInsetAdjustmentBehavior = .never
-//            }
-//            
-//            self.contentView = ComponentHostView<ChildEnvironmentType>()
-//            
-//            super.init(frame: frame)
-//            
-//            self.addSubview(self.dimView)
-//            
-//            self.scrollView.delegate = self
-//            self.scrollView.showsVerticalScrollIndicator = false
-//            
-//            self.containerView.clipsToBounds = true
-//            
-//            self.addSubview(self.wrappingView)
-//            self.wrappingView.addSubview(self.containerView)
-//            self.containerView.addSubview(self.scrollView)
-//            self.scrollView.addSubview(self.contentView)
-//            
-//            self.dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimViewTapGesture(_:))))
-//            
-//            let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-//            panRecognizer.delegate = self
-//            panRecognizer.delaysTouchesBegan = false
-//            panRecognizer.cancelsTouchesInView = true
-//            self.panGestureRecognizer = panRecognizer
-//            self.wrappingView.addGestureRecognizer(panRecognizer)
-//        }
-//        
-//        required init?(coder: NSCoder) {
-//            fatalError("init(coder:) has not been implemented")
-//        }
-//        
-//        @objc private func dimViewTapGesture(_ recognizer: UITapGestureRecognizer) {
-//            if case .ended = recognizer.state {
-//                self.dismiss?()
-//            }
-//        }
-//        
-//        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-//            if let (layout, _) = self.currentLayout {
-//                if case .regular = layout.metrics.widthClass {
-//                    return false
-//                }
-//            }
-//            return true
-//        }
-//        
-//        func scrollViewDidScroll(_ scrollView: UIScrollView) {
-//            let contentOffset = self.scrollView.contentOffset.y
-//            self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
-//        }
-//        
-//        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-//            if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer {
-//                return true
-//            }
-//            return false
-//        }
-//        
-//      
-//        
-//        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-//            if !self.backgroundView.bounds.contains(self.convert(point, to: self.backgroundView)) {
-//                return self.dimView
-//            }
-//            
-//            return super.hitTest(point, with: event)
-//        }
-//        
-//        private func animateOut(completion: @escaping () -> Void) {
-//            self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
-//            self.scrollView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.bounds.height - self.scrollView.contentInset.top), duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
-//                completion()
-//            })
-//        }
-//        
-//        func update(component: ExpandingSheetComponent<ChildEnvironmentType>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-//            component.animateOut.connect { [weak self] completion in
-//                guard let strongSelf = self else {
-//                    return
-//                }
-//                strongSelf.animateOut {
-//                    completion(Void())
-//                }
-//            }
-//            
-//            if self.backgroundView.backgroundColor != component.backgroundColor {
-//                self.backgroundView.backgroundColor = component.backgroundColor
-//            }
-//            
-//            transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)
-//            
-//            let contentSize = self.contentView.update(
-//                transition: transition,
-//                component: component.content,
-//                environment: {
-//                    environment[ChildEnvironmentType.self]
-//                },
-//                containerSize: CGSize(width: availableSize.width, height: .greatestFiniteMagnitude)
-//            )
-//            
-//            transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: contentSize), completion: nil)
-//            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: contentSize.width, height: contentSize.height + 1000.0)), completion: nil)
-//            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)
-//            self.scrollView.contentSize = contentSize
-//            self.scrollView.contentInset = UIEdgeInsets(top: max(0.0, availableSize.height - contentSize.height), left: 0.0, bottom: 0.0, right: 0.0)
-//            
-//            if environment[SheetComponentEnvironment.self].value.isDisplaying, !self.previousIsDisplaying, let _ = transition.userData(ViewControllerComponentContainer.AnimateInTransition.self) {
-//                self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-//                self.scrollView.layer.animatePosition(from: CGPoint(x: 0.0, y: availableSize.height - self.scrollView.contentInset.top), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true, completion: nil)
-//            } else if !environment[SheetComponentEnvironment.self].value.isDisplaying, self.previousIsDisplaying, let _ = transition.userData(ViewControllerComponentContainer.AnimateOutTransition.self) {
-//                self.animateOut(completion: {})
-//            }
-//            self.previousIsDisplaying = environment[SheetComponentEnvironment.self].value.isDisplaying
-//            
-//            self.dismiss = environment[SheetComponentEnvironment.self].value.dismiss
-//            
-//            return availableSize
-//        }
-//    }
-//    
-//    public func makeView() -> View {
-//        return View(frame: CGRect())
-//    }
-//    
-//    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-//        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-//    }
-//}
+private class FooterNode: ASDisplayNode {
+    private let backgroundNode: NavigationBackgroundNode
+    private let separatorNode: ASDisplayNode
+    private let buttonNode: SolidRoundedButtonNode
+    
+    private var theme: PresentationTheme
+    private var validLayout: ContainerViewLayout?
+    
+    var action: () -> Void = {}
+        
+    init(theme: PresentationTheme, title: String, gloss: Bool) {
+        self.theme = theme
+        
+        self.backgroundNode = NavigationBackgroundNode(color: theme.rootController.tabBar.backgroundColor)
+        self.separatorNode = ASDisplayNode()
+        
+        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 11.0, gloss: gloss)
+        self.buttonNode.title = title
+        
+        super.init()
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.separatorNode)
+        self.addSubnode(self.buttonNode)
+        
+        self.updateTheme(theme)
+        
+        self.buttonNode.pressed = { [weak self] in
+            self?.action()
+        }
+    }
+    
+    private func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
+        self.backgroundNode.updateColor(color: self.theme.rootController.tabBar.backgroundColor, transition: .immediate)
+        self.separatorNode.backgroundColor = self.theme.rootController.tabBar.separatorColor
+        
+        let backgroundColors = [
+            UIColor(rgb: 0x0077ff),
+            UIColor(rgb: 0x6b93ff),
+            UIColor(rgb: 0x8878ff),
+            UIColor(rgb: 0xe46ace)
+        ]
+        
+        self.buttonNode.updateTheme(SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0x0077ff), backgroundColors: backgroundColors, foregroundColor: .white), animated: true)
+    }
+    
+    func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self.backgroundNode, alpha: alpha)
+        transition.updateAlpha(node: self.separatorNode, alpha: alpha)
+    }
+    
+    func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = layout
+        
+        let buttonInset: CGFloat = 16.0
+        let buttonWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - buttonInset * 2.0
+        let buttonHeight = self.buttonNode.updateLayout(width: buttonWidth, transition: transition)
+        let inset: CGFloat = 9.0
+        
+        let insets = layout.insets(options: [.input])
+        
+        var panelHeight: CGFloat = buttonHeight + inset * 2.0
+        let totalPanelHeight: CGFloat
+        if let inputHeight = layout.inputHeight, inputHeight > 0.0 {
+            totalPanelHeight = panelHeight + insets.bottom
+        } else {
+            panelHeight += insets.bottom
+            totalPanelHeight = panelHeight
+        }
+        
+        let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: panelHeight))
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: panelFrame.minY + inset), size: CGSize(width: buttonWidth, height: buttonHeight)))
+        
+        transition.updateFrame(node: self.backgroundNode, frame: panelFrame)
+        self.backgroundNode.update(size: panelFrame.size, transition: transition)
+        
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: panelFrame.origin, size: CGSize(width: panelFrame.width, height: UIScreenPixel)))
+        
+        return totalPanelHeight
+    }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        if self.backgroundNode.frame.contains(point) {
+            return true
+        } else {
+            return false
+        }
+    }
+}
