@@ -7,6 +7,7 @@ private var sharedRecognizers: [String: NSObject] = [:]
 private struct TranscriptionResult {
     var text: String
     var confidence: Float
+    var isFinal: Bool
 }
 
 private func transcribeAudio(path: String, locale: String) -> Signal<TranscriptionResult?, NoError> {
@@ -53,7 +54,7 @@ private func transcribeAudio(path: String, locale: String) -> Signal<Transcripti
                         
                         let request = SFSpeechURLRecognitionRequest(url: URL(fileURLWithPath: tempFilePath))
                         request.requiresOnDeviceRecognition = speechRecognizer.supportsOnDeviceRecognition
-                        request.shouldReportPartialResults = false
+                        request.shouldReportPartialResults = true
                         
                         let task = speechRecognizer.recognitionTask(with: request, resultHandler: { result, error in
                             if let result = result {
@@ -62,8 +63,11 @@ private func transcribeAudio(path: String, locale: String) -> Signal<Transcripti
                                     confidence += segment.confidence
                                 }
                                 confidence /= Float(result.bestTranscription.segments.count)
-                                subscriber.putNext(TranscriptionResult(text: result.bestTranscription.formattedString, confidence: confidence))
-                                subscriber.putCompletion()
+                                subscriber.putNext(TranscriptionResult(text: result.bestTranscription.formattedString, confidence: confidence, isFinal: result.isFinal))
+                                
+                                if result.isFinal {
+                                    subscriber.putCompletion()
+                                }
                             } else {
                                 print("transcribeAudio: locale: \(locale), error: \(String(describing: error))")
                                 
@@ -91,7 +95,12 @@ private func transcribeAudio(path: String, locale: String) -> Signal<Transcripti
     |> runOn(.mainQueue())
 }
 
-public func transcribeAudio(path: String, appLocale: String) -> Signal<String?, NoError> {
+public struct LocallyTranscribedAudio {
+    public var text: String
+    public var isFinal: Bool
+}
+
+public func transcribeAudio(path: String, appLocale: String) -> Signal<LocallyTranscribedAudio?, NoError> {
     var signals: [Signal<TranscriptionResult?, NoError>] = []
     var locales: [String] = []
     if !locales.contains(Locale.current.identifier) {
@@ -113,10 +122,12 @@ public func transcribeAudio(path: String, appLocale: String) -> Signal<String?, 
     }
     
     return resultSignal
-    |> map { results -> String? in
+    |> map { results -> LocallyTranscribedAudio? in
         let sortedResults = results.compactMap({ $0 }).sorted(by: { lhs, rhs in
             return lhs.confidence > rhs.confidence
         })
-        return sortedResults.first?.text
+        return sortedResults.first.flatMap { result -> LocallyTranscribedAudio in
+            return LocallyTranscribedAudio(text: result.text, isFinal: result.isFinal)
+        }
     }
 }

@@ -32,7 +32,7 @@ private struct FetchControls {
 }
 
 private enum TranscribedText {
-    case success(String)
+    case success(text: String, isPending: Bool)
     case error
 }
 
@@ -40,7 +40,7 @@ private func transcribedText(message: Message) -> TranscribedText? {
     for attribute in message.attributes {
         if let attribute = attribute as? AudioTranscriptionMessageAttribute {
             if !attribute.text.isEmpty {
-                return .success(attribute.text)
+                return .success(text: attribute.text, isPending: attribute.isPending)
             } else {
                 return .error
             }
@@ -343,7 +343,21 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             return
         }
         
-        if transcribedText(message: message) == nil {
+        var shouldBeginTranscription = false
+        var shouldExpandNow = false
+        if let result = transcribedText(message: message) {
+            shouldExpandNow = true
+            
+            if case let .success(_, isPending) = result {
+                shouldBeginTranscription = isPending
+            } else {
+                shouldBeginTranscription = true
+            }
+        } else {
+            shouldBeginTranscription = true
+        }
+        
+        if shouldBeginTranscription {
             if self.transcribeDisposable == nil {
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
@@ -351,7 +365,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if context.sharedContext.immediateExperimentalUISettings.localTranscription {
                     let appLocale = presentationData.strings.baseLanguageCode
                     
-                    let signal: Signal<String?, NoError> = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: message.id))
+                    let signal: Signal<LocallyTranscribedAudio?, NoError> = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: message.id))
                     |> mapToSignal { message -> Signal<String?, NoError> in
                         guard let message = message else {
                             return .single(nil)
@@ -376,14 +390,26 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             return TempBox.shared.tempFile(fileName: "audio.m4a").path
                         })
                     }
-                    |> mapToSignal { result -> Signal<String?, NoError> in
+                    |> mapToSignal { result -> Signal<LocallyTranscribedAudio?, NoError> in
                         guard let result = result else {
                             return .single(nil)
                         }
                         return transcribeAudio(path: result, appLocale: appLocale)
                     }
                     
-                    let _ = signal.start(next: { [weak self] result in
+                    self.transcribeDisposable = (signal
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let strongSelf = self, let arguments = strongSelf.arguments else {
+                            return
+                        }
+                        
+                        if let result = result {
+                            let _ = arguments.context.engine.messages.storeLocallyTranscribedAudio(messageId: arguments.message.id, text: result.text, isFinal: result.isFinal).start()
+                        } else {
+                            strongSelf.audioTranscriptionState = .collapsed
+                            strongSelf.requestUpdateLayout(true)
+                        }
+                    }, completed: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
@@ -399,7 +425,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     })
                 }
             }
-        } else {
+        }
+        
+        if shouldExpandNow {
             switch self.audioTranscriptionState {
             case .expanded:
                 self.audioTranscriptionState = .collapsed
@@ -615,8 +643,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 if let transcribedText = transcribedText, case .expanded = effectiveAudioTranscriptionState {
                     switch transcribedText {
-                    case let .success(text):
-                        textString = NSAttributedString(string: text, font: textFont, textColor: messageTheme.primaryTextColor)
+                    case let .success(text, isPending):
+                        var resultText = text
+                        if isPending {
+                            resultText += " [...]"
+                        }
+                        textString = NSAttributedString(string: resultText, font: textFont, textColor: messageTheme.primaryTextColor)
                     case .error:
                         let errorTextFont = Font.regular(floor(arguments.presentationData.fontSize.baseDisplaySize * 15.0 / 17.0))
                         //TODO:localize
