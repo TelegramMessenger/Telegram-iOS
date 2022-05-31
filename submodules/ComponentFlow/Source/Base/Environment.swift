@@ -171,7 +171,7 @@ public struct EnvironmentBuilder {
     }
 
     public static func buildExpression<T: Equatable>(_ expression: EnvironmentValue<T>) -> Partial<T> {
-        return Partial<T>(value: expression)
+        return Partial<T>(value: EnvironmentValue(expression.value))
     }
 
     public static func buildBlock<T1: Equatable>(_ t1: Partial<T1>) -> Environment<T1> {
