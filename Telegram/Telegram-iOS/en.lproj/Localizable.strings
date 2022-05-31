@@ -7665,3 +7665,5 @@ Sorry for the inconvenience.";
 "Premium.Limits.FoldersInfo" = "Organize your chats into 20 folders";
 "Premium.Limits.ChatsPerFolderInfo" = "Add up to 200 chats into each of your folders";
 "Premium.Limits.AccountsInfo" = "Connect 4 accounts with different mobile numbers";
+
+"Bot.AccepRecurrentInfo" = "I accept [Terms of Service]() of **%1$@**";
