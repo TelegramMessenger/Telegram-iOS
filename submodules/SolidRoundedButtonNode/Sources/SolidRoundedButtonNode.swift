@@ -2,8 +2,10 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import HierarchyTrackingLayer
 import ShimmerEffect
+import ManagedAnimationNode
 
 private func generateIndefiniteActivityIndicatorImage(color: UIColor, diameter: CGFloat = 22.0, lineWidth: CGFloat = 2.0) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
@@ -74,6 +76,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     private let iconNode: ASImageNode
+    private var animationNode: SimpleAnimationNode?
     private var progressNode: ASImageNode?
     
     private let buttonHeight: CGFloat
@@ -101,6 +104,44 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     public var icon: UIImage? {
         didSet {
             self.iconNode.image = generateTintedImage(image: self.icon, color: self.theme.foregroundColor)
+        }
+    }
+    
+    private var animationTimer: SwiftSignalKit.Timer?
+    public var animation: String? {
+        didSet {
+            if let animation = self.animation {
+                if animation != oldValue {
+                    self.animationNode?.removeFromSupernode()
+                    self.animationNode = nil
+                    
+                    let animationNode = SimpleAnimationNode(animationName: animation, size: CGSize(width: 30.0, height: 30.0))
+                    animationNode.customColor = self.theme.foregroundColor
+                    self.addSubnode(animationNode)
+                    self.animationNode = animationNode
+                    
+                    if let width = self.validLayout {
+                        _ = self.updateLayout(width: width, transition: .immediate)
+                    }
+                    
+                    if self.gloss {
+                        self.animationTimer?.invalidate()
+                        
+                        Queue.mainQueue().after(0.75) {
+                            self.animationNode?.play()
+                            
+                            let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: true, completion: { [weak self] in
+                                self?.animationNode?.play()
+                            }, queue: Queue.mainQueue())
+                            self.animationTimer = timer
+                            timer.start()
+                        }
+                    }
+                }
+            } else if let animationNode = self.animationNode {
+                animationNode.removeFromSupernode()
+                self.animationNode = nil
+            }
         }
     }
     
@@ -253,8 +294,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             compositingFilter = nil
         }
         
-        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, duration: 3.0, horizontal: true)
-        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, duration: 3.0, horizontal: true)
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: false, duration: 3.0, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: false, duration: 3.0, horizontal: true)
         
         shimmerView.layer.compositingFilter = compositingFilter
         borderShimmerView.layer.compositingFilter = compositingFilter
@@ -300,6 +341,18 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                 self.iconNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -15.0), to: CGPoint(), duration: 0.2, additive: true)
                 self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
+            
+            if let animationNode = self.animationNode, let snapshotView = animationNode.view.snapshotView(afterScreenUpdates: false) {
+                snapshotView.frame = animationNode.frame
+                
+                self.view.insertSubview(snapshotView, aboveSubview: animationNode.view)
+                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 15.0), duration: 0.2, removeOnCompletion: false, additive: true)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+                animationNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -15.0), to: CGPoint(), duration: 0.2, additive: true)
+                animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
         }
         if theme.backgroundColors.count > 1 {
             self.buttonBackgroundNode.backgroundColor = nil
@@ -319,6 +372,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
         
         self.iconNode.image = generateTintedImage(image: self.iconNode.image, color: theme.foregroundColor)
+        self.animationNode?.customColor = theme.foregroundColor
         
         if let width = self.validLayout {
             _ = self.updateLayout(width: width, transition: .immediate)
@@ -359,7 +413,12 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: self.theme.foregroundColor)
         }
         
-        let iconSize = self.iconNode.image?.size ?? CGSize()
+        let iconSize: CGSize
+        if let _ = self.animationNode {
+            iconSize = CGSize(width: 30.0, height: 30.0)
+        } else {
+            iconSize = self.iconNode.image?.size ?? CGSize()
+        }
         let titleSize = self.titleNode.updateLayout(buttonSize)
         
         let spacingOffset: CGFloat = 9.0
@@ -391,6 +450,9 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
+        if let animationNode = self.animationNode {
+            transition.updateFrame(node: animationNode, frame: iconFrame)
+        }
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
         if self.subtitle != self.subtitleNode.attributedText?.string {
@@ -477,6 +539,7 @@ public final class SolidRoundedButtonView: UIView {
     private let titleNode: ImmediateTextView
     private let subtitleNode: ImmediateTextView
     private let iconNode: UIImageView
+    private var animationNode: SimpleAnimationNode?
     private var progressNode: UIImageView?
     
     private let buttonHeight: CGFloat
@@ -504,6 +567,47 @@ public final class SolidRoundedButtonView: UIView {
     public var icon: UIImage? {
         didSet {
             self.iconNode.image = generateTintedImage(image: self.icon, color: self.theme.foregroundColor)
+        }
+    }
+    
+    private var animationTimer: SwiftSignalKit.Timer?
+    public var animation: String? {
+        didSet {
+            if let animation = self.animation {
+                if animation != oldValue {
+                    self.animationNode?.view.removeFromSuperview()
+                    self.animationNode = nil
+                    
+                    let animationNode = SimpleAnimationNode(animationName: animation, size: CGSize(width: 30.0, height: 30.0))
+                    animationNode.customColor = self.theme.foregroundColor
+                    self.addSubview(animationNode.view)
+                    self.animationNode = animationNode
+                    
+                    if let width = self.validLayout {
+                        _ = self.updateLayout(width: width, transition: .immediate)
+                    }
+                    
+                    if self.gloss {
+                        self.animationTimer?.invalidate()
+                        
+                        Queue.mainQueue().after(0.75) {
+                            self.animationNode?.play()
+                            
+                            let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: true, completion: { [weak self] in
+                                self?.animationNode?.play()
+                            }, queue: Queue.mainQueue())
+                            self.animationTimer = timer
+                            timer.start()
+                        }
+                    }
+                }
+            } else if let animationNode = self.animationNode {
+                animationNode.view.removeFromSuperview()
+                self.animationNode = nil
+                
+                self.animationTimer?.invalidate()
+                self.animationTimer = nil
+            }
         }
     }
     
@@ -815,13 +919,12 @@ public final class SolidRoundedButtonView: UIView {
             compositingFilter = nil
         }
         
-        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, duration: 3.0, horizontal: true)
-        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, duration: 3.0, horizontal: true)
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: false, duration: 3.0, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: false, duration: 3.0, horizontal: true)
         
         shimmerView.layer.compositingFilter = compositingFilter
         borderShimmerView.layer.compositingFilter = compositingFilter
     }
-    
     
     public func updateTheme(_ theme: SolidRoundedButtonTheme) {
         guard theme !== self.theme else {
@@ -888,7 +991,12 @@ public final class SolidRoundedButtonView: UIView {
             self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: self.theme.foregroundColor)
         }
         
-        let iconSize = self.iconNode.image?.size ?? CGSize()
+        let iconSize: CGSize
+        if let _ = self.animationNode {
+            iconSize = CGSize(width: 30.0, height: 30.0)
+        } else {
+            iconSize = self.iconNode.image?.size ?? CGSize()
+        }
         let titleSize = self.titleNode.updateLayout(buttonSize)
         
         let spacingOffset: CGFloat = 9.0
@@ -905,7 +1013,7 @@ public final class SolidRoundedButtonView: UIView {
         let titleFrame: CGRect
         switch self.iconPosition {
             case .left:
-                iconFrame =  CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize)
+                iconFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize)
                 if !iconSize.width.isZero {
                     nextContentOrigin += iconSize.width + iconSpacing
                 }
@@ -915,10 +1023,13 @@ public final class SolidRoundedButtonView: UIView {
                 if !iconSize.width.isZero {
                     nextContentOrigin += titleFrame.width + iconSpacing
                 }
-                iconFrame =  CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize)
+                iconFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize)
         }
         
         transition.updateFrame(view: self.iconNode, frame: iconFrame)
+        if let animationNode = self.animationNode {
+            transition.updateFrame(view: animationNode.view, frame: iconFrame)
+        }
         transition.updateFrame(view: self.titleNode, frame: titleFrame)
         
         if self.subtitle != self.subtitleNode.attributedText?.string {

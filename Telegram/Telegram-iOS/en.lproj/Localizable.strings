@@ -7539,6 +7539,8 @@ Sorry for the inconvenience.";
 "Premium.Stickers.Description" = "Unlock this sticker and more by subscribing to Telegram Premium.";
 "Premium.Stickers.Proceed" = "Unlock Premium Stickers";
 
+"Premium.Reactions.Proceed" = "Unlock Premium Reactions";
+
 "AccessDenied.LocationPreciseDenied" = "To share your specific location in this chat, please go to Settings > Privacy > Location Services > Telegram and set Precise Location to On.";
 
 "Chat.MultipleTypingPair" = "%@ and %@";
@@ -7626,8 +7628,6 @@ Sorry for the inconvenience.";
 
 "Premium.ChargeInfo" = "Next charge: %1$@ on %2$@. [Cancel](cancel).";
 
-"Premium.MoreAboutPremium" = "More About Premium";
-
 "Conversation.CopyProtectionSavingDisabledSecret" = "Saving is restricted";
 "Conversation.CopyProtectionForwardingDisabledSecret" = "Forwards are restricted";
 
@@ -7651,6 +7651,7 @@ Sorry for the inconvenience.";
 "Premium.Limits.PublicLinks" = "Public Links";
 "Premium.Limits.SavedGifs" = "Saved GIFs";
 "Premium.Limits.FavedStickers" = "Favorite Stickers";
+"Premium.Limits.Bio" = "Bio";
 "Premium.Limits.Captions" = "Captions";
 "Premium.Limits.Folders" = "Folders";
 "Premium.Limits.ChatsPerFolder" = "Chats per Folder";
@@ -7661,6 +7662,7 @@ Sorry for the inconvenience.";
 "Premium.Limits.PublicLinksInfo" = "Reserve up to 20 [t.me/name]() links";
 "Premium.Limits.SavedGifsInfo" = "Save up to 400 GIFs in your Favorite GIFs";
 "Premium.Limits.FavedStickersInfo" = "Save up to 10 stickers in your Favorite stickers";
+"Premium.Limits.BioInfo" = "Add more symbols and use links in your bio";
 "Premium.Limits.CaptionsInfo" = "Use longer descriptions for your photos and videos";
 "Premium.Limits.FoldersInfo" = "Organize your chats into 20 folders";
 "Premium.Limits.ChatsPerFolderInfo" = "Add up to 200 chats into each of your folders";

@@ -827,7 +827,7 @@ private final class DemoSheetContent: CombinedComponent {
                     case let .intro(price):
                         buttonText = strings.Premium_SubscribeFor(price ?? "–").string
                     case .other:
-                        buttonText = strings.Premium_MoreAboutPremium
+                        buttonText = strings.Premium_Reactions_Proceed
                 }
             }
             
@@ -849,7 +849,9 @@ private final class DemoSheetContent: CombinedComponent {
                     height: 50.0,
                     cornerRadius: 10.0,
                     gloss: state.isPremium != true,
+                    animationName: isStandalone && component.subject == .uniqueReactions ? "premium_unlock" : nil,
                     iconPosition: .right,
+                    iconSpacing: 6.0,
                     action: { [weak component] in
                         guard let component = component else {
                             return

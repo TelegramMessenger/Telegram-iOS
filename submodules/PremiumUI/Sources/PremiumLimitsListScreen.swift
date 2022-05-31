@@ -191,6 +191,7 @@ private enum Limit: CaseIterable {
     case publicLinks
     case savedGifs
     case favedStickers
+    case about
     case captions
     case folders
     case chatsPerFolder
@@ -208,6 +209,8 @@ private enum Limit: CaseIterable {
                 return strings.Premium_Limits_SavedGifs
             case .favedStickers:
                 return strings.Premium_Limits_FavedStickers
+            case .about:
+                return strings.Premium_Limits_Bio
             case .captions:
                 return strings.Premium_Limits_Captions
             case .folders:
@@ -231,6 +234,8 @@ private enum Limit: CaseIterable {
                 return strings.Premium_Limits_SavedGifsInfo
             case .favedStickers:
                 return strings.Premium_Limits_FavedStickersInfo
+            case .about:
+                return strings.Premium_Limits_BioInfo
             case .captions:
                 return strings.Premium_Limits_CaptionsInfo
             case .folders:
@@ -255,6 +260,8 @@ private enum Limit: CaseIterable {
                 value = configuration.maxSavedGifCount
             case .favedStickers:
                 value = configuration.maxFavedStickerCount
+            case .about:
+                value = configuration.maxAboutLength
             case .captions:
                 value = configuration.maxCaptionLength
             case .folders:
@@ -337,6 +344,7 @@ private final class PremimLimitsListScreenComponent: CombinedComponent {
                 UIColor(rgb: 0x9377ff),
                 UIColor(rgb: 0xac64f3),
                 UIColor(rgb: 0xc456ae),
+                UIColor(rgb: 0xcf579a),
                 UIColor(rgb: 0xdb5887),
                 UIColor(rgb: 0xdb496f),
                 UIColor(rgb: 0xe95d44),
@@ -375,7 +383,7 @@ private final class PremimLimitsListScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: environment.navigationHeight + list.size.height / 2.0))
             )
             
-            return CGSize(width: context.availableSize.width, height: environment.navigationHeight + list.size.height + environment.safeInsets.bottom)
+            return CGSize(width: context.availableSize.width, height: environment.navigationHeight + list.size.height + environment.safeInsets.bottom - 16.0)
         }
     }
 }
@@ -474,6 +482,11 @@ public class PremimLimitsListScreen: ViewController {
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             let contentOffset = self.scrollView.contentOffset.y
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
+            
+            let bottomOffsetY = max(0.0, self.scrollView.contentSize.height + 20.0 - contentOffset - self.scrollView.frame.height)
+            let backgroundAlpha: CGFloat = min(30.0, bottomOffsetY) / 30.0
+            
+            self.footerNode.updateBackgroundAlpha(backgroundAlpha, transition: .immediate)
         }
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
