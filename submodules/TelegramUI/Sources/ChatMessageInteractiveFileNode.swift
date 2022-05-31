@@ -349,16 +349,21 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         var shouldBeginTranscription = false
         var shouldExpandNow = false
-        if let result = transcribedText(message: message) {
+        
+        if case .expanded = self.audioTranscriptionState {
             shouldExpandNow = true
-            
-            if case let .success(_, isPending) = result {
-                shouldBeginTranscription = isPending
+        } else {
+            if let result = transcribedText(message: message) {
+                shouldExpandNow = true
+                
+                if case let .success(_, isPending) = result {
+                    shouldBeginTranscription = isPending
+                } else {
+                    shouldBeginTranscription = true
+                }
             } else {
                 shouldBeginTranscription = true
             }
-        } else {
-            shouldBeginTranscription = true
         }
         
         if shouldBeginTranscription {

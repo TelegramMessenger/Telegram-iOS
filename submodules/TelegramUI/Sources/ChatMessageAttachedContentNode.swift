@@ -235,6 +235,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     
     var openMedia: ((InteractiveMediaNodeActivateContent) -> Void)?
     var activateAction: (() -> Void)?
+    var requestUpdateLayout: (() -> Void)?
     
     var visibility: ListViewItemNodeVisibility = .none {
         didSet {
@@ -837,7 +838,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             strongSelf.theme = presentationData.theme
                             
                             strongSelf.lineNode.image = lineImage
-                            strongSelf.lineNode.frame = CGRect(origin: CGPoint(x: 13.0, y: insets.top), size: CGSize(width: 2.0, height: adjustedLineHeight - insets.top - insets.bottom - 2.0))
+                            animation.animator.updateFrame(layer: strongSelf.lineNode.layer, frame: CGRect(origin: CGPoint(x: 13.0, y: insets.top), size: CGSize(width: 2.0, height: adjustedLineHeight - insets.top - insets.bottom - 2.0)), completion: nil)
                             strongSelf.lineNode.isHidden = !displayLine
                             
                             strongSelf.textNode.displaysAsynchronously = !isPreview
@@ -929,6 +930,11 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     contentFileNode.activateLocalContent = { [weak strongSelf] in
                                         if let strongSelf = strongSelf {
                                             strongSelf.openMedia?(.default)
+                                        }
+                                    }
+                                    contentFileNode.requestUpdateLayout = { [weak strongSelf] _ in
+                                        if let strongSelf = strongSelf {
+                                            strongSelf.requestUpdateLayout?()
                                         }
                                     }
                                 }

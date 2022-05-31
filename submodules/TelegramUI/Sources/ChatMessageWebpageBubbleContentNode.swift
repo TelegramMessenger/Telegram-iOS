@@ -96,6 +96,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
         }
+        self.contentNode.requestUpdateLayout = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item {
+                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
+            }
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
