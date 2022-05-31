@@ -64,6 +64,8 @@ public final class AccountStateManager {
     let auxiliaryMethods: AccountAuxiliaryMethods
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
+    let audioTranscriptionManager = Atomic<AudioTranscriptionManager>(value: AudioTranscriptionManager())
+    
     private var updateService: UpdateMessageService?
     private let updateServiceDisposable = MetaDisposable()
     
@@ -425,6 +427,7 @@ public final class AccountStateManager {
                 let mediaBox = postbox.mediaBox
                 let accountPeerId = self.accountPeerId
                 let auxiliaryMethods = self.auxiliaryMethods
+                let audioTranscriptionManager = self.audioTranscriptionManager
                 let signal = postbox.stateView()
                 |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
                     if let state = view.state as? AuthorizedAccountState {
@@ -476,7 +479,7 @@ public final class AccountStateManager {
                                                     let removePossiblyDeliveredMessagesUniqueIds = self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
                                                     return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool) in
                                                         let startTime = CFAbsoluteTimeGetCurrent()
-                                                        let replayedState = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false)
+                                                        let replayedState = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false, audioTranscriptionManager: audioTranscriptionManager)
                                                         let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
                                                         if deltaTime > 1.0 {
                                                             Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
@@ -575,6 +578,7 @@ public final class AccountStateManager {
                 let auxiliaryMethods = self.auxiliaryMethods
                 let accountPeerId = self.accountPeerId
                 let mediaBox = postbox.mediaBox
+                let audioTranscriptionManager = self.audioTranscriptionManager
                 let queue = self.queue
                 let signal = initialStateWithUpdateGroups(postbox: postbox, groups: groups)
                 |> mapToSignal { [weak self] state -> Signal<(AccountReplayedFinalState?, AccountFinalState), NoError> in
@@ -594,7 +598,7 @@ public final class AccountStateManager {
                                 return nil
                             } else {
                                 let startTime = CFAbsoluteTimeGetCurrent()
-                                let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false)
+                                let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false, audioTranscriptionManager: audioTranscriptionManager)
                                 let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
                                 if deltaTime > 1.0 {
                                     Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
@@ -827,10 +831,11 @@ public final class AccountStateManager {
                 let mediaBox = self.postbox.mediaBox
                 let network = self.network
                 let auxiliaryMethods = self.auxiliaryMethods
+                let audioTranscriptionManager = self.audioTranscriptionManager
                 let removePossiblyDeliveredMessagesUniqueIds = self.removePossiblyDeliveredMessagesUniqueIds
                 let signal = self.postbox.transaction { transaction -> AccountReplayedFinalState? in
                     let startTime = CFAbsoluteTimeGetCurrent()
-                    let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false)
+                    let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false, audioTranscriptionManager: audioTranscriptionManager)
                     let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
                     if deltaTime > 1.0 {
                         Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
@@ -872,10 +877,11 @@ public final class AccountStateManager {
         let mediaBox = self.postbox.mediaBox
         let network = self.network
         let auxiliaryMethods = self.auxiliaryMethods
+        let audioTranscriptionManager = self.audioTranscriptionManager
         let removePossiblyDeliveredMessagesUniqueIds = self.removePossiblyDeliveredMessagesUniqueIds
         let signal = self.postbox.transaction { transaction -> AccountReplayedFinalState? in
             let startTime = CFAbsoluteTimeGetCurrent()
-            let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false)
+            let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false, audioTranscriptionManager: audioTranscriptionManager)
             let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
             if deltaTime > 1.0 {
                 Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
@@ -897,6 +903,7 @@ public final class AccountStateManager {
         let mediaBox = postbox.mediaBox
         let accountPeerId = self.accountPeerId
         let auxiliaryMethods = self.auxiliaryMethods
+        let audioTranscriptionManager = self.audioTranscriptionManager
 
         let signal = postbox.stateView()
         |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
@@ -959,7 +966,8 @@ public final class AccountStateManager {
                                             auxiliaryMethods: auxiliaryMethods,
                                             finalState: finalState,
                                             removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds,
-                                            ignoreDate: true
+                                            ignoreDate: true,
+                                            audioTranscriptionManager: audioTranscriptionManager
                                         )
                                         let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
                                         if deltaTime > 1.0 {

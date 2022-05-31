@@ -27,7 +27,7 @@ final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleContentNod
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.buttonNode)
         
         return { item, layoutConstants, _, _, constrainedSize in
@@ -68,7 +68,7 @@ final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleContentNod
                     actionButtonSizeAndApply = (size, apply)
                     let adjustedBoundingSize = CGSize(width: refinedButtonWidth + insets.left + insets.right, height: insets.bottom + size.height)
                     
-                    return (adjustedBoundingSize, { [weak self] animation, synchronousLoads in
+                    return (adjustedBoundingSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             

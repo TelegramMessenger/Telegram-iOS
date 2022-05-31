@@ -132,15 +132,17 @@ public final class ListViewAnimation {
     let to: Interpolatable
     let duration: Double
     let startTime: Double
+    let invertOffsetDirection: Bool
     private let curve: (CGFloat) -> CGFloat
     private let interpolator: (Interpolatable, Interpolatable, CGFloat) -> Interpolatable
     private let update: (CGFloat, Interpolatable) -> Void
     private let completed: (Bool) -> Void
     
-    public init<T: Interpolatable>(from: T, to: T, duration: Double, curve: @escaping (CGFloat) -> CGFloat, beginAt: Double, update: @escaping (CGFloat, T) -> Void, completed: @escaping (Bool) -> Void = { _ in }) {
+    public init<T: Interpolatable>(from: T, to: T, duration: Double, invertOffsetDirection: Bool = false, curve: @escaping (CGFloat) -> CGFloat, beginAt: Double, update: @escaping (CGFloat, T) -> Void, completed: @escaping (Bool) -> Void = { _ in }) {
         self.from = from
         self.to = to
         self.duration = duration
+        self.invertOffsetDirection = invertOffsetDirection
         self.curve = curve
         self.startTime = beginAt
         self.interpolator = T.interpolator()
@@ -157,6 +159,7 @@ public final class ListViewAnimation {
         self.curve = copying.curve
         self.startTime = copying.startTime
         self.interpolator = copying.interpolator
+        self.invertOffsetDirection = copying.invertOffsetDirection
         self.update = { progress, value in
             update(progress, value as! T)
         }
