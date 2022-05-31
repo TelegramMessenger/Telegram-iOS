@@ -15,6 +15,7 @@ public final class ShimmerEffectForegroundView: UIView {
     private var absoluteLocation: (CGRect, CGSize)?
     private var isCurrentlyInHierarchy = false
     private var shouldBeAnimating = false
+    private var globalTimeOffset = true
     
     private let trackingLayer: HierarchyTrackingLayer
     
@@ -57,7 +58,7 @@ public final class ShimmerEffectForegroundView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func update(backgroundColor: UIColor, foregroundColor: UIColor, gradientSize: CGFloat?, duration: Double?, horizontal: Bool = false) {
+    public func update(backgroundColor: UIColor, foregroundColor: UIColor, gradientSize: CGFloat?, globalTimeOffset: Bool, duration: Double?, horizontal: Bool = false) {
         if let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor), self.currentHorizontal == horizontal, self.currentGradientSize == gradientSize {
             return
         }
@@ -65,6 +66,7 @@ public final class ShimmerEffectForegroundView: UIView {
         self.currentForegroundColor = foregroundColor
         self.currentHorizontal = horizontal
         self.currentGradientSize = gradientSize
+        self.globalTimeOffset = globalTimeOffset
         self.currentDuration = duration
         
         let image: UIImage?
@@ -155,14 +157,18 @@ public final class ShimmerEffectForegroundView: UIView {
             self.image.frame = CGRect(origin: CGPoint(x: -gradientSize, y: 0.0), size: CGSize(width: gradientSize, height: containerSize.height))
             let animation = self.image.makeAnimation(from: 0.0 as NSNumber, to: (containerSize.width + gradientSize) as NSNumber, keyPath: "position.x", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: self.currentDuration ?? 1.3, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
             animation.repeatCount = Float.infinity
-            animation.beginTime = 1.0
+            if self.globalTimeOffset {
+                animation.beginTime = 1.0
+            }
             self.image.add(animation, forKey: "shimmer")
         } else {
             let gradientSize = self.currentGradientSize ?? 250.0
             self.image.frame = CGRect(origin: CGPoint(x: 0.0, y: -gradientSize), size: CGSize(width: containerSize.width, height: gradientSize))
             let animation = self.image.makeAnimation(from: 0.0 as NSNumber, to: (containerSize.height + gradientSize) as NSNumber, keyPath: "position.y", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: self.currentDuration ?? 1.3, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
             animation.repeatCount = Float.infinity
-            animation.beginTime = 1.0
+            if self.globalTimeOffset {
+                animation.beginTime = 1.0
+            }
             self.image.add(animation, forKey: "shimmer")
         }
     }

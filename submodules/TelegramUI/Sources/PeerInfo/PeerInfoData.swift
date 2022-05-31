@@ -124,6 +124,7 @@ final class TelegramGlobalSettings {
     let privacySettings: AccountPrivacySettings?
     let unreadTrendingStickerPacks: Int
     let archivedStickerPacks: [ArchivedStickerPackItem]?
+    let userLimits: EngineConfiguration.UserLimits
     let hasPassport: Bool
     let hasWatchApp: Bool
     let enableQRLogin: Bool
@@ -143,6 +144,7 @@ final class TelegramGlobalSettings {
         privacySettings: AccountPrivacySettings?,
         unreadTrendingStickerPacks: Int,
         archivedStickerPacks: [ArchivedStickerPackItem]?,
+        userLimits: EngineConfiguration.UserLimits,
         hasPassport: Bool,
         hasWatchApp: Bool,
         enableQRLogin: Bool
@@ -161,6 +163,7 @@ final class TelegramGlobalSettings {
         self.privacySettings = privacySettings
         self.unreadTrendingStickerPacks = unreadTrendingStickerPacks
         self.archivedStickerPacks = archivedStickerPacks
+        self.userLimits = userLimits
         self.hasPassport = hasPassport
         self.hasWatchApp = hasWatchApp
         self.enableQRLogin = enableQRLogin
@@ -410,44 +413,67 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         hasPassport,
         (context.watchManager?.watchAppInstalled ?? .single(false)),
         context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
-        getServerProvidedSuggestions(account: context.account)
+        getServerProvidedSuggestions(account: context.account),
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
         )
-        |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions -> PeerInfoScreenData in
-            let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
-            let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
-            
-            let proxySettings: ProxySettings = sharedPreferences.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) ?? ProxySettings.defaultSettings
-            let inAppNotificationSettings: InAppNotificationSettings = sharedPreferences.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
-            
-            let unreadTrendingStickerPacks = featuredStickerPacks.reduce(0, { count, item -> Int in
-                return item.unread ? count + 1 : count
-            })
-            
-            var enableQRLogin = false
-            if let appConfiguration = accountPreferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self), let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR {
-                enableQRLogin = true
-            }
-            
-            let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber), suggestPasswordConfirmation: suggestions.contains(.validatePassword), accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions?.0, webSessionsContext: accountSessions?.2, otherSessionsCount: accountSessions?.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
-            
-            return PeerInfoScreenData(
-                peer: peerView.peers[peerId],
-                chatPeer: peerView.peers[peerId],
-                cachedData: peerView.cachedData,
-                status: nil,
-                notificationSettings: nil,
-                globalNotificationSettings: nil,
-                isContact: false,
-                availablePanes: [],
-                groupsInCommon: nil,
-                linkedDiscussionPeer: nil,
-                members: nil,
-                encryptionKeyFingerprint: nil,
-                globalSettings: globalSettings,
-                invitations: nil,
-                requests: nil,
-                requestsContext: nil
-            )
+    )
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits -> PeerInfoScreenData in
+        let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
+        let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
+        
+        let proxySettings: ProxySettings = sharedPreferences.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) ?? ProxySettings.defaultSettings
+        let inAppNotificationSettings: InAppNotificationSettings = sharedPreferences.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
+        
+        let unreadTrendingStickerPacks = featuredStickerPacks.reduce(0, { count, item -> Int in
+            return item.unread ? count + 1 : count
+        })
+        
+        var enableQRLogin = false
+        if let appConfiguration = accountPreferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self), let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR {
+            enableQRLogin = true
+        }
+        
+        let peer = peerView.peers[peerId]
+        let globalSettings = TelegramGlobalSettings(
+            suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber),
+            suggestPasswordConfirmation: suggestions.contains(.validatePassword),
+            accountsAndPeers: accountsAndPeers,
+            activeSessionsContext: accountSessions?.0,
+            webSessionsContext: accountSessions?.2,
+            otherSessionsCount: accountSessions?.1,
+            proxySettings: proxySettings,
+            notificationAuthorizationStatus: notificationsAuthorizationStatus,
+            notificationWarningSuppressed: notificationsWarningSuppressed,
+            notificationExceptions: notificationExceptions,
+            inAppNotificationSettings: inAppNotificationSettings,
+            privacySettings: privacySettings,
+            unreadTrendingStickerPacks: unreadTrendingStickerPacks,
+            archivedStickerPacks: archivedStickerPacks,
+            userLimits: peer?.isPremium == true ? limits.1 : limits.0,
+            hasPassport: hasPassport,
+            hasWatchApp: hasWatchApp,
+            enableQRLogin: enableQRLogin)
+        
+        return PeerInfoScreenData(
+            peer: peer,
+            chatPeer: peer,
+            cachedData: peerView.cachedData,
+            status: nil,
+            notificationSettings: nil,
+            globalNotificationSettings: nil,
+            isContact: false,
+            availablePanes: [],
+            groupsInCommon: nil,
+            linkedDiscussionPeer: nil,
+            members: nil,
+            encryptionKeyFingerprint: nil,
+            globalSettings: globalSettings,
+            invitations: nil,
+            requests: nil,
+            requestsContext: nil
+        )
     }
 }
 

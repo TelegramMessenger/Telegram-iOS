@@ -238,7 +238,7 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
         self.textNode.attributedText = NSAttributedString(string: strings.Premium_Stickers_Description, font: Font.regular(17.0), textColor: theme.actionSheet.secondaryTextColor)
         self.textNode.lineSpacing = 0.1
         
-        self.proceedButton = SolidRoundedButtonNode(title: strings.Premium_Stickers_Proceed, icon: UIImage(bundleImageName: "Premium/ButtonIcon"), theme: SolidRoundedButtonTheme(
+        self.proceedButton = SolidRoundedButtonNode(title: strings.Premium_Stickers_Proceed, theme: SolidRoundedButtonTheme(
             backgroundColor: .white,
             backgroundColors: [
             UIColor(rgb: 0x0077ff),
@@ -246,6 +246,9 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
             UIColor(rgb: 0x8878ff),
             UIColor(rgb: 0xe46ace)
         ], foregroundColor: .white), height: 50.0, cornerRadius: 11.0, gloss: true)
+        self.proceedButton.iconPosition = .right
+        self.proceedButton.iconSpacing = 6.0
+        self.proceedButton.animation = "premium_unlock"
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: theme.list.itemAccentColor, for: .normal)

@@ -680,7 +680,7 @@ private final class LimitSheetContent: CombinedComponent {
             )
              
             var titleText = strings.Premium_LimitReached
-            var buttonIconName = "Premium/X2"
+            var buttonAnimationName = "premium_x2"
             let iconName: String
             let badgeText: String
             let string: String
@@ -738,7 +738,7 @@ private final class LimitSheetContent: CombinedComponent {
                     } else {
                         badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                     }
-                    buttonIconName = "Premium/PlusOne"
+                    buttonAnimationName = "premium_addone"
             }
             var reachedMaximumLimit = badgePosition >= 1.0
             if case .folders = subject, !state.isPremium {
@@ -809,6 +809,7 @@ private final class LimitSheetContent: CombinedComponent {
             let button = button.update(
                 component: SolidRoundedButtonComponent(
                     title: !reachedMaximumLimit ? strings.Premium_IncreaseLimit : strings.Common_OK,
+                    
                     theme: SolidRoundedButtonComponent.Theme(
                         backgroundColor: .black,
                         backgroundColors: [
@@ -824,7 +825,7 @@ private final class LimitSheetContent: CombinedComponent {
                     height: 50.0,
                     cornerRadius: 10.0,
                     gloss: !reachedMaximumLimit,
-                    iconName: !reachedMaximumLimit ? buttonIconName : nil,
+                    animationName: !reachedMaximumLimit ? buttonAnimationName : nil,
                     iconPosition: .right,
                     action: { [weak component] in
                         guard let component = component else {

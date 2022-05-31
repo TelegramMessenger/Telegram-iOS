@@ -14,6 +14,7 @@ import ContextUI
 import MoreButtonNode
 import UndoUI
 import ShareController
+import TextFormat
 import PremiumUI
 
 private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
@@ -126,7 +127,7 @@ private final class StickerPackContainer: ASDisplayNode {
     
     private weak var peekController: PeekController?
     
-    init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPack: StickerPackReference, decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, controller: StickerPackScreenImpl?) {
+    init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPack: StickerPackReference, decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, openMention: @escaping (String) -> Void, controller: StickerPackScreenImpl?) {
         self.index = index
         self.context = context
         self.controller = controller
@@ -156,6 +157,20 @@ private final class StickerPackContainer: ASDisplayNode {
         
         self.buttonNode = HighlightableButtonNode()
         self.titleNode = ImmediateTextNode()
+        self.titleNode.maximumNumberOfLines = 2
+        self.titleNode.highlightAttributeAction = { attributes in
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)
+            } else {
+                return nil
+            }
+        }
+        self.titleNode.tapAttributeAction = { attributes, _ in
+            if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String, mention.count > 1 {
+                openMention(String(mention[mention.index(after:  mention.startIndex)...]))
+            }
+        }
+        
         self.titleContainer = ASDisplayNode()
         self.titleSeparatorNode = ASDisplayNode()
         self.titleSeparatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
@@ -175,7 +190,7 @@ private final class StickerPackContainer: ASDisplayNode {
         self.addSubnode(self.actionAreaSeparatorNode)
         self.addSubnode(self.buttonNode)
         
-        self.addSubnode(self.titleBackgroundnode)
+//        self.addSubnode(self.titleBackgroundnode)
         self.titleContainer.addSubnode(self.titleNode)
         self.addSubnode(self.titleContainer)
         self.addSubnode(self.titleSeparatorNode)
@@ -203,12 +218,12 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         }
         
-//        self.gridNode.visibleContentOffsetChanged = { [weak self] offset in
-//            guard let strongSelf = self else {
-//                return
-//            }
-//            
-//        }
+        self.gridNode.visibleContentOffsetChanged = { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateButtonBackgroundAlpha()
+        }
         
         self.gridNode.interactiveScrollingWillBeEnded = { [weak self] contentOffset, velocity, targetOffset -> CGPoint in
             guard let strongSelf = self, !strongSelf.isDismissed else {
@@ -315,6 +330,8 @@ private final class StickerPackContainer: ASDisplayNode {
                 strongSelf.morePressed(node: strongSelf.moreButtonNode.contextSourceNode, gesture: gesture)
             }
         }
+        
+        self.titleNode.linkHighlightColor = self.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
     }
     
     deinit {
@@ -420,17 +437,23 @@ private final class StickerPackContainer: ASDisplayNode {
         self.cancelButtonNode.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
         self.moreButtonNode.theme = self.presentationData.theme
         
+        self.titleNode.linkHighlightColor = self.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
+        
         if let currentContents = self.currentContents {
             let buttonColor: UIColor
+            var buttonFont: UIFont = Font.semibold(17.0)
             switch currentContents {
                 case .fetching:
-                    buttonColor = self.presentationData.theme.list.itemDisabledTextColor
+                    buttonColor = .clear
                 case .none:
                     buttonColor = self.presentationData.theme.list.itemAccentColor
                 case let .result(_, _, installed):
-                    buttonColor = installed ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemAccentColor
+                    buttonColor = installed ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemCheckColors.foregroundColor
+                    if installed {
+                        buttonFont = Font.regular(17.0)
+                    }
             }
-            self.buttonNode.setTitle(self.buttonNode.attributedTitle(for: .normal)?.string ?? "", with: Font.semibold(17.0), with: buttonColor, for: .normal)
+            self.buttonNode.setTitle(self.buttonNode.attributedTitle(for: .normal)?.string ?? "", with: buttonFont, with: buttonColor, for: .normal)
         }
                 
         if !self.currentEntries.isEmpty {
@@ -438,9 +461,13 @@ private final class StickerPackContainer: ASDisplayNode {
             self.enqueueTransaction(transaction)
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.semibold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        let titleFont = Font.semibold(17.0)
+        let title = self.titleNode.attributedText?.string ?? ""
+        let entities = generateTextEntities(title, enabledTypes: [.mention])
+        self.titleNode.attributedText = stringWithAppliedEntities(title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
+        
         if let (layout, _, _, _) = self.validLayout {
-            let _ = self.titleNode.updateLayout(CGSize(width: layout.size.width - 12.0 * 2.0, height: .greatestFiniteMagnitude))
+            let _ = self.titleNode.updateLayout(CGSize(width: layout.size.width - max(12.0, self.cancelButtonNode.frame.width) * 2.0 - 40.0, height: .greatestFiniteMagnitude))
             self.updateLayout(layout: layout, transition: .immediate)
         }
     }
@@ -532,6 +559,21 @@ private final class StickerPackContainer: ASDisplayNode {
                 }
             }
         })
+    }
+    
+    private func updateButtonBackgroundAlpha() {
+        let offset = self.gridNode.visibleContentOffset()
+        
+        let backgroundAlpha: CGFloat
+        switch offset {
+            case let .known(value):
+                let bottomOffsetY = max(0.0, self.gridNode.scrollView.contentSize.height + self.gridNode.scrollView.contentInset.top + self.gridNode.scrollView.contentInset.bottom - value - self.gridNode.scrollView.frame.height - 10.0)
+                backgroundAlpha = min(10.0, bottomOffsetY) / 10.0
+            case .unknown, .none:
+                backgroundAlpha = 1.0
+        }
+        self.actionAreaBackgroundNode.alpha = backgroundAlpha
+        self.actionAreaSeparatorNode.alpha = backgroundAlpha
     }
     
     private var currentContents: LoadedStickerPack?
@@ -631,7 +673,10 @@ private final class StickerPackContainer: ASDisplayNode {
                 }
             }
             
-            self.titleNode.attributedText = NSAttributedString(string: info.title, font: Font.semibold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+            let titleFont = Font.semibold(17.0)
+            let entities = generateTextEntities(info.title, enabledTypes: [.mention])
+            self.titleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
+            
             updateLayout = true
             
             var generalItems: [StickerPackItem] = []
@@ -686,11 +731,11 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         if updateLayout, let (layout, _, _, _) = self.validLayout {
-            let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 12.0 * 2.0, height: .greatestFiniteMagnitude))
-            self.titleNode.frame = CGRect(origin: CGPoint(x: floor((-titleSize.width) / 2.0), y: floor((-titleSize.height) / 2.0)), size: titleSize)
-            
             let cancelSize = self.cancelButtonNode.measure(CGSize(width: layout.size.width, height: .greatestFiniteMagnitude))
             self.cancelButtonNode.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left + 16.0, y: 18.0), size: cancelSize)
+            
+            let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - cancelSize.width * 2.0 - 40.0, height: .greatestFiniteMagnitude))
+            self.titleNode.frame = CGRect(origin: CGPoint(x: floor((-titleSize.width) / 2.0), y: floor((-titleSize.height) / 2.0)), size: titleSize)
             
             self.moreButtonNode.frame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - 46.0, y: 5.0), size: CGSize(width: 44.0, height: 44.0))
             
@@ -851,7 +896,9 @@ private final class StickerPackContainer: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.titleContainer, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0), y: backgroundFrame.minY + floor((56.0) / 2.0)), size: CGSize()))
         transition.updateFrame(node: self.titleSeparatorNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY + 56.0 - UIScreenPixel), size: CGSize(width: backgroundFrame.width, height: UIScreenPixel)))
-                
+        transition.updateFrame(node: self.titleBackgroundnode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.width, height: 56.0)))
+        self.titleBackgroundnode.update(size: CGSize(width: layout.size.width, height: 56.0), transition: .immediate)
+        
         transition.updateFrame(node: self.topContainerNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.width, height: 56.0)))
         
         let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
@@ -879,6 +926,11 @@ private final class StickerPackContainer: ASDisplayNode {
         if self.bounds.contains(point) {
             if !self.backgroundNode.bounds.contains(self.convert(point, to: self.backgroundNode)) {
                 return nil
+            }
+            
+            let titlePoint = self.view.convert(point, to: self.titleNode.view)
+            if self.titleNode.bounds.contains(titlePoint) {
+                return self.titleNode.view
             }
         }
         
@@ -908,6 +960,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     private let dismissed: () -> Void
     private let presentInGlobalOverlay: (ViewController, Any?) -> Void
     private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    private let openMention: (String) -> Void
     
     private let dimNode: ASDisplayNode
     private let containerContainingNode: ASDisplayNode
@@ -924,7 +977,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         return self._ready
     }
     
-    init(context: AccountContext, controller: StickerPackScreenImpl, stickerPacks: [StickerPackReference], initialSelectedStickerPackIndex: Int, modalProgressUpdated: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
+    init(context: AccountContext, controller: StickerPackScreenImpl, stickerPacks: [StickerPackReference], initialSelectedStickerPackIndex: Int, modalProgressUpdated: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, openMention: @escaping (String) -> Void) {
         self.context = context
         self.controller = controller
         self.presentationData = controller.presentationData
@@ -934,6 +987,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         self.dismissed = dismissed
         self.presentInGlobalOverlay = presentInGlobalOverlay
         self.sendSticker = sendSticker
+        self.openMention = openMention
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
@@ -1048,8 +1102,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                                 }
                             }
                         }
-                    }, presentInGlobalOverlay: presentInGlobalOverlay,
-                    sendSticker: sendSticker, controller: self.controller)
+                    }, presentInGlobalOverlay: presentInGlobalOverlay, sendSticker: sendSticker, openMention: openMention, controller: self.controller)
                     self.containerContainingNode.addSubnode(container)
                     self.containers[i] = container
                 }
@@ -1245,6 +1298,8 @@ public final class StickerPackScreenImpl: ViewController {
         return self._ready
     }
     
+    private let openMentionDisposable = MetaDisposable()
+    
     private var alreadyDidAppear: Bool = false
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
@@ -1275,6 +1330,7 @@ public final class StickerPackScreenImpl: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.openMentionDisposable.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -1299,6 +1355,28 @@ public final class StickerPackScreenImpl: ViewController {
                     return false
                 }
             }
+        }, openMention: { [weak self] mention in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.openMentionDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: mention)
+            |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                if let peer = peer {
+                    return .single(peer._asPeer())
+                } else {
+                    return .single(nil)
+                }
+            }
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let peer = peer, let parentNavigationController = strongSelf.parentNavigationController {
+                    strongSelf.dismiss()
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), animated: true))
+                }
+            }))
         })
         
         self._ready.set(self.controllerNode.ready.get())
