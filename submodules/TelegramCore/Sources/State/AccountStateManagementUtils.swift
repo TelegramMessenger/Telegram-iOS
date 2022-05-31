@@ -1102,8 +1102,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         }
                 }
             case let .updateTranscribeAudio(flags, transcriptionId, text):
-                let isPending = (flags & (1 << 0)) != 0
-                updatedState.updateAudioTranscription(id: transcriptionId, isPending: isPending, text: text)
+                let isFinal = (flags & (1 << 0)) != 0
+                updatedState.updateAudioTranscription(id: transcriptionId, isPending: !isFinal, text: text)
             case let .updateNotifySettings(apiPeer, apiNotificationSettings):
                 switch apiPeer {
                     case let .notifyPeer(peer):
