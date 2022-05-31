@@ -4239,13 +4239,25 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 if itemNode.apparentFrame.maxY <= visualInsets.top {
                     offsetRanges.offset(IndexRange(first: 0, last: index), offset: -apparentHeightDelta)
-                } else if invertOffsetDirection {
-                    if itemNode.apparentFrame.minY - apparentHeightDelta < visualInsets.top {
-                        let overflowOffset = visualInsets.top - (itemNode.apparentFrame.minY - apparentHeightDelta)
+                } else if invertOffsetDirection /*&& itemNode.frame.height < self.visibleSize.height*/ {
+                    if self.scroller.contentOffset.y < 1.0 {
+                        /*let overflowOffset = visualInsets.top - (itemNode.apparentFrame.minY - apparentHeightDelta)
                         let remainingOffset = apparentHeightDelta - overflowOffset
                         offsetRanges.offset(IndexRange(first: 0, last: index), offset: -remainingOffset)
                         
                         var offsetDelta = overflowOffset
+                        if offsetDelta < 0.0 {
+                            let maxDelta = visualInsets.top - itemNode.apparentFrame.maxY
+                            if maxDelta > offsetDelta {
+                                let remainingOffset = maxDelta - offsetDelta
+                                offsetRanges.offset(IndexRange(first: 0, last: index), offset: remainingOffset)
+                                offsetDelta = maxDelta
+                            }
+                        }
+                        
+                        offsetRanges.offset(IndexRange(first: index + 1, last: Int.max), offset: offsetDelta)*/
+                        
+                        var offsetDelta = apparentHeightDelta
                         if offsetDelta < 0.0 {
                             let maxDelta = visualInsets.top - itemNode.apparentFrame.maxY
                             if maxDelta > offsetDelta {

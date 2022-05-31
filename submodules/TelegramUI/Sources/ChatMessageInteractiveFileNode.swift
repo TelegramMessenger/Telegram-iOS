@@ -42,7 +42,11 @@ private func transcribedText(message: Message) -> TranscribedText? {
             if !attribute.text.isEmpty {
                 return .success(text: attribute.text, isPending: attribute.isPending)
             } else {
-                return .error
+                if attribute.isPending {
+                    return nil
+                } else {
+                    return .error
+                }
             }
         }
     }
