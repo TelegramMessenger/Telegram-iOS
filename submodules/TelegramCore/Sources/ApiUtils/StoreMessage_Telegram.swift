@@ -375,7 +375,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
         case let .messageEntitySpoiler(offset, length):
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Spoiler))
         case let .messageEntityAnimatedEmoji(offset, length):
-            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .AnimatedEmoji))
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .AnimatedEmoji(nil)))
         }
     }
     return result
