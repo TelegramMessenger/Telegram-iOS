@@ -429,6 +429,11 @@ private enum FetchResourceReference {
 }
 
 private final class MultipartFetchManager {
+    private struct FetchSpeedRecord {
+        var timestamp: Double
+        var byteCount: Int
+    }
+    
     let parallelParts: Int
     let defaultPartSize: Int64
     var partAlignment: Int64 = 4 * 1024
@@ -473,6 +478,10 @@ private final class MultipartFetchManager {
     
     var rangesDisposable: Disposable?
     
+    private var speedTimer: SwiftSignalKit.Timer?
+    private var fetchSpeedRecords: [FetchSpeedRecord] = []
+    private var totalFetchedByteCount: Int = 0
+    
     init(resource: TelegramMediaResource, parameters: MediaResourceFetchParameters?, size: Int64?, intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int64?, location: MultipartFetchMasterLocation, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext?, partReady: @escaping (Int64, Data) -> Void, reportCompleteSize: @escaping (Int64) -> Void, useMainConnection: Bool) {
         self.resource = resource
         self.parameters = parameters
@@ -485,7 +494,7 @@ private final class MultipartFetchManager {
                 self.defaultPartSize = 16 * 1024
                 self.parallelParts = 4 * 4
             } else {
-                self.defaultPartSize = 128 * 1024
+                self.defaultPartSize = 512 * 1024
                 self.parallelParts = 8
             }
         } else {
@@ -542,6 +551,12 @@ private final class MultipartFetchManager {
                 }
             }
         })
+        
+        self.markSpeedRecord()
+        self.speedTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+            self?.markSpeedRecord()
+        }, queue: self.queue)
+        self.speedTimer?.start()
     }
     
     deinit {
@@ -549,6 +564,7 @@ private final class MultipartFetchManager {
         self.queue.async {
             rangesDisposable?.dispose()
         }
+        self.speedTimer?.invalidate()
     }
     
     func start() {
@@ -565,6 +581,27 @@ private final class MultipartFetchManager {
             }
             self.reuploadToCdnDisposable.dispose()
             self.revalidateMediaReferenceDisposable.dispose()
+        }
+    }
+    
+    private func addSpeedRecord(byteCount: Int) {
+        self.totalFetchedByteCount += byteCount
+    }
+    
+    private func markSpeedRecord() {
+        self.fetchSpeedRecords.append(FetchSpeedRecord(timestamp: CFAbsoluteTimeGetCurrent(), byteCount: self.totalFetchedByteCount))
+        if self.fetchSpeedRecords.count > 10 {
+            self.fetchSpeedRecords.removeFirst(self.fetchSpeedRecords.count - 10)
+        }
+        
+        if !self.fetchSpeedRecords.isEmpty {
+            let totalByteCount = self.fetchSpeedRecords[self.fetchSpeedRecords.count - 1].byteCount - self.fetchSpeedRecords[0].byteCount
+            let totalTime = self.fetchSpeedRecords[self.fetchSpeedRecords.count - 1].timestamp - self.fetchSpeedRecords[0].timestamp
+            
+            if totalTime > 0.0 {
+                let speed = Double(totalByteCount) / totalTime
+                Logger.shared.log("MultipartFetch", "\(self.resource.id.stringRepresentation) \(speed) bytes/s")
+            }
         }
     }
     
@@ -594,6 +631,9 @@ private final class MultipartFetchManager {
                 if !hasEarlierFetchingPart {
                     self.currentFilledRanges.insert(integersIn: Int(partRange.lowerBound) ..< Int(partRange.upperBound))
                     self.fetchedParts.removeValue(forKey: offset)
+                    
+                    self.addSpeedRecord(byteCount: Int(partRange.upperBound - partRange.lowerBound))
+                    
                     self.partReady(offset, self.state.transform(offset: offset, data: data))
                 }
             }
