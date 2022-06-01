@@ -92,7 +92,6 @@ final class ReactionsCarouselComponent: Component {
 
 private let itemSize = CGSize(width: 110.0, height: 110.0)
 
-//private let order = ["👌","😍","🤡","🕊","🥱","🥴"]
 private let order = ["😍","👌","🥴","🐳","🥱","🕊","🤡"]
 
 private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {

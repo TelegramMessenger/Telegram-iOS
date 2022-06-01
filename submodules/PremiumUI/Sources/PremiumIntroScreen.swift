@@ -942,19 +942,18 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             size.height += text.size.height
             size.height += 21.0
             
-            let gradientColors: [(UIColor, UIColor)] = [
-                (UIColor(rgb: 0xF28528), UIColor(rgb: 0xEF7633)),
-                (UIColor(rgb: 0xEA5F43), UIColor(rgb: 0xE7504E)),
-                (UIColor(rgb: 0xDE4768), UIColor(rgb: 0xD54D82)),
-                (UIColor(rgb: 0xDE4768), UIColor(rgb: 0xD54D82)),
-                (UIColor(rgb: 0xC654A8), UIColor(rgb: 0xBE5AC2)),
-                (UIColor(rgb: 0xAF62E9), UIColor(rgb: 0xA668FF)),
-                (UIColor(rgb: 0x9674FF), UIColor(rgb: 0x8C7DFF)),
-                (UIColor(rgb: 0x9674FF), UIColor(rgb: 0x8C7DFF)),
-                (UIColor(rgb: 0x7B88FF), UIColor(rgb: 0x7091FF)),
-                (UIColor(rgb: 0x609DFF), UIColor(rgb: 0x56A5FF)),
-                
-                (UIColor(rgb: 0x609DFF), UIColor(rgb: 0x56A5FF))
+            let gradientColors: [UIColor] = [
+                UIColor(rgb: 0xF27C30),
+                UIColor(rgb: 0xE36850),
+                UIColor(rgb: 0xD15078),
+                UIColor(rgb: 0xC14998),
+                UIColor(rgb: 0xB24CB5),
+                UIColor(rgb: 0xA34ED0),
+                UIColor(rgb: 0x9054E9),
+                UIColor(rgb: 0x7561EB),
+                UIColor(rgb: 0x5A6EEE),
+                UIColor(rgb: 0x548DFF),
+                UIColor(rgb: 0x54A3FF)
             ]
             
             var items: [SectionGroupComponent.Item] = []
@@ -976,8 +975,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             PerkComponent(
                                 iconName: perk.iconName,
                                 iconBackgroundColors: [
-                                    iconBackgroundColors.0,
-                                    iconBackgroundColors.1
+                                    iconBackgroundColors
                                 ],
                                 title: perk.title(strings: strings),
                                 titleColor: titleColor,

@@ -37,22 +37,30 @@ final class AppIconsDemoComponent: Component {
     public final class View: UIView {
         private var component: AppIconsDemoComponent?
         
+        private var containerView: UIView
         private var imageViews: [UIImageView] = []
+        
+        private var isVisible = false
                 
+        public override init(frame: CGRect) {
+            self.containerView = UIView()
+            self.containerView.clipsToBounds = true
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.containerView)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
         public func update(component: AppIconsDemoComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
-//            let isDisplaying = environment[DemoPageEnvironment.self].isDisplaying
+            let isDisplaying = environment[DemoPageEnvironment.self].isDisplaying
             
-//            if self.node == nil {
-//                let node = StickersCarouselNode(
-//                    context: component.context,
-//                    stickers: component.stickers
-//                )
-//                self.node = node
-//                self.addSubnode(node)
-//            }
-            
-//            let isFirstTime = self.component == nil
             self.component = component
+            
+            self.containerView.frame = CGRect(origin: .zero, size: availableSize)
             
             if self.imageViews.isEmpty {
                 for icon in component.appIcons {
@@ -61,7 +69,7 @@ final class AppIconsDemoComponent: Component {
                         imageView.clipsToBounds = true
                         imageView.layer.cornerRadius = 24.0
                         imageView.image = image
-                        self.addSubview(imageView)
+                        self.containerView.addSubview(imageView)
                         
                         self.imageViews.append(imageView)
                     }
@@ -92,37 +100,46 @@ final class AppIconsDemoComponent: Component {
             
             if let _ = transition.userData(DemoAnimateInTransition.self), abs(mappedPosition) < .ulpOfOne {
                 Queue.mainQueue().after(0.1) {
-                    var i = 0
-                    for view in self.imageViews {
-                        let from: CGPoint
-                        let delay: Double
-                        switch i {
-                            case 0:
-                                from = CGPoint(x: -availableSize.width * 0.333, y: -availableSize.height * 0.8)
-                                delay = 0.1
-                            case 1:
-                                from = CGPoint(x: -availableSize.width * 0.75, y: availableSize.height * 0.75)
-                                delay = 0.15
-                            case 2:
-                                from = CGPoint(x: availableSize.width * 0.9, y: availableSize.height * 0.0)
-                                delay = 0.0
-                            default:
-                                from = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)
-                                delay = 0.0
-                        }
-                        view.layer.animateScale(from: 3.0, to: 1.0, duration: 0.5, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
-                        view.layer.animatePosition(from: from, to: CGPoint(), duration: 0.5, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                        
-                        i += 1
-                    }
+                    self.animateIn(availableSize: availableSize)
                 }
             }
+            
+            if isDisplaying && !self.isVisible {
+//                var fast = false
+//                if let _ = transition.userData(DemoAnimateInTransition.self) {
+//                    fast = true
+//                }
+                self.animateIn(availableSize: availableSize)
+            }
+            self.isVisible = isDisplaying
             
             return availableSize
         }
         
-        func animateIn() {
-            
+        func animateIn(availableSize: CGSize) {
+            var i = 0
+            for view in self.imageViews {
+                let from: CGPoint
+                let delay: Double
+                switch i {
+                    case 0:
+                        from = CGPoint(x: -availableSize.width * 0.333, y: -availableSize.height * 0.8)
+                        delay = 0.1
+                    case 1:
+                        from = CGPoint(x: -availableSize.width * 0.75, y: availableSize.height * 0.75)
+                        delay = 0.15
+                    case 2:
+                        from = CGPoint(x: availableSize.width * 0.9, y: availableSize.height * 0.0)
+                        delay = 0.0
+                    default:
+                        from = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)
+                        delay = 0.0
+                }
+                view.layer.animateScale(from: 3.0, to: 1.0, duration: 0.5, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
+                view.layer.animatePosition(from: from, to: CGPoint(), duration: 0.5, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                
+                i += 1
+            }
         }
     }
     

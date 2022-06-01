@@ -7621,8 +7621,8 @@ Sorry for the inconvenience.";
 "Premium.Avatar" = "Animated Profile Pictures";
 "Premium.AvatarInfo" = "Video avatars animated in chat lists and chats to allow for additional self-expression.";
 
-"Premium.AppIcon" = "App Icons";
-"Premium.AppIconInfo" = "Additional app icons description goes here.";
+"Premium.AppIcon" = "Telegram App Icon";
+"Premium.AppIconInfo" = "Choose from a selection of Telegram app icons for your homescreen.";
 
 "Premium.AppIconStandalone" = "Additional App Icons";
 "Premium.AppIconStandaloneInfo" = "Unlock a wider range of app icons by subscribing to **Telegram Premium**.";
