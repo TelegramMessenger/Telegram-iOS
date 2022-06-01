@@ -4,6 +4,9 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
+public func updatePremiumPromoConfigurationOnce(account: Account) -> Signal<Void, NoError> {
+    return updatePremiumPromoConfigurationOnce(postbox: account.postbox, network: account.network)
+}
 
 func updatePremiumPromoConfigurationOnce(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     return network.request(Api.functions.help.getPremiumPromo())

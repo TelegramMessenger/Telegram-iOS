@@ -335,7 +335,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
             }
         }
         
-        if let premiumStickers = premiumStickers, !premiumStickers.items.isEmpty {
+        if let premiumStickers = premiumStickers, !premiumStickers.items.isEmpty && hasPremium {
             let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_PremiumStickers.uppercased(), shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
             for i in 0 ..< premiumStickers.items.count {
                 if let item = premiumStickers.items[i].contents.get(RecentMediaItem.self) {

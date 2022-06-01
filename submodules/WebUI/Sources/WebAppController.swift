@@ -802,6 +802,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
         fileprivate func sendBackButtonEvent() {
             self.webView?.sendEvent(name: "back_button_pressed", data: nil)
         }
+        
+        fileprivate func sendSettingsButtonEvent() {
+            self.webView?.sendEvent(name: "settings_button_pressed", data: nil)
+        }
     }
     
     fileprivate var controllerNode: Node {
@@ -931,6 +935,21 @@ public final class WebAppController: ViewController, AttachmentContainable {
         let items = context.engine.messages.attachMenuBots()
         |> map { [weak self] attachMenuBots -> ContextController.Items in
             var items: [ContextMenuItem] = []
+            
+            let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId})
+            
+            if let attachMenuBot = attachMenuBot, attachMenuBot.hasSettings {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    if let strongSelf = self {
+                        strongSelf.controllerNode.sendSettingsButtonEvent()
+                    }
+                })))
+            }
+            
             if peerId != botId {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_OpenBot, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: theme.contextMenu.primaryColor)
@@ -952,7 +971,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self?.controllerNode.webView?.reload()
             })))
             
-            if let _ = attachMenuBots.firstIndex(where: { $0.peer.id == botId}) {
+            if let _ = attachMenuBot, self?.url == nil {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                 }, action: { [weak self] _, f in

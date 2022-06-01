@@ -749,6 +749,37 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateBackgroundColor(layer: CALayer, color: UIColor, completion: ((Bool) -> Void)? = nil) {
+        if let nodeColor = layer.backgroundColor, nodeColor == color.cgColor {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            layer.backgroundColor = color.cgColor
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            if let nodeColor = layer.backgroundColor {
+                layer.backgroundColor = color.cgColor
+                layer.animate(from: nodeColor, to: color.cgColor, keyPath: "backgroundColor", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+            } else {
+                layer.backgroundColor = color.cgColor
+                if let completion = completion {
+                    completion(true)
+                }
+            }
+        }
+    }
+    
     func updateCornerRadius(node: ASDisplayNode, cornerRadius: CGFloat, completion: ((Bool) -> Void)? = nil) {
         if node.cornerRadius.isEqual(to: cornerRadius) {
             if let completion = completion {

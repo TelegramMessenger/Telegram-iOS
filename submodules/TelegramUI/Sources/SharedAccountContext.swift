@@ -1489,6 +1489,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 mappedSource = .folders
             case .chatsPerFolder:
                 mappedSource = .chatsPerFolder
+            case .appIcons:
+                mappedSource = .appIcons
             case .accounts:
                 mappedSource = .accounts
             case .about:

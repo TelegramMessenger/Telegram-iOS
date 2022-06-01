@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import ComponentFlow
 
 public final class PageIndicatorComponent: Component {
@@ -336,7 +337,8 @@ private class ItemView: UIView {
 
     var dotColor = UIColor.lightGray {
         didSet {
-            self.dotView.backgroundColor = dotColor
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
+            transition.updateBackgroundColor(layer: self.dotView.layer, color: dotColor)
         }
     }
 

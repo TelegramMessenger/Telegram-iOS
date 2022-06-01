@@ -393,7 +393,13 @@ private final class DemoPagerComponent: Component {
                     itemTransition = transition.withAnimation(.none)
                     itemView = ComponentHostView<DemoPageEnvironment>()
                     self.itemViews[item.content.id] = itemView
-                    self.scrollView.addSubview(itemView)
+                    
+                    
+                    if item.content.id == (PremiumDemoScreen.Subject.fasterDownload as AnyHashable) {
+                        self.scrollView.insertSubview(itemView, at: 0)
+                    } else {
+                        self.scrollView.addSubview(itemView)
+                    }
                 }
                                 
                 let environment = DemoPageEnvironment(isDisplaying: isDisplaying, isCentral: abs(centerDelta) < CGFloat.ulpOfOne, position: position)
@@ -464,11 +470,18 @@ private final class DemoSheetContent: CombinedComponent {
     let action: () -> Void
     let dismiss: () -> Void
     
-    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source, order: [PremiumPerk]?, action: @escaping () -> Void, dismiss: @escaping () -> Void) {
+    init(
+        context: AccountContext,
+        subject: PremiumDemoScreen.Subject,
+        source: PremiumDemoScreen.Source,
+        order: [PremiumPerk]?,
+        action: @escaping () -> Void,
+        dismiss: @escaping () -> Void
+    ) {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .advancedChatManagement, .profileBadge, .animatedUserpics]
+        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons]
         self.action = action
         self.dismiss = dismiss
     }
@@ -496,10 +509,14 @@ private final class DemoSheetContent: CombinedComponent {
         var isPremium: Bool?
         var reactions: [AvailableReactions.Reaction]?
         var stickers: [TelegramMediaFile]?
+        var appIcons: [PresentationAppIcon]?
         var disposable: Disposable?
+        
+        var promoConfiguration: PremiumPromoConfiguration?
         
         init(context: AccountContext) {
             self.context = context
+            self.appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons().filter { $0.isPremium }
             
             super.init()
             
@@ -519,9 +536,12 @@ private final class DemoSheetContent: CombinedComponent {
                     return items != nil
                 }
                 |> take(1),
-                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                self.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId),
+                    TelegramEngine.EngineData.Item.Configuration.PremiumPromo()
+                )
             )
-            |> map { reactions, items, accountPeer -> ([AvailableReactions.Reaction], [TelegramMediaFile], Bool?) in
+            |> map { reactions, items, data -> ([AvailableReactions.Reaction], [TelegramMediaFile], Bool?, PremiumPromoConfiguration?) in
                 if let reactions = reactions {
                     var result: [TelegramMediaFile] = []
                     if let items = items {
@@ -531,17 +551,18 @@ private final class DemoSheetContent: CombinedComponent {
                             }
                         }
                     }
-                    return (reactions.reactions.filter({ $0.isPremium }), result, accountPeer?.isPremium ?? false)
+                    return (reactions.reactions.filter({ $0.isPremium }), result, data.0?.isPremium ?? false, data.1)
                 } else {
-                    return ([], [], nil)
+                    return ([], [], nil, nil)
                 }
-            }).start(next: { [weak self] reactions, stickers, isPremium in
+            }).start(next: { [weak self] reactions, stickers, isPremium, promoConfiguration in
                 guard let strongSelf = self else {
                     return
                 }
                 strongSelf.reactions = reactions
                 strongSelf.stickers = stickers
                 strongSelf.isPremium = isPremium
+                strongSelf.promoConfiguration = promoConfiguration
                 if !reactions.isEmpty && !stickers.isEmpty {
                     strongSelf.updated(transition: Transition(.immediate).withUserData(DemoAnimateInTransition()))
                 }
@@ -600,7 +621,7 @@ private final class DemoSheetContent: CombinedComponent {
                 isStandalone = true
             }
             
-            if let reactions = state.reactions, let stickers = state.stickers {
+            if let reactions = state.reactions, let stickers = state.stickers, let appIcons = state.appIcons, let configuration = state.promoConfiguration {
                 let textColor = theme.actionSheet.primaryTextColor
                 
                 var availableItems: [PremiumPerk: DemoPagerComponent.Item] = [:]
@@ -613,7 +634,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .bottom,
-                                    videoName: "4gb"
+                                    videoFile: configuration.videos["double_limits"]
                                 )),
                                 title: strings.Premium_UploadSize,
                                 text: strings.Premium_UploadSizeInfo,
@@ -630,7 +651,8 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoName: "fastdownload"
+                                    videoFile: configuration.videos["faster_download"],
+                                    hasStars: true
                                 )),
                                 title: strings.Premium_FasterSpeed,
                                 text: strings.Premium_FasterSpeedInfo,
@@ -647,7 +669,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoName: "voice"
+                                    videoFile: configuration.videos["voice_to_text"]
                                 )),
                                 title: strings.Premium_VoiceToText,
                                 text: strings.Premium_VoiceToTextInfo,
@@ -664,7 +686,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .bottom,
-                                    videoName: "noads"
+                                    videoFile: configuration.videos["no_ads"]
                                 )),
                                 title: strings.Premium_NoAds,
                                 text: strings.Premium_NoAdsInfo,
@@ -718,7 +740,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoName: "fastdownload"
+                                    videoFile: configuration.videos["chat_management"]
                                 )),
                                 title: strings.Premium_ChatManagement,
                                 text: strings.Premium_ChatManagementInfo,
@@ -735,7 +757,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoName: "badge"
+                                    videoFile: configuration.videos["profile_badge"]
                                 )),
                                 title: strings.Premium_Badge,
                                 text: strings.Premium_BadgeInfo,
@@ -752,10 +774,26 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoName: "badge"
+                                    videoFile: configuration.videos["userpics"]
                                 )),
                                 title: strings.Premium_Avatar,
                                 text: strings.Premium_AvatarInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.appIcons] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.appIcons,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(AppIconsDemoComponent(
+                                    context: component.context,
+                                    appIcons: appIcons
+                                )),
+                                title: isStandalone ? strings.Premium_AppIconStandalone : strings.Premium_AppIcon,
+                                text: isStandalone ? strings.Premium_AppIconStandaloneInfo :strings.Premium_AppIconInfo,
                                 textColor: textColor
                             )
                         )
@@ -827,7 +865,16 @@ private final class DemoSheetContent: CombinedComponent {
                     case let .intro(price):
                         buttonText = strings.Premium_SubscribeFor(price ?? "–").string
                     case .other:
-                        buttonText = strings.Premium_Reactions_Proceed
+                    switch component.subject {
+                        case .uniqueReactions:
+                            buttonText = strings.Premium_Reactions_Proceed
+                        case .premiumStickers:
+                            buttonText = strings.Premium_Stickers_Proceed
+                        case .appIcons:
+                            buttonText = strings.Premium_AppIcons_Proceed
+                        default:
+                            buttonText = strings.Common_OK
+                    }
                 }
             }
             
@@ -851,7 +898,7 @@ private final class DemoSheetContent: CombinedComponent {
                     gloss: state.isPremium != true,
                     animationName: isStandalone && component.subject == .uniqueReactions ? "premium_unlock" : nil,
                     iconPosition: .right,
-                    iconSpacing: 6.0,
+                    iconSpacing: 4.0,
                     action: { [weak component] in
                         guard let component = component else {
                             return
@@ -989,6 +1036,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case advancedChatManagement
         case profileBadge
         case animatedUserpics
+        case appIcons
     }
     
     public enum Source: Equatable {

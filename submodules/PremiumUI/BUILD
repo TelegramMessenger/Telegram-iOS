@@ -47,6 +47,7 @@ swift_library(
         "//submodules/InstantPageCache:InstantPageCache",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
+        "//submodules/RadialStatusNode:RadialStatusNode",
     ],
     visibility = [
         "//visibility:public",

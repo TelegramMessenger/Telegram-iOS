@@ -135,9 +135,14 @@ private final class LimitComponent: CombinedComponent {
             let textFont = Font.regular(13.0)
             let boldTextFont = Font.semibold(13.0)
             let textColor = component.textColor
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: component.accentColor), linkAttribute: { _ in
-                return nil
-            })
+            let markdownAttributes = MarkdownAttributes(
+                body: MarkdownAttributeSet(font: textFont, textColor: textColor), 
+                bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), 
+                link: MarkdownAttributeSet(font: textFont, textColor: component.accentColor),
+                linkAttribute: { _ in
+                    return nil
+                }
+            )
                         
             let text = text.update(
                 component: MultilineTextComponent(

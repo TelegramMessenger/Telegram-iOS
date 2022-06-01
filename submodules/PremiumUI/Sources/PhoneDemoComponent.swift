@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import SceneKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
@@ -7,10 +8,10 @@ import Postbox
 import TelegramCore
 import ComponentFlow
 import AccountContext
-
-import AppBundle
+import RadialStatusNode
 import UniversalMediaPlayer
 import TelegramUniversalVideoContent
+import AppBundle
 
 private let phoneSize = CGSize(width: 262.0, height: 539.0)
 private var phoneBorderImage = {
@@ -42,6 +43,14 @@ private final class PhoneView: UIView {
     let borderView: UIImageView
     
     fileprivate var videoNode: UniversalVideoNode?
+    private let statusNode: RadialStatusNode
+    
+    var playbackStatus: Signal<MediaPlayerStatus?, NoError> {
+        return self.playbackStatusPromise.get()
+    }
+    private var playbackStatusPromise = ValuePromise<MediaPlayerStatus?>(nil)
+    private var playbackStatusValue: MediaPlayerStatus?
+    private var statusDisposable = MetaDisposable()
     
     var screenRotation: CGFloat = 0.0 {
         didSet {
@@ -50,7 +59,6 @@ private final class PhoneView: UIView {
             } else {
                 self.overlayView.backgroundColor = .black
             }
-            self.contentContainerView.alpha = self.screenRotation > 0.0 ? 1.0 - self.screenRotation : 1.0
             self.overlayView.alpha = self.screenRotation > 0.0 ? self.screenRotation * 0.5 : self.screenRotation * -1.0
         }
     }
@@ -67,41 +75,91 @@ private final class PhoneView: UIView {
         
         self.borderView = UIImageView(image: phoneBorderImage)
         
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6), enableBlur: false)
+        self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false, animateRotation: true))
+        self.statusNode.isUserInteractionEnabled = false
+        
         super.init(frame: frame)
         
         self.addSubview(self.contentContainerView)
+        self.contentContainerView.addSubview(self.statusNode.view)
         self.contentContainerView.addSubview(self.overlayView)
         self.addSubview(self.borderView)
     }
     
+    deinit {
+        self.statusDisposable.dispose()
+    }
     
     private var position: PhoneDemoComponent.Position = .top
     
-    func setup(context: AccountContext, videoName: String?, position: PhoneDemoComponent.Position) {
+    func setup(context: AccountContext, videoFile: TelegramMediaFile?, position: PhoneDemoComponent.Position) {
         self.position = position
         
-        guard self.videoNode == nil, let videoName = videoName, let path = getAppBundle().path(forResource: videoName, ofType: "mp4"), let size = fileSize(path) else {
+        guard self.videoNode == nil, let file = videoFile else {
             return
         }
         
         self.contentContainerView.backgroundColor = .clear
-        
-        let dimensions = PixelDimensions(width: 1170, height: 1754)
-        
-        let id = Int64.random(in: 0..<Int64.max)
-        let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: size, attributes: [.Video(duration: 3, size: dimensions, flags: [])])
-        
-        let videoContent = NativeVideoContent(id: .message(1, MediaId(namespace: 0, id: id)), fileReference: .standalone(media: dummyFile), streamVideo: .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
-        
+                
+        let videoContent = NativeVideoContent(
+            id: .message(1, MediaId(namespace: 0, id: Int64.random(in: 0..<Int64.max))),
+            fileReference: .standalone(media: file),
+            streamVideo: .conservative,
+            loopVideo: true,
+            enableSound: false,
+            fetchAutomatically: true,
+            onlyFullSizeThumbnail: false,
+            continuePlayingWithoutSoundOnLostAudioSession: false,
+            placeholderColor: .darkGray,
+            hintDimensions: CGSize(width: 1170, height: 1754)
+        )
         let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: VideoDecoration(), content: videoContent, priority: .embedded)
         videoNode.canAttachContent = true
         self.videoNode = videoNode
         
+        let status = videoNode.status
+        |> mapToSignal { status -> Signal<MediaPlayerStatus?, NoError> in
+            if let status = status, case .buffering = status.status {
+                return .single(status) |> delay(1.0, queue: Queue.mainQueue())
+            } else {
+                return .single(status)
+            }
+        }
+        
+        self.statusDisposable.set((status |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let strongSelf = self {
+                strongSelf.playbackStatusValue = status
+                strongSelf.playbackStatusPromise.set(status)
+                strongSelf.updatePlaybackStatus()
+            }
+        }))
+                
         self.contentContainerView.insertSubview(videoNode.view, at: 0)
         
         videoNode.pause()
         
         self.setNeedsLayout()
+    }
+    
+    private func updatePlaybackStatus() {
+        var state: RadialStatusNodeState?
+        if let playbackStatus = self.playbackStatusValue {
+            if case let .buffering(initial, _, progress, _) = playbackStatus.status, initial || !progress.isZero {
+                let adjustedProgress = max(progress, 0.027)
+                state = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false, animateRotation: true)
+            } else if playbackStatus.status == .playing {
+                state = RadialStatusNodeState.none
+            }
+        }
+        
+        if let state = state {
+            self.statusNode.transitionToState(state, completion: { [weak self] in
+                if case .none = state {
+                    self?.statusNode.removeFromSupernode()
+                }
+            })
+        }
     }
     
     private var isPlaying = false
@@ -133,11 +191,101 @@ private final class PhoneView: UIView {
             self.overlayView.frame = self.contentContainerView.bounds
             
             if let videoNode = self.videoNode {
-                let videoSize = CGSize(width: self.contentContainerView.frame.width, height: 353.0)
+                let videoSize = CGSize(width: self.contentContainerView.frame.width, height: 354.0)
                 videoNode.view.frame = CGRect(origin: CGPoint(x: 0.0, y: self.position == .top ? 0.0 : self.contentContainerView.frame.height - videoSize.height), size: videoSize)
                 videoNode.updateLayout(size: videoSize, transition: .immediate)
+                
+                let notchHeight: CGFloat = 20.0
+                let radialStatusSize: CGFloat = 40.0
+                self.statusNode.frame = CGRect(x: floor((videoSize.width - radialStatusSize) / 2.0), y: self.position == .top ? notchHeight + floor((videoSize.height - notchHeight - radialStatusSize) / 2.0) : self.contentContainerView.frame.height - videoSize.height + floor((videoSize.height - radialStatusSize) / 2.0), width: radialStatusSize, height: radialStatusSize)
             }
         }
+    }
+}
+
+private final class StarsView: UIView {
+    private let sceneView: SCNView
+    
+    override init(frame: CGRect) {
+        self.sceneView = SCNView(frame: CGRect(origin: .zero, size: frame.size))
+        self.sceneView.backgroundColor = .clear
+        if let url = getAppBundle().url(forResource: "lightspeed", withExtension: "scn") {
+            self.sceneView.scene = try? SCNScene(url: url, options: nil)
+        }
+        self.sceneView.isUserInteractionEnabled = false
+        self.sceneView.preferredFramesPerSecond = 60
+        
+        super.init(frame: frame)
+        
+        self.alpha = 0.0
+        
+        self.addSubview(self.sceneView)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func setVisible(_ visible: Bool) {
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+        transition.updateAlpha(layer: self.layer, alpha: visible ? 1.0 : 0.0)
+    }
+    
+    private var playing = false
+    func startAnimation() {
+        guard !self.playing, let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "particles", recursively: false), let particles = node.particleSystems?.first else {
+            return
+        }
+        self.playing = true
+        
+        let speedAnimation = CABasicAnimation(keyPath: "speedFactor")
+        speedAnimation.fromValue = 1.0
+        speedAnimation.toValue = 1.8
+        speedAnimation.duration = 0.8
+        speedAnimation.fillMode = .forwards
+        particles.addAnimation(speedAnimation, forKey: "speedFactor")
+        
+        particles.speedFactor = 3.0
+        
+        let stretchAnimation = CABasicAnimation(keyPath: "stretchFactor")
+        stretchAnimation.fromValue = 0.05
+        stretchAnimation.toValue = 0.3
+        stretchAnimation.duration = 0.8
+        stretchAnimation.fillMode = .forwards
+        particles.addAnimation(stretchAnimation, forKey: "stretchFactor")
+        
+        particles.stretchFactor = 0.3
+    }
+    
+    func stopAnimation() {
+        guard self.playing, let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "particles", recursively: false), let particles = node.particleSystems?.first else {
+            return
+        }
+        self.playing = false
+        
+        let speedAnimation = CABasicAnimation(keyPath: "speedFactor")
+        speedAnimation.fromValue = 3.0
+        speedAnimation.toValue = 1.0
+        speedAnimation.duration = 0.35
+        speedAnimation.fillMode = .forwards
+        particles.addAnimation(speedAnimation, forKey: "speedFactor")
+        
+        particles.speedFactor = 1.0
+        
+        let stretchAnimation = CABasicAnimation(keyPath: "stretchFactor")
+        stretchAnimation.fromValue = 0.3
+        stretchAnimation.toValue = 0.05
+        stretchAnimation.duration = 0.35
+        stretchAnimation.fillMode = .forwards
+        particles.addAnimation(stretchAnimation, forKey: "stretchFactor")
+        
+        particles.stretchFactor = 0.05
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        self.sceneView.frame = CGRect(origin: .zero, size: frame.size)
     }
 }
 
@@ -151,16 +299,19 @@ final class PhoneDemoComponent: Component {
     
     let context: AccountContext
     let position: Position
-    let videoName: String?
+    let videoFile: TelegramMediaFile?
+    let hasStars: Bool
     
     public init(
         context: AccountContext,
         position: PhoneDemoComponent.Position,
-        videoName: String?
+        videoFile: TelegramMediaFile?,
+        hasStars: Bool = false
     ) {
         self.context = context
         self.position = position
-        self.videoName = videoName
+        self.videoFile = videoFile
+        self.hasStars = hasStars
     }
     
     public static func ==(lhs: PhoneDemoComponent, rhs: PhoneDemoComponent) -> Bool {
@@ -170,7 +321,10 @@ final class PhoneDemoComponent: Component {
         if lhs.position != rhs.position {
             return false
         }
-        if lhs.videoName != rhs.videoName {
+        if lhs.videoFile != rhs.videoFile {
+            return false
+        }
+        if lhs.hasStars != rhs.hasStars {
             return false
         }
         return true
@@ -190,8 +344,12 @@ final class PhoneDemoComponent: Component {
         private var isCentral = false
         private var component: PhoneDemoComponent?
         
+        private let starsContainerView: UIView
         private let containerView: UIView
+        private var starsView: StarsView?
         private let phoneView: PhoneView
+        
+        private var starsDisposable: Disposable?
         
         public var ready: Signal<Bool, NoError> {
             if let videoNode = self.phoneView.videoNode {
@@ -205,12 +363,17 @@ final class PhoneDemoComponent: Component {
         }
         
         public override init(frame: CGRect) {
+            self.starsContainerView = UIView(frame: frame)
+            self.starsContainerView.clipsToBounds = true
+            
             self.containerView = UIView(frame: frame)
             self.containerView.clipsToBounds = true
+            
             self.phoneView = PhoneView(frame: CGRect(origin: .zero, size: phoneSize))
             
             super.init(frame: frame)
             
+            self.addSubview(self.starsContainerView)
             self.addSubview(self.containerView)
             self.containerView.addSubview(self.phoneView)
         }
@@ -219,15 +382,41 @@ final class PhoneDemoComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.starsDisposable?.dispose()
+        }
+        
         public func update(component: PhoneDemoComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
             self.component = component
             
-            
-            self.phoneView.setup(context: component.context, videoName: component.videoName, position: component.position)
-            
             self.containerView.frame = CGRect(origin: .zero, size: availableSize)
+            self.starsContainerView.frame = CGRect(origin: CGPoint(x: -availableSize.width * 0.5, y: 0.0), size: CGSize(width: availableSize.width * 2.0, height: availableSize.height))
             self.phoneView.bounds = CGRect(origin: .zero, size: phoneSize)
-
+            
+            if component.hasStars {
+                if self.starsView == nil {
+                    let starsView = StarsView(frame: self.starsContainerView.bounds)
+                    self.starsView = starsView
+                    self.starsContainerView.addSubview(starsView)
+                    
+                    self.starsDisposable = (self.phoneView.playbackStatus
+                    |> deliverOnMainQueue).start(next: { [weak self] status in
+                        if let strongSelf = self, let status = status {
+                            if status.timestamp > 8.0 {
+                                strongSelf.starsView?.stopAnimation()
+                            } else if status.timestamp > 0.85 {
+                                strongSelf.starsView?.startAnimation()
+                            }
+                        }
+                    })
+                }
+            } else if let starsView = self.starsView {
+                self.starsView = nil
+                starsView.removeFromSuperview()
+            }
+            
+            self.phoneView.setup(context: component.context, videoFile: component.videoFile, position: component.position)
+        
             var mappedPosition = environment[DemoPageEnvironment.self].position
             mappedPosition *= abs(mappedPosition)
             
@@ -242,10 +431,11 @@ final class PhoneDemoComponent: Component {
                     phoneY = (-149.0 + phoneSize.height / 2.0 - 24.0 - abs(mappedPosition) * 24.0) * scale
             }
             
-            
             let isVisible = environment[DemoPageEnvironment.self].isDisplaying
             let isCentral = environment[DemoPageEnvironment.self].isCentral
             self.isCentral = isCentral
+            
+            self.starsView?.setVisible(isVisible && abs(mappedPosition) < 0.4)
             
             self.phoneView.center = CGPoint(x: availableSize.width / 2.0 + phoneX, y: phoneY)
             self.phoneView.screenRotation = mappedPosition * -0.7
@@ -258,6 +448,7 @@ final class PhoneDemoComponent: Component {
                 self.phoneView.play()
             } else if !isVisible {
                 self.phoneView.reset()
+                self.starsView?.stopAnimation()
             }
             
             if let _ = transition.userData(DemoAnimateInTransition.self), abs(mappedPosition) < .ulpOfOne {

@@ -622,7 +622,7 @@ private struct ChannelVisibilityControllerState: Equatable {
     }
 }
 
-private func channelVisibilityControllerEntries(presentationData: PresentationData, mode: ChannelVisibilityControllerMode, view: PeerView, publicChannelsToRevoke: [Peer]?, importers: PeerInvitationImportersState?, state: ChannelVisibilityControllerState) -> [ChannelVisibilityEntry] {
+private func channelVisibilityControllerEntries(presentationData: PresentationData, mode: ChannelVisibilityControllerMode, view: PeerView, publicChannelsToRevoke: [Peer]?, importers: PeerInvitationImportersState?, state: ChannelVisibilityControllerState, limits: EngineConfiguration.UserLimits, premiumLimits: EngineConfiguration.UserLimits, isPremium: Bool) -> [ChannelVisibilityEntry] {
     var entries: [ChannelVisibilityEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramChannel {
@@ -730,7 +730,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 
                 if displayAvailability {
                     if let publicChannelsToRevoke = publicChannelsToRevoke {
-                        entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(20)").string, 10, 20))
+                        entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(20)").string, limits.maxPublicLinksCount, premiumLimits.maxPublicLinksCount))
                         
                         var index: Int32 = 0
                         for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
@@ -1349,10 +1349,24 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     }
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
-    let signal = combineLatest(presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue, importersContext, importersState.get())
+    let signal = combineLatest(
+        presentationData,
+        statePromise.get() |> deliverOnMainQueue,
+        peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue,
+        importersContext,
+        importersState.get(),
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true),
+            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
+        )
+    )
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, publicChannelsToRevoke, importersContext, importers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, view, publicChannelsToRevoke, importersContext, importers, data -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peer = peerViewMainPeer(view)
+        
+        let (limits, premiumLimits, accountPeer) = data
+        let isPremium = accountPeer?.isPremium ?? false
         
         var footerItem: ItemListControllerFooterItem?
         
@@ -1630,7 +1644,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 title = presentationData.strings.Premium_LimitReached
         }
 
-        let entries = channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, importers: importers, state: state)
+        let entries = channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, importers: importers, state: state, limits: limits, premiumLimits: premiumLimits, isPremium: isPremium)
         
         var focusItemTag: ItemListItemTag?
         if entries.count > 1, let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
