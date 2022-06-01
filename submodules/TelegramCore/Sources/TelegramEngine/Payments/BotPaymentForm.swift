@@ -44,12 +44,17 @@ public struct BotPaymentInvoice : Equatable {
         public var max: Int64
         public var suggested: [Int64]
     }
+    
+    public struct RecurrentInfo: Equatable {
+        public var termsUrl: String
+    }
 
     public let isTest: Bool
     public let requestedFields: BotPaymentInvoiceFields
     public let currency: String
     public let prices: [BotPaymentPrice]
     public let tip: Tip?
+    public let recurrentInfo: RecurrentInfo?
 }
 
 public struct BotPaymentNativeProvider : Equatable {
@@ -124,39 +129,43 @@ public enum BotPaymentFormRequestError {
 extension BotPaymentInvoice {
     init(apiInvoice: Api.Invoice) {
         switch apiInvoice {
-            case let .invoice(flags, currency, prices, maxTipAmount, suggestedTipAmounts, _):
-                var fields = BotPaymentInvoiceFields()
-                if (flags & (1 << 1)) != 0 {
-                    fields.insert(.name)
+        case let .invoice(flags, currency, prices, maxTipAmount, suggestedTipAmounts, recurrentTermsUrl):
+            var fields = BotPaymentInvoiceFields()
+            if (flags & (1 << 1)) != 0 {
+                fields.insert(.name)
+            }
+            if (flags & (1 << 2)) != 0 {
+                fields.insert(.phone)
+            }
+            if (flags & (1 << 3)) != 0 {
+                fields.insert(.email)
+            }
+            if (flags & (1 << 4)) != 0 {
+                fields.insert(.shippingAddress)
+            }
+            if (flags & (1 << 5)) != 0 {
+                fields.insert(.flexibleShipping)
+            }
+            if (flags & (1 << 6)) != 0 {
+                fields.insert(.phoneAvailableToProvider)
+            }
+            if (flags & (1 << 7)) != 0 {
+                fields.insert(.emailAvailableToProvider)
+            }
+            var recurrentInfo: BotPaymentInvoice.RecurrentInfo?
+            if let recurrentTermsUrl = recurrentTermsUrl {
+                recurrentInfo = BotPaymentInvoice.RecurrentInfo(termsUrl: recurrentTermsUrl)
+            }
+            var parsedTip: BotPaymentInvoice.Tip?
+            if let maxTipAmount = maxTipAmount, let suggestedTipAmounts = suggestedTipAmounts {
+                parsedTip = BotPaymentInvoice.Tip(max: maxTipAmount, suggested: suggestedTipAmounts)
+            }
+            self.init(isTest: (flags & (1 << 0)) != 0, requestedFields: fields, currency: currency, prices: prices.map {
+                switch $0 {
+                case let .labeledPrice(label, amount):
+                    return BotPaymentPrice(label: label, amount: amount)
                 }
-                if (flags & (1 << 2)) != 0 {
-                    fields.insert(.phone)
-                }
-                if (flags & (1 << 3)) != 0 {
-                    fields.insert(.email)
-                }
-                if (flags & (1 << 4)) != 0 {
-                    fields.insert(.shippingAddress)
-                }
-                if (flags & (1 << 5)) != 0 {
-                    fields.insert(.flexibleShipping)
-                }
-                if (flags & (1 << 6)) != 0 {
-                    fields.insert(.phoneAvailableToProvider)
-                }
-                if (flags & (1 << 7)) != 0 {
-                    fields.insert(.emailAvailableToProvider)
-                }
-                var parsedTip: BotPaymentInvoice.Tip?
-                if let maxTipAmount = maxTipAmount, let suggestedTipAmounts = suggestedTipAmounts {
-                    parsedTip = BotPaymentInvoice.Tip(max: maxTipAmount, suggested: suggestedTipAmounts)
-                }
-                self.init(isTest: (flags & (1 << 0)) != 0, requestedFields: fields, currency: currency, prices: prices.map {
-                    switch $0 {
-                        case let .labeledPrice(label, amount):
-                            return BotPaymentPrice(label: label, amount: amount)
-                    }
-                }, tip: parsedTip)
+            }, tip: parsedTip, recurrentInfo: recurrentInfo)
         }
     }
 }

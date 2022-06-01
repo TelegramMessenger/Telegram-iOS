@@ -667,7 +667,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textInputBackgroundNode.isUserInteractionEnabled = true
         self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
         
-        if let presentationContext = presentationContext {
+        /*if let presentationContext = presentationContext {
             self.emojiViewProvider = { [weak self, weak presentationContext] emoji in
                 guard let strongSelf = self, let presentationContext = presentationContext, let presentationInterfaceState = strongSelf.presentationInterfaceState, let context = strongSelf.context, let file = strongSelf.context?.animatedEmojiStickers[emoji]?.first?.file else {
                     return UIView()
@@ -675,7 +675,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 return EmojiTextAttachmentView(context: context, file: file, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12))
             }
-        }
+        }*/
     }
 
     required init?(coder aDecoder: NSCoder) {

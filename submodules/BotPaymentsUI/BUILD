@@ -25,6 +25,9 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/CheckNode:CheckNode",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/Markdown:Markdown",
     ],
     visibility = [
         "//visibility:public",

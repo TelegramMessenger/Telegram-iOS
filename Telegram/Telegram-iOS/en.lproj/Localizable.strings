@@ -7677,3 +7677,5 @@ Sorry for the inconvenience.";
 "Premium.Limits.AccountsInfo" = "Connect 4 accounts with different mobile numbers";
 
 "WebApp.Settings" = "Settings";
+
+"Bot.AccepRecurrentInfo" = "I accept [Terms of Service]() of **%1$@**";

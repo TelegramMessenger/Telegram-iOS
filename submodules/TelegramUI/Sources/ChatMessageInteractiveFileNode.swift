@@ -42,7 +42,11 @@ private func transcribedText(message: Message) -> TranscribedText? {
             if !attribute.text.isEmpty {
                 return .success(text: attribute.text, isPending: attribute.isPending)
             } else {
-                return .error
+                if attribute.isPending {
+                    return nil
+                } else {
+                    return .error
+                }
             }
         }
     }
@@ -345,16 +349,21 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         var shouldBeginTranscription = false
         var shouldExpandNow = false
-        if let result = transcribedText(message: message) {
+        
+        if case .expanded = self.audioTranscriptionState {
             shouldExpandNow = true
-            
-            if case let .success(_, isPending) = result {
-                shouldBeginTranscription = isPending
+        } else {
+            if let result = transcribedText(message: message) {
+                shouldExpandNow = true
+                
+                if case let .success(_, isPending) = result {
+                    shouldBeginTranscription = isPending
+                } else {
+                    shouldBeginTranscription = true
+                }
             } else {
                 shouldBeginTranscription = true
             }
-        } else {
-            shouldBeginTranscription = true
         }
         
         if shouldBeginTranscription {

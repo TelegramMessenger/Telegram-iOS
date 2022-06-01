@@ -15,13 +15,16 @@ public final class BotCheckoutController: ViewController {
 
         let form: BotPaymentForm
         let validatedFormInfo: BotPaymentValidatedFormInfo?
+        let botPeer: EnginePeer?
 
         private init(
             form: BotPaymentForm,
-            validatedFormInfo: BotPaymentValidatedFormInfo?
+            validatedFormInfo: BotPaymentValidatedFormInfo?,
+            botPeer: EnginePeer?
         ) {
             self.form = form
             self.validatedFormInfo = validatedFormInfo
+            self.botPeer = botPeer
         }
 
         public static func fetch(context: AccountContext, source: BotPaymentInvoiceSource) -> Signal<InputData, FetchError> {
@@ -39,28 +42,35 @@ public final class BotCheckoutController: ViewController {
                 return .generic
             }
             |> mapToSignal { paymentForm -> Signal<InputData, FetchError> in
-                if let current = paymentForm.savedInfo {
-                    return context.engine.payments.validateBotPaymentForm(saveInfo: true, source: source, formInfo: current)
-                    |> mapError { _ -> FetchError in
-                        return .generic
-                    }
-                    |> map { result -> InputData in
-                        return InputData(
-                            form: paymentForm,
-                            validatedFormInfo: result
-                        )
-                    }
-                    |> `catch` { _ -> Signal<InputData, FetchError> in
+                return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: paymentForm.paymentBotId))
+                |> castError(FetchError.self)
+                |> mapToSignal { botPeer -> Signal<InputData, FetchError> in
+                    if let current = paymentForm.savedInfo {
+                        return context.engine.payments.validateBotPaymentForm(saveInfo: true, source: source, formInfo: current)
+                        |> mapError { _ -> FetchError in
+                            return .generic
+                        }
+                        |> map { result -> InputData in
+                            return InputData(
+                                form: paymentForm,
+                                validatedFormInfo: result,
+                                botPeer: botPeer
+                            )
+                        }
+                        |> `catch` { _ -> Signal<InputData, FetchError> in
+                            return .single(InputData(
+                                form: paymentForm,
+                                validatedFormInfo: nil,
+                                botPeer: botPeer
+                            ))
+                        }
+                    } else {
                         return .single(InputData(
                             form: paymentForm,
-                            validatedFormInfo: nil
+                            validatedFormInfo: nil,
+                            botPeer: botPeer
                         ))
                     }
-                } else {
-                    return .single(InputData(
-                        form: paymentForm,
-                        validatedFormInfo: nil
-                    ))
                 }
             }
         }

@@ -17,6 +17,9 @@ import PasswordSetupUI
 import Stripe
 import LocalAuth
 import OverlayStatusController
+import CheckNode
+import TextFormat
+import Markdown
 
 final class BotCheckoutControllerArguments {
     fileprivate let account: Account
@@ -489,6 +492,160 @@ private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutP
     return methods
 }
 
+private final class RecurrentConfirmationNode: ASDisplayNode {
+    private let isAcceptedUpdated: (Bool) -> Void
+    private let openTerms: () -> Void
+    
+    private var checkNode: InteractiveCheckNode?
+    private let textNode: ImmediateTextNode
+    
+    init(isAcceptedUpdated: @escaping (Bool) -> Void, openTerms: @escaping () -> Void) {
+        self.isAcceptedUpdated = isAcceptedUpdated
+        self.openTerms = openTerms
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.maximumNumberOfLines = 0
+        
+        super.init()
+        
+        self.textNode.highlightAttributeAction = { attributes in
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+            } else {
+                return nil
+            }
+        }
+        self.textNode.tapAttributeAction = { [weak self] attributes, _ in
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                self?.openTerms()
+            }
+        }
+        
+        self.addSubnode(self.textNode)
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+    }
+    
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        guard let checkNode = self.checkNode else {
+            return
+        }
+        if case .ended = recognizer.state {
+            checkNode.setSelected(!checkNode.selected, animated: true)
+            checkNode.valueChanged?(checkNode.selected)
+        }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.bounds.contains(point) {
+            return nil
+        }
+        
+        if let (_, attributes) = self.textNode.attributesAtPoint(self.view.convert(point, to: self.textNode.view)) {
+            if attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] == nil {
+                return self.view
+            }
+        }
+        
+        return super.hitTest(point, with: event)
+    }
+    
+    func update(presentationData: PresentationData, botName: String, width: CGFloat, sideInset: CGFloat) -> CGFloat {
+        let spacing: CGFloat = 16.0
+        let topInset: CGFloat = 8.0
+        
+        let checkNode: InteractiveCheckNode
+        if let current = self.checkNode {
+            checkNode = current
+        } else {
+            checkNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: presentationData.theme.list.itemCheckColors.fillColor, strokeColor: presentationData.theme.list.itemCheckColors.foregroundColor, borderColor: presentationData.theme.list.itemCheckColors.strokeColor, overlayBorder: false, hasInset: false, hasShadow: false))
+            checkNode.valueChanged = { [weak self] value in
+                self?.isAcceptedUpdated(value)
+            }
+            self.checkNode = checkNode
+            self.addSubnode(checkNode)
+        }
+        
+        let checkSize = CGSize(width: 22.0, height: 22.0)
+        
+        self.textNode.linkHighlightColor = presentationData.theme.list.itemAccentColor.withAlphaComponent(0.3)
+        
+        let attributedText = parseMarkdownIntoAttributedString(
+            presentationData.strings.Bot_AccepRecurrentInfo(botName).string,
+            attributes: MarkdownAttributes(
+                body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.list.freeTextColor),
+                bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.list.freeTextColor),
+                link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.list.itemAccentColor),
+                linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                }
+            )
+        )
+        
+        self.textNode.attributedText = attributedText
+        let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0 - spacing - checkSize.width, height: .greatestFiniteMagnitude))
+        
+        let height = textSize.height + 15.0
+        
+        let contentWidth = checkSize.width + spacing + textSize.width
+        let contentOriginX = sideInset + floor((width - sideInset * 2.0 - contentWidth) / 2.0)
+        
+        checkNode.frame = CGRect(origin: CGPoint(x: contentOriginX, y: topInset + floor((height - checkSize.height) / 2.0)), size: checkSize)
+        
+        self.textNode.frame = CGRect(origin: CGPoint(x: contentOriginX + checkSize.width + spacing, y: topInset + floor((height - textSize.height) / 2.0)), size: textSize)
+        
+        return height
+    }
+}
+
+private final class ActionButtonPanelNode: ASDisplayNode {
+    private(set) var isAccepted: Bool = false
+    var isAcceptedUpdated: (() -> Void)?
+    var openRecurrentTerms: (() -> Void)?
+    private var recurrentConfirmationNode: RecurrentConfirmationNode?
+    
+    func update(presentationData: PresentationData, layout: ContainerViewLayout, invoice: BotPaymentInvoice?, botName: String?) -> (CGFloat, CGFloat) {
+        let bottomPanelVerticalInset: CGFloat = 16.0
+        
+        var height = max(layout.intrinsicInsets.bottom, layout.inputHeight ?? 0.0) + bottomPanelVerticalInset * 2.0 + BotCheckoutActionButton.height
+        var actionButtonOffset: CGFloat = bottomPanelVerticalInset
+        
+        if let invoice = invoice, let recurrentInfo = invoice.recurrentInfo, let botName = botName {
+            let recurrentConfirmationNode: RecurrentConfirmationNode
+            if let current = self.recurrentConfirmationNode {
+                recurrentConfirmationNode = current
+            } else {
+                recurrentConfirmationNode = RecurrentConfirmationNode(isAcceptedUpdated: { [weak self] value in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.isAccepted = value
+                    strongSelf.isAcceptedUpdated?()
+                }, openTerms: { [weak self] in
+                    self?.openRecurrentTerms?()
+                })
+                self.recurrentConfirmationNode = recurrentConfirmationNode
+                self.addSubnode(recurrentConfirmationNode)
+            }
+            
+            let _ = recurrentInfo
+            
+            let recurrentConfirmationHeight = recurrentConfirmationNode.update(presentationData: presentationData, botName: botName, width: layout.size.width, sideInset: layout.safeInsets.left + 33.0)
+            recurrentConfirmationNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: recurrentConfirmationHeight))
+            
+            actionButtonOffset += recurrentConfirmationHeight
+        } else if let recurrentConfirmationNode = self.recurrentConfirmationNode {
+            self.recurrentConfirmationNode = nil
+            
+            recurrentConfirmationNode.removeFromSupernode()
+        }
+        
+        height += actionButtonOffset - bottomPanelVerticalInset
+        
+        return (height, actionButtonOffset)
+    }
+}
+
 final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthorizationViewControllerDelegate {
     private weak var controller: BotCheckoutController?
     private let navigationBar: NavigationBar
@@ -509,6 +666,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     
     private let paymentFormAndInfo = Promise<(BotPaymentForm, BotPaymentRequestedInfo, BotPaymentValidatedFormInfo?, String?, BotCheckoutPaymentMethod?, Int64?)?>(nil)
     private var paymentFormValue: BotPaymentForm?
+    private var botPeerValue: EnginePeer?
     private var currentFormInfo: BotPaymentRequestedInfo?
     private var currentValidatedFormInfo: BotPaymentValidatedFormInfo?
     private var currentShippingOptionId: String?
@@ -516,7 +674,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private var currentTipAmount: Int64?
     private var formRequestDisposable: Disposable?
 
-    private let actionButtonPanelNode: ASDisplayNode
+    private let actionButtonPanelNode: ActionButtonPanelNode
     private let actionButtonPanelSeparator: ASDisplayNode
     private let actionButton: BotCheckoutActionButton
     private let inProgressDimNode: ASDisplayNode
@@ -585,13 +743,11 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             return (ItemListPresentationData(presentationData), (nodeState, arguments))
         }
 
-        self.actionButtonPanelNode = ASDisplayNode()
-        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
+        self.actionButtonPanelNode = ActionButtonPanelNode()
 
         self.actionButtonPanelSeparator = ASDisplayNode()
-        self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
-        self.actionButton = BotCheckoutActionButton(activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor)
+        self.actionButton = BotCheckoutActionButton(activeFillColor: self.presentationData.theme.list.itemAccentColor, inactiveFillColor: self.presentationData.theme.list.itemDisabledTextColor.mixedWith(self.presentationData.theme.list.blocksBackgroundColor, alpha: 0.7), foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor)
         self.actionButton.setState(.placeholder)
         
         self.inProgressDimNode = ASDisplayNode()
@@ -602,6 +758,22 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         super.init(controller: nil, navigationBar: navigationBar, state: signal)
         
         self.arguments = arguments
+        
+        self.actionButtonPanelNode.isAcceptedUpdated = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateActionButton()
+        }
+        
+        self.actionButtonPanelNode.openRecurrentTerms = { [weak self] in
+            guard let strongSelf = self, let paymentForm = strongSelf.paymentFormValue, let recurrentInfo = paymentForm.invoice.recurrentInfo else {
+                return
+            }
+            strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: recurrentInfo.termsUrl, forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {
+                self?.view.endEditing(true)
+            })
+        }
         
         openInfoImpl = { [weak self] focus in
             if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo {
@@ -924,6 +1096,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     savedInfo = BotPaymentRequestedInfo(name: nil, phone: nil, email: nil, shippingAddress: nil)
                 }
                 strongSelf.paymentFormValue = formAndValidatedInfo.form
+                strongSelf.botPeerValue = formAndValidatedInfo.botPeer
                 strongSelf.currentFormInfo = savedInfo
                 strongSelf.currentValidatedFormInfo = formAndValidatedInfo.validatedFormInfo
                 if let savedCredentials = formAndValidatedInfo.form.savedCredentials {
@@ -959,6 +1132,38 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 }
             }
         })
+        
+        self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        self.actionButtonPanelNode.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
+        self.visibleBottomContentOffsetChanged = { [weak self] offset in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let panelColor: UIColor
+            let separatorColor: UIColor
+            switch offset {
+            case let .known(value):
+                if value > 10.0 {
+                    panelColor = strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
+                    separatorColor = strongSelf.presentationData.theme.rootController.navigationBar.separatorColor
+                } else {
+                    panelColor = .clear
+                    separatorColor = .clear
+                }
+            default:
+                panelColor = strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
+                separatorColor = strongSelf.presentationData.theme.rootController.navigationBar.separatorColor
+            }
+            
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
+            if strongSelf.actionButtonPanelNode.backgroundColor != panelColor {
+                transition.updateBackgroundColor(node: strongSelf.actionButtonPanelNode, color: panelColor)
+            }
+            if strongSelf.actionButtonPanelSeparator.backgroundColor != separatorColor {
+                transition.updateBackgroundColor(node: strongSelf.actionButtonPanelSeparator, color: separatorColor)
+            }
+        }
     }
     
     deinit {
@@ -971,22 +1176,34 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private func updateActionButton() {
         let totalAmount = currentTotalPrice(paymentForm: self.paymentFormValue, validatedFormInfo: self.currentValidatedFormInfo, currentShippingOptionId: self.currentShippingOptionId, currentTip: self.currentTipAmount)
         let payString: String
+        var isButtonEnabled = true
         if let paymentForm = self.paymentFormValue, totalAmount > 0 {
             payString = self.presentationData.strings.Checkout_PayPrice(formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)).string
+            
+            if let _ = paymentForm.invoice.recurrentInfo {
+                if !self.actionButtonPanelNode.isAccepted {
+                    isButtonEnabled = false
+                }
+            }
         } else {
             payString = self.presentationData.strings.CheckoutInfo_Pay
         }
+        
+        self.actionButton.isEnabled = isButtonEnabled
+        
         if let currentPaymentMethod = self.currentPaymentMethod {
             switch currentPaymentMethod {
             case .applePay:
-                self.actionButton.setState(.applePay)
+                self.actionButton.setState(.applePay(isEnabled: isButtonEnabled))
             default:
-                self.actionButton.setState(.active(payString))
+                self.actionButton.setState(.active(text: payString, isEnabled: isButtonEnabled))
             }
         } else {
-            self.actionButton.setState(.active(payString))
+            self.actionButton.setState(.active(text: payString, isEnabled: isButtonEnabled))
         }
         self.actionButtonPanelNode.isHidden = false
+        
+        self.controller?.requestLayout(transition: .immediate)
     }
 
     private func updateIsInProgress(_ value: Bool) {
@@ -1006,13 +1223,18 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         var updatedInsets = layout.intrinsicInsets
 
         let bottomPanelHorizontalInset: CGFloat = 16.0
-        let bottomPanelVerticalInset: CGFloat = 16.0
-        let bottomPanelHeight = max(updatedInsets.bottom, layout.inputHeight ?? 0.0) + bottomPanelVerticalInset * 2.0 + BotCheckoutActionButton.height
+        
+        var botName: String?
+        if let botPeer = self.botPeerValue {
+            botName = botPeer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
+        }
+        
+        let (bottomPanelHeight, actionButtonOffset) = self.actionButtonPanelNode.update(presentationData: self.presentationData, layout: layout, invoice: self.paymentFormValue?.invoice, botName: botName)
 
         transition.updateFrame(node: self.actionButtonPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomPanelHeight), size: CGSize(width: layout.size.width, height: bottomPanelHeight)))
         transition.updateFrame(node: self.actionButtonPanelSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
 
-        let actionButtonFrame = CGRect(origin: CGPoint(x: bottomPanelHorizontalInset, y: bottomPanelVerticalInset), size: CGSize(width: layout.size.width - bottomPanelHorizontalInset * 2.0, height: BotCheckoutActionButton.height))
+        let actionButtonFrame = CGRect(origin: CGPoint(x: bottomPanelHorizontalInset, y: actionButtonOffset), size: CGSize(width: layout.size.width - bottomPanelHorizontalInset * 2.0, height: BotCheckoutActionButton.height))
         transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
         self.actionButton.updateLayout(absoluteRect: actionButtonFrame.offsetBy(dx: self.actionButtonPanelNode.frame.minX, dy: self.actionButtonPanelNode.frame.minY), containerSize: layout.size, transition: transition)
 
