@@ -7541,6 +7541,8 @@ Sorry for the inconvenience.";
 
 "Premium.Reactions.Proceed" = "Unlock Premium Reactions";
 
+"Premium.AppIcons.Proceed" = "Unlock Premium Icons";
+
 "AccessDenied.LocationPreciseDenied" = "To share your specific location in this chat, please go to Settings > Privacy > Location Services > Telegram and set Precise Location to On.";
 
 "Chat.MultipleTypingPair" = "%@ and %@";
@@ -7619,6 +7621,12 @@ Sorry for the inconvenience.";
 "Premium.Avatar" = "Animated Profile Pictures";
 "Premium.AvatarInfo" = "Video avatars animated in chat lists and chats to allow for additional self-expression.";
 
+"Premium.AppIcon" = "App Icons";
+"Premium.AppIconInfo" = "Additional app icons description goes here.";
+
+"Premium.AppIconStandalone" = "Additional App Icons";
+"Premium.AppIconStandaloneInfo" = "Unlock a wider range of app icons by subscribing to **Telegram Premium**.";
+
 "Premium.SubscribeFor" = "Subscribe for %@ / month";
 
 "Premium.AboutTitle" = "ABOUT TELEGRAM PREMIUM";
@@ -7667,3 +7675,5 @@ Sorry for the inconvenience.";
 "Premium.Limits.FoldersInfo" = "Organize your chats into 20 folders";
 "Premium.Limits.ChatsPerFolderInfo" = "Add up to 200 chats into each of your folders";
 "Premium.Limits.AccountsInfo" = "Connect 4 accounts with different mobile numbers";
+
+"WebApp.Settings" = "Settings";

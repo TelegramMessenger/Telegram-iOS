@@ -652,6 +652,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
         let filtersLimit = self.filtersLimit.flatMap({ $0 + 1 }) ?? Int32(self.availableFilters.count)
+        let maxFilterIndex = min(Int(filtersLimit), self.availableFilters.count) - 1
         
         switch recognizer.state {
         case .began:
@@ -693,11 +694,11 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     transitionFraction = rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
                 }
                 
-                if selectedIndex >= filtersLimit - 1 && translation.x < 0.0 {
+                if selectedIndex >= maxFilterIndex && translation.x < 0.0 {
                     let overscroll = -translation.x
                     transitionFraction = -rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
                     
-                    if self.filtersLimit != nil {
+                    if let filtersLimit = self.filtersLimit, selectedIndex >= filtersLimit - 1 {
                         transitionFraction = 0.0
                         recognizer.isEnabled = false
                         recognizer.isEnabled = true
@@ -744,7 +745,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 if let directionIsToRight = directionIsToRight {
                     var updatedIndex = selectedIndex
                     if directionIsToRight {
-                        updatedIndex = min(updatedIndex + 1, Int(filtersLimit) - 1)
+                        updatedIndex = min(updatedIndex + 1, maxFilterIndex)
                     } else {
                         updatedIndex = max(updatedIndex - 1, 0)
                     }

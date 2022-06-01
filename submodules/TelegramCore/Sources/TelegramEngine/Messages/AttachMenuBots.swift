@@ -10,6 +10,7 @@ public final class AttachMenuBots: Equatable, Codable {
             case name
             case botIcons
             case peerTypes
+            case hasSettings
         }
         
         public enum IconName: Int32, Codable {
@@ -93,17 +94,20 @@ public final class AttachMenuBots: Equatable, Codable {
         public let name: String
         public let icons: [IconName: TelegramMediaFile]
         public let peerTypes: PeerFlags
+        public let hasSettings: Bool
         
         public init(
             peerId: PeerId,
             name: String,
             icons: [IconName: TelegramMediaFile],
-            peerTypes: PeerFlags
+            peerTypes: PeerFlags,
+            hasSettings: Bool
         ) {
             self.peerId = peerId
             self.name = name
             self.icons = icons
             self.peerTypes = peerTypes
+            self.hasSettings = hasSettings
         }
         
         public static func ==(lhs: Bot, rhs: Bot) -> Bool {
@@ -117,6 +121,9 @@ public final class AttachMenuBots: Equatable, Codable {
                 return false
             }
             if lhs.peerTypes != rhs.peerTypes {
+                return false
+            }
+            if lhs.hasSettings != rhs.hasSettings {
                 return false
             }
             return true
@@ -139,6 +146,8 @@ public final class AttachMenuBots: Equatable, Codable {
             
             let value = try container.decodeIfPresent(Int32.self, forKey: .peerTypes) ?? Int32(PeerFlags.default.rawValue)
             self.peerTypes = PeerFlags(rawValue: UInt32(value))
+            
+            self.hasSettings = try container.decodeIfPresent(Bool.self, forKey: .hasSettings) ?? false
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -154,6 +163,8 @@ public final class AttachMenuBots: Equatable, Codable {
             try container.encode(iconPairs, forKey: .botIcons)
             
             try container.encode(Int32(self.peerTypes.rawValue), forKey: .peerTypes)
+            
+            try container.encode(self.hasSettings, forKey: .hasSettings)
         }
     }
     
@@ -265,7 +276,7 @@ func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network, force:
                             var resultBots: [AttachMenuBots.Bot] = []
                             for bot in bots {
                                 switch bot {
-                                    case let .attachMenuBot(_, botId, name, apiPeerTypes, botIcons):
+                                    case let .attachMenuBot(flags, botId, name, apiPeerTypes, botIcons):
                                         var icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile] = [:]
                                         for icon in botIcons {
                                             switch icon {
@@ -291,7 +302,7 @@ func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network, force:
                                                         peerTypes.insert(.channel)
                                                 }
                                             }
-                                            resultBots.append(AttachMenuBots.Bot(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), name: name, icons: icons, peerTypes: peerTypes))
+                                            resultBots.append(AttachMenuBots.Bot(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), name: name, icons: icons, peerTypes: peerTypes, hasSettings: (flags & (1 << 1)) != 0))
                                         }
                                 }
                             }
@@ -395,12 +406,14 @@ public struct AttachMenuBot {
     public let shortName: String
     public let icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile]
     public let peerTypes: AttachMenuBots.Bot.PeerFlags
+    public let hasSettings: Bool
     
-    init(peer: Peer, shortName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], peerTypes: AttachMenuBots.Bot.PeerFlags) {
+    init(peer: Peer, shortName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], peerTypes: AttachMenuBots.Bot.PeerFlags, hasSettings: Bool) {
         self.peer = peer
         self.shortName = shortName
         self.icons = icons
         self.peerTypes = peerTypes
+        self.hasSettings = hasSettings
     }
 }
 
@@ -412,7 +425,7 @@ func _internal_attachMenuBots(postbox: Postbox) -> Signal<[AttachMenuBot], NoErr
         var resultBots: [AttachMenuBot] = []
         for bot in cachedBots {
             if let peer = transaction.getPeer(bot.peerId) {
-                resultBots.append(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes))
+                resultBots.append(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes, hasSettings: bot.hasSettings))
             }
         }
         return resultBots
@@ -427,7 +440,7 @@ public func _internal_getAttachMenuBot(postbox: Postbox, network: Network, botId
     return postbox.transaction { transaction -> Signal<AttachMenuBot, GetAttachMenuBotError> in
         if cached, let cachedBots = cachedAttachMenuBots(transaction: transaction)?.bots {
             if let bot = cachedBots.first(where: { $0.peerId == botId }), let peer = transaction.getPeer(bot.peerId) {
-                return .single(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes))
+                return .single(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes, hasSettings: bot.hasSettings))
             }
         }
         
@@ -461,7 +474,7 @@ public func _internal_getAttachMenuBot(postbox: Postbox, network: Network, botId
                         }
                     
                         switch bot {
-                            case let .attachMenuBot(_, _, name, apiPeerTypes, botIcons):
+                            case let .attachMenuBot(flags, _, name, apiPeerTypes, botIcons):
                                 var icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile] = [:]
                                 for icon in botIcons {
                                     switch icon {
@@ -486,7 +499,7 @@ public func _internal_getAttachMenuBot(postbox: Postbox, network: Network, botId
                                             peerTypes.insert(.channel)
                                     }
                                 }
-                                return .single(AttachMenuBot(peer: peer, shortName: name, icons: icons, peerTypes: peerTypes))
+                                return .single(AttachMenuBot(peer: peer, shortName: name, icons: icons, peerTypes: peerTypes, hasSettings: (flags & (1 << 1)) != 0))
                         }
                 }
             }

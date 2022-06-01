@@ -45,14 +45,16 @@ class ThemeSettingsAppIconItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let icons: [PresentationAppIcon]
+    let isPremium: Bool
     let currentIconName: String?
-    let updated: (String) -> Void
+    let updated: (PresentationAppIcon) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, icons: [PresentationAppIcon], currentIconName: String?, updated: @escaping (String) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, icons: [PresentationAppIcon], isPremium: Bool, currentIconName: String?, updated: @escaping (PresentationAppIcon) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.icons = icons
+        self.isPremium = isPremium
         self.currentIconName = currentIconName
         self.updated = updated
         self.tag = tag
@@ -96,6 +98,7 @@ class ThemeSettingsAppIconItem: ListViewItem, ItemListItem {
 private final class ThemeSettingsAppIconNode : ASDisplayNode {
     private let iconNode: ASImageNode
     private let overlayNode: ASImageNode
+    private let lockNode: ASImageNode
     private let textNode: ASTextNode
     private var action: (() -> Void)?
     
@@ -108,21 +111,27 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 62.0))
         self.overlayNode.isLayerBacked = true
         
+        self.lockNode = ASImageNode()
+        self.lockNode.displaysAsynchronously = false
+        self.lockNode.isUserInteractionEnabled = false
+        
         self.textNode = ASTextNode()
         self.textNode.isUserInteractionEnabled = false
-        self.textNode.displaysAsynchronously = true
+        self.textNode.displaysAsynchronously = false
         
         super.init()
         
         self.addSubnode(self.iconNode)
         self.addSubnode(self.overlayNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.lockNode)
     }
     
-    func setup(theme: PresentationTheme, icon: UIImage, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void) {
+    func setup(theme: PresentationTheme, icon: UIImage, title: NSAttributedString, locked: Bool, color: UIColor, bordered: Bool, selected: Bool, action: @escaping () -> Void) {
         self.iconNode.image = icon
         self.textNode.attributedText = title
         self.overlayNode.image = generateBorderImage(theme: theme, bordered: bordered, selected: selected)
+        self.lockNode.image = locked ? generateTintedImage(image: UIImage(bundleImageName: "Notification/SecretLock"), color: color) : nil
         self.action = {
             action()
         }
@@ -147,7 +156,8 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         
         self.iconNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
         self.overlayNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
-        self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 14.0 + 60.0 + 4.0 + 9.0), size: CGSize(width: bounds.size.width, height: 16.0))
+        self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 87.0), size: CGSize(width: bounds.size.width, height: 16.0))
+        self.lockNode.frame = CGRect(x: 9.0, y: 90.0, width: 6.0, height: 8.0)
     }
 }
 
@@ -321,12 +331,18 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     name = item.strings.Appearance_AppIconNew1
                                 case "New2":
                                     name = item.strings.Appearance_AppIconNew2
+                                case "PremiumCosmic":
+                                    name = "Cosmic"
+                                case "PremiumCherry":
+                                    name = "Cherry"
+                                case "PremiumDuck":
+                                    name = "Duck"
                                 default:
-                                    break
+                                    name = icon.name
                             }
                         
-                            imageNode.setup(theme: item.theme, icon: image, title: NSAttributedString(string: name, font: selected ? selectedTextFont : textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), bordered: bordered, selected: selected, action: { [weak self, weak imageNode] in
-                                item.updated(icon.name)
+                            imageNode.setup(theme: item.theme, icon: image, title: NSAttributedString(string: name, font: selected ? selectedTextFont : textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), locked: !item.isPremium && icon.isPremium, color: item.theme.list.itemPrimaryTextColor, bordered: bordered, selected: selected, action: { [weak self, weak imageNode] in
+                                item.updated(icon)
                                 if let imageNode = imageNode {
                                     self?.scrollToNode(imageNode, animated: true)
                                 }

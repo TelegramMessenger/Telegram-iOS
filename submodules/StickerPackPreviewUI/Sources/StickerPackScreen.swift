@@ -157,6 +157,7 @@ private final class StickerPackContainer: ASDisplayNode {
         
         self.buttonNode = HighlightableButtonNode()
         self.titleNode = ImmediateTextNode()
+        self.titleNode.textAlignment = .center
         self.titleNode.maximumNumberOfLines = 2
         self.titleNode.highlightAttributeAction = { attributes in
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] {

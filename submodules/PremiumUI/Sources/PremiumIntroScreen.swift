@@ -19,6 +19,7 @@ import InAppPurchaseManager
 import ConfettiEffect
 import TextFormat
 import InstantPageCache
+import UniversalMediaPlayer
 
 public enum PremiumSource: Equatable {
     case settings
@@ -35,6 +36,7 @@ public enum PremiumSource: Equatable {
     case chatsPerFolder
     case accounts
     case about
+    case appIcons
     case deeplink(String?)
     case profile(PeerId)
     
@@ -50,6 +52,8 @@ public enum PremiumSource: Equatable {
                 return "no_ads"
             case .upload:
                 return "more_upload"
+            case .appIcons:
+                return "app_icons"
             case .groupsAndChannels:
                 return "double_limits__channels"
             case .pinnedChats:
@@ -91,6 +95,7 @@ enum PremiumPerk: CaseIterable {
     case advancedChatManagement
     case profileBadge
     case animatedUserpics
+    case appIcons
     
     static var allCases: [PremiumPerk] {
         return [
@@ -103,7 +108,8 @@ enum PremiumPerk: CaseIterable {
             .premiumStickers,
             .advancedChatManagement,
             .profileBadge,
-            .animatedUserpics
+            .animatedUserpics,
+            .appIcons
         ]
     }
     
@@ -139,6 +145,8 @@ enum PremiumPerk: CaseIterable {
                 return "profile_badge"
             case .animatedUserpics:
                 return "animated_userpics"
+            case .appIcons:
+                return "app_icon"
         }
     }
     
@@ -164,6 +172,8 @@ enum PremiumPerk: CaseIterable {
                 return strings.Premium_Badge
             case .animatedUserpics:
                 return strings.Premium_Avatar
+            case .appIcons:
+                return strings.Premium_AppIcon
         }
     }
     
@@ -189,6 +199,8 @@ enum PremiumPerk: CaseIterable {
                 return strings.Premium_BadgeInfo
             case .animatedUserpics:
                 return strings.Premium_AvatarInfo
+            case .appIcons:
+                return strings.Premium_AppIconInfo
         }
     }
     
@@ -214,6 +226,8 @@ enum PremiumPerk: CaseIterable {
                 return "Premium/Perk/Badge"
             case .animatedUserpics:
                 return "Premium/Perk/Avatar"
+            case .appIcons:
+                return "Premium/Perk/AppIcon"
         }
     }
 }
@@ -230,7 +244,8 @@ private struct PremiumIntroConfiguration {
             .premiumStickers,
             .advancedChatManagement,
             .profileBadge,
-            .animatedUserpics
+            .animatedUserpics,
+            .appIcons
         ])
     }
     
@@ -258,6 +273,9 @@ private struct PremiumIntroConfiguration {
             }
             if perks.count < 4 {
                 perks = PremiumIntroConfiguration.defaultValue.perks
+            }
+            if !perks.contains(.appIcons) {
+                perks.append(.appIcons)
             }
             return PremiumIntroConfiguration(perks: perks)
         } else {
@@ -778,21 +796,23 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         
         private var disposable: Disposable?
         private(set) var configuration = PremiumIntroConfiguration.defaultValue
+        private(set) var promoConfiguration: PremiumPromoConfiguration?
+        
+        private var preloadDisposableSet =  DisposableSet()
         
         init(context: AccountContext, source: PremiumSource) {
             self.context = context
             
             super.init()
             
-            self.disposable = (context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-            |> map { view -> AppConfiguration in
-                let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
-                return appConfiguration
-            }
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] appConfiguration in
+            self.disposable = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Configuration.App(),
+                TelegramEngine.EngineData.Item.Configuration.PremiumPromo()
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] appConfiguration, promoConfiguration in
                 if let strongSelf = self {
                     strongSelf.configuration = PremiumIntroConfiguration.with(appConfiguration: appConfiguration)
+                    strongSelf.promoConfiguration = promoConfiguration
                     strongSelf.updated(transition: .immediate)
                     
                     var jsonString: String = "{"
@@ -809,9 +829,12 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     }
                     jsonString += "]}}"
                     
-                    
                     if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
                         addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_show", data: json)
+                    }
+                    
+                    for (_, video) in promoConfiguration.videos {
+                        strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())
                     }
                 }
             })
@@ -819,6 +842,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         
         deinit {
             self.disposable?.dispose()
+            self.preloadDisposableSet.dispose()
         }
     }
     
@@ -928,6 +952,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 (UIColor(rgb: 0x9674FF), UIColor(rgb: 0x8C7DFF)),
                 (UIColor(rgb: 0x9674FF), UIColor(rgb: 0x8C7DFF)),
                 (UIColor(rgb: 0x7B88FF), UIColor(rgb: 0x7091FF)),
+                (UIColor(rgb: 0x609DFF), UIColor(rgb: 0x56A5FF)),
+                
                 (UIColor(rgb: 0x609DFF), UIColor(rgb: 0x56A5FF))
             ]
             
@@ -986,6 +1012,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             demoSubject = .profileBadge
                         case .animatedUserpics:
                             demoSubject = .animatedUserpics
+                        case .appIcons:
+                            demoSubject = .appIcons
                         }
                         
                         var dismissImpl: (() -> Void)?
@@ -1091,17 +1119,33 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             size.height += 6.0
             
             let termsFont = Font.regular(13.0)
+            let boldTermsFont = Font.semibold(13.0)
+            let italicTermsFont = Font.italic(13.0)
+            let boldItalicTermsFont = Font.semiboldItalic(13.0)
+            let monospaceTermsFont = Font.monospace(13.0)
             let termsTextColor = environment.theme.list.freeTextColor
             let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
             })
-                                                             
+                       
+            let termsString: MultilineTextComponent.TextContent
+            if context.component.isPremium == true {
+                if let promoConfiguration = context.state.promoConfiguration {
+                    let attributedString = stringWithAppliedEntities(promoConfiguration.status, entities: promoConfiguration.statusEntities, baseColor: termsTextColor, linkColor: environment.theme.list.itemAccentColor, baseFont: termsFont, linkFont: termsFont, boldFont: boldTermsFont, italicFont: italicTermsFont, boldItalicFont: boldItalicTermsFont, fixedFont: monospaceTermsFont, blockQuoteFont: termsFont)
+                    termsString = .plain(attributedString)
+                } else {
+                    termsString = .plain(NSAttributedString())
+                }
+            } else {
+                termsString = .markdown(
+                    text: strings.Premium_Terms,
+                    attributes: termsMarkdownAttributes
+                )
+            }
+            
             let termsText = termsText.update(
                 component: MultilineTextComponent(
-                    text: .markdown(
-                        text: context.component.isPremium == true ? strings.Premium_ChargeInfo("$4.99", "–").string : strings.Premium_Terms,
-                        attributes: termsMarkdownAttributes
-                    ),
+                    text: termsString,
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.0,
@@ -1448,7 +1492,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         present: context.component.present,
                         buy: { [weak state] in
                             state?.buy()
-                        }, updateIsFocused: { [weak state] isFocused in
+                        },
+                        updateIsFocused: { [weak state] isFocused in
                             state?.updateIsFocused(isFocused)
                         }
                     )),

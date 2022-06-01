@@ -746,6 +746,7 @@ public enum PremiumIntroSource {
     case folders
     case chatsPerFolder
     case accounts
+    case appIcons
     case about
     case deeplink(String?)
     case profile(PeerId)

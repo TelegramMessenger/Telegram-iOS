@@ -121,8 +121,12 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                 }
             }
         }
-                
+               
+        private var ignoreScrolling: Bool = false
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            guard !self.ignoreScrolling else {
+                return
+            }
             let contentOffset = (scrollView.contentOffset.y + scrollView.contentInset.top - scrollView.contentSize.height) * -1.0
             if contentOffset >= scrollView.contentSize.height {
                 self.dismiss?(false)
@@ -194,11 +198,13 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                 containerSize: CGSize(width: availableSize.width, height: .greatestFiniteMagnitude)
             )
             
+            self.ignoreScrolling = true
             transition.setFrame(view: self.contentView, frame: CGRect(origin: .zero, size: contentSize), completion: nil)
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: contentSize.width, height: contentSize.height + 1000.0)), completion: nil)
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)
             self.scrollView.contentSize = contentSize
             self.scrollView.contentInset = UIEdgeInsets(top: max(0.0, availableSize.height - contentSize.height) + contentSize.height, left: 0.0, bottom: 0.0, right: 0.0)
+            self.ignoreScrolling = false
             
             if environment[SheetComponentEnvironment.self].value.isDisplaying, !self.previousIsDisplaying, let _ = transition.userData(ViewControllerComponentContainer.AnimateInTransition.self) {
                 self.animateIn()

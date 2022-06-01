@@ -247,7 +247,7 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
             UIColor(rgb: 0xe46ace)
         ], foregroundColor: .white), height: 50.0, cornerRadius: 11.0, gloss: true)
         self.proceedButton.iconPosition = .right
-        self.proceedButton.iconSpacing = 6.0
+        self.proceedButton.iconSpacing = 4.0
         self.proceedButton.animation = "premium_unlock"
         
         self.cancelButton = HighlightableButtonNode()
