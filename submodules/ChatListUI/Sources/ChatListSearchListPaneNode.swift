@@ -1401,6 +1401,11 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 var entries: [ChatListSearchEntry] = []
                 var index = 0
                 
+                var recentPeers = recentPeers
+                if query != nil {
+                    recentPeers = []
+                }
+                
                 let _ = currentRemotePeers.swap((foundRemotePeers.0, foundRemotePeers.1))
                 
                 let filteredPeer: (EnginePeer, EnginePeer) -> Bool = { peer, accountPeer in

@@ -1137,7 +1137,7 @@
     if ([self.item.asset isKindOfClass:[TGMediaAsset class]]) {
         itemSignal = [TGMediaAssetImageSignals playerItemForVideoAsset:(TGMediaAsset *)self.item.asset];
     }
-    else if (self.item.avAsset != nil) {
+    else if ([self.item respondsToSelector:@selector(avAsset)] && self.item.avAsset != nil) {
         itemSignal = [self.item.avAsset mapToSignal:^SSignal *(AVAsset *avAsset) {
             if ([avAsset isKindOfClass:[AVAsset class]]) {
                 return [SSignal single:[AVPlayerItem playerItemWithAsset:avAsset]];
