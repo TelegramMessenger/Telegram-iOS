@@ -801,7 +801,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 reactionButtonPosition.y += item.size.height + 6.0
                             }
                                 
-                            if item.node.view.superview == nil {
+                            if item.node.view.superview != strongSelf.view {
+                                assert(item.node.view.superview == nil)
                                 strongSelf.view.addSubview(item.node.view)
                                 item.node.view.frame = CGRect(origin: reactionButtonPosition, size: item.size)
                                 
@@ -1072,6 +1073,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     if animation.isAnimated {
                                         node.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
                                         node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
+                                            node?.layer.removeAllAnimations()
                                             node?.removeFromSupernode()
                                         })
                                     } else {

@@ -308,7 +308,8 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                         strongSelf.backgroundMaskButtons[item.value] = itemMaskView
                     }
                     
-                    if item.node.view.superview == nil {
+                    if item.node.view.superview != strongSelf.view {
+                        assert(item.node.view.superview == nil)
                         strongSelf.view.addSubview(item.node.view)
                         if animation.isAnimated {
                             item.node.view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
@@ -336,15 +337,18 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                     }
                     item.node.view.additionalActivationProgressLayer = itemMaskView.layer
                     
-                    if itemMaskView.superview == nil {
-                        strongSelf.backgroundMaskView?.addSubview(itemMaskView)
-                        if animation.isAnimated {
-                            itemMaskView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-                            itemMaskView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    if let backgroundMaskView = strongSelf.backgroundMaskView {
+                        if itemMaskView.superview != backgroundMaskView {
+                            assert(itemMaskView.superview == nil)
+                            backgroundMaskView.addSubview(itemMaskView)
+                            if animation.isAnimated {
+                                itemMaskView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                                itemMaskView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
+                            itemMaskView.frame = itemMaskFrame
+                        } else {
+                            animation.animator.updateFrame(layer: itemMaskView.layer, frame: itemMaskFrame, completion: nil)
                         }
-                        itemMaskView.frame = itemMaskFrame
-                    } else {
-                        animation.animator.updateFrame(layer: itemMaskView.layer, frame: itemMaskFrame, completion: nil)
                     }
                 }
                 
@@ -355,6 +359,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                         if animation.isAnimated {
                             view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                             view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] _ in
+                                view?.layer.removeAllAnimations()
                                 view?.removeFromSuperview()
                             })
                         } else {

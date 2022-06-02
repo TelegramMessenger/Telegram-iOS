@@ -835,6 +835,7 @@ public final class ReactionNodePool {
     
     func putBack(view: ReactionButtonAsyncNode) {
         assert(view.superview == nil)
+        assert(view.layer.superlayer == nil)
         
         if self.views.count < 64 {
             view.reset()
@@ -844,7 +845,12 @@ public final class ReactionNodePool {
     
     func take() -> Item {
         if !self.views.isEmpty {
-            return Item(view: self.views.removeLast(), pool: self)
+            let view = self.views.removeLast()
+            view.layer.removeAllAnimations()
+            view.alpha = 1.0
+            view.isHidden = false
+            view.transform = .identity
+            return Item(view: view, pool: self)
         } else {
             return Item(view: ReactionButtonAsyncNode(), pool: self)
         }
