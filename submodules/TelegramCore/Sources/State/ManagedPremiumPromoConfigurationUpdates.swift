@@ -54,7 +54,7 @@ private func updatePremiumPromoConfiguration(transaction: Transaction, _ f: (Pre
 private extension PremiumPromoConfiguration {
     init(apiPremiumPromo: Api.help.PremiumPromo) {
         switch apiPremiumPromo {
-            case let .premiumPromo(statusText, statusEntities, videoSections, videoFiles):
+            case let .premiumPromo(statusText, statusEntities, videoSections, videoFiles, _, _):
                 self.status = statusText
                 self.statusEntities = messageTextEntitiesFromApiEntities(statusEntities)
                 

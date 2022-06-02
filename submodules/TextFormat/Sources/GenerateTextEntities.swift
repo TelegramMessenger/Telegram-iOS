@@ -155,7 +155,7 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
                 if !emoji.isEmpty && emoji.isSingleEmoji {
                     let mappedRange = NSRange(substringRange, in: text.string)
                     
-                    entities.append(MessageTextEntity(range: mappedRange.lowerBound ..< mappedRange.upperBound, type: .AnimatedEmoji))
+                    entities.append(MessageTextEntity(range: mappedRange.lowerBound ..< mappedRange.upperBound, type: .AnimatedEmoji(nil)))
                     
                     count += 1
                     if count >= maxAnimatedEmojisInText {

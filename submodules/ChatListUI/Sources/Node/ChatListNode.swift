@@ -1274,6 +1274,18 @@ public final class ChatListNode: ListView {
         let previousActivities = Atomic<ChatListNodePeerInputActivities?>(value: nil)
         self.activityStatusesDisposable = (context.account.allPeerInputActivities()
         |> mapToSignal { activitiesByPeerId -> Signal<[EnginePeer.Id: [(EnginePeer, PeerInputActivity)]], NoError> in
+            var activitiesByPeerId = activitiesByPeerId
+            for key in activitiesByPeerId.keys {
+                activitiesByPeerId[key]?.removeAll(where: { _, activity in
+                    switch activity {
+                    case .interactingWithEmoji:
+                        return true
+                    default:
+                        return false
+                    }
+                })
+            }
+            
             var foundAllPeers = true
             var cachedResult: [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] = [:]
             previousPeerCache.with { dict -> Void in

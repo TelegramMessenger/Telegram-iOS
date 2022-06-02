@@ -6350,13 +6350,13 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
-                static func requestRecurrentPayment(userId: Int64, recurrentInitCharge: String, invoiceMedia: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func requestRecurringPayment(userId: Api.InputUser, recurringInitCharge: String, invoiceMedia: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1329030023)
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeString(recurrentInitCharge, buffer: buffer, boxed: false)
+                    buffer.appendInt32(342791565)
+                    userId.serialize(buffer, true)
+                    serializeString(recurringInitCharge, buffer: buffer, boxed: false)
                     invoiceMedia.serialize(buffer, true)
-                    return (FunctionDescription(name: "payments.requestRecurrentPayment", parameters: [("userId", String(describing: userId)), ("recurrentInitCharge", String(describing: recurrentInitCharge)), ("invoiceMedia", String(describing: invoiceMedia))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "payments.requestRecurringPayment", parameters: [("userId", String(describing: userId)), ("recurringInitCharge", String(describing: recurringInitCharge)), ("invoiceMedia", String(describing: invoiceMedia))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

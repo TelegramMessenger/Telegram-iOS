@@ -41,8 +41,9 @@ public final class AudioTranscriptionButtonComponent: Component {
         private var component: AudioTranscriptionButtonComponent?
         
         private let backgroundLayer: SimpleLayer
-        private var inProgressLayer: SimpleShapeLayer?
         private let animationView: ComponentHostView<Empty>
+        
+        private var progressAnimationView: ComponentHostView<Empty>?
         
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
@@ -76,53 +77,20 @@ public final class AudioTranscriptionButtonComponent: Component {
             if self.component?.transcriptionState != component.transcriptionState {
                 switch component.transcriptionState {
                 case .inProgress:
-                    if self.inProgressLayer == nil {
-                        let inProgressLayer = SimpleShapeLayer()
-                        inProgressLayer.isOpaque = false
-                        inProgressLayer.backgroundColor = nil
-                        inProgressLayer.fillColor = nil
-                        inProgressLayer.lineCap = .round
-                        inProgressLayer.lineWidth = 1.0
-                        
-                        let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: CGSize(width: 30.0, height: 30.0)), cornerRadius: 9.0).cgPath
-                        inProgressLayer.path = path
-                        
-                        self.inProgressLayer = inProgressLayer
-                        
-                        inProgressLayer.didEnterHierarchy = { [weak inProgressLayer] in
-                            guard let inProgressLayer = inProgressLayer else {
-                                return
-                            }
-                            let endAnimation = CABasicAnimation(keyPath: "strokeEnd")
-                            endAnimation.fromValue = CGFloat(0.0) as NSNumber
-                            endAnimation.toValue = CGFloat(1.0) as NSNumber
-                            endAnimation.duration = 1.25
-                            endAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                            endAnimation.fillMode = .forwards
-                            endAnimation.repeatCount = .infinity
-                            inProgressLayer.add(endAnimation, forKey: "strokeEnd")
-                            
-                            let startAnimation = CABasicAnimation(keyPath: "strokeStart")
-                            startAnimation.fromValue = CGFloat(0.0) as NSNumber
-                            startAnimation.toValue = CGFloat(1.0) as NSNumber
-                            startAnimation.duration = 1.25
-                            startAnimation.timingFunction = CAMediaTimingFunction(name: .easeIn)
-                            startAnimation.fillMode = .forwards
-                            startAnimation.repeatCount = .infinity
-                            inProgressLayer.add(startAnimation, forKey: "strokeStart")
-                        }
-                        
-                        self.layer.addSublayer(inProgressLayer)
+                    if self.progressAnimationView == nil {
+                        let progressAnimationView = ComponentHostView<Empty>()
+                        self.progressAnimationView = progressAnimationView
+                        self.addSubview(progressAnimationView)
                     }
                 default:
-                    if let inProgressLayer = self.inProgressLayer {
-                        self.inProgressLayer = nil
+                    if let progressAnimationView = self.progressAnimationView {
+                        self.progressAnimationView = nil
                         if case .none = transition.animation {
-                            inProgressLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak inProgressLayer] _ in
-                                inProgressLayer?.removeFromSuperlayer()
+                            progressAnimationView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak progressAnimationView] _ in
+                                progressAnimationView?.removeFromSuperview()
                             })
                         } else {
-                            inProgressLayer.removeFromSuperlayer()
+                            progressAnimationView.removeFromSuperview()
                         }
                     }
                 }
@@ -162,13 +130,29 @@ public final class AudioTranscriptionButtonComponent: Component {
             }
             
             self.backgroundLayer.backgroundColor = component.theme.bubble.withWallpaper.reactionInactiveBackground.cgColor
-            self.inProgressLayer?.strokeColor = foregroundColor.cgColor
             
             self.component = component
             
             self.backgroundLayer.frame = CGRect(origin: CGPoint(), size: size)
-            if let inProgressLayer = self.inProgressLayer {
-                inProgressLayer.frame = CGRect(origin: CGPoint(), size: size)
+            if let progressAnimationView = self.progressAnimationView {
+                let progressFrame = CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0)
+                let _ = progressAnimationView.update(
+                    transition: transition,
+                    component: AnyComponent(LottieAnimationComponent(
+                        animation: LottieAnimationComponent.Animation(
+                            name: "voicets_progress",
+                            colors: [
+                                "Rectangle 60.Rectangle 60.Stroke 1": foregroundColor
+                            ],
+                            mode: .animating(loop: true)
+                        ),
+                        size: progressFrame.size
+                    )),
+                    environment: {},
+                    containerSize: progressFrame.size
+                )
+                
+                progressAnimationView.frame = progressFrame
             }
             
             return CGSize(width: min(availableSize.width, size.width), height: min(availableSize.height, size.height))

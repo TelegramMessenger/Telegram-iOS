@@ -212,13 +212,13 @@ public extension Api.help {
 }
 public extension Api.help {
     enum PremiumPromo: TypeConstructorDescription {
-        case premiumPromo(statusText: String, statusEntities: [Api.MessageEntity], videoSections: [String], videos: [Api.Document])
+        case premiumPromo(statusText: String, statusEntities: [Api.MessageEntity], videoSections: [String], videos: [Api.Document], currency: String, monthlyAmount: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .premiumPromo(let statusText, let statusEntities, let videoSections, let videos):
+                case .premiumPromo(let statusText, let statusEntities, let videoSections, let videos, let currency, let monthlyAmount):
                     if boxed {
-                        buffer.appendInt32(1065019118)
+                        buffer.appendInt32(-533328101)
                     }
                     serializeString(statusText, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -236,14 +236,16 @@ public extension Api.help {
                     for item in videos {
                         item.serialize(buffer, true)
                     }
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(monthlyAmount, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .premiumPromo(let statusText, let statusEntities, let videoSections, let videos):
-                return ("premiumPromo", [("statusText", String(describing: statusText)), ("statusEntities", String(describing: statusEntities)), ("videoSections", String(describing: videoSections)), ("videos", String(describing: videos))])
+                case .premiumPromo(let statusText, let statusEntities, let videoSections, let videos, let currency, let monthlyAmount):
+                return ("premiumPromo", [("statusText", String(describing: statusText)), ("statusEntities", String(describing: statusEntities)), ("videoSections", String(describing: videoSections)), ("videos", String(describing: videos)), ("currency", String(describing: currency)), ("monthlyAmount", String(describing: monthlyAmount))])
     }
     }
     
@@ -262,12 +264,18 @@ public extension Api.help {
             if let _ = reader.readInt32() {
                 _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
             }
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Int64?
+            _6 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.help.PremiumPromo.premiumPromo(statusText: _1!, statusEntities: _2!, videoSections: _3!, videos: _4!)
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.help.PremiumPromo.premiumPromo(statusText: _1!, statusEntities: _2!, videoSections: _3!, videos: _4!, currency: _5!, monthlyAmount: _6!)
             }
             else {
                 return nil
