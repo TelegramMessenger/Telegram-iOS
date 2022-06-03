@@ -133,9 +133,9 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        for reaction in reactions {
-            sortedReactions.append(reaction)
-        }
+//        for reaction in reactions {
+//            sortedReactions.append(reaction)
+//        }
         
         self.reactions = sortedReactions
         
@@ -542,7 +542,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             let distance = abs(relativeAngle) / CGFloat.pi
             
             var updatedAngle = angle
-            updatedAngle += 10 * cos(updatedAngle)
+//            updatedAngle += 10 * cos(updatedAngle)
                         
             let point = CGPoint(
                 x: cos(updatedAngle),
