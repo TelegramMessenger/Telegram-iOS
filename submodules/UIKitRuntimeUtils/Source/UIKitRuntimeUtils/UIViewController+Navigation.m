@@ -102,7 +102,9 @@ static bool notyfyingShiftState = false;
 - (void)_65087dc8_setPreferredFrameRateRange:(CAFrameRateRange)range API_AVAILABLE(ios(15.0)) {
     if ([self associatedObjectForKey:forceFullRefreshRateKey] != nil) {
         float maxFps = [UIScreen mainScreen].maximumFramesPerSecond;
-        range = CAFrameRateRangeMake(maxFps, maxFps, maxFps);
+        if (maxFps > 61.0f) {
+            range = CAFrameRateRangeMake(maxFps, maxFps, maxFps);
+        }
     }
     
     [self _65087dc8_setPreferredFrameRateRange:range];
@@ -127,7 +129,9 @@ static bool notyfyingShiftState = false;
             
             if (@available(iOS 15.0, *)) {
                 float maxFps = [UIScreen mainScreen].maximumFramesPerSecond;
-                [displayLink setPreferredFrameRateRange:CAFrameRateRangeMake(maxFps, maxFps, maxFps)];
+                if (maxFps > 61.0f) {
+                    [displayLink setPreferredFrameRateRange:CAFrameRateRangeMake(maxFps, maxFps, maxFps)];
+                }
             }
         }
     }

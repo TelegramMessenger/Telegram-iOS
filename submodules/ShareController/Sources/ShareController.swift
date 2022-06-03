@@ -424,8 +424,21 @@ public final class ShareController: ViewController {
                 if case .saveToCameraRoll = preferredAction {
                     self.actionIsMediaSaving = true
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
-                        self?.saveToCameraRoll(messages: messages)
-                        self?.actionCompleted?()
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        let actionCompleted = strongSelf.actionCompleted
+                        strongSelf.saveToCameraRoll(messages: messages, completion: {
+                            actionCompleted?()
+                            
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.controllerNode.animateOut(shared: false, completion: {
+                                self?.presentingViewController?.dismiss(animated: false, completion: nil)
+                            })
+                        })
                     })
                 } else if let message = messages.first {
                     let groupingKey: Int64? = message.groupingKey
@@ -913,7 +926,7 @@ public final class ShareController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
-    private func saveToCameraRoll(messages: [Message]) {
+    private func saveToCameraRoll(messages: [Message], completion: @escaping () -> Void) {
         let postbox = self.currentAccount.postbox
         let signals: [Signal<Float, NoError>] = messages.compactMap { message -> Signal<Float, NoError>? in
             if let media = message.media.first {
@@ -938,7 +951,7 @@ public final class ShareController: ViewController {
                 total /= Float(values.count)
                 return total
             }
-            self.controllerNode.transitionToProgressWithValue(signal: total)
+            self.controllerNode.transitionToProgressWithValue(signal: total, completion: completion)
         }
     }
     
@@ -950,7 +963,7 @@ public final class ShareController: ViewController {
         } else {
             context = self.sharedContext.makeTempAccountContext(account: self.currentAccount)
         }
-        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: .standalone(media: media)) |> map(Optional.init), dismissImmediately: true)
+        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: .standalone(media: media)) |> map(Optional.init), dismissImmediately: true, completion: {})
     }
     
     private func saveToCameraRoll(mediaReference: AnyMediaReference) {
@@ -960,7 +973,7 @@ public final class ShareController: ViewController {
         } else {
             context = self.sharedContext.makeTempAccountContext(account: self.currentAccount)
         }
-        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference) |> map(Optional.init), dismissImmediately: true)
+        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference) |> map(Optional.init), dismissImmediately: true, completion: {})
     }
     
     private func switchToAccount(account: Account, animateIn: Bool) {

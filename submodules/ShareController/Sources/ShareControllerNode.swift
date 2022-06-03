@@ -696,7 +696,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 if fromForeignApp, case let .preparing(long) = status, !transitioned {
                     transitioned = true
                     if long {
-                        strongSelf.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true), fastOut: true)
+                        strongSelf.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true, account: strongSelf.context?.account, sharedContext: strongSelf.sharedContext), fastOut: true)
                     } else {
                         strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
                     }
@@ -1006,7 +1006,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
         
-        self.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true), fastOut: true)
+        self.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true, account: self.context?.account, sharedContext: self.sharedContext), fastOut: true)
         let timestamp = CACurrentMediaTime()
         self.shareDisposable.set(signal.start(completed: { [weak self] in
             let minDelay = 0.6
@@ -1021,7 +1021,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }))
     }
     
-    func transitionToProgressWithValue(signal: Signal<Float?, NoError>, dismissImmediately: Bool = false) {
+    func transitionToProgressWithValue(signal: Signal<Float?, NoError>, dismissImmediately: Bool = false, completion: @escaping () -> Void) {
         self.inputFieldNode.deactivateInput()
         
         if dismissImmediately {
@@ -1034,6 +1034,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 if let strongSelf = self {
                     strongSelf.dismiss?(true)
                 }
+                
+                completion()
             }))
         } else {
             let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
@@ -1066,6 +1068,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     contentNode.state = .progress(status)
                 }
             }, completed: { [weak self] in
+                completion()
+                
                 guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainer else {
                     return
                 }

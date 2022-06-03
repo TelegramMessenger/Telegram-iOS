@@ -34,22 +34,7 @@ public enum EngineAudioTranscriptionResult {
     case error
 }
 
-class AudioTranscriptionManager {
-    private var pendingMapping: [Int64: MessageId] = [:]
-    
-    init() {
-    }
-    
-    func addPendingMapping(transcriptionId: Int64, messageId: MessageId) {
-        self.pendingMapping[transcriptionId] = messageId
-    }
-    
-    func getPendingMapping(transcriptionId: Int64) -> MessageId? {
-        return self.pendingMapping[transcriptionId]
-    }
-}
-
-func _internal_transcribeAudio(postbox: Postbox, network: Network, audioTranscriptionManager: Atomic<AudioTranscriptionManager>, messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
+func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -58,28 +43,31 @@ func _internal_transcribeAudio(postbox: Postbox, network: Network, audioTranscri
             return .single(.error)
         }
         return network.request(Api.functions.messages.transcribeAudio(peer: inputPeer, msgId: messageId.id))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.messages.TranscribedAudio?, NoError> in
-            return .single(nil)
+        |> map { result -> Result<Api.messages.TranscribedAudio, AudioTranscriptionMessageAttribute.TranscriptionError> in
+            return .success(result)
+        }
+        |> `catch` { error -> Signal<Result<Api.messages.TranscribedAudio, AudioTranscriptionMessageAttribute.TranscriptionError>, NoError> in
+            let mappedError: AudioTranscriptionMessageAttribute.TranscriptionError
+            if error.errorDescription == "MSG_VOICE_TOO_LONG" {
+                mappedError = .tooLong
+            } else {
+                mappedError = .generic
+            }
+            return .single(.failure(mappedError))
         }
         |> mapToSignal { result -> Signal<EngineAudioTranscriptionResult, NoError> in
             return postbox.transaction { transaction -> EngineAudioTranscriptionResult in
                 let updatedAttribute: AudioTranscriptionMessageAttribute
-                if let result = result {
-                    switch result {
+                switch result {
+                case let .success(transcribedAudio):
+                    switch transcribedAudio {
                     case let .transcribedAudio(flags, transcriptionId, text):
                         let isPending = (flags & (1 << 0)) != 0
                         
-                        if isPending {
-                            audioTranscriptionManager.with { audioTranscriptionManager in
-                                audioTranscriptionManager.addPendingMapping(transcriptionId: transcriptionId, messageId: messageId)
-                            }
-                        }
-                        
-                        updatedAttribute = AudioTranscriptionMessageAttribute(id: transcriptionId, text: text, isPending: isPending, didRate: false)
+                        updatedAttribute = AudioTranscriptionMessageAttribute(id: transcriptionId, text: text, isPending: isPending, didRate: false, error: nil)
                     }
-                } else {
-                    updatedAttribute = AudioTranscriptionMessageAttribute(id: 0, text: "", isPending: false, didRate: false)
+                case let .failure(error):
+                    updatedAttribute = AudioTranscriptionMessageAttribute(id: 0, text: "", isPending: false, didRate: false, error: error)
                 }
                     
                 transaction.updateMessage(messageId, update: { currentMessage in
@@ -91,7 +79,7 @@ func _internal_transcribeAudio(postbox: Postbox, network: Network, audioTranscri
                     return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
                 
-                if let _ = result {
+                if updatedAttribute.error == nil {
                     return .success
                 } else {
                     return .error

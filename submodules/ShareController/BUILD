@@ -34,6 +34,7 @@ swift_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
     ],
     visibility = [
         "//visibility:public",
