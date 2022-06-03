@@ -541,7 +541,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             let relativeAngle = calculateRelativeAngle(angle)
             let distance = abs(relativeAngle) / CGFloat.pi
             
-            var updatedAngle = angle
+            let updatedAngle = angle
 //            updatedAngle += 10 * cos(updatedAngle)
                         
             let point = CGPoint(
