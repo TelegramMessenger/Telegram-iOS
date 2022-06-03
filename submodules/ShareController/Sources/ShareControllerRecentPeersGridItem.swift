@@ -83,7 +83,7 @@ final class ShareControllerRecentPeersGridItemNode: GridItemNode {
         
         let bounds = self.bounds
         
-        self.peersNode?.frame = CGRect(origin: CGPoint(), size: bounds.size)
+        self.peersNode?.frame = CGRect(origin: CGPoint(x: -8.0, y: 0.0), size: CGSize(width: bounds.width + 8.0, height: bounds.height))
         self.peersNode?.updateLayout(size: bounds.size, leftInset: 0.0, rightInset: 0.0)
     }
 }

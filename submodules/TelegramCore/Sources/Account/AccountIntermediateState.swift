@@ -113,7 +113,7 @@ enum AccountStateMutationOperation {
     case UpdateGroupCall(peerId: PeerId, call: Api.GroupCall)
     case UpdateAutoremoveTimeout(peer: Api.Peer, value: CachedPeerAutoremoveTimeout.Value?)
     case UpdateAttachMenuBots
-    case UpdateAudioTranscription(id: Int64, isPending: Bool, text: String)
+    case UpdateAudioTranscription(messageId: MessageId, id: Int64, isPending: Bool, text: String)
 }
 
 struct HoleFromPreviousState {
@@ -509,8 +509,8 @@ struct AccountMutableState {
         self.addOperation(.UpdateAttachMenuBots)
     }
     
-    mutating func updateAudioTranscription(id: Int64, isPending: Bool, text: String) {
-        self.addOperation(.UpdateAudioTranscription(id: id, isPending: isPending, text: text))
+    mutating func updateAudioTranscription(messageId: MessageId, id: Int64, isPending: Bool, text: String) {
+        self.addOperation(.UpdateAudioTranscription(messageId: messageId, id: id, isPending: isPending, text: text))
     }
     
     mutating func addDismissedWebView(queryId: Int64) {

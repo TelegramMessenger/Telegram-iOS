@@ -2494,6 +2494,13 @@ Unused sets are archived when you add more.";
 
 "Message.PaymentSent" = "Payment: %@";
 "Notification.PaymentSent" = "You have just successfully transferred {amount} to {name} for {title}";
+"Notification.PaymentSentNoTitle" = "You have just successfully transferred {amount} to {name}";
+
+"Notification.PaymentSentRecurringInit" = "You have just successfully transferred {amount} to {name} for {title} and allowed future reccurrent payments";
+"Notification.PaymentSentRecurringInitNoTitle" = "You have just successfully transferred {amount} to {name} and allowed future reccurrent payments";
+
+"Notification.PaymentSentRecurringUsed" = "You have just successfully transferred {amount} to {name} for {title} via recurrent payments";
+"Notification.PaymentSentRecurringUsedNoTitle" = "You have just successfully transferred {amount} to {name} via recurrent payments";
 
 "Common.NotNow" = "Not Now";
 
@@ -7679,3 +7686,8 @@ Sorry for the inconvenience.";
 "WebApp.Settings" = "Settings";
 
 "Bot.AccepRecurrentInfo" = "I accept [Terms of Service]() of **%1$@**";
+
+"Chat.AudioTranscriptionRateAction" = "Rate Transcription";
+"Chat.AudioTranscriptionFeedbackTip" = "Thank you for your feedback.";
+"Message.AudioTranscription.ErrorEmpty" = "No speech detected";
+"Message.AudioTranscription.ErrorTooLong" = "The audio is too long";

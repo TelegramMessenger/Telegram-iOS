@@ -1118,7 +1118,7 @@ public final class MessageHistoryView {
                 self.maxReadIndex = nil
             }
         case let .external(input):
-            if let maxReadMesageId = input.maxReadIncomingMessageId {
+            if let maxReadMessageId = input.maxReadIncomingMessageId {
                 var maxIndex: MessageIndex?
                 
                 let hasUnread = true
@@ -1128,15 +1128,15 @@ public final class MessageHistoryView {
                         peerIds.insert(entry.index.id.peerId)
                     }
                     for peerId in peerIds {
-                        if peerId != maxReadMesageId.peerId {
+                        if peerId != maxReadMessageId.peerId {
                             continue
                         }
-                        let namespace = maxReadMesageId.namespace
+                        let namespace = maxReadMessageId.namespace
                         
                         var maxNamespaceIndex: MessageIndex?
                         var index = entries.count - 1
                         for entry in entries.reversed() {
-                            if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace && entry.index.id <= maxReadMesageId {
+                            if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace && entry.index.id <= maxReadMessageId {
                                 maxNamespaceIndex = entry.index
                                 break
                             }

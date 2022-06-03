@@ -715,8 +715,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 
                 let _ = context.engine.messages.rateAudioTranscription(messageId: message.id, id: audioTranscription.id, isGood: value).start()
                 
-                //TODO:localize
-                let content: UndoOverlayContent = .info(title: nil, text: "Thank you for your feedback.")
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let content: UndoOverlayContent = .info(title: nil, text: presentationData.strings.Chat_AudioTranscriptionFeedbackTip)
                 controllerInteraction.displayUndo(content)
             }), false), at: 0)
             actions.insert(.separator, at: 1)
@@ -2423,8 +2423,7 @@ private final class ChatRateTranscriptionContextItemNode: ASDisplayNode, Context
         self.textNode.isAccessibilityElement = false
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
-        //TODO:localizable
-        self.textNode.attributedText = NSAttributedString(string: "Rate Transcription", font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
+        self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Chat_AudioTranscriptionRateAction, font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
         self.textNode.maximumNumberOfLines = 1
         
         self.upButtonImageNode = ASImageNode()

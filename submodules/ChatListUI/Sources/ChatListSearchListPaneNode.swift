@@ -1018,31 +1018,36 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let selectionPromise = self.selectedMessagesPromise
         
         let previousRecentlySearchedPeerOrder = Atomic<[EnginePeer.Id]>(value: [])
-        let fixedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
-        |> map { peers -> [RecentlySearchedPeer] in
-            var result: [RecentlySearchedPeer] = []
-            let _ = previousRecentlySearchedPeerOrder.modify { current in
-                var updated: [EnginePeer.Id] = []
-                for id in current {
-                    inner: for peer in peers {
-                        if peer.peer.peerId == id {
-                            updated.append(id)
-                            result.append(peer)
-                            break inner
+        let fixedRecentlySearchedPeers: Signal<[RecentlySearchedPeer], NoError>
+        if case .chats = key {
+            fixedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
+            |> map { peers -> [RecentlySearchedPeer] in
+                var result: [RecentlySearchedPeer] = []
+                let _ = previousRecentlySearchedPeerOrder.modify { current in
+                    var updated: [EnginePeer.Id] = []
+                    for id in current {
+                        inner: for peer in peers {
+                            if peer.peer.peerId == id {
+                                updated.append(id)
+                                result.append(peer)
+                                break inner
+                            }
                         }
                     }
-                }
-                for peer in peers.reversed() {
-                    if !updated.contains(peer.peer.peerId) {
-                        updated.insert(peer.peer.peerId, at: 0)
-                        result.insert(peer, at: 0)
+                    for peer in peers.reversed() {
+                        if !updated.contains(peer.peer.peerId) {
+                            updated.insert(peer.peer.peerId, at: 0)
+                            result.insert(peer, at: 0)
+                        }
                     }
+                    return updated
                 }
-                return updated
+                return result
             }
-            return result
+        } else {
+            fixedRecentlySearchedPeers = .single([])
         }
-        
+            
         let downloadItems: Signal<(inProgressItems: [DownloadItem], doneItems: [RenderedRecentDownloadItem]), NoError>
         if key == .downloads {
             var firstTime = true
@@ -1191,7 +1196,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             
             let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
             let foundLocalPeers: Signal<(peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>), NoError>
-            if let query = query {
+            if let query = query, case .chats = key {
                 let fixedOrRemovedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
                 |> map { peers -> [RecentlySearchedPeer] in
                     let allIds = peers.map(\.peer.peerId)

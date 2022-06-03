@@ -33,7 +33,7 @@ private struct FetchControls {
 
 private enum TranscribedText {
     case success(text: String, isPending: Bool)
-    case error
+    case error(AudioTranscriptionMessageAttribute.TranscriptionError)
 }
 
 private func transcribedText(message: Message) -> TranscribedText? {
@@ -45,7 +45,7 @@ private func transcribedText(message: Message) -> TranscribedText? {
                 if attribute.isPending {
                     return nil
                 } else {
-                    return .error
+                    return .error(attribute.error ?? .generic)
                 }
             }
         }
@@ -413,7 +413,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                         
                         if let result = result {
-                            let _ = arguments.context.engine.messages.storeLocallyTranscribedAudio(messageId: arguments.message.id, text: result.text, isFinal: result.isFinal).start()
+                            let _ = arguments.context.engine.messages.storeLocallyTranscribedAudio(messageId: arguments.message.id, text: result.text, isFinal: result.isFinal, error: nil).start()
                         } else {
                             strongSelf.audioTranscriptionState = .collapsed
                             strongSelf.requestUpdateLayout(true)
@@ -658,10 +658,16 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             resultText += " [...]"
                         }
                         textString = NSAttributedString(string: resultText, font: textFont, textColor: messageTheme.primaryTextColor)
-                    case .error:
+                    case let .error(error):
                         let errorTextFont = Font.regular(floor(arguments.presentationData.fontSize.baseDisplaySize * 15.0 / 17.0))
-                        //TODO:localize
-                        textString = NSAttributedString(string: "No speech detected", font: errorTextFont, textColor: messageTheme.secondaryTextColor)
+                        let errorText: String
+                        switch error {
+                        case .generic:
+                            errorText = arguments.presentationData.strings.Message_AudioTranscription_ErrorEmpty
+                        case .tooLong:
+                            errorText = arguments.presentationData.strings.Message_AudioTranscription_ErrorTooLong
+                        }
+                        textString = NSAttributedString(string: errorText, font: errorTextFont, textColor: messageTheme.secondaryTextColor)
                     }
                 } else {
                     textString = nil
