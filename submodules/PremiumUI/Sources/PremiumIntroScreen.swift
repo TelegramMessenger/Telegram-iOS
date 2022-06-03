@@ -1158,7 +1158,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     tapAction: { attributes, _ in
                         if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String,
                            let controller = environment.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
-                            if url == "cancel" {
+                            if url.hasPrefix("https://") {
+                                controller.context.sharedContext.openExternalUrl(context: controller.context, urlContext: .generic, url: url, forceExternal: true, presentationData: controller.context.sharedContext.currentPresentationData.with({$0}), navigationController: nil, dismissInput: {})
+                            } else if url == "cancel" {
                                 
                             } else {
                                 let context = controller.context
@@ -1362,6 +1364,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         
                     }, completed: { [weak self] in
                         if let strongSelf = self {
+                            strongSelf.isPremium = true
+                            strongSelf.updated(transition: .easeInOut(duration: 0.25))
                             strongSelf.completion()
                         }
                     }))
@@ -1631,13 +1635,40 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 context.add(bottomPanel
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height / 2.0))
                     .opacity(bottomPanelAlpha)
+                    .disappear(Transition.Disappear { view, transition, completion in
+                        if case .none = transition.animation {
+                            completion()
+                            return
+                        }
+                        view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: bottomPanel.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
+                            completion()
+                        })
+                    })
                 )
                 context.add(bottomSeparator
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height))
                     .opacity(bottomPanelAlpha)
+                    .disappear(Transition.Disappear { view, transition, completion in
+                        if case .none = transition.animation {
+                            completion()
+                            return
+                        }
+                        view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: bottomPanel.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
+                            completion()
+                        })
+                    })
                 )
                 context.add(button
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height + bottomPanelPadding + button.size.height / 2.0))
+                    .disappear(Transition.Disappear { view, transition, completion in
+                        if case .none = transition.animation {
+                            completion()
+                            return
+                        }
+                        view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: bottomPanel.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
+                            completion()
+                        })
+                    })
                 )
             }
             
@@ -1704,9 +1735,6 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         completionImpl = { [weak self] in
             if let strongSelf = self {
                 strongSelf.view.addSubview(ConfettiView(frame: strongSelf.view.bounds))
-                Queue.mainQueue().after(2.0, {
-                    self?.dismiss()
-                })
             }
         }
     }

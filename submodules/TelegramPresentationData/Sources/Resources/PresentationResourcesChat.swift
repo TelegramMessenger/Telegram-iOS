@@ -319,40 +319,6 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatInputMediaStickerGridPremiumIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatInputMediaStickerGridPremiumIcon.rawValue, { theme in
-            return generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                if let backgroundImage = UIImage(bundleImageName: "Premium/BackgroundIcon"), let foregroundImage = UIImage(bundleImageName: "Premium/ForegroundIcon") {
-                    context.saveGState()
-                    if let cgImage = backgroundImage.cgImage {
-                        context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                    }
-                    
-                    let colorsArray: [CGColor] = [
-                        UIColor(rgb: 0x6B93FF).cgColor,
-                        UIColor(rgb: 0x6B93FF).cgColor,
-                        UIColor(rgb: 0x976FFF).cgColor,
-                        UIColor(rgb: 0xE46ACE).cgColor,
-                        UIColor(rgb: 0xE46ACE).cgColor
-                    ]
-                    var locations: [CGFloat] = [0.0, 0.15, 0.5, 0.85, 1.0]
-                    let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
-
-                    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
-                    
-                    context.restoreGState()
-                    
-                    if let cgImage = foregroundImage.cgImage {
-                        context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                    }
-                    context.setFillColor(UIColor.white.cgColor)
-                    context.fill(CGRect(origin: CGPoint(), size: size))
-                }
-            })
-        })
-    }
-        
     public static func chatInputMediaPanelRecentStickersIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelRecentStickersIconImage.rawValue, { theme in
             return generateImage(CGSize(width: 42.0, height: 42.0), contextGenerator: { size, context in

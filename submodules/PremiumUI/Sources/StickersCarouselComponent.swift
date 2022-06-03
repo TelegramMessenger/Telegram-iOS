@@ -11,6 +11,7 @@ import TelegramPresentationData
 import AccountContext
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ShimmerEffect
 
 final class StickersCarouselComponent: Component {
     public typealias EnvironmentType = DemoPageEnvironment
@@ -88,15 +89,19 @@ private class StickerNode: ASDisplayNode {
     public var animationNode: AnimatedStickerNode?
     public var additionalAnimationNode: AnimatedStickerNode?
     
+    private var placeholderNode: StickerShimmerEffectNode
+    
     private let disposable = MetaDisposable()
     private let effectDisposable = MetaDisposable()
+    
+    private var setupTimestamp: Double?
     
     init(context: AccountContext, file: TelegramMediaFile) {
         self.context = context
         self.file = file
         
         self.imageNode = TransformImageNode()
-        
+    
         if file.isPremiumSticker {
             let animationNode = AnimatedStickerNode()
             self.animationNode = animationNode
@@ -123,6 +128,8 @@ private class StickerNode: ASDisplayNode {
             self.animationNode = nil
         }
         
+        self.placeholderNode = StickerShimmerEffectNode()
+        
         super.init()
         
         self.isUserInteractionEnabled = false
@@ -136,11 +143,55 @@ private class StickerNode: ASDisplayNode {
         if let additionalAnimationNode = self.additionalAnimationNode {
             self.addSubnode(additionalAnimationNode)
         }
+        
+        self.addSubnode(self.placeholderNode)
+        
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+            }
+            firstTime = false
+        }
+            
+        if let animationNode = self.animationNode {
+            animationNode.started = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                strongSelf.imageNode.alpha = 0.0
+                
+                let current = CACurrentMediaTime()
+                if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
+                    if !strongSelf.placeholderNode.alpha.isZero {
+                        strongSelf.removePlaceholder(animated: true)
+                    }
+                } else {
+                    strongSelf.removePlaceholder(animated: false)
+                }
+            }
+        }
     }
     
     deinit {
         self.disposable.dispose()
         self.effectDisposable.dispose()
+    }
+    
+    
+    private func removePlaceholder(animated: Bool) {
+        if !animated {
+            self.placeholderNode.removeFromSupernode()
+        } else {
+            self.placeholderNode.alpha = 0.0
+            self.placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                self?.placeholderNode.removeFromSupernode()
+            })
+        }
     }
     
     private var visibility: Bool = false
@@ -154,6 +205,12 @@ private class StickerNode: ASDisplayNode {
     public func setVisible(_ visible: Bool) {
         self.visibility = visible
         self.updatePlayback()
+        
+        self.setupTimestamp = CACurrentMediaTime()
+    }
+    
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.placeholderNode.updateAbsoluteRect(rect, within: containerSize)
     }
     
     private func updatePlayback() {
@@ -196,6 +253,11 @@ private class StickerNode: ASDisplayNode {
                     additionalAnimationNode.updateLayout(size: additionalAnimationNode.frame.size)
                 }
             }
+            
+            let placeholderFrame = CGRect(origin: .zero, size: size)
+            let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
+            self.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: self.file.immediateThumbnailData, size: placeholderFrame.size, imageSize: thumbnailDimensions.cgSize)
+            self.placeholderNode.frame = placeholderFrame
         }
     }
 }
@@ -527,6 +589,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             containerNode.position = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
             transition.updateTransformScale(node: containerNode, scale: 1.0 - distance * 0.75)
             transition.updateAlpha(node: containerNode, alpha: 1.0 - distance * 0.6)
+            itemNode.updateAbsoluteRect(itemFrame, within: size)
             
             let isVisible = self.visibility && itemFrame.intersects(bounds)
             itemNode.setVisible(isVisible)

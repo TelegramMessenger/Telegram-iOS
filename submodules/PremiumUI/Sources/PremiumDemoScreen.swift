@@ -634,7 +634,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .bottom,
-                                    videoFile: configuration.videos["double_limits"]
+                                    videoFile: configuration.videos["more_upload"]
                                 )),
                                 title: strings.Premium_UploadSize,
                                 text: strings.Premium_UploadSizeInfo,
@@ -740,7 +740,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoFile: configuration.videos["chat_management"]
+                                    videoFile: configuration.videos["advanced_chat_management"]
                                 )),
                                 title: strings.Premium_ChatManagement,
                                 text: strings.Premium_ChatManagementInfo,
@@ -774,7 +774,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoFile: configuration.videos["userpics"]
+                                    videoFile: configuration.videos["animated_userpics"]
                                 )),
                                 title: strings.Premium_Avatar,
                                 text: strings.Premium_AvatarInfo,
@@ -899,12 +899,14 @@ private final class DemoSheetContent: CombinedComponent {
                     animationName: isStandalone && component.subject == .uniqueReactions ? "premium_unlock" : nil,
                     iconPosition: .right,
                     iconSpacing: 4.0,
-                    action: { [weak component] in
+                    action: { [weak component, weak state] in
                         guard let component = component else {
                             return
                         }
                         component.dismiss()
-                        component.action()
+                        if let state = state, state.isPremium == false {
+                            component.action()
+                        }
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),

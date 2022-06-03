@@ -38,6 +38,8 @@ private let font = Font.medium(13.0)
 protocol ReactionItemNode: ASDisplayNode {
     var isExtracted: Bool { get }
     
+    var maskNode: ASDisplayNode? { get }
+    
     func appear(animated: Bool)
     func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition)
 }
@@ -105,6 +107,10 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     deinit {
         self.fetchStickerDisposable?.dispose()
         self.fetchFullAnimationDisposable?.dispose()
+    }
+    
+    var maskNode: ASDisplayNode? {
+        return nil
     }
     
     func appear(animated: Bool) {
@@ -351,13 +357,29 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
     var isExtracted: Bool = false
     
     let imageNode: ASImageNode
+    let maskImageNode: ASImageNode
     
     init(theme: PresentationTheme) {
         self.imageNode = ASImageNode()
         self.imageNode.contentMode = .center
         self.imageNode.displaysAsynchronously = false
         self.imageNode.isUserInteractionEnabled = false
-        self.imageNode.image = generatePremiumReactionIcon()
+        self.imageNode.image = UIImage(bundleImageName: "Premium/ReactionsForeground")
+        
+        self.maskImageNode = ASImageNode()
+        if let backgroundImage = UIImage(bundleImageName: "Premium/ReactionsBackground") {
+            self.maskImageNode.image = generateImage(CGSize(width: 40.0, height: 52.0), contextGenerator: { size, context in
+                context.setFillColor(UIColor.black.cgColor)
+                context.fill(CGRect(origin: .zero, size: size))
+                
+                if let cgImage = backgroundImage.cgImage {
+                    let maskFrame = CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 10.0)
+                    context.clip(to: maskFrame, mask: cgImage)
+                }
+                context.setBlendMode(.clear)
+                context.fill(CGRect(origin: .zero, size: size))
+            })
+        }
         
         super.init()
         
@@ -370,5 +392,10 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
     
     func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
+    }
+    
+    
+    var maskNode: ASDisplayNode? {
+        return self.maskImageNode
     }
 }

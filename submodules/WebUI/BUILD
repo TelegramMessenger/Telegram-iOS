@@ -26,6 +26,7 @@ swift_library(
         "//submodules/UrlHandling:UrlHandling",
         "//submodules/MoreButtonNode:MoreButtonNode",
         "//submodules/BotPaymentsUI:BotPaymentsUI",
+        "//submodules/PromptUI:PromptUI",
     ],
     visibility = [
         "//visibility:public",

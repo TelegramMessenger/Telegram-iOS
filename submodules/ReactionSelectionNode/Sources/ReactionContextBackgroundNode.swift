@@ -42,7 +42,8 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
     
     private let maskLayer: SimpleLayer
-    private let backgroundLayer: SimpleLayer
+    private let backgroundClippingLayer: SimpleLayer
+    private let backgroundMaskNode: ASDisplayNode
     private let backgroundShadowLayer: SimpleLayer
     private let largeCircleLayer: SimpleLayer
     private let largeCircleShadowLayer: SimpleLayer
@@ -51,22 +52,23 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     
     private var theme: PresentationTheme?
     
-    init(largeCircleSize: CGFloat, smallCircleSize: CGFloat) {
+    init(largeCircleSize: CGFloat, smallCircleSize: CGFloat, maskNode: ASDisplayNode) {
         self.largeCircleSize = largeCircleSize
         self.smallCircleSize = smallCircleSize
         
         self.backgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: true)
         
         self.maskLayer = SimpleLayer()
-        self.backgroundLayer = SimpleLayer()
+        self.backgroundClippingLayer = SimpleLayer()
+        self.backgroundClippingLayer.cornerRadius = 52.0
+        self.backgroundClippingLayer.masksToBounds = true
+        self.backgroundMaskNode = maskNode
+
         self.backgroundShadowLayer = SimpleLayer()
         self.largeCircleLayer = SimpleLayer()
         self.largeCircleShadowLayer = SimpleLayer()
         self.smallCircleLayer = SimpleLayer()
         self.smallCircleShadowLayer = SimpleLayer()
-        
-        self.backgroundLayer.backgroundColor = UIColor.black.cgColor
-        self.backgroundLayer.masksToBounds = true
         
         self.largeCircleLayer.backgroundColor = UIColor.black.cgColor
         self.largeCircleLayer.masksToBounds = true
@@ -77,7 +79,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         self.smallCircleLayer.cornerRadius = smallCircleSize / 2.0
         
         if #available(iOS 13.0, *) {
-            self.backgroundLayer.cornerCurve = .circular
+//            self.backgroundLayer.cornerCurve = .circular
             self.largeCircleLayer.cornerCurve = .circular
             self.smallCircleLayer.cornerCurve = .circular
         }
@@ -96,7 +98,9 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         
         self.maskLayer.addSublayer(self.smallCircleLayer)
         self.maskLayer.addSublayer(self.largeCircleLayer)
-        self.maskLayer.addSublayer(self.backgroundLayer)
+        self.maskLayer.addSublayer(self.backgroundClippingLayer)
+        
+        self.backgroundClippingLayer.addSublayer(self.backgroundMaskNode.layer)
         
         self.backgroundNode.layer.mask = self.maskLayer
     }
@@ -137,12 +141,14 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         }
         
         var backgroundFrame = CGRect(origin: CGPoint(), size: size)
+        var backgroundMaskNodeFrame = backgroundFrame
         if isMinimized {
             let updatedHeight = floor(size.height * 0.9)
             backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - updatedHeight), size: CGSize(width: size.width, height: updatedHeight))
+            backgroundMaskNodeFrame = backgroundMaskNodeFrame.offsetBy(dx: 0.0, dy: (updatedHeight - backgroundMaskNodeFrame.height) * 0.5)
         }
         
-        transition.updateCornerRadius(layer: self.backgroundLayer, cornerRadius: backgroundFrame.height / 2.0)
+        transition.updateCornerRadius(layer: self.backgroundClippingLayer, cornerRadius: backgroundFrame.height / 2.0)
         
         let largeCircleFrame: CGRect
         let smallCircleFrame: CGRect
@@ -156,7 +162,8 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         
         let contentBounds = backgroundFrame.insetBy(dx: -10.0, dy: -10.0).union(largeCircleFrame).union(smallCircleFrame)
         
-        transition.updateFrame(layer: self.backgroundLayer, frame: backgroundFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY), beginWithCurrentState: true)
+        transition.updateFrame(node: self.backgroundMaskNode, frame: backgroundMaskNodeFrame, beginWithCurrentState: true)
+        transition.updateFrame(layer: self.backgroundClippingLayer, frame: backgroundFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY), beginWithCurrentState: true)
         transition.updateFrame(layer: self.largeCircleLayer, frame: largeCircleFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY), beginWithCurrentState: true)
         transition.updateFrame(layer: self.smallCircleLayer, frame: smallCircleFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY), beginWithCurrentState: true)
         
@@ -181,8 +188,8 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         self.largeCircleLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: largeCircleDuration, delay: largeCircleDelay)
         self.largeCircleShadowLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: largeCircleDuration, delay: largeCircleDelay)
         
-        self.backgroundLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.01, delay: mainCircleDelay)
-        self.backgroundLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay)
+        self.backgroundClippingLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.01, delay: mainCircleDelay)
+        self.backgroundClippingLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay)
         self.backgroundShadowLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay)
     }
     
@@ -197,14 +204,14 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         let visualSourceBackgroundFrame = sourceBackgroundFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY)
         let sourceShadowFrame = visualSourceBackgroundFrame.insetBy(dx: -shadowInset, dy: -shadowInset)
         
-        self.backgroundLayer.animateSpring(from: NSValue(cgPoint: CGPoint(x: visualSourceBackgroundFrame.midX - size.width / 2.0, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
-        self.backgroundLayer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualSourceBackgroundFrame.size)), to: NSValue(cgRect: self.backgroundLayer.bounds), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
+        self.backgroundClippingLayer.animateSpring(from: NSValue(cgPoint: CGPoint(x: visualSourceBackgroundFrame.midX - size.width / 2.0, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
+        self.backgroundClippingLayer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualSourceBackgroundFrame.size)), to: NSValue(cgRect: self.backgroundClippingLayer.bounds), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
         self.backgroundShadowLayer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceShadowFrame.midX - size.width / 2.0, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
         self.backgroundShadowLayer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: sourceShadowFrame.size)), to: NSValue(cgRect: self.backgroundShadowLayer.bounds), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
     }
     
     func animateOut() {
-        self.backgroundLayer.animateAlpha(from: CGFloat(self.backgroundLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.backgroundClippingLayer.animateAlpha(from: CGFloat(self.backgroundClippingLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.backgroundShadowLayer.animateAlpha(from: CGFloat(self.backgroundShadowLayer.opacity), to: 0.0, duration: 0.1, removeOnCompletion: false)
         self.largeCircleLayer.animateAlpha(from: CGFloat(self.largeCircleLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.largeCircleShadowLayer.animateAlpha(from: CGFloat(self.largeCircleShadowLayer.opacity), to: 0.0, duration: 0.1, removeOnCompletion: false)

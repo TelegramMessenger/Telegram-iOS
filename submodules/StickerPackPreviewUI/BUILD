@@ -34,6 +34,7 @@ swift_library(
         "//submodules/MoreButtonNode:MoreButtonNode",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/PremiumUI:PremiumUI",
+        "//submodules/OverlayStatusController:OverlayStatusController",
     ],
     visibility = [
         "//visibility:public",

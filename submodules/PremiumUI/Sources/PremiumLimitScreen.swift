@@ -258,6 +258,8 @@ private class PremiumLimitAnimationComponent: Component {
                         countWidth = 35.0
                     case 3:
                         countWidth = 51.0
+                    case 4:
+                        countWidth = 60.0
                     default:
                         countWidth = 51.0
                 }
@@ -549,7 +551,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
             )
             
             context.add(inactiveValue
-                .position(CGPoint(x: context.availableSize.width / 2.0 - activeValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0 - inactiveValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
             )
             
             context.add(activeTitle
@@ -693,7 +695,7 @@ private final class LimitSheetContent: CombinedComponent {
                     let premiumLimit = state.premiumLimits.maxFoldersCount
                     iconName = "Premium/Folder"
                     badgeText = "\(component.count)"
-                    string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
+                    string = component.count >= premiumLimit ? strings.Premium_MaxFoldersCountFinalText("\(premiumLimit)").string : strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
@@ -702,7 +704,7 @@ private final class LimitSheetContent: CombinedComponent {
                     let premiumLimit = state.premiumLimits.maxFolderChatsCount
                     iconName = "Premium/Chat"
                     badgeText = "\(component.count)"
-                    string = strings.Premium_MaxChatsInFolderText("\(limit)", "\(premiumLimit)").string
+                    string = component.count >= premiumLimit ? strings.Premium_MaxChatsInFolderFinalText("\(premiumLimit)").string : strings.Premium_MaxChatsInFolderText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
@@ -711,7 +713,7 @@ private final class LimitSheetContent: CombinedComponent {
                     let premiumLimit = state.premiumLimits.maxPinnedChatCount
                     iconName = "Premium/Pin"
                     badgeText = "\(component.count)"
-                    string = strings.Premium_MaxPinsText("\(limit)", "\(premiumLimit)").string
+                    string = component.count >= premiumLimit ? strings.Premium_MaxPinsFinalText("\(premiumLimit)").string : strings.Premium_MaxPinsText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
@@ -719,8 +721,8 @@ private final class LimitSheetContent: CombinedComponent {
                     let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
                     let premiumLimit = Int64(state.premiumLimits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
                     iconName = "Premium/File"
-                    badgeText = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
-                    string = strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
+                    badgeText = dataSizeString(component.count == 4 ? premiumLimit : limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
+                    string = component.count == 4 ? strings.Premium_MaxFileSizeFinalText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string : strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
                     defaultValue = component.count == 4 ? dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
                     premiumValue = component.count != 4 ? dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
                     badgePosition = component.count == 4 ? 1.0 : 0.5
@@ -730,7 +732,7 @@ private final class LimitSheetContent: CombinedComponent {
                     let premiumLimit = component.count + 1
                     iconName = "Premium/Account"
                     badgeText = "\(component.count)"
-                    string = strings.Premium_MaxAccountsText("\(component.count)").string
+                    string = component.count >= premiumLimit ? strings.Premium_MaxAccountsFinalText("\(premiumLimit)").string : strings.Premium_MaxAccountsText("\(limit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     if component.count == limit {

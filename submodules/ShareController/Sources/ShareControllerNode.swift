@@ -59,7 +59,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     var dismiss: ((Bool) -> Void)?
     var cancel: (() -> Void)?
-    var share: ((String, [PeerId], Bool, Bool) -> Signal<ShareState, NoError>)?
+    var share: ((String, [PeerId], Bool, Bool) -> Signal<ShareState, ShareControllerError>)?
     var shareExternal: ((Bool) -> Signal<ShareExternalState, NoError>)?
     var switchToAnotherAccount: (() -> Void)?
     var debugAction: (() -> Void)?
@@ -673,7 +673,6 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 })
             }
             
-            //
             if !self.fromForeignApp {
                 self.animateOut(shared: true, completion: {
                 })

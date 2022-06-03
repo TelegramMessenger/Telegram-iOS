@@ -133,6 +133,10 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
+        for reaction in reactions {
+            sortedReactions.append(reaction)
+        }
+        
         self.reactions = sortedReactions
         
         self.scrollNode = ASScrollNode()
@@ -537,19 +541,21 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             let relativeAngle = calculateRelativeAngle(angle)
             let distance = abs(relativeAngle) / CGFloat.pi
             
+            var updatedAngle = angle
+            updatedAngle += 10 * cos(updatedAngle)
+                        
             let point = CGPoint(
-                x: cos(angle),
-                y: sin(angle)
+                x: cos(updatedAngle),
+                y: sin(updatedAngle)
             )
             
             let itemFrame = CGRect(origin: CGPoint(x: size.width * 0.5 + point.x * areaSize.width * 0.5 - itemSize.width * 0.5, y: size.height * 0.5 + point.y * areaSize.height * 0.5 - itemSize.height * 0.5), size: itemSize)
             containerNode.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
             containerNode.position = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
-            transition.updateTransformScale(node: containerNode, scale: 1.0 - distance * 0.65)
+            transition.updateTransformScale(node: containerNode, scale: 1.0 - distance * 0.8)
             
             itemNode.frame = CGRect(origin: CGPoint(), size: itemFrame.size)
             itemNode.updateLayout(size: itemFrame.size, isExpanded: false, largeExpanded: false, isPreviewing: false, transition: transition)
-            
         }
     }
 }

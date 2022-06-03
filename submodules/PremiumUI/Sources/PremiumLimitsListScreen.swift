@@ -928,6 +928,7 @@ public class PremimLimitsListScreen: ViewController {
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: context.sharedContext.currentPresentationData.with { $0 }))
         
         self.navigationPresentation = .flatModal
+        self.statusBar.statusBarStyle = .Ignore
     }
     
     required public init(coder aDecoder: NSCoder) {

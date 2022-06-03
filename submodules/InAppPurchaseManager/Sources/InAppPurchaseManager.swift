@@ -80,7 +80,6 @@ public final class InAppPurchaseManager: NSObject {
         self.productRequest = productRequest
     }
     
-    
     public var availableProducts: Signal<[Product], NoError> {
         if self.products.isEmpty && self.productRequest == nil {
             self.requestProducts()

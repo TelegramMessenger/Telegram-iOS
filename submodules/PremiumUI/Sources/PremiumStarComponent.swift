@@ -7,7 +7,7 @@ import SceneKit
 import GZip
 import AppBundle
 
-private let sceneVersion: Int = 2
+private let sceneVersion: Int = 3
 
 private func deg2rad(_ number: Float) -> Float {
     return number * .pi / 180

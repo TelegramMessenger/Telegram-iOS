@@ -265,7 +265,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     strongSelf.chatListDisplayNode.containerNode.currentItemNode.scrollToPosition(.top)
                 case let .known(offset):
                     if offset <= navigationBarSearchContentHeight + 1.0 && strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter != nil {
-                        strongSelf.selectTab(id: .all)
+                        let _ = (strongSelf.context.engine.peers.currentChatListFilters()
+                        |> deliverOnMainQueue).start(next: { [weak self] filters in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let targetTab: ChatListFilterTabEntryId
+                            let firstFilter = filters.first ?? .allChats
+                            switch firstFilter {
+                                case .allChats:
+                                    targetTab = .all
+                                case let .filter(id, _, _, _):
+                                    targetTab = .filter(id)
+                            }
+                                                            
+                            strongSelf.selectTab(id: targetTab)
+                        })
                     } else {
                         if let searchContentNode = strongSelf.searchContentNode {
                             searchContentNode.updateExpansionProgress(1.0, animated: true)

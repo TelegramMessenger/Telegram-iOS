@@ -555,8 +555,16 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             var actionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: contentRect.maxY + contentActionsSpacing), size: actionsSize)
 
+            var contentVerticalOffset: CGFloat = 0.0
             if keepInPlace, case .extracted = self.source {
                 actionsFrame.origin.y = contentRect.minY - contentActionsSpacing - actionsFrame.height
+                let statusBarHeight = (layout.statusBarHeight ?? 0.0)
+                if actionsFrame.origin.y < statusBarHeight {
+                    let updatedActionsOriginY = statusBarHeight + contentActionsSpacing
+                    let delta = updatedActionsOriginY - actionsFrame.origin.y
+                    actionsFrame.origin.y = updatedActionsOriginY
+                    contentVerticalOffset = delta
+                }
             }
             if centerActionsHorizontally {
                 actionsFrame.origin.x = floor(contentParentGlobalFrame.minX + contentRect.midX - actionsFrame.width / 2.0)
@@ -593,14 +601,18 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             transition.updateFrame(node: self.actionsStackNode, frame: actionsFrame, beginWithCurrentState: true)
             
             if let contentNode = contentNode {
-                contentTransition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: contentParentGlobalFrame.minX + contentRect.minX - contentNode.containingItem.contentRect.minX, y: contentRect.minY - contentNode.containingItem.contentRect.minY), size: contentNode.containingItem.view.bounds.size), beginWithCurrentState: true)
+                contentTransition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: contentParentGlobalFrame.minX + contentRect.minX - contentNode.containingItem.contentRect.minX, y: contentRect.minY - contentNode.containingItem.contentRect.minY + contentVerticalOffset), size: contentNode.containingItem.view.bounds.size), beginWithCurrentState: true)
             }
             
             let contentHeight: CGFloat
             if self.actionsStackNode.topPositionLock != nil {
                 contentHeight = layout.size.height
             } else {
-                contentHeight = actionsFrame.maxY + bottomInset + layout.intrinsicInsets.bottom
+                if keepInPlace, case .extracted = self.source {
+                    contentHeight = (layout.statusBarHeight ?? 0.0) + actionsFrame.height + abs(actionsFrame.minY) + bottomInset + layout.intrinsicInsets.bottom
+                } else {
+                    contentHeight = actionsFrame.maxY + bottomInset + layout.intrinsicInsets.bottom
+                }
             }
             let contentSize = CGSize(width: layout.size.width, height: contentHeight)
             

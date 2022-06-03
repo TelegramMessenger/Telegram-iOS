@@ -47,16 +47,21 @@ private func scalePhotoImage(_ image: UIImage, dimensions: CGSize) -> UIImage? {
     }
 }
 
-private func preparedShareItem(account: Account, to peerId: PeerId, value: [String: Any]) -> Signal<PreparedShareItem, Void> {
+public enum PreparedShareItemError {
+    case generic
+    case fileTooBig(Int64)
+}
+
+private func preparedShareItem(account: Account, to peerId: PeerId, value: [String: Any]) -> Signal<PreparedShareItem, PreparedShareItemError> {
     if let imageData = value["scaledImageData"] as? Data, let dimensions = value["scaledImageDimensions"] as? NSValue {
         let diminsionsSize = dimensions.cgSizeValue
         return .single(.preparing(false))
         |> then(
             standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(diminsionsSize.width), height: Int32(diminsionsSize.height)))
-            |> mapError { _ -> Void in
-                return Void()
+            |> mapError { _ -> PreparedShareItemError in
+                return .generic
             }
-            |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
+            |> mapToSignal { event -> Signal<PreparedShareItem, PreparedShareItemError> in
                 switch event {
                     case let .progress(value):
                         return .single(.progress(value))
@@ -72,10 +77,10 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             return .single(.preparing(false))
             |> then(
                 standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height)))
-                |> mapError { _ -> Void in
-                    return Void()
+                |> mapError { _ -> PreparedShareItemError in
+                    return .generic
                 }
-                |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
+                |> mapToSignal { event -> Signal<PreparedShareItem, PreparedShareItemError> in
                     switch event {
                         case let .progress(value):
                             return .single(.progress(value))
@@ -111,7 +116,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         }
         var finalDuration: Double = CMTimeGetSeconds(asset.duration)
         
-        func loadValues(_ avAsset: AVURLAsset) -> Signal<AVURLAsset, Void> {
+        func loadValues(_ avAsset: AVURLAsset) -> Signal<AVURLAsset, PreparedShareItemError> {
             return Signal { subscriber in
                 avAsset.loadValuesAsynchronously(forKeys: ["tracks", "duration", "playable"]) {
                     subscriber.putNext(avAsset)
@@ -123,7 +128,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         return .single(.preparing(true))
         |> then(
             loadValues(asset)
-            |> mapToSignal { asset -> Signal<PreparedShareItem, Void> in
+            |> mapToSignal { asset -> Signal<PreparedShareItem, PreparedShareItemError> in
                 let preset = adjustments?.preset ?? TGMediaVideoConversionPresetCompressedMedium
                 let finalDimensions = TGMediaVideoConverter.dimensions(for: asset.originalSize, adjustments: adjustments, preset: preset)
                 
@@ -142,10 +147,10 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 
                 let resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), path: asset.url.path, adjustments: resourceAdjustments)
                 return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
-                |> mapError { _ -> Void in
-                    return Void()
+                |> mapError { _ -> PreparedShareItemError in
+                    return .generic
                 }
-                |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
+                |> mapToSignal { event -> Signal<PreparedShareItem, PreparedShareItemError> in
                     switch event {
                         case let .progress(value):
                             return .single(.progress(value))
@@ -201,7 +206,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 return .single(.preparing(true))
                 |> then(
                     convertedData
-                    |> castError(Void.self)
+                    |> castError(PreparedShareItemError.self)
                     |> mapToSignal { data, dimensions, duration, converted in
                         var attributes: [TelegramMediaFileAttribute] = []
                         let mimeType: String
@@ -213,8 +218,10 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                             attributes = [.ImageSize(size: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height))), .Animated, .FileName(fileName: fileName ?? "animation.gif")]
                         }
                         return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), mimeType: mimeType, attributes: attributes, hintFileIsLarge: data.count > 10 * 1024 * 1024)
-                        |> mapError { _ -> Void in return Void() }
-                        |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
+                        |> mapError { _ -> PreparedShareItemError in
+                            return .generic
+                        }
+                        |> mapToSignal { event -> Signal<PreparedShareItem, PreparedShareItemError> in
                             switch event {
                                 case let .progress(value):
                                     return .single(.progress(value))
@@ -230,8 +237,10 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 return .single(.preparing(false))
                 |> then(
                     standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(scaledImage.size.width), height: Int32(scaledImage.size.height)))
-                    |> mapError { _ -> Void in return Void() }
-                    |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
+                    |> mapError { _ -> PreparedShareItemError in
+                        return .generic
+                    }
+                    |> mapToSignal { event -> Signal<PreparedShareItem, PreparedShareItemError> in
                         switch event {
                             case let .progress(value):
                                 return .single(.progress(value))
@@ -251,8 +260,10 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             return .single(.preparing(long))
             |> then(
                 standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), thumbnailData: thumbnailData, mimeType: mimeType, attributes: [.FileName(fileName: fileName ?? "file")], hintFileIsLarge: data.count > 10 * 1024 * 1024)
-                |> mapError { _ -> Void in return Void() }
-                |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
+                |> mapError { _ -> PreparedShareItemError in
+                    return .generic
+                }
+                |> mapToSignal { event -> Signal<PreparedShareItem, PreparedShareItemError> in
                     switch event {
                         case let .progress(value):
                             return .single(.progress(value))
@@ -280,8 +291,10 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             return .single(.preparing(long))
             |> then(
                 standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(audioData), mimeType: mimeType, attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform?.makeData()), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 10 * 1024 * 1024)
-                |> mapError { _ -> Void in return Void() }
-                |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
+                |> mapError { _ -> PreparedShareItemError in
+                    return .generic
+                }
+                |> mapToSignal { event -> Signal<PreparedShareItem, PreparedShareItemError> in
                     switch event {
                         case let .progress(value):
                             return .single(.progress(value))
@@ -300,7 +313,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         )
     } else if let url = value["url"] as? URL {
         if TGShareLocationSignals.isLocationURL(url) {
-            return Signal<PreparedShareItem, Void> { subscriber in
+            return Signal<PreparedShareItem, PreparedShareItemError> { subscriber in
                 subscriber.putNext(.preparing(false))
                 let disposable = TGShareLocationSignals.locationMessageContent(for: url).start(next: { value in
                     if let value = value as? TGShareLocationResult {
@@ -332,8 +345,8 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
     }
 }
 
-public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [MTSignal], additionalText: String) -> Signal<PreparedShareItems, Void> {
-    var dataSignals: Signal<[String: Any], Void> = .complete()
+public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [MTSignal], additionalText: String) -> Signal<PreparedShareItems, PreparedShareItemError> {
+    var dataSignals: Signal<[String: Any], PreparedShareItemError> = .complete()
     for dataItem in dataItems {
         let wrappedSignal: Signal<[String: Any], NoError> = Signal { subscriber in
             let disposable = dataItem.start(next: { value in
@@ -349,7 +362,7 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
         dataSignals = dataSignals
         |> then(
             wrappedSignal
-            |> castError(Void.self)
+            |> castError(PreparedShareItemError.self)
             |> take(1)
         )
     }
@@ -359,7 +372,7 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
     |> reduceLeft(value: [[String: Any]](), f: { list, rest in
         return list + rest
     })
-    |> mapToSignal { items -> Signal<[PreparedShareItem], Void> in
+    |> mapToSignal { items -> Signal<[PreparedShareItem], PreparedShareItemError> in
         return combineLatest(items.map {
             preparedShareItem(account: account, to: peerId, value: $0)
         })
