@@ -19,6 +19,7 @@ import LegacyComponents
 import UrlHandling
 import MoreButtonNode
 import BotPaymentsUI
+import PromptUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -461,6 +462,33 @@ public final class WebAppController: ViewController, AttachmentContainable {
         @available(iOSApplicationExtension 15.0, iOS 15.0, *)
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
             decisionHandler(.prompt)
+        }
+        
+        func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+            let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: message, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+                completionHandler()
+            })])
+            self.controller?.present(alertController, in: .window(.root))
+        }
+
+        func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+            let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: message, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+                completionHandler(false)
+            }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+                completionHandler(true)
+            })])
+            self.controller?.present(alertController, in: .window(.root))
+        }
+
+        func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+            let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: self.controller?.updatedPresentationData, text: prompt, value: defaultText, apply: { value in
+                if let value = value {
+                    completionHandler(value)
+                } else {
+                    completionHandler(nil)
+                }
+            })
+            self.controller?.present(promptController, in: .window(.root))
         }
                 
         private var targetContentOffset: CGPoint?

@@ -39,6 +39,10 @@ public enum ShareControllerExternalStatus {
     case done
 }
 
+public enum ShareControllerError {
+    case fileTooBig(Int64)
+}
+
 public struct ShareControllerSegmentedValue {
     let title: String
     let subject: ShareControllerSubject
@@ -61,7 +65,7 @@ public enum ShareControllerSubject {
     case image([ImageRepresentationWithReference])
     case media(AnyMediaReference)
     case mapMedia(TelegramMediaMap)
-    case fromExternal(([PeerId], String, Account, Bool) -> Signal<ShareControllerExternalStatus, NoError>)
+    case fromExternal(([PeerId], String, Account, Bool) -> Signal<ShareControllerExternalStatus, ShareControllerError>)
 }
 
 private enum ExternalShareItem {
@@ -670,18 +674,20 @@ public final class ShareController: ViewController {
             let queue = Queue.mainQueue()
             var displayedError = false
             return combineLatest(queue: queue, shareSignals)
-            |> mapToSignal { messageIdSets -> Signal<ShareState, NoError> in
-                var statuses: [Signal<(MessageId, PendingMessageStatus?, PendingMessageFailureReason?), NoError>] = []
+            |> castError(ShareControllerError.self)
+            |> mapToSignal { messageIdSets -> Signal<ShareState, ShareControllerError> in
+                var statuses: [Signal<(MessageId, PendingMessageStatus?, PendingMessageFailureReason?), ShareControllerError>] = []
                 for messageIds in messageIdSets {
                     for case let id? in messageIds {
                         statuses.append(account.pendingMessageManager.pendingMessageStatus(id)
+                        |> castError(ShareControllerError.self)
                         |> map { status, error -> (MessageId, PendingMessageStatus?, PendingMessageFailureReason?) in
                             return (id, status, error)
                         })
                     }
                 }
                 return combineLatest(queue: queue, statuses)
-                |> mapToSignal { statuses -> Signal<ShareState, NoError> in
+                |> mapToSignal { statuses -> Signal<ShareState, ShareControllerError> in
                     var hasStatuses = false
                     for (id, status, error) in statuses {
                         if let error = error {

@@ -48,6 +48,7 @@ swift_library(
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
         "//submodules/RadialStatusNode:RadialStatusNode",
+        "//submodules/ShimmerEffect:ShimmerEffect",
     ],
     visibility = [
         "//visibility:public",

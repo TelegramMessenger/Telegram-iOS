@@ -73,9 +73,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let contentContainer: ASDisplayNode
     private let contentContainerMask: UIImageView
+    private let leftBackgroundMaskNode: ASDisplayNode
+    private let rightBackgroundMaskNode: ASDisplayNode
+    private let backgroundMaskNode: ASDisplayNode
     private let scrollNode: ASScrollNode
     private let previewingItemContainer: ASDisplayNode
     private var visibleItemNodes: [Int: ReactionItemNode] = [:]
+    private var visibleItemMaskNodes: [Int: ASDisplayNode] = [:]
     
     private var longPressRecognizer: UILongPressGestureRecognizer?
     private var longPressTimer: SwiftSignalKit.Timer?
@@ -101,7 +105,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.theme = theme
         self.items = items
         
-        self.backgroundNode = ReactionContextBackgroundNode(largeCircleSize: largeCircleSize, smallCircleSize: smallCircleSize)
+        self.backgroundMaskNode = ASDisplayNode()
+        self.backgroundNode = ReactionContextBackgroundNode(largeCircleSize: largeCircleSize, smallCircleSize: smallCircleSize, maskNode: self.backgroundMaskNode)
+        self.leftBackgroundMaskNode = ASDisplayNode()
+        self.leftBackgroundMaskNode.backgroundColor = .black
+        self.rightBackgroundMaskNode = ASDisplayNode()
+        self.rightBackgroundMaskNode.backgroundColor = .black
+        self.backgroundMaskNode.addSubnode(self.leftBackgroundMaskNode)
+        self.backgroundMaskNode.addSubnode(self.rightBackgroundMaskNode)
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
@@ -275,6 +286,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             highlightedReactionIndex = nil
         }
         
+        var currentMaskFrame: CGRect?
+        var maskTransition: ContainedViewLayoutTransition?
+        
         var validIndices = Set<Int>()
         var nextX: CGFloat = sideInset
         for i in 0 ..< self.items.count {
@@ -324,21 +338,38 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 var animateIn = false
                 
+                let maskNode: ASDisplayNode?
                 let itemNode: ReactionItemNode
                 var itemTransition = transition
                 if let current = self.visibleItemNodes[i] {
                     itemNode = current
+                    maskNode = self.visibleItemMaskNodes[i]
                 } else {
                     animateIn = self.didAnimateIn
                     itemTransition = .immediate
                     
                     if case let .reaction(item) = self.items[i] {
                         itemNode = ReactionNode(context: self.context, theme: self.theme, item: item)
+                        maskNode = nil
                     } else {
                         itemNode = PremiumReactionsNode(theme: self.theme)
+                        maskNode = itemNode.maskNode
                     }
                     self.visibleItemNodes[i] = itemNode
+                    
                     self.scrollNode.addSubnode(itemNode)
+                    
+                    if let maskNode = maskNode {
+                        self.visibleItemMaskNodes[i] = maskNode
+                        self.backgroundMaskNode.addSubnode(maskNode)
+                    }
+                }
+                maskTransition = itemTransition
+                
+                if let maskNode = maskNode {
+                    let maskFrame = CGRect(origin: CGPoint(x: -self.scrollNode.view.contentOffset.x + itemFrame.minX, y: 0.0), size: CGSize(width: itemFrame.width, height: itemFrame.height + 12.0))
+                    itemTransition.updateFrame(node: maskNode, frame: maskFrame)
+                    currentMaskFrame = maskFrame
                 }
                 
                 if !itemNode.isExtracted {
@@ -370,6 +401,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
+        if let currentMaskFrame = currentMaskFrame {
+            let transition = maskTransition ?? transition
+            transition.updateFrame(node: self.leftBackgroundMaskNode, frame: CGRect(x: -1000.0 + currentMaskFrame.minX, y: 0.0, width: 1000.0, height: 52.0))
+            transition.updateFrame(node: self.rightBackgroundMaskNode, frame: CGRect(x: currentMaskFrame.maxX, y: 0.0, width: 1000.0, height: 52.0))
+        } else {
+            self.leftBackgroundMaskNode.frame = CGRect(x: 0.0, y: 0.0, width: 1000.0, height: 52.0)
+            self.rightBackgroundMaskNode.frame = CGRect(origin: .zero, size: .zero)
+        }
+        
         var removedIndices: [Int] = []
         for (index, itemNode) in self.visibleItemNodes {
             if !validIndices.contains(index) {
@@ -377,8 +417,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 itemNode.removeFromSupernode()
             }
         }
+        for (index, maskNode) in self.visibleItemMaskNodes {
+            if !validIndices.contains(index) {
+                maskNode.removeFromSupernode()
+            }
+        }
         for index in removedIndices {
             self.visibleItemNodes.removeValue(forKey: index)
+            self.visibleItemMaskNodes.removeValue(forKey: index)
         }
     }
     

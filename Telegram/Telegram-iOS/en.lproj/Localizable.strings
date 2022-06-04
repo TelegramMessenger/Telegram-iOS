@@ -7568,13 +7568,13 @@ Sorry for the inconvenience.";
 "Premium.IncreaseLimit" = "Increase Limit";
 
 "Premium.MaxFoldersCountText" = "You have reached the limit of **%1$@** folders. You can double the limit to **%2$@** folders by subscribing to **Telegram Premium**.";
+"Premium.MaxFoldersCountFinalText" = "Sorry, you can't create more than **%1$@** folders.";
 "Premium.MaxChatsInFolderText" = "Sorry, you can't add more than **%1$@** chats to a folder. You can increase this limit to **%2$@** by upgrading to **Telegram Premium**.";
 "Premium.MaxChatsInFolderFinalText" = "Sorry, you can't add more than **%@** chats to a folder.";
 "Premium.MaxFileSizeText" = "Double this limit to %@ per file by subscribing to **Telegram Premium**.";
 "Premium.MaxFileSizeFinalText" = "The document can't be sent, because it is larger than **%@**.";
 "Premium.MaxPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
-"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **@** chats to the top. Unpin some of the currently pinned ones.";
-"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **@** chats to the top.";
+"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some of the currently pinned ones.";
 "Premium.MaxFavedStickersTitle" = "The Limit of %@ Stickers Reached";
 "Premium.MaxFavedStickersText" = "An older sticker was replaced with this one. You can [increase the limit]() to %@ stickers.";
 "Premium.MaxFavedStickersFinalText" = "An older sticker was replaced with this one.";
@@ -7582,6 +7582,7 @@ Sorry for the inconvenience.";
 "Premium.MaxSavedGifsText" = "An older GIF was replaced with this one. You can [increase the limit]() to %@ GIFS.";
 "Premium.MaxSavedGifsFinalText" = "An older GIF was replaced with this one.";
 "Premium.MaxAccountsText" = "You have reached the limit of **%@** connected accounts. You can free one place by subscribing to **Telegram Premium**.";
+"Premium.MaxAccountsFinalText" = "You have reached the limit of **%@** connected accounts.";
 
 "Premium.Free" = "Free";
 "Premium.Premium" = "Premium";

@@ -173,6 +173,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             }
         }
         
+        private var currentAvailableSize: CGSize?
         func update(component: SheetComponent<ChildEnvironmentType>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             component.animateOut.connect { [weak self] completion in
                 guard let strongSelf = self else {
@@ -205,6 +206,11 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             self.scrollView.contentSize = contentSize
             self.scrollView.contentInset = UIEdgeInsets(top: max(0.0, availableSize.height - contentSize.height) + contentSize.height, left: 0.0, bottom: 0.0, right: 0.0)
             self.ignoreScrolling = false
+            
+            if let currentAvailableSize = self.currentAvailableSize, currentAvailableSize.height != availableSize.height {
+                self.scrollView.contentOffset = CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height))
+            }
+            self.currentAvailableSize = availableSize
             
             if environment[SheetComponentEnvironment.self].value.isDisplaying, !self.previousIsDisplaying, let _ = transition.userData(ViewControllerComponentContainer.AnimateInTransition.self) {
                 self.animateIn()

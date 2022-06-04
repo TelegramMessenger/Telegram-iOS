@@ -16,6 +16,8 @@ import UndoUI
 import ShareController
 import TextFormat
 import PremiumUI
+import OverlayStatusController
+import PresentationDataUtils
 
 private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
     case sticker(index: Int, stableId: Int, stickerItem: StickerPackItem?, isEmpty: Bool, isPremium: Bool, isLocked: Bool)
@@ -577,6 +579,10 @@ private final class StickerPackContainer: ASDisplayNode {
         self.actionAreaSeparatorNode.alpha = backgroundAlpha
     }
     
+    var onLoading: () -> Void = {}
+    var onReady: () -> Void = {}
+    var onError: () -> Void = {}
+    
     private var currentContents: LoadedStickerPack?
     private func updateStickerPackContents(_ contents: LoadedStickerPack, hasPremium: Bool) {
         self.currentContents = contents
@@ -590,6 +596,7 @@ private final class StickerPackContainer: ASDisplayNode {
         
         switch contents {
         case .fetching:
+            self.onLoading()
             entries = []
             self.buttonNode.setTitle(self.presentationData.strings.Channel_NotificationLoading, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemDisabledTextColor, for: .normal)
             self.buttonNode.setBackgroundImage(nil, for: [])
@@ -620,20 +627,11 @@ private final class StickerPackContainer: ASDisplayNode {
                 self.titleContainer.addSubnode(titlePlaceholderNode)
             }
         case .none:
-            entries = []
-            self.buttonNode.setTitle(self.presentationData.strings.Common_Close, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
-            self.buttonNode.setBackgroundImage(nil, for: [])
-            
-            for _ in 0 ..< 16 {
-                let resolvedStableId = self.nextStableId
-                self.nextStableId += 1
-                entries.append(.sticker(index: entries.count, stableId: resolvedStableId, stickerItem: nil, isEmpty: true, isPremium: false, isLocked: false))
-            }
-            if let titlePlaceholderNode = self.titlePlaceholderNode {
-                self.titlePlaceholderNode = nil
-                titlePlaceholderNode.removeFromSupernode()
-            }
+            self.onError()
+            self.controller?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            self.controller?.dismiss(animated: true, completion: nil)
         case let .result(info, items, installed):
+            self.onReady()
             if !items.isEmpty && self.currentStickerPack == nil {
                 if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
                     scrollToItem = GridNodeScrollToItem(index: 0, position: .top(0.0), transition: .immediate, directionHint: .up, adjustForSection: false)
@@ -978,6 +976,10 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         return self._ready
     }
     
+    var onLoading: () -> Void = {}
+    var onReady: () -> Void = {}
+    var onError: () -> Void = {}
+    
     init(context: AccountContext, controller: StickerPackScreenImpl, stickerPacks: [StickerPackReference], initialSelectedStickerPackIndex: Int, modalProgressUpdated: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, openMention: @escaping (String) -> Void) {
         self.context = context
         self.controller = controller
@@ -1104,6 +1106,15 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                             }
                         }
                     }, presentInGlobalOverlay: presentInGlobalOverlay, sendSticker: sendSticker, openMention: openMention, controller: self.controller)
+                    container.onReady = { [weak self] in
+                        self?.onReady()
+                    }
+                    container.onLoading = { [weak self] in
+                        self?.onLoading()
+                    }
+                    container.onError = { [weak self] in
+                        self?.onError()
+                    }
                     self.containerContainingNode.addSubnode(container)
                     self.containers[i] = container
                 }
@@ -1380,17 +1391,76 @@ public final class StickerPackScreenImpl: ViewController {
             }))
         })
         
+        var loaded = false
+        var dismissed = false
+        
+        var overlayStatusController: ViewController?
+        let cancelImpl: (() -> Void)? = { [weak self] in
+            dismissed = true
+            overlayStatusController?.dismiss()
+            self?.dismiss()
+        }
+        
+        self.controllerNode.onReady = { [weak self] in
+            loaded = true
+            
+            if let strongSelf = self {
+                if !dismissed {
+                    if let overlayStatusController = overlayStatusController {
+                        overlayStatusController.dismiss()
+                    }
+                    
+                    if strongSelf.alreadyDidAppear {
+                        strongSelf.controllerNode.animateIn()
+                    } else {
+                        strongSelf.isReady = true
+                    }
+                    
+                    self?.controllerNode.isHidden = false
+                    self?.controllerNode.animateIn()
+                }
+            }
+        }
+         
+        let presentationData = self.presentationData
+        self.controllerNode.onLoading = { [weak self] in
+            Queue.mainQueue().after(0.15, {
+                if !loaded {
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    self?.present(controller, in: .window(.root))
+                    overlayStatusController = controller
+                }
+            })
+        }
+        
+        self.controllerNode.onError = {
+            loaded = true
+            
+            if let overlayStatusController = overlayStatusController {
+                overlayStatusController.dismiss()
+            }
+        }
+        
+        self.controllerNode.isHidden = true
+        
         self._ready.set(self.controllerNode.ready.get())
         
         super.displayNodeDidLoad()
     }
+    
+    private var isReady = false
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         if !self.alreadyDidAppear {
             self.alreadyDidAppear = true
-            self.controllerNode.animateIn()
+            
+            if self.isReady {
+                self.controllerNode.animateIn()
+            }
         }
     }
     

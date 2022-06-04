@@ -147,9 +147,6 @@ public struct ChatListFilterIncludePeers: Equatable, Hashable {
             return false
         }
         
-        if self.peers.count + self.pinnedPeers.count >= 100 {
-            return false
-        }
         self.peers.insert(peerId, at: 0)
         return true
     }

@@ -150,9 +150,11 @@ final class GameControllerNode: ViewControllerTracingNode {
                         if let strongSelf = self, let message = strongSelf.message {
                             let signals = peerIds.map { TelegramEngine(account: account).messages.forwardGameWithScore(messageId: message.id, to: $0, as: nil) }
                             return .single(.preparing(false))
+                            |> castError(ShareControllerError.self)
                             |> then(
                                 combineLatest(signals)
-                                |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, NoError> in return .complete() }
+                                |> castError(ShareControllerError.self)
+                                |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, ShareControllerError> in return .complete() }
                             )
                             |> then(.single(.done))
                         } else {

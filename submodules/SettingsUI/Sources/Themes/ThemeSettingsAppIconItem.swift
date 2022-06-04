@@ -99,8 +99,10 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
     private let iconNode: ASImageNode
     private let overlayNode: ASImageNode
     private let lockNode: ASImageNode
-    private let textNode: ASTextNode
+    private let textNode: ImmediateTextNode
     private var action: (() -> Void)?
+    
+    private var locked = false
     
     override init() {
         self.iconNode = ASImageNode()
@@ -112,10 +114,11 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         self.overlayNode.isLayerBacked = true
         
         self.lockNode = ASImageNode()
+        self.lockNode.contentMode = .scaleAspectFit
         self.lockNode.displaysAsynchronously = false
         self.lockNode.isUserInteractionEnabled = false
         
-        self.textNode = ASTextNode()
+        self.textNode = ImmediateTextNode()
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         
@@ -128,6 +131,7 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
     }
     
     func setup(theme: PresentationTheme, icon: UIImage, title: NSAttributedString, locked: Bool, color: UIColor, bordered: Bool, selected: Bool, action: @escaping () -> Void) {
+        self.locked = locked
         self.iconNode.image = icon
         self.textNode.attributedText = title
         self.overlayNode.image = generateBorderImage(theme: theme, bordered: bordered, selected: selected)
@@ -135,6 +139,8 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         self.action = {
             action()
         }
+        
+        self.setNeedsLayout()
     }
     
     override func didLoad() {
@@ -154,10 +160,17 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         
         let bounds = self.bounds
         
-        self.iconNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
-        self.overlayNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
-        self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 87.0), size: CGSize(width: bounds.size.width, height: 16.0))
-        self.lockNode.frame = CGRect(x: 9.0, y: 90.0, width: 6.0, height: 8.0)
+        self.iconNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
+        self.overlayNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
+        
+        let textSize = self.textNode.updateLayout(bounds.size)
+        var textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - textSize.width)) / 2.0, y: 87.0), size: textSize)
+        if self.locked {
+            textFrame = textFrame.offsetBy(dx: 5.0, dy: 0.0)
+        }
+        self.textNode.frame = textFrame
+        
+        self.lockNode.frame = CGRect(x: self.textNode.frame.minX - 10.0, y: 90.0, width: 6.0, height: 8.0)
     }
 }
 
@@ -331,12 +344,12 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     name = item.strings.Appearance_AppIconNew1
                                 case "New2":
                                     name = item.strings.Appearance_AppIconNew2
-                                case "PremiumCosmic":
-                                    name = "Cosmic"
-                                case "PremiumCherry":
-                                    name = "Cherry"
-                                case "PremiumDuck":
-                                    name = "Duck"
+                                case "Premium":
+                                    name = "Premium"
+                                case "PremiumBlack":
+                                    name = "Black"
+                                case "PremiumTurbo":
+                                    name = "Turbo"
                                 default:
                                     name = icon.name
                             }

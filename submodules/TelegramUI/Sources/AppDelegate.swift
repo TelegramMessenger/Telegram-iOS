@@ -680,9 +680,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     icons.append(PresentationAppIcon(name: "WhiteFilledIcon", imageName: "WhiteFilledIcon"))
                 }
                 
-                icons.append(PresentationAppIcon(name: "PremiumCosmic", imageName: "PremiumCosmic", isPremium: true))
-                icons.append(PresentationAppIcon(name: "PremiumCherry", imageName: "PremiumCherry", isPremium: true))
-                icons.append(PresentationAppIcon(name: "PremiumDuck", imageName: "PremiumDuck", isPremium: true))
+                icons.append(PresentationAppIcon(name: "Premium", imageName: "Premium", isPremium: true))
+                icons.append(PresentationAppIcon(name: "PremiumBlack", imageName: "PremiumBlack", isPremium: true))
+                icons.append(PresentationAppIcon(name: "PremiumTurbo", imageName: "PremiumTurbo", isPremium: true))
                 
                 return icons
             } else {

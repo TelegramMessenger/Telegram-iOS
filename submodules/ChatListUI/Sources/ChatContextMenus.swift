@@ -56,9 +56,14 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
 
     return combineLatest(
         context.engine.data.get(TelegramEngine.EngineData.Item.Messages.ChatListGroup(id: peerId)),
-        context.engine.peers.recentlySearchedPeers() |> take(1)
+        context.engine.peers.recentlySearchedPeers() |> take(1),
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+        )
     )
-    |> mapToSignal { peerGroup, recentlySearchedPeers -> Signal<[ContextMenuItem], NoError> in
+    |> mapToSignal { peerGroup, recentlySearchedPeers, limitsData -> Signal<[ContextMenuItem], NoError> in
         let location: TogglePeerChatPinnedLocation
         var chatListFilter: ChatListFilter?
         if case let .chatList(filter) = source, let chatFilter = filter {
@@ -243,6 +248,30 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                                 return generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.contextMenu.primaryColor)
                                             }, action: { c, f in
                                                 c.dismiss(completion: {
+                                                    let isPremium = limitsData.0?.isPremium ?? false
+                                                    let (_, limits, premiumLimits) = limitsData
+                                                    
+                                                    let limit = limits.maxFolderChatsCount
+                                                    let premiumLimit = premiumLimits.maxFolderChatsCount
+
+                                                    let count = data.includePeers.peers.count - 1
+                                                    if count >= premiumLimit {
+                                                        let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {})
+                                                        chatListController?.push(controller)
+                                                        return
+                                                    } else if count >= limit && !isPremium {
+                                                        var replaceImpl: ((ViewController) -> Void)?
+                                                        let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
+                                                            let controller = PremiumIntroScreen(context: context, source: .chatsPerFolder)
+                                                            replaceImpl?(controller)
+                                                        })
+                                                        replaceImpl = { [weak controller] c in
+                                                            controller?.replace(with: c)
+                                                        }
+                                                        chatListController?.push(controller)
+                                                        return
+                                                    }
+                                                    
                                                     let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
                                                         var filters = filters
                                                         for i in 0 ..< filters.count {

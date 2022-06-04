@@ -76,7 +76,7 @@ private final class PhoneView: UIView {
         self.borderView = UIImageView(image: phoneBorderImage)
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6), enableBlur: false)
-        self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false, animateRotation: true))
+        self.statusNode.transitionToState(.none)
         self.statusNode.isUserInteractionEnabled = false
         
         super.init(frame: frame)

@@ -81,7 +81,7 @@ public final class PageIndicatorComponent: Component {
 
 private final class PageIndicatorView: UIView {
     var displayCount: Int {
-        return min(9, self.pageCount)
+        return min(11, self.pageCount)
     }
     var dotSize: CGFloat = 8.0
     var dotSpace: CGFloat = 10.0

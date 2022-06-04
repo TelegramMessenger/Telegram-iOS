@@ -22,7 +22,6 @@ swift_library(
         "//submodules/AlertUI:AlertUI",
         "//submodules/AppBundle:AppBundle",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
-        "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",

@@ -368,10 +368,15 @@ public class ShareRootControllerImpl {
                                 let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
                                 return preparedShareItems(account: account, to: peerIds[0], dataItems: rawSignals, additionalText: additionalText)
                                 |> map(Optional.init)
-                                |> `catch` { _ -> Signal<PreparedShareItems?, NoError> in
-                                    return .single(nil)
+                                |> `catch` { error -> Signal<PreparedShareItems?, ShareControllerError> in
+                                    switch error {
+                                        case .generic:
+                                            return .single(nil)
+                                        case let .fileTooBig(size):
+                                            return .fail(.fileTooBig(size))
+                                    }
                                 }
-                                |> mapToSignal { state -> Signal<ShareControllerExternalStatus, NoError> in
+                                |> mapToSignal { state -> Signal<ShareControllerExternalStatus, ShareControllerError> in
                                     guard let state = state else {
                                         return .single(.done)
                                     }
@@ -382,11 +387,14 @@ public class ShareRootControllerImpl {
                                             return .single(.progress(value))
                                         case let .userInteractionRequired(value):
                                             return requestUserInteraction(value)
-                                            |> mapToSignal { contents -> Signal<ShareControllerExternalStatus, NoError> in
+                                            |> castError(ShareControllerError.self)
+                                            |> mapToSignal { contents -> Signal<ShareControllerExternalStatus, ShareControllerError> in
                                                 return sentItems(peerIds, contents, account, silently)
+                                                |> castError(ShareControllerError.self)
                                             }
                                         case let .done(contents):
                                             return sentItems(peerIds, contents, account, silently)
+                                            |> castError(ShareControllerError.self)
                                     }
                                 }
                             } else {

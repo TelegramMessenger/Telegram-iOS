@@ -2169,7 +2169,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 videoNode.canAttachContent = true
                 videoNode.play()
                 
-                self.contextContainer.insertSubnode(videoNode, aboveSubnode: self.avatarNode)
+//                self.contextContainer.insertSubnode(videoNode, aboveSubnode: self.avatarNode)
+                self.avatarNode.addSubnode(videoNode)
                 self.videoNode = videoNode
             }
         } else if let videoNode = self.videoNode {
@@ -2179,7 +2180,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         if let videoNode = self.videoNode {
             videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
-            videoNode.frame = self.avatarNode.frame
+            videoNode.frame = self.avatarNode.bounds
         }
     }
         
@@ -2218,7 +2219,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             avatarFrame.origin.x = leftInset - avatarLeftInset + editingOffset + 10.0 + offset
             transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
             if let videoNode = self.videoNode {
-                transition.updateFrame(node: videoNode, frame: avatarFrame)
+                transition.updateFrame(node: videoNode, frame: CGRect(origin: .zero, size: avatarFrame.size))
             }
             
             var onlineFrame = self.onlineNode.frame
