@@ -290,6 +290,21 @@ static int32_t fixedTimeDifferenceValue = 0;
     }
 }
 
+static void copyKeychainKey(NSString * _Nonnull group, NSString * _Nonnull key, id<MTKeychain> _Nonnull fromKeychain, id<MTKeychain> _Nonnull toKeychain) {
+    id value = [fromKeychain objectForKey:key group:group];
+    if (value) {
+        [toKeychain setObject:value forKey:key group:group];
+    }
+}
+
++ (void)copyAuthInfoFrom:(id<MTKeychain> _Nonnull)keychain toTempKeychain:(id<MTKeychain> _Nonnull)tempKeychain {
+    copyKeychainKey(@"temp", @"globalTimeDifference", keychain, tempKeychain);
+    copyKeychainKey(@"persistent", @"datacenterAddressSetById", keychain, tempKeychain);
+    copyKeychainKey(@"persistent", @"datacenterAuthInfoById", keychain, tempKeychain);
+    copyKeychainKey(@"ephemeral", @"datacenterPublicKeysById", keychain, tempKeychain);
+    //copyKeychainKey(@"persistent", @"authTokenById", keychain, tempKeychain);
+}
+
 - (void)cleanup
 {
     NSDictionary *datacenterAuthActions = _datacenterAuthActions;
