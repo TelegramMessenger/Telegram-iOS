@@ -7653,8 +7653,6 @@ Sorry for the inconvenience.";
 
 "Premium.Terms" = "By purchasing a Premium subscription, you agree to our [Terms of Service](terms) and [Privacy Policy](privacy).";
 
-"Premium.ChargeInfo" = "Next charge: %1$@ on %2$@. [Cancel](cancel).";
-
 "Conversation.CopyProtectionSavingDisabledSecret" = "Saving is restricted";
 "Conversation.CopyProtectionForwardingDisabledSecret" = "Forwards are restricted";
 
@@ -7667,8 +7665,6 @@ Sorry for the inconvenience.";
 "Conversation.PremiumUploadFileTooLarge" = "File could not be sent, because it is larger than 4 GB.\n\nYou can send as many files as you like, but each must be smaller than 4 GB.";
 
 "SponsoredMessageMenu.Hide" = "Hide";
-
-"ChatListFolder.MaxChatsInFolder" = "Sorry, you can't add more than %d chats to a folder.";
 
 "Conversation.SaveGif" = "Save GIF";
 
@@ -7705,3 +7701,7 @@ Sorry for the inconvenience.";
 "Message.AudioTranscription.ErrorTooLong" = "The audio is too long";
 
 "WebApp.SelectChat" = "Select Chat";
+
+"Premium.Purchase.ErrorUnknown" = "An error occurred. Please try again.";
+"Premium.Purchase.ErrorNetwork" = "Please check your internet connection and try again.";
+"Premium.Purchase.ErrorNotAllowed" = "The device is not not allowed to make the payment.";

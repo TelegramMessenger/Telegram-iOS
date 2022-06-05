@@ -388,7 +388,7 @@ private final class PremimLimitsListScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: environment.navigationHeight + list.size.height / 2.0))
             )
             
-            return CGSize(width: context.availableSize.width, height: environment.navigationHeight + list.size.height + environment.safeInsets.bottom - 16.0)
+            return CGSize(width: context.availableSize.width, height: environment.navigationHeight + list.size.height + environment.safeInsets.bottom)
         }
     }
 }
@@ -492,7 +492,7 @@ public class PremimLimitsListScreen: ViewController {
             let contentOffset = self.scrollView.contentOffset.y
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
             
-            let bottomOffsetY = max(0.0, self.scrollView.contentSize.height + 20.0 - contentOffset - self.scrollView.frame.height)
+            let bottomOffsetY = max(0.0, self.scrollView.contentSize.height - contentOffset - self.scrollView.frame.height)
             let backgroundAlpha: CGFloat = min(30.0, bottomOffsetY) / 30.0
             
             self.footerNode.updateBackgroundAlpha(backgroundAlpha, transition: .immediate)
@@ -1077,28 +1077,19 @@ private class FooterNode: ASDisplayNode {
         let buttonInset: CGFloat = 16.0
         let buttonWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - buttonInset * 2.0
         let buttonHeight = self.buttonNode.updateLayout(width: buttonWidth, transition: transition)
-        let inset: CGFloat = 9.0
-        
-        let insets = layout.insets(options: [.input])
-        
-        var panelHeight: CGFloat = buttonHeight + inset * 2.0
-        let totalPanelHeight: CGFloat
-        if let inputHeight = layout.inputHeight, inputHeight > 0.0 {
-            totalPanelHeight = panelHeight + insets.bottom
-        } else {
-            panelHeight += insets.bottom
-            totalPanelHeight = panelHeight
-        }
-        
+        let bottomPanelPadding: CGFloat = 12.0
+        let bottomInset: CGFloat = layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : bottomPanelPadding
+                
+        let panelHeight: CGFloat = bottomPanelPadding + 50.0 + bottomInset
         let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: panelHeight))
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: panelFrame.minY + inset), size: CGSize(width: buttonWidth, height: buttonHeight)))
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: bottomPanelPadding), size: CGSize(width: buttonWidth, height: buttonHeight)))
         
         transition.updateFrame(node: self.backgroundNode, frame: panelFrame)
         self.backgroundNode.update(size: panelFrame.size, transition: transition)
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: panelFrame.origin, size: CGSize(width: panelFrame.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: panelFrame.width, height: UIScreenPixel)))
         
-        return totalPanelHeight
+        return panelHeight
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

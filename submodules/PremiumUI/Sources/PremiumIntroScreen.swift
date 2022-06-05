@@ -1404,11 +1404,24 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                 strongSelf.updateInProgress(false)
                                 strongSelf.updated(transition: .immediate)
 
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                var errorText: String?
                                 switch error {
                                     case .generic:
-                                        addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                    case .network:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorNetwork
+                                    case .notAllowed:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorNotAllowed
                                     case .cancelled:
                                         break
+                                }
+                                
+                                if let errorText = errorText {
+                                    addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
+                                    
+                                    let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                                    strongSelf.present(alertController)
                                 }
                             }
                         }))
@@ -1635,7 +1648,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                             foregroundColor: .white
                         ),
                         height: 50.0,
-                        cornerRadius: 10.0,
+                        cornerRadius: 11.0,
                         gloss: true,
                         isLoading: state.inProgress,
                         action: {

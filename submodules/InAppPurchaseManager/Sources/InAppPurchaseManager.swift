@@ -28,6 +28,8 @@ public final class InAppPurchaseManager: NSObject {
     public enum PurchaseError {
         case generic
         case cancelled
+        case network
+        case notAllowed
     }
     
     private final class PaymentTransactionContext {
@@ -43,7 +45,7 @@ public final class InAppPurchaseManager: NSObject {
         case purchased(transactionId: String?)
         case restored(transactionId: String?)
         case purchasing
-        case failed
+        case failed(error: SKError?)
         case deferred
     }
     
@@ -109,8 +111,23 @@ public final class InAppPurchaseManager: NSObject {
                             } else {
                                 subscriber.putError(.generic)
                             }
-                        case .failed:
-                            subscriber.putError(.generic)
+                        case let .failed(error):
+                            if let error = error {
+                                let mappedError: PurchaseError
+                                switch error.code {
+                                    case .paymentCancelled:
+                                        mappedError = .cancelled
+                                    case .cloudServiceNetworkConnectionFailed, .cloudServicePermissionDenied:
+                                        mappedError = .network
+                                    case .paymentNotAllowed, .clientInvalid:
+                                        mappedError = .notAllowed
+                                    default:
+                                        mappedError = .generic
+                                }
+                                subscriber.putError(mappedError)
+                            } else {
+                                subscriber.putError(.generic)
+                            }
                         case .deferred, .purchasing:
                             break
                     }
@@ -174,7 +191,7 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                             )
                         }
                     case .failed:
-                        transactionState = .failed
+                        transactionState = .failed(error: transaction.error as? SKError)
                         queue.finishTransaction(transaction)
                     case .purchasing:
                         transactionState = .purchasing
