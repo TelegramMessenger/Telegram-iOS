@@ -52,6 +52,11 @@ public enum ChatControllerInteractionReaction {
     case reaction(String)
 }
 
+struct UnreadMessageRangeKey: Hashable {
+    var peerId: PeerId
+    var namespace: MessageId.Namespace
+}
+
 public final class ChatControllerInteraction {
     let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
     let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Peer?) -> Void
@@ -149,6 +154,7 @@ public final class ChatControllerInteraction {
     var currentPsaMessageWithTooltip: MessageId?
     var stickerSettings: ChatInterfaceStickerSettings
     var searchTextHighightState: (String, [MessageIndex])?
+    var unreadMessageRange: [UnreadMessageRangeKey: Range<MessageId.Id>] = [:]
     var seenOneTimeAnimatedMedia = Set<MessageId>()
     var currentMessageWithLoadingReplyThread: MessageId?
     var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
