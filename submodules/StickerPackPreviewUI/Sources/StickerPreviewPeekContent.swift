@@ -187,6 +187,9 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             if size.width == 292.0 {
                 topOffset = 60.0
                 textSpacing -= 10.0
+            } else if size.width == 347.0 && size.height == 577.0 {
+                topOffset = 60.0
+                textSpacing -= 10.0
             }
             
             let textSize = self.textNode.measure(CGSize(width: 100.0, height: 100.0))
@@ -275,6 +278,8 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
         
         var bottomOffset: CGFloat = 0.0
         if size.width == 320.0 {
+            bottomOffset = 30.0
+        } else if size.width == 375.0 && size.height == 667.0 {
             bottomOffset = 30.0
         }
         

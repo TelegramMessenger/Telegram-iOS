@@ -626,24 +626,15 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         controller?.push(c)
     }
     
-    let _ = combineLatest(
-        queue: Queue.mainQueue(),
-        controller.result |> take(1),
-        context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
-            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
-            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
-        )
-    )
-    .start(next: { [weak controller] result, data in
+    let _ = (controller.result
+    |> take(1)
+    |> deliverOnMainQueue)
+    .start(next: { [weak controller] result in
         guard case let .result(peerIds, additionalCategoryIds) = result else {
             controller?.dismiss()
             return
         }
-        
-//        let (accountPeer, limits, premiumLimits) = data
-//        let isPremium = accountPeer?.isPremium ?? false
-        
+                
         var includePeers: [PeerId] = []
         for peerId in peerIds {
             switch peerId {
@@ -654,24 +645,6 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
             }
         }
         includePeers.sort()
-        
-//        if includePeers.count > premiumLimits.maxFolderChatsCount {
-//            let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(includePeers.count), action: {})
-//            controller?.push(limitController)
-//            return
-//        } else if includePeers.count > limits.maxFolderChatsCount && !isPremium {
-//            var replaceImpl: ((ViewController) -> Void)?
-//            let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(includePeers.count), action: {
-//                let introController = PremiumIntroScreen(context: context, source: .chatsPerFolder)
-//                replaceImpl?(introController)
-//            })
-//            replaceImpl = { [weak controller] c in
-//                controller?.replace(with: c)
-//            }
-//            controller?.push(limitController)
-//
-//            return
-//        }
         
         var categories: ChatListFilterPeerCategories = []
         for id in additionalCategoryIds {

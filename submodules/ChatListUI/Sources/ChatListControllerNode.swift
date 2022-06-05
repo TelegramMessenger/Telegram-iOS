@@ -431,7 +431,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     
     private var itemNodes: [ChatListFilterTabEntryId: ChatListContainerItemNode] = [:]
     private var pendingItemNode: (ChatListFilterTabEntryId, ChatListContainerItemNode, Disposable)?
-    private var availableFilters: [ChatListContainerNodeFilter] = [.all]
+    private(set) var availableFilters: [ChatListContainerNodeFilter] = [.all]
     private var filtersLimit: Int32? = nil
     private var selectedId: ChatListFilterTabEntryId
     

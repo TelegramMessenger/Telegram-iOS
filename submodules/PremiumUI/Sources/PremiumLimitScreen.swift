@@ -685,7 +685,7 @@ private final class LimitSheetContent: CombinedComponent {
             var buttonAnimationName = "premium_x2"
             let iconName: String
             let badgeText: String
-            let string: String
+            var string: String
             let defaultValue: String
             let premiumValue: String
             let badgePosition: CGFloat
@@ -699,6 +699,10 @@ private final class LimitSheetContent: CombinedComponent {
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                
+                    if !state.isPremium && badgePosition > 0.5 {
+                        string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
+                    }
                 case .chatsPerFolder:
                     let limit = state.limits.maxFolderChatsCount
                     let premiumLimit = state.premiumLimits.maxFolderChatsCount

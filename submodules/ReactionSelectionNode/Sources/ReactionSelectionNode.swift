@@ -356,10 +356,26 @@ private func generatePremiumReactionIcon() -> UIImage? {
 final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
     var isExtracted: Bool = false
     
+    var backgroundView: UIVisualEffectView?
+    let backgroundMaskNode: ASImageNode
+    let backgroundOverlayNode: ASImageNode
     let imageNode: ASImageNode
     let maskImageNode: ASImageNode
     
     init(theme: PresentationTheme) {
+        self.backgroundMaskNode = ASImageNode()
+        self.backgroundMaskNode.contentMode = .center
+        self.backgroundMaskNode.displaysAsynchronously = false
+        self.backgroundMaskNode.isUserInteractionEnabled = false
+        self.backgroundMaskNode.image = UIImage(bundleImageName: "Premium/ReactionsBackground")
+        
+        self.backgroundOverlayNode = ASImageNode()
+        self.backgroundOverlayNode.alpha = 0.05
+        self.backgroundOverlayNode.contentMode = .center
+        self.backgroundOverlayNode.displaysAsynchronously = false
+        self.backgroundOverlayNode.isUserInteractionEnabled = false
+        self.backgroundOverlayNode.image = generateTintedImage(image: UIImage(bundleImageName: "Premium/ReactionsBackground"), color: theme.overallDarkAppearance ? .white : .black)
+          
         self.imageNode = ASImageNode()
         self.imageNode.contentMode = .center
         self.imageNode.displaysAsynchronously = false
@@ -383,7 +399,23 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
         
         super.init()
         
+        self.addSubnode(self.backgroundOverlayNode)
         self.addSubnode(self.imageNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let blurEffect: UIBlurEffect
+        if #available(iOS 13.0, *) {
+            blurEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+        } else {
+            blurEffect = UIBlurEffect(style: .light)
+        }
+        let backgroundView = UIVisualEffectView(effect: blurEffect)
+        backgroundView.mask = self.backgroundMaskNode.view
+        self.view.insertSubview(backgroundView, at: 0)
+        self.backgroundView = backgroundView
     }
     
     func appear(animated: Bool) {
@@ -391,7 +423,11 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
     }
     
     func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
-        self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        self.backgroundView?.frame = bounds
+        self.backgroundMaskNode.frame = bounds
+        self.backgroundOverlayNode.frame = bounds
+        self.imageNode.frame = bounds
     }
     
     

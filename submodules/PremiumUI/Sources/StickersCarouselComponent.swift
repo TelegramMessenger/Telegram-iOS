@@ -555,7 +555,6 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         let bounds = CGRect(origin: .zero, size: size)
         let areaSize = CGSize(width: floor(size.width * 4.0), height: size.height * 2.2)
         
-        var visibleCount = 0
         for i in 0 ..< self.itemNodes.count {
             let itemNode = self.itemNodes[i]
             let containerNode = self.itemContainerNodes[i]
@@ -593,9 +592,6 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             
             let isVisible = self.visibility && itemFrame.intersects(bounds)
             itemNode.setVisible(isVisible)
-            if isVisible {
-                visibleCount += 1
-            }
             
             itemNode.frame = CGRect(origin: CGPoint(), size: itemFrame.size)
             itemNode.updateLayout(size: itemFrame.size, transition: transition)
