@@ -12,6 +12,7 @@ import AccountContext
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
+import StickerResources
 
 final class StickersCarouselComponent: Component {
     public typealias EnvironmentType = DemoPageEnvironment
@@ -104,6 +105,7 @@ private class StickerNode: ASDisplayNode {
     
         if file.isPremiumSticker {
             let animationNode = AnimatedStickerNode()
+            animationNode.automaticallyLoadFirstFrame = true
             self.animationNode = animationNode
             
             let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -111,6 +113,8 @@ private class StickerNode: ASDisplayNode {
             
             let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
             animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
+            
+            self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: context.account.postbox, file: file, small: false, size: fittedDimensions))
             
             self.disposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, fileReference: .standalone(media: file), resource: file.resource).start())
             
@@ -134,10 +138,9 @@ private class StickerNode: ASDisplayNode {
         
         self.isUserInteractionEnabled = false
         
+        self.addSubnode(self.imageNode)
         if let animationNode = self.animationNode {
             self.addSubnode(animationNode)
-        } else {
-            self.addSubnode(self.imageNode)
         }
         
         if let additionalAnimationNode = self.additionalAnimationNode {
@@ -254,7 +257,7 @@ private class StickerNode: ASDisplayNode {
                 }
             }
             
-            let placeholderFrame = CGRect(origin: .zero, size: size)
+            let placeholderFrame = CGRect(origin: .zero, size: imageSize)
             let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
             self.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: self.file.immediateThumbnailData, size: placeholderFrame.size, imageSize: thumbnailDimensions.cgSize)
             self.placeholderNode.frame = placeholderFrame
@@ -266,7 +269,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private let stickers: [TelegramMediaFile]
     private var itemContainerNodes: [ASDisplayNode] = []
-    private var itemNodes: [StickerNode] = []
+    private var itemNodes: [Int: StickerNode] = [:]
     private let scrollNode: ASScrollNode
     private let tapNode: ASDisplayNode
     
@@ -299,7 +302,13 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.tapNode)
         
-        self.setup()
+        for _ in self.stickers {
+            let containerNode = ASDisplayNode()
+            containerNode.isUserInteractionEnabled = false
+            self.addSubnode(containerNode)
+                        
+            self.itemContainerNodes.append(containerNode)
+        }
     }
     
     override func didLoad() {
@@ -351,7 +360,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func scrollTo(_ index: Int, playAnimation: Bool, duration: Double, clockwise: Bool? = nil) {
-        guard index >= 0 && index < self.itemNodes.count else {
+        guard index >= 0 && index < self.stickers.count else {
             return
         }
         self.currentIndex = index
@@ -411,19 +420,6 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func setup() {
-        for sticker in self.stickers {
-            let containerNode = ASDisplayNode()
-            let itemNode = StickerNode(context: self.context, file: sticker)
-            containerNode.isUserInteractionEnabled = false
-            containerNode.addSubnode(itemNode)
-            self.addSubnode(containerNode)
-                        
-            self.itemContainerNodes.append(containerNode)
-            self.itemNodes.append(itemNode)
-        }
-    }
-    
     private var ignoreContentOffsetChange = false
     private func resetScrollPosition() {
         self.scrollStartPosition = nil
@@ -434,14 +430,13 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     
     func playSelectedSticker() {
         let delta = self.positionDelta
-        let index = max(0, Int(round(self.currentPosition / delta)) % self.itemNodes.count)
+        let index = max(0, Int(round(self.currentPosition / delta)) % self.stickers.count)
         
         guard !self.playingIndices.contains(index) else {
             return
         }
         
-        for i in 0 ..< self.itemNodes.count {
-            let itemNode = self.itemNodes[i]
+        for (i, itemNode) in self.itemNodes {
             let containerNode = self.itemContainerNodes[i]
             let isCentral = i == index
             itemNode.setCentral(isCentral)
@@ -461,7 +456,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             self.scrollStartPosition = (scrollView.contentOffset.y, self.currentPosition)
         }
         
-        for itemNode in self.itemNodes {
+        for (_, itemNode) in self.itemNodes {
             itemNode.setCentral(false)
         }
     }
@@ -493,7 +488,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         self.currentPosition = updatedPosition
         
         let indexDelta = self.positionDelta
-        let index = max(0, Int(round(self.currentPosition / indexDelta)) % self.itemNodes.count)
+        let index = max(0, Int(round(self.currentPosition / indexDelta)) % self.stickers.count)
         if index != self.currentIndex {
             self.currentIndex = index
             if self.scrollNode.view.isTracking || self.scrollNode.view.isDecelerating {
@@ -528,7 +523,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             self.resetScrollPosition()
             
             let delta = self.positionDelta
-            let index = max(0, Int(round(self.currentPosition / delta)) % self.itemNodes.count)
+            let index = max(0, Int(round(self.currentPosition / delta)) % self.stickers.count)
             self.scrollTo(index, playAnimation: true, duration: 0.2)
         }
     }
@@ -555,9 +550,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         let bounds = CGRect(origin: .zero, size: size)
         let areaSize = CGSize(width: floor(size.width * 4.0), height: size.height * 2.2)
         
-        var visibleCount = 0
-        for i in 0 ..< self.itemNodes.count {
-            let itemNode = self.itemNodes[i]
+        for i in 0 ..< self.stickers.count {
             let containerNode = self.itemContainerNodes[i]
             
             var angle = CGFloat.pi * 0.5 + CGFloat(i) * delta * CGFloat.pi * 2.0 - self.currentPosition * CGFloat.pi * 2.0 - CGFloat.pi * 0.5
@@ -589,16 +582,28 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             containerNode.position = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
             transition.updateTransformScale(node: containerNode, scale: 1.0 - distance * 0.75)
             transition.updateAlpha(node: containerNode, alpha: 1.0 - distance * 0.6)
-            itemNode.updateAbsoluteRect(itemFrame, within: size)
             
             let isVisible = self.visibility && itemFrame.intersects(bounds)
-            itemNode.setVisible(isVisible)
             if isVisible {
-                visibleCount += 1
+                let itemNode: StickerNode
+                if let current = self.itemNodes[i] {
+                    itemNode = current
+                } else {
+                    itemNode = StickerNode(context: self.context, file: self.stickers[i])
+                    containerNode.addSubnode(itemNode)
+                    self.itemNodes[i] = itemNode
+                }
+                itemNode.updateAbsoluteRect(itemFrame, within: size)
+                itemNode.setVisible(isVisible)
+                
+                itemNode.frame = CGRect(origin: CGPoint(), size: itemFrame.size)
+                itemNode.updateLayout(size: itemFrame.size, transition: transition)
+            } else {
+                if let itemNode = self.itemNodes[i] {
+                    itemNode.removeFromSupernode()
+                    self.itemNodes[i] = nil
+                }
             }
-            
-            itemNode.frame = CGRect(origin: CGPoint(), size: itemFrame.size)
-            itemNode.updateLayout(size: itemFrame.size, transition: transition)
         }
     }
 }

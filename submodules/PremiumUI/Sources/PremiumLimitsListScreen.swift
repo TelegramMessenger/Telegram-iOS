@@ -891,6 +891,8 @@ public class PremimLimitsListScreen: ViewController {
     private let buttonText: String
     private let buttonGloss: Bool
     
+    var disposed: () -> Void = {}
+    
     public convenience init(context: AccountContext, buttonText: String, isPremium: Bool) {
         var expandImpl: (() -> Void)?
         self.init(context: context, component: PremimLimitsListScreenComponent(context: context, expand: {
@@ -933,6 +935,10 @@ public class PremimLimitsListScreen: ViewController {
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.disposed()
     }
     
     @objc private func cancelPressed() {

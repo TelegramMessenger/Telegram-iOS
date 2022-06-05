@@ -30,3 +30,18 @@ func _internal_assignAppStoreTransaction(account: Account, transactionId: String
         }
     }
 }
+
+func _internal_canPurchasePremium(account: Account) -> Signal<Bool, NoError> {
+    return account.network.request(Api.functions.payments.canPurchasePremium())
+    |> map { result -> Bool in
+        switch result {
+            case .boolTrue:
+                return true
+            case .boolFalse:
+                return false
+        }
+    }
+    |> `catch` { _ -> Signal<Bool, NoError> in
+        return.single(false)
+    }
+}

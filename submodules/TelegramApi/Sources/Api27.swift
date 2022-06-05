@@ -6257,6 +6257,21 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
+                static func canPurchasePremium() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1435856696)
+                    
+                    return (FunctionDescription(name: "payments.canPurchasePremium", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func clearSavedInfo(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-667062079)
@@ -6357,6 +6372,36 @@ public extension Api.functions.payments {
                     serializeString(recurringInitCharge, buffer: buffer, boxed: false)
                     invoiceMedia.serialize(buffer, true)
                     return (FunctionDescription(name: "payments.requestRecurringPayment", parameters: [("userId", String(describing: userId)), ("recurringInitCharge", String(describing: recurringInitCharge)), ("invoiceMedia", String(describing: invoiceMedia))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
+                static func restoreAppStoreReceipt(receipt: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2132923705)
+                    serializeBytes(receipt, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.restoreAppStoreReceipt", parameters: [("receipt", String(describing: receipt))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
+                static func restorePlayMarketReceipt(receipt: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-781917334)
+                    serializeBytes(receipt, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.restorePlayMarketReceipt", parameters: [("receipt", String(describing: receipt))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

@@ -3466,8 +3466,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let openWebView = {
                 if fromMenu {
-                    strongSelf.interfaceInteraction?.updateShowWebView { _ in
-                        return true
+                    strongSelf.updateChatPresentationInterfaceState(interactive: false) { state in
+                        return state.updatedShowWebView(true).updatedForceInputCommandsHidden(true)
                     }
                     
                     let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true, isSimple: false)
@@ -3493,6 +3493,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.chatDisplayNode.insertSubnode(strongSelf.chatDisplayNode.inputPanelContainerNode, aboveSubnode: strongSelf.chatDisplayNode.historyNodeContainer)
                             if isFocused {
                                 strongSelf.chatDisplayNode.textInputPanelNode?.ensureFocused()
+                            }
+                            
+                            strongSelf.updateChatPresentationInterfaceState(interactive: false) { state in
+                                return state.updatedForceInputCommandsHidden(false)
                             }
                         }
                     }, getNavigationController: { [weak self] in
@@ -10778,11 +10782,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
-        
-        if botId != nil && peer.id.namespace != Namespaces.Peer.CloudUser {
-            return
-        }
-        
+                
         let context = self.context
         
         let inputIsActive = self.presentationInterfaceState.inputMode == .text

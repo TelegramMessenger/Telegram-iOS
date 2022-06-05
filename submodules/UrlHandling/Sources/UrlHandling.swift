@@ -88,7 +88,7 @@ public enum ParsedInternalUrl {
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
     case phone(String, String?, String?)
-    case startAttach(String, String?)
+    case startAttach(String, String?, String?)
 }
 
 private enum ParsedUrl {
@@ -210,12 +210,26 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     return .peerName(peerName, .voiceChat(value))
                                 } else if queryItem.name == "startattach" {
-                                    return .startAttach(peerName, value)
+                                    var choose: String?
+                                    for queryItem in queryItems {
+                                        if queryItem.name == "choose", let value = queryItem.value {
+                                            choose = value
+                                            break
+                                        }
+                                    }
+                                    return .startAttach(peerName, value, choose)
                                 }
                             } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name)  {
                                 return .peerName(peerName, .voiceChat(nil))
                             } else if queryItem.name == "startattach" {
-                                return .startAttach(peerName, nil)
+                                var choose: String?
+                                for queryItem in queryItems {
+                                    if queryItem.name == "choose", let value = queryItem.value {
+                                        choose = value
+                                        break
+                                    }
+                                }
+                                return .startAttach(peerName, nil, choose)
                             }
                         }
                     }
@@ -591,7 +605,23 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             return .single(.wallpaper(parameter))
         case let .theme(slug):
             return .single(.theme(slug))
-        case let .startAttach(name, payload):
+        case let .startAttach(name, payload, chooseValue):
+            var choose: ResolvedBotChoosePeerTypes = []
+            if let chooseValue = chooseValue?.lowercased() {
+                let components = chooseValue.components(separatedBy: "+")
+                if components.contains("users") {
+                    choose.insert(.users)
+                }
+                if components.contains("bots") {
+                    choose.insert(.bots)
+                }
+                if components.contains("groups") {
+                    choose.insert(.groups)
+                }
+                if components.contains("channels") {
+                    choose.insert(.channels)
+                }
+            }
             return context.engine.peers.resolvePeerByName(name: name)
             |> take(1)
             |> mapToSignal { peer -> Signal<Peer?, NoError> in
@@ -599,7 +629,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
-                    return .single(.startAttach(peerId: peer.id, payload: payload))
+                    return .single(.startAttach(peerId: peer.id, payload: payload, choose: !choose.isEmpty ? choose : nil))
                 } else {
                     return .single(.inaccessiblePeer)
                 }

@@ -21,6 +21,13 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+#filegroup(
+#    name = "Icons",
+#    srcs = glob([
+#        "Telegram-iOS/Icons.xcassets/**/*",
+#    ], exclude = ["Telegram-iOS/Icons.xcassets/**/.*"]),
+#)
+
 internal_bundle_ids = [
     "org.telegram.Telegram-iOS",
 ]

@@ -40,5 +40,9 @@ public extension TelegramEngine {
         public func assignAppStoreTransaction(transactionId: String) -> Signal<Never, AssignAppStoreTransactionError> {
             return _internal_assignAppStoreTransaction(account: self.account, transactionId: transactionId)
         }
+        
+        public func canPurchasePremium() -> Signal<Bool, NoError> {
+            return _internal_canPurchasePremium(account: self.account)
+        }
     }
 }

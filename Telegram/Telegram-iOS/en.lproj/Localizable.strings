@@ -7692,3 +7692,5 @@ Sorry for the inconvenience.";
 "Chat.AudioTranscriptionFeedbackTip" = "Thank you for your feedback.";
 "Message.AudioTranscription.ErrorEmpty" = "No speech detected";
 "Message.AudioTranscription.ErrorTooLong" = "The audio is too long";
+
+"WebApp.SelectChat" = "Select Chat";

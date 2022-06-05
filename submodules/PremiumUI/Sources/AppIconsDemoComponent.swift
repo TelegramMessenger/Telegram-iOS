@@ -60,7 +60,7 @@ final class AppIconsDemoComponent: Component {
             
             self.component = component
             
-            self.containerView.frame = CGRect(origin: .zero, size: availableSize)
+            self.containerView.frame = CGRect(origin: CGPoint(x: -availableSize.width / 2.0, y: 0.0), size: CGSize(width: availableSize.width * 2.0, height: availableSize.height))
             
             if self.imageViews.isEmpty {
                 for icon in component.appIcons {
@@ -68,6 +68,9 @@ final class AppIconsDemoComponent: Component {
                         let imageView = UIImageView(frame: CGRect(origin: .zero, size: CGSize(width: 90.0, height: 90.0)))
                         imageView.clipsToBounds = true
                         imageView.layer.cornerRadius = 24.0
+                        if #available(iOS 13.0, *) {
+                            imageView.layer.cornerCurve = .continuous
+                        }
                         imageView.image = image
                         self.containerView.addSubview(imageView)
                         
@@ -90,7 +93,7 @@ final class AppIconsDemoComponent: Component {
                         position = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)
                 }
                 
-                view.center = position
+                view.center = position.offsetBy(dx: availableSize.width / 2.0, dy: 0.0)
                 
                 i += 1
             }
@@ -105,10 +108,6 @@ final class AppIconsDemoComponent: Component {
             }
             
             if isDisplaying && !self.isVisible {
-//                var fast = false
-//                if let _ = transition.userData(DemoAnimateInTransition.self) {
-//                    fast = true
-//                }
                 self.animateIn(availableSize: availableSize)
             }
             self.isVisible = isDisplaying
@@ -126,10 +125,10 @@ final class AppIconsDemoComponent: Component {
                         from = CGPoint(x: -availableSize.width * 0.333, y: -availableSize.height * 0.8)
                         delay = 0.1
                     case 1:
-                        from = CGPoint(x: -availableSize.width * 0.75, y: availableSize.height * 0.75)
+                        from = CGPoint(x: -availableSize.width * 0.55, y: availableSize.height * 0.75)
                         delay = 0.15
                     case 2:
-                        from = CGPoint(x: availableSize.width * 0.9, y: availableSize.height * 0.0)
+                        from = CGPoint(x: availableSize.width * 0.9, y: availableSize.height * 0.75)
                         delay = 0.0
                     default:
                         from = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)

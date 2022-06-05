@@ -8,7 +8,7 @@ extension TelegramTheme {
     convenience init(apiTheme: Api.Theme) {
         switch apiTheme {
             case let .theme(flags, id, accessHash, slug, title, document, settings, emoticon, installCount):
-                self.init(id: id, accessHash: accessHash, slug: slug, emoticon: emoticon, title: title, file: document.flatMap(telegramMediaFileFromApiDocument), settings: settings?.compactMap(TelegramThemeSettings.init(apiThemeSettings:)), isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0, installCount: installCount)
+                self.init(id: id, accessHash: accessHash, slug: slug, emoticon: emoticon, title: title, file: document.flatMap { telegramMediaFileFromApiDocument($0) }, settings: settings?.compactMap(TelegramThemeSettings.init(apiThemeSettings:)), isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0, installCount: installCount)
         }
     }
 }

@@ -264,7 +264,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                     strongSelf.chatListDisplayNode.containerNode.currentItemNode.scrollToPosition(.top)
                 case let .known(offset):
-                    if offset <= navigationBarSearchContentHeight + 1.0 && strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter != nil {
+                    let isFirstFilter = strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter == strongSelf.chatListDisplayNode.containerNode.availableFilters.first?.filter
+                    
+                    if offset <= navigationBarSearchContentHeight + 1.0 && !isFirstFilter {
                         let _ = (strongSelf.context.engine.peers.currentChatListFilters()
                         |> deliverOnMainQueue).start(next: { [weak self] filters in
                             guard let strongSelf = self else {
@@ -3328,7 +3330,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             replaceImpl = { [weak controller] c in
                                 controller?.replace(with: c)
                             }
-                            strongSelf.push(controller)
+                            if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                                navigationController.pushViewController(controller)
+                            }
                         } else {
                             strongSelf.selectTab(id: .filter(id))
                         }

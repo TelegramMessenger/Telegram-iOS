@@ -990,7 +990,11 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         switch perk {
                         case .doubleLimits:
                             let controller = PremimLimitsListScreen(context: accountContext, buttonText: isPremium ? strings.Common_OK : strings.Premium_SubscribeFor(state?.price ?? "–").string, isPremium: isPremium)
+                            controller.disposed = {
+                                updateIsFocused(false)
+                            }
                             present(controller)
+                            updateIsFocused(true)
                             return
                         case .moreUpload:
                             demoSubject = .moreUpload
@@ -1261,13 +1265,15 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     let source: PremiumSource
     let updateInProgress: (Bool) -> Void
     let present: (ViewController) -> Void
+    let push: (ViewController) -> Void
     let completion: () -> Void
     
-    init(context: AccountContext, source: PremiumSource, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
+    init(context: AccountContext, source: PremiumSource, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
         self.context = context
         self.source = source
         self.updateInProgress = updateInProgress
         self.present = present
+        self.push = push
         self.completion = completion
     }
         
@@ -1284,6 +1290,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     final class State: ComponentState {
         private let context: AccountContext
         private let updateInProgress: (Bool) -> Void
+        private let present: (ViewController) -> Void
         private let completion: () -> Void
         
         var topContentOffset: CGFloat?
@@ -1300,9 +1307,10 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         private var paymentDisposable = MetaDisposable()
         private var activationDisposable = MetaDisposable()
         
-        init(context: AccountContext, source: PremiumSource, updateInProgress: @escaping (Bool) -> Void, completion: @escaping () -> Void) {
+        init(context: AccountContext, source: PremiumSource, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
             self.context = context
             self.updateInProgress = updateInProgress
+            self.present = present
             self.completion = completion
             
             super.init()
@@ -1356,34 +1364,45 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.updateInProgress(true)
             self.updated(transition: .immediate)
             
-            self.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct, account: self.context.account)
-            |> deliverOnMainQueue).start(next: { [weak self] status in
-                if let strongSelf = self, case let .purchased(transactionId) = status {
-                    strongSelf.activationDisposable.set((strongSelf.context.engine.payments.assignAppStoreTransaction(transactionId: transactionId)
-                    |> deliverOnMainQueue).start(error: { _ in
-                        
-                    }, completed: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.isPremium = true
-                            strongSelf.updated(transition: .easeInOut(duration: 0.25))
-                            strongSelf.completion()
-                        }
-                    }))
-                }
-            }, error: { [weak self] error in
+            let _ = (self.context.engine.payments.canPurchasePremium()
+            |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
-                    strongSelf.inProgress = false
-                    strongSelf.updateInProgress(false)
-                    strongSelf.updated(transition: .immediate)
-                    
-                    switch error {
-                        case .generic:
-                            addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
-                        case .cancelled:
-                            break
+                    if available {
+                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct, account: strongSelf.context.account)
+                        |> deliverOnMainQueue).start(next: { [weak self] status in
+                            if let strongSelf = self, case let .purchased(transactionId) = status {
+                                strongSelf.activationDisposable.set((strongSelf.context.engine.payments.assignAppStoreTransaction(transactionId: transactionId)
+                                |> deliverOnMainQueue).start(error: { _ in
+                                    
+                                }, completed: { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.isPremium = true
+                                        strongSelf.updated(transition: .easeInOut(duration: 0.25))
+                                        strongSelf.completion()
+                                    }
+                                }))
+                            }
+                        }, error: { [weak self] error in
+                            if let strongSelf = self {
+                                strongSelf.inProgress = false
+                                strongSelf.updateInProgress(false)
+                                strongSelf.updated(transition: .immediate)
+                                
+                                switch error {
+                                    case .generic:
+                                        addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
+                                    case .cancelled:
+                                        break
+                                }
+                            }
+                        }))
+                    } else {
+                        strongSelf.inProgress = false
+                        strongSelf.updateInProgress(false)
+                        strongSelf.updated(transition: .immediate)
                     }
                 }
-            }))
+            })
         }
         
         func updateIsFocused(_ isFocused: Bool) {
@@ -1393,7 +1412,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, source: self.source, updateInProgress: self.updateInProgress, completion: self.completion)
+        return State(context: self.context, source: self.source, updateInProgress: self.updateInProgress, present: self.present, completion: self.completion)
     }
     
     static var body: Body {
@@ -1694,6 +1713,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         self.context = context
             
         var updateInProgressImpl: ((Bool) -> Void)?
+        var pushImpl: ((ViewController) -> Void)?
         var presentImpl: ((ViewController) -> Void)?
         var completionImpl: (() -> Void)?
         super.init(context: context, component: PremiumIntroScreenComponent(
@@ -1704,6 +1724,9 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
             },
             present: { c in
                 presentImpl?(c)
+            },
+            push: { c in
+                pushImpl?(c)
             },
             completion: {
                 completionImpl?()
@@ -1729,6 +1752,10 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         }
         
         presentImpl = { [weak self] c in
+            self?.present(c, in: .window(.root))
+        }
+        
+        pushImpl = { [weak self] c in
             self?.push(c)
         }
         

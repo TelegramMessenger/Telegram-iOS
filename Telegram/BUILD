@@ -332,6 +332,7 @@ swift_library(
         "Telegram-iOS/Application.swift",
     ]),
     data = [
+        ":Icons",
         ":AppResources",
         ":AppIntentVocabularyResources",
         ":InfoPlistStringResources",

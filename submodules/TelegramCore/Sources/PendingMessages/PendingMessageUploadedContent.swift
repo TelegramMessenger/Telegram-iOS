@@ -511,10 +511,6 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 attributes.append(.documentAttributeSticker(flags: flags, alt: displayText, stickerset: stickerSet, maskCoords: inputMaskCoords))
             case .HasLinkedStickers:
                 attributes.append(.documentAttributeHasStickers)
-            case .hintFileIsLarge:
-                break
-            case .hintIsValidated:
-                break
             case let .Video(duration, size, videoFlags):
                 var flags: Int32 = 0
                 if videoFlags.contains(.instantRoundVideo) {
@@ -542,6 +538,12 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                     waveformBuffer = Buffer(data: waveform)
                 }
                 attributes.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
+            case .hintFileIsLarge:
+                break
+            case .hintIsValidated:
+                break
+            case .NoPremium:
+                break
         }
     }
     return attributes
@@ -782,8 +784,8 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                                 |> mapError { _ -> PendingMessageUploadError in return .generic }
                                 |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                     switch result {
-                                        case let .messageMediaDocument(_, document, _):
-                                            if let document = document, let mediaFile = telegramMediaFileFromApiDocument(document), let resource = mediaFile.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
+                                        case let .messageMediaDocument(flags, document, _):
+                                        if let document = document, let mediaFile = telegramMediaFileFromApiDocument(document, noPremium: (flags & (1 << 3)) != 0), let resource = mediaFile.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
                                                 return maybeCacheUploadedResource(postbox: postbox, key: referenceKey, result: .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaDocument(flags: 0, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: nil, query: nil), text), reuploadInfo: nil)), media: mediaFile)
                                             }
                                         default:

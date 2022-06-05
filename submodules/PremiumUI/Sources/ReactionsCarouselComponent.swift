@@ -126,16 +126,20 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             reactionMap[reaction.value] = reaction
         }
         
+        var addedReactions = Set<String>()
         var sortedReactions: [AvailableReactions.Reaction] = []
         for emoji in order {
             if let reaction = reactionMap[emoji] {
                 sortedReactions.append(reaction)
+                addedReactions.insert(emoji)
             }
         }
         
-//        for reaction in reactions {
-//            sortedReactions.append(reaction)
-//        }
+        for reaction in reactions {
+            if !addedReactions.contains(reaction.value) {
+                sortedReactions.append(reaction)
+            }
+        }
         
         self.reactions = sortedReactions
         
@@ -537,13 +541,15 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 return relativeAngle
             }
+                        
+            let rotatedAngle = angle - CGFloat.pi / 2.0
             
-            let relativeAngle = calculateRelativeAngle(angle)
+            var updatedAngle = rotatedAngle + 0.5 * sin(rotatedAngle)
+            updatedAngle = updatedAngle + CGFloat.pi / 2.0
+
+            let relativeAngle = calculateRelativeAngle(updatedAngle)
             let distance = abs(relativeAngle) / CGFloat.pi
             
-            let updatedAngle = angle
-//            updatedAngle += 10 * cos(updatedAngle)
-                        
             let point = CGPoint(
                 x: cos(updatedAngle),
                 y: sin(updatedAngle)

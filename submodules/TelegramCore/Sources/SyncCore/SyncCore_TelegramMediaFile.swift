@@ -10,6 +10,7 @@ private let typeAudio: Int32 = 5
 private let typeHasLinkedStickers: Int32 = 6
 private let typeHintFileIsLarge: Int32 = 7
 private let typeHintIsValidated: Int32 = 8
+private let typeNoPremium: Int32 = 9
 
 public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
     case id(id: Int64, accessHash: Int64)
@@ -144,6 +145,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
     case HasLinkedStickers
     case hintFileIsLarge
     case hintIsValidated
+    case NoPremium
     
     public init(decoder: PostboxDecoder) {
         let type: Int32 = decoder.decodeInt32ForKey("t", orElse: 0)
@@ -171,6 +173,8 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
                 self = .hintFileIsLarge
             case typeHintIsValidated:
                 self = .hintIsValidated
+            case typeNoPremium:
+                self = .NoPremium
             default:
                 preconditionFailure()
         }
@@ -225,6 +229,8 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
                 encoder.encodeInt32(typeHintFileIsLarge, forKey: "t")
             case .hintIsValidated:
                 encoder.encodeInt32(typeHintIsValidated, forKey: "t")
+            case .NoPremium:
+                encoder.encodeInt32(typeNoPremium, forKey: "t")
         }
     }
 }
