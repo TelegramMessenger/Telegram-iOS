@@ -18,6 +18,7 @@ import AsyncDisplayKit
 import PresentationDataUtils
 import MeshAnimationCache
 import FetchManagerImpl
+import InAppPurchaseManager
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -122,6 +123,7 @@ public final class AccountContextImpl: AccountContext {
     public let peersNearbyManager: PeersNearbyManager?
     public let wallpaperUploadManager: WallpaperUploadManager?
     private let themeUpdateManager: ThemeUpdateManager?
+    public let inAppPurchaseManager: InAppPurchaseManager?
     
     public let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
     
@@ -184,10 +186,16 @@ public final class AccountContextImpl: AccountContext {
             self.prefetchManager = PrefetchManagerImpl(sharedContext: sharedContext, account: account, engine: self.engine, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
+            if let premiumProductId = sharedContext.premiumProductId {
+                self.inAppPurchaseManager = InAppPurchaseManager(engine: self.engine, premiumProductId: premiumProductId)
+            } else {
+                self.inAppPurchaseManager = nil
+            }
         } else {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil
             self.themeUpdateManager = nil
+            self.inAppPurchaseManager = nil
         }
         
         if let locationManager = self.sharedContextImpl.locationManager, sharedContext.applicationBindings.isMainApp && !temp {

@@ -793,6 +793,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         private let context: AccountContext
     
         var price: String?
+        var isPremium: Bool?
         
         private var disposable: Disposable?
         private(set) var configuration = PremiumIntroConfiguration.defaultValue
@@ -867,6 +868,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let state = context.state
             state.price = context.component.price
+            state.isPremium = context.component.isPremium
             
             let theme = environment.theme
             let strings = environment.strings
@@ -963,8 +965,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let buy = context.component.buy
             let updateIsFocused = context.component.updateIsFocused
             
-            let isPremium = context.component.isPremium ?? false
-            
             var i = 0
             for perk in state.configuration.perks {
                 let iconBackgroundColors = gradientColors[i]
@@ -989,11 +989,21 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         var demoSubject: PremiumDemoScreen.Subject
                         switch perk {
                         case .doubleLimits:
-                            let controller = PremimLimitsListScreen(context: accountContext, buttonText: isPremium ? strings.Common_OK : strings.Premium_SubscribeFor(state?.price ?? "–").string, isPremium: isPremium)
+                            var dismissImpl: (() -> Void)?
+                            let controller = PremimLimitsListScreen(context: accountContext, buttonText: state?.isPremium == true ? strings.Common_OK : strings.Premium_SubscribeFor(state?.price ?? "–").string, isPremium: state?.isPremium == true)
+                            controller.action = { [weak state] in
+                                dismissImpl?()
+                                if state?.isPremium == false {
+                                    buy()
+                                }
+                            }
                             controller.disposed = {
                                 updateIsFocused(false)
                             }
                             present(controller)
+                            dismissImpl = { [weak controller] in
+                                controller?.dismiss(animated: true, completion: nil)
+                            }
                             updateIsFocused(true)
                             return
                         case .moreUpload:
@@ -1018,15 +1028,13 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             demoSubject = .appIcons
                         }
                         
-                        var dismissImpl: (() -> Void)?
                         let controller = PremiumDemoScreen(
                             context: accountContext,
                             subject: demoSubject,
                             source: .intro(state?.price),
                             order: state?.configuration.perks,
                             action: {
-                                dismissImpl?()
-                                if !isPremium {
+                                if state?.isPremium == false {
                                     buy()
                                 }
                             }
@@ -1035,9 +1043,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             updateIsFocused(false)
                         }
                         present(controller)
-                        dismissImpl = { [weak controller] in
-                            controller?.dismiss(animated: true, completion: nil)
-                        }
                         updateIsFocused(true)
                         
                         addAppLogEvent(postbox: accountContext.account.postbox, type: "premium.promo_screen_tap", data: ["item": perk.identifier])
@@ -1315,7 +1320,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             
             super.init()
             
-            if let inAppPurchaseManager = context.sharedContext.inAppPurchaseManager {
+            if let inAppPurchaseManager = context.inAppPurchaseManager {
                 let otherPeerName: Signal<String?, NoError>
                 if case let .profile(peerId) = source {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -1353,27 +1358,38 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         }
         
         func buy() {
-            guard let inAppPurchaseManager = self.context.sharedContext.inAppPurchaseManager,
+            guard let inAppPurchaseManager = self.context.inAppPurchaseManager,
                   let premiumProduct = self.premiumProduct, !self.inProgress else {
                 return
             }
             
             addAppLogEvent(postbox: self.context.account.postbox, type: "premium.promo_screen_accept")
-            
+
             self.inProgress = true
             self.updateInProgress(true)
             self.updated(transition: .immediate)
-            
+
             let _ = (self.context.engine.payments.canPurchasePremium()
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
                     if available {
                         strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct, account: strongSelf.context.account)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
-                            if let strongSelf = self, case let .purchased(transactionId) = status {
-                                strongSelf.activationDisposable.set((strongSelf.context.engine.payments.assignAppStoreTransaction(transactionId: transactionId)
+                            if let strongSelf = self, case .purchased = status {
+                                strongSelf.activationDisposable.set((strongSelf.context.account.postbox.peerView(id: strongSelf.context.account.peerId)
+                                |> castError(AssignAppStoreTransactionError.self)
+                                |> take(until: { view in
+                                    if let peer = view.peers[view.peerId], peer.isPremium {
+                                        return SignalTakeAction(passthrough: false, complete: true)
+                                    } else {
+                                        return SignalTakeAction(passthrough: false, complete: false)
+                                    }
+                                })
+                                |> mapToSignal { _ -> Signal<Never, AssignAppStoreTransactionError> in
+                                    return .never()
+                                }
                                 |> deliverOnMainQueue).start(error: { _ in
-                                    
+
                                 }, completed: { [weak self] in
                                     if let strongSelf = self {
                                         strongSelf.isPremium = true
@@ -1387,7 +1403,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                 strongSelf.inProgress = false
                                 strongSelf.updateInProgress(false)
                                 strongSelf.updated(transition: .immediate)
-                                
+
                                 switch error {
                                     case .generic:
                                         addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
@@ -1421,7 +1437,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         let star = Child(PremiumStarComponent.self)
         let topPanel = Child(BlurredRectangle.self)
         let topSeparator = Child(Rectangle.self)
-        let title = Child(Text.self)
+        let title = Child(MultilineTextComponent.self)
         let secondaryTitle = Child(MultilineTextComponent.self)
         let bottomPanel = Child(BlurredRectangle.self)
         let bottomSeparator = Child(Rectangle.self)
@@ -1468,10 +1484,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             }
             
             let title = title.update(
-                component: Text(
-                    text: titleString,
-                    font: Font.bold(28.0),
-                    color: environment.theme.rootController.navigationBar.primaryTextColor
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: titleString, font: Font.bold(28.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    horizontalAlignment: .center,
+                    truncationType: .end,
+                    maximumNumberOfLines: 1
                 ),
                 availableSize: context.availableSize,
                 transition: context.transition

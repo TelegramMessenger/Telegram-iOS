@@ -452,6 +452,10 @@ public class PremimLimitsListScreen: ViewController {
             self.containerView.addSubview(self.scrollView)
             self.containerView.addSubnode(self.footerNode)
             self.scrollView.addSubview(self.hostView)
+            
+            self.footerNode.action = { [weak self] in
+                self?.controller?.action()
+            }
         }
         
         override func didLoad() {
@@ -891,6 +895,7 @@ public class PremimLimitsListScreen: ViewController {
     private let buttonText: String
     private let buttonGloss: Bool
     
+    var action: () -> Void = {}
     var disposed: () -> Void = {}
     
     public convenience init(context: AccountContext, buttonText: String, isPremium: Bool) {

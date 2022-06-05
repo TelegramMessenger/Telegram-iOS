@@ -47,6 +47,7 @@ public final class InAppPurchaseManager: NSObject {
         case deferred
     }
     
+    private let engine: TelegramEngine
     private let premiumProductId: String
     
     private var products: [Product] = []
@@ -56,7 +57,10 @@ public final class InAppPurchaseManager: NSObject {
     private let stateQueue = Queue()
     private var paymentContexts: [String: PaymentTransactionContext] = [:]
     
-    public init(premiumProductId: String) {
+    private let disposableSet = DisposableDict<String>()
+    
+    public init(engine: TelegramEngine, premiumProductId: String) {
+        self.engine = engine
         self.premiumProductId = premiumProductId
         
         super.init()
@@ -88,7 +92,7 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     public func buyProduct(_ product: Product, account: Account) -> Signal<PurchaseState, PurchaseError> {
-        let payment = SKMutablePayment(product: product.skProduct)
+        let payment = SKPayment(product: product.skProduct)
         SKPaymentQueue.default().add(payment)
         
         let productIdentifier = payment.productIdentifier
@@ -140,26 +144,47 @@ extension InAppPurchaseManager: SKProductsRequestDelegate {
 
 extension InAppPurchaseManager: SKPaymentTransactionObserver {
     public func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
-        if let transaction = transactions.first {
+        for transaction in transactions {
             let productIdentifier = transaction.payment.productIdentifier
             self.stateQueue.async {
-                if let context = self.paymentContexts[productIdentifier] {
-                    let transactionState: TransactionState?
-                    switch transaction.transactionState {
-                        case .purchased:
-                            transactionState = .purchased(transactionId: transaction.transactionIdentifier)
-                        case .restored:
-                            transactionState = .restored(transactionId: transaction.transactionIdentifier)
-                        case .failed:
-                            transactionState = .failed
-                        case .purchasing:
-                            transactionState = .purchasing
-                        case .deferred:
-                            transactionState = .deferred
-                        default:
-                            transactionState = nil
-                    }
-                    if let transactionState = transactionState {
+                let transactionState: TransactionState?
+                switch transaction.transactionState {
+                    case .purchased:
+                        transactionState = .purchased(transactionId: transaction.transactionIdentifier)
+                        if let transactionIdentifier = transaction.transactionIdentifier {
+                            self.disposableSet.set(
+                                self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier).start(error: { error in
+
+                                }, completed: {
+                                    queue.finishTransaction(transaction)
+                                }),
+                                forKey: transaction.transactionIdentifier ?? ""
+                            )
+                        }
+                    case .restored:
+                        transactionState = .restored(transactionId: transaction.transactionIdentifier)
+                        if let transactionIdentifier = transaction.transactionIdentifier {
+                            self.disposableSet.set(
+                                self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier).start(error: { error in
+
+                                }, completed: {
+                                    queue.finishTransaction(transaction)
+                                }),
+                                forKey: transaction.transactionIdentifier ?? ""
+                            )
+                        }
+                    case .failed:
+                        transactionState = .failed
+                        queue.finishTransaction(transaction)
+                    case .purchasing:
+                        transactionState = .purchasing
+                    case .deferred:
+                        transactionState = .deferred
+                    default:
+                        transactionState = nil
+                }
+                if let transactionState = transactionState {
+                    if let context = self.paymentContexts[productIdentifier] {
                         context.subscriber(transactionState)
                     }
                 }
