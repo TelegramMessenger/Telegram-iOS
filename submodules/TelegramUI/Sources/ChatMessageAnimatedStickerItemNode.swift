@@ -1614,6 +1614,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return
         }
         self.playedPremiumStickerAnimation = true
+        if file.attributes.contains(where: { attribute in
+            if case .NoPremium = attribute {
+                return true
+            } else {
+                return false
+            }
+        }) {
+            return
+        }
         self.playEffectAnimation(resource: effect.resource, isStickerEffect: true)
     }
     
