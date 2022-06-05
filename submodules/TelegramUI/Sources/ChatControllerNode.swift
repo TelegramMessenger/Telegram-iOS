@@ -2310,6 +2310,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     enableGesture = false
                 }
             }
+            
+            if let peer = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil, case .inputButtons = self.chatPresentationInterfaceState.inputMode {
+                enableGesture = false
+            }
+            
             if enableGesture {
                 self.keyboardGestureBeginLocation = keyboardGestureBeginLocation
                 self.keyboardGestureAccessoryHeight = accessoryHeight
