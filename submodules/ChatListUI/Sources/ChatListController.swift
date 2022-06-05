@@ -3330,7 +3330,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             replaceImpl = { [weak controller] c in
                                 controller?.replace(with: c)
                             }
-                            strongSelf.push(controller)
+                            if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                                navigationController.pushViewController(controller)
+                            }
                         } else {
                             strongSelf.selectTab(id: .filter(id))
                         }

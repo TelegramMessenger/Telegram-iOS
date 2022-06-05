@@ -6266,7 +6266,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     replaceImpl = { [weak controller] c in
                         controller?.replace(with: c)
                     }
-                    self.controller?.push(controller)
+                    if let navigationController = context.sharedContext.mainWindow?.viewController as? NavigationController {
+                        navigationController.pushViewController(controller)
+                    }
                 } else {
                     self.context.sharedContext.beginNewAuth(testingEnvironment: self.context.account.testingEnvironment)
                 }
