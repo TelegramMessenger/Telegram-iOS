@@ -936,6 +936,7 @@ public final class MessageHistoryView {
     public let entries: [MessageHistoryEntry]
     public let maxReadIndex: MessageIndex?
     public let fixedReadStates: MessageHistoryViewReadState?
+    public let transientReadStates: MessageHistoryViewReadState?
     public let topTaggedMessages: [Message]
     public let additionalData: [AdditionalMessageHistoryViewDataEntry]
     public let isLoading: Bool
@@ -952,6 +953,7 @@ public final class MessageHistoryView {
         self.entries = entries
         self.maxReadIndex = nil
         self.fixedReadStates = nil
+        self.transientReadStates = nil
         self.topTaggedMessages = []
         self.additionalData = []
         self.isLoading = isLoading
@@ -1053,6 +1055,7 @@ public final class MessageHistoryView {
         self.additionalData = mutableView.additionalDatas
         
         self.fixedReadStates = mutableView.combinedReadStates
+        self.transientReadStates = mutableView.transientReadStates
         
         switch mutableView.peerIds {
         case .single, .associated:

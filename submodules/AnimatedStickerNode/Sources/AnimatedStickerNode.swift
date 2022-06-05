@@ -375,6 +375,11 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     private var isSetUpForPlayback = false
+    
+    public func playOnce() {
+        self.playbackMode = .once
+        self.play()
+    }
         
     public func play(firstFrame: Bool = false, fromIndex: Int? = nil) {
         if !firstFrame {

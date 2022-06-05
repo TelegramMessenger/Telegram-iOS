@@ -341,7 +341,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
-                if let entities = entities {
+                /*if let entities = entities {
                     let updatedString = NSMutableAttributedString(attributedString: attributedText)
                     
                     for entity in entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound }) {
@@ -368,48 +368,11 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(file: emojiFile)
                             
                             let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}]", attributes: updatedAttributes)
-                            //updatedString.insert(insertString, at: NSRange(substringRange, in: updatedString.string).upperBound)
                             updatedString.replaceCharacters(in: range, with: insertString)
                         }
-                        
-                        /*var currentCount = 0
-                        let updatedString = NSMutableAttributedString(attributedString: attributedText)
-                        var startIndex = updatedString.string.startIndex
-                        while true {
-                            var hadUpdates = false
-                            updatedString.string.enumerateSubstrings(in: startIndex ..< updatedString.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
-                                if let substring = substring {
-                                    let emoji = substring.basicEmoji.0
-                                    
-                                    var emojiFile: TelegramMediaFile?
-                                    emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
-                                    if emojiFile == nil {
-                                        emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
-                                    }
-                                    
-                                    if let emojiFile = emojiFile {
-                                        let currentDict = updatedString.attributes(at: NSRange(substringRange, in: updatedString.string).lowerBound, effectiveRange: nil)
-                                        var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
-                                        updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
-                                        updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(file: emojiFile)
-                                        
-                                        let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}\u{00a0}]", attributes: updatedAttributes)
-                                        //updatedString.insert(insertString, at: NSRange(substringRange, in: updatedString.string).upperBound)
-                                        updatedString.replaceCharacters(in: NSRange(substringRange, in: updatedString.string), with: insertString)
-                                        startIndex = substringRange.lowerBound
-                                        currentCount += 1
-                                        hadUpdates = true
-                                        stop = true
-                                    }
-                                }
-                            }
-                            if !hadUpdates || currentCount >= 10 {
-                                break
-                            }
-                        }*/
                     }
                     attributedText = updatedString
-                }
+                }*/
                 
                 let cutout: TextNodeCutout? = nil
                 

@@ -146,7 +146,7 @@ private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, 
 public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimatedEmojisInText: Int? = nil) -> [MessageTextEntity] {
     var entities: [MessageTextEntity] = []
     
-    if let maxAnimatedEmojisInText = maxAnimatedEmojisInText {
+    if let maxAnimatedEmojisInText = maxAnimatedEmojisInText, maxAnimatedEmojisInText != 0 {
         var count = 0
         text.string.enumerateSubstrings(in: text.string.startIndex ..< text.string.endIndex, options: [.byComposedCharacterSequences], { substring, substringRange, _, stop in
             if let substring = substring {
@@ -159,10 +159,7 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
                     
                     count += 1
                     if count >= maxAnimatedEmojisInText {
-                        #if DEBUG
-                        #else
                         stop = true
-                        #endif
                     }
                 }
             }

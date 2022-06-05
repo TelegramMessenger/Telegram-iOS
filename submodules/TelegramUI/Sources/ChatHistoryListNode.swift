@@ -1309,31 +1309,35 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let previousMaxIncomingMessageIndexByNamespace = Atomic<[MessageId.Namespace: MessageIndex]>(value: [:])
         let readHistory = combineLatest(self.maxVisibleIncomingMessageIndex.get(), self.canReadHistory.get())
-        |> map { messageIndex, canRead in
-            if canRead {
-                var apply = false
-                let _ = previousMaxIncomingMessageIndexByNamespace.modify { dict in
-                    let previousIndex = dict[messageIndex.id.namespace]
-                    if previousIndex == nil || previousIndex! < messageIndex {
-                        apply = true
-                        var dict = dict
-                        dict[messageIndex.id.namespace] = messageIndex
-                        return dict
-                    }
+        
+        self.readHistoryDisposable.set((readHistory |> deliverOnMainQueue).start(next: { [weak self] messageIndex, canRead in
+            guard let strongSelf = self else {
+                return
+            }
+            if !canRead {
+                return
+            }
+            
+            var apply = false
+            let _ = previousMaxIncomingMessageIndexByNamespace.modify { dict in
+                let previousIndex = dict[messageIndex.id.namespace]
+                if previousIndex == nil || previousIndex! < messageIndex {
+                    apply = true
+                    var dict = dict
+                    dict[messageIndex.id.namespace] = messageIndex
                     return dict
                 }
-                if apply {
-                    switch chatLocation {
-                    case .peer, .replyThread, .feed:
-                        if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
-                            context.applyMaxReadIndex(for: chatLocation, contextHolder: chatLocationContextHolder, messageIndex: messageIndex)
-                        }
+                return dict
+            }
+            if apply {
+                switch chatLocation {
+                case .peer, .replyThread, .feed:
+                    if !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                        strongSelf.context.applyMaxReadIndex(for: chatLocation, contextHolder: chatLocationContextHolder, messageIndex: messageIndex)
                     }
                 }
             }
-        }
-        
-        self.readHistoryDisposable.set(readHistory.start())
+        }))
         
         self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).start(next: { [weak self, weak context] value in
             if let strongSelf = self {
@@ -2157,6 +2161,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return result
     }
     
+    public func forEachVisibleMessageItemNode(_ f: (ChatMessageItemView) -> Void) {
+        self.forEachVisibleItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                f(itemNode)
+            }
+        }
+    }
+    
     public func latestMessageInCurrentHistoryView() -> Message? {
         if let historyView = self.historyView {
             if historyView.originalView.laterId == nil, let firstEntry = historyView.filteredEntries.last {
@@ -2369,6 +2381,42 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                 }
                 
+                var unreadMessageRangeUpdated = false
+                
+                if case let .peer(peerId) = strongSelf.chatLocation, let previousReadStatesValue = strongSelf.historyView?.originalView.transientReadStates, case let .peer(previousReadStates) = previousReadStatesValue, case let .peer(updatedReadStates) = transition.historyView.originalView.transientReadStates {
+                    if let previousPeerReadState = previousReadStates[peerId], let updatedPeerReadState = updatedReadStates[peerId] {
+                        if previousPeerReadState != updatedPeerReadState {
+                            for (namespace, state) in previousPeerReadState.states {
+                                inner: for (updatedNamespace, updatedState) in updatedPeerReadState.states {
+                                    if namespace == updatedNamespace {
+                                        switch state {
+                                        case let .idBased(previousIncomingId, _, _, _, _):
+                                            if case let .idBased(updatedIncomingId, _, _, _, _) = updatedState, previousIncomingId <= updatedIncomingId {
+                                                let rangeKey = UnreadMessageRangeKey(peerId: peerId, namespace: namespace)
+                                                
+                                                if let currentRange = strongSelf.controllerInteraction.unreadMessageRange[rangeKey] {
+                                                    if currentRange.upperBound < (updatedIncomingId + 1) {
+                                                        strongSelf.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: peerId, namespace: namespace)] = currentRange.lowerBound ..< (updatedIncomingId + 1)
+                                                        unreadMessageRangeUpdated = true
+                                                    }
+                                                } else {
+                                                    strongSelf.controllerInteraction.unreadMessageRange[rangeKey] = (previousIncomingId + 1) ..< (updatedIncomingId + 1)
+                                                    unreadMessageRangeUpdated = true
+                                                }
+                                            }
+                                        case .indexBased:
+                                            break
+                                        }
+                                        
+                                        break inner
+                                    }
+                                }
+                            }
+                            //print("Read from \(previousPeerReadState) up to \(updatedPeerReadState)")
+                        }
+                    }
+                }
+                
                 strongSelf.historyView = transition.historyView
                 
                 let loadState: ChatHistoryNodeLoadState
@@ -2538,6 +2586,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     let visibleNewIncomingReactionMessageIds = strongSelf.displayUnseenReactionAnimations(messageIds: messageIds)
                     if !visibleNewIncomingReactionMessageIds.isEmpty {
                         strongSelf.unseenReactionsProcessingManager.add(visibleNewIncomingReactionMessageIds)
+                    }
+                }
+                
+                if unreadMessageRangeUpdated {
+                    strongSelf.forEachVisibleMessageItemNode { itemNode in
+                        itemNode.unreadMessageRangeUpdated()
                     }
                 }
                 

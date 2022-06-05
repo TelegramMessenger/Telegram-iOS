@@ -218,6 +218,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
+    private var wasPending: Bool = false
+    private var didChangeFromPendingToSent: Bool = false
+    
     required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
@@ -470,6 +473,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     override func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         super.setupItem(item, synchronousLoad: synchronousLoad)
+        
+        if item.message.id.namespace == Namespaces.Message.Local {
+            self.wasPending = true
+        }
+        if self.wasPending && item.message.id.namespace != Namespaces.Message.Local {
+            self.didChangeFromPendingToSent = true
+        }
                 
         for media in item.message.media {
             if let telegramFile = media as? TelegramMediaFile {
@@ -526,7 +536,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false, synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
                 }
-                self.updateVisibility()
                 
                 let textEmoji = item.message.text.strippedEmoji
                 var additionalTextEmoji = textEmoji
@@ -551,11 +560,37 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
         }
+        
+        self.updateVisibility()
     }
     
     private func updateVisibility() {
         guard let item = self.item else {
             return
+        }
+        
+        var file: TelegramMediaFile?
+        var playbackMode: AnimatedStickerPlaybackMode = .loop
+        var isEmoji = false
+        var fitzModifier: EmojiFitzModifier?
+        
+        if let telegramFile = self.telegramFile {
+            file = telegramFile
+            if !item.controllerInteraction.stickerSettings.loopAnimatedStickers {
+                playbackMode = .once
+            }
+        } else if let emojiFile = self.emojiFile {
+            isEmoji = true
+            file = emojiFile
+            //if alreadySeen && emojiFile.resource is LocalFileReferenceMediaResource {
+                playbackMode = .still(.end)
+            //} else {
+            //    playbackMode = .once
+            //}
+            let (_, fitz) = item.message.text.basicEmoji
+            if let fitz = fitz {
+                fitzModifier = EmojiFitzModifier(emoji: fitz)
+            }
         }
         
         let isPlaying = self.visibilityStatus && !self.forceStopAnimations
@@ -583,51 +618,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if self.isPlaying != isPlaying {
                 self.isPlaying = isPlaying
                 
-                var alreadySeen = false
-                if isPlaying, let _ = self.emojiFile {
-                    if item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
-                        alreadySeen = true
-                    }
-                }
-                
                 if isPlaying && self.setupTimestamp == nil {
                     self.setupTimestamp = CACurrentMediaTime()
                 }
                 animationNode.visibility = isPlaying
                 
-                if self.didSetUpAnimationNode && alreadySeen {
+                /*if self.didSetUpAnimationNode && alreadySeen {
                     if let emojiFile = self.emojiFile, emojiFile.resource is LocalFileReferenceMediaResource {
                     } else {
                         animationNode.seekTo(.start)
                     }
-                }
+                }*/
                 
                 if self.isPlaying && !self.didSetUpAnimationNode {
                     self.didSetUpAnimationNode = true
-                    
-                    var file: TelegramMediaFile?
-                    var playbackMode: AnimatedStickerPlaybackMode = .loop
-                    var isEmoji = false
-                    var fitzModifier: EmojiFitzModifier?
-                    
-                    if let telegramFile = self.telegramFile {
-                        file = telegramFile
-                        if !item.controllerInteraction.stickerSettings.loopAnimatedStickers {
-                            playbackMode = .once
-                        }
-                    } else if let emojiFile = self.emojiFile {
-                        isEmoji = true
-                        file = emojiFile
-                        if alreadySeen && emojiFile.resource is LocalFileReferenceMediaResource {
-                            playbackMode = .still(.end)
-                        } else {
-                            playbackMode = .once
-                        }
-                        let (_, fitz) = item.message.text.basicEmoji
-                        if let fitz = fitz {
-                            fitzModifier = EmojiFitzModifier(emoji: fitz)
-                        }
-                    }
 
                     if let file = file {
                         let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -637,14 +641,38 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let mode: AnimatedStickerMode = .direct(cachePathPrefix: pathPrefix)
                         self.animationSize = fittedSize
                         animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier, isVideo: file.isVideoSticker), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: mode)
-                        
-                        if file.isPremiumSticker && !alreadySeen {
-                            item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
-                            Queue.mainQueue().after(0.1) {
-                                self.playPremiumStickerAnimation()
-                            }
+                    }
+                }
+            }
+        }
+        
+        if isPlaying, let animationNode = self.animationNode as? AnimatedStickerNode {
+            var alreadySeen = true
+            if item.message.flags.contains(.Incoming) {
+                if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
+                    if unreadRange.contains(item.message.id.id) {
+                        if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                            alreadySeen = false
                         }
                     }
+                }
+            } else {
+                if self.didChangeFromPendingToSent {
+                    if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                        alreadySeen = false
+                    }
+                }
+            }
+            
+            if !alreadySeen {
+                item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+                if let file = file, file.isPremiumSticker {
+                    Queue.mainQueue().after(0.1) {
+                        self.playPremiumStickerAnimation()
+                    }
+                } else if isEmoji {
+                    animationNode.seekTo(.start)
+                    animationNode.playOnce()
                 }
             }
         }
@@ -654,7 +682,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.forceStopAnimations = forceStopAnimations
         self.updateVisibility()
     }
-    
     
     private var absoluteRect: (CGRect, CGSize)?
     override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
@@ -2377,6 +2404,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return self.dateAndStatusNode.reactionView(value: value)
         }
         return nil
+    }
+    
+    override func unreadMessageRangeUpdated() {
+        self.updateVisibility()
     }
 }
 

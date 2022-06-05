@@ -898,4 +898,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
             }
         }
     }
+    
+    func unreadMessageRangeUpdated() {
+    }
 }
