@@ -1172,6 +1172,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         strongSelf.animationNode?.frame = animationNodeFrame
                         if let animationNode = strongSelf.animationNode as? AnimatedStickerNode {
                             animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
+                            
+                            if let file = file, file.isPremiumSticker && incoming {
+                                let mirroredTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                                strongSelf.imageNode.transform = mirroredTransform
+                                animationNode.transform = mirroredTransform
+                                strongSelf.placeholderNode.transform = mirroredTransform
+                            }
                         }
                     }
 
@@ -1643,9 +1650,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if isStickerEffect {
                 let scale: CGFloat = 0.245
                 animationFrame = animationNode.frame.offsetBy(dx: incomingMessage ? animationNode.frame.width * scale : -animationNode.frame.width * scale + 21.0, dy: -1.0).insetBy(dx: -animationNode.frame.width * scale, dy: -animationNode.frame.height * scale)
-                if incomingMessage {
-                    animationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-                }
             } else {
                 animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
                     .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
