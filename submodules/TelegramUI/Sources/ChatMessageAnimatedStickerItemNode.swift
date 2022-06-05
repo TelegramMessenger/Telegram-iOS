@@ -1681,7 +1681,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         } else {
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
             let additionalAnimationNode = AnimatedStickerNode()
-            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2), height: Int(animationSize.height * 2), playbackMode: .once, mode: isStickerEffect ? .cached : .direct(cachePathPrefix: pathPrefix))
+            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2), height: Int(animationSize.height * 2), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame: CGRect
             if isStickerEffect {
                 let scale: CGFloat = 0.245

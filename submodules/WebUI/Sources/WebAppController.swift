@@ -966,7 +966,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId})
             
-            if let attachMenuBot = attachMenuBot, attachMenuBot.hasSettings {
+            if self?.url == nil, let attachMenuBot = attachMenuBot, attachMenuBot.hasSettings {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, f in
