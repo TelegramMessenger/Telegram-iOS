@@ -997,7 +997,39 @@ public final class ChatListNode: ListView {
                             guard !filter.contains(.excludeSavedMessages) || !peer.peerId.isReplies else { return false }
                             guard !filter.contains(.excludeSecretChats) || peer.peerId.namespace != Namespaces.Peer.SecretChat else { return false }
                             guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
-
+                        
+                            if let peer = peer.peer {
+                                switch peer {
+                                    case let .user(user):
+                                        if user.botInfo != nil {
+                                            if filter.contains(.excludeBots) {
+                                                return false
+                                            }
+                                        } else {
+                                            if filter.contains(.excludeUsers) {
+                                                return false
+                                            }
+                                        }
+                                    case .legacyGroup:
+                                        if filter.contains(.excludeGroups) {
+                                            return false
+                                        }
+                                    case let .channel(channel):
+                                        switch channel.info {
+                                            case .broadcast:
+                                                if filter.contains(.excludeChannels) {
+                                                    return false
+                                                }
+                                            case .group:
+                                                if filter.contains(.excludeGroups) {
+                                                    return false
+                                                }
+                                        }
+                                    default:
+                                        break
+                                }
+                            }
+                                                
                             if filter.contains(.onlyGroupsAndChannels) {
                                 if case .channel = peer.chatMainPeer {
                                 } else if case .legacyGroup = peer.chatMainPeer {

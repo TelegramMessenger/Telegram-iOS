@@ -553,7 +553,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     present(controller, nil)
                 }
             }
-        case let .startAttach(peerId, payload):
+        case let .startAttach(peerId, payload, choose):
             let presentError: (String) -> Void = { errorText in
                 present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: errorText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
                     return true
@@ -561,23 +561,100 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
             let _ = (context.engine.messages.attachMenuBots()
             |> deliverOnMainQueue).start(next: { attachMenuBots in
-                if let _ = attachMenuBots.firstIndex(where: { $0.peer.id == peerId }) {
-                    if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
-                        let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: peerId, payload: payload), useExisting: true))
+                func filterChooseTypes(_ chooseTypes: ResolvedBotChoosePeerTypes?, peerTypes: AttachMenuBots.Bot.PeerFlags) -> ResolvedBotChoosePeerTypes? {
+                    var chooseTypes = chooseTypes
+                    if chooseTypes != nil {
+                        if !peerTypes.contains(.user) {
+                            chooseTypes?.remove(.users)
+                        }
+                        if !peerTypes.contains(.bot) {
+                            chooseTypes?.remove(.bots)
+                        }
+                        if !peerTypes.contains(.group) {
+                            chooseTypes?.remove(.groups)
+                        }
+                        if !peerTypes.contains(.channel) {
+                            chooseTypes?.remove(.channels)
+                        }
+                    }
+                    return (chooseTypes?.isEmpty ?? true) ? nil : chooseTypes
+                }
+                
+                if let bot = attachMenuBots.first(where: { $0.peer.id == peerId }) {
+                    let choose = filterChooseTypes(choose, peerTypes: bot.peerTypes)
+                    
+                    if let choose = choose {
+                        var filters: ChatListNodePeersFilter = []
+                        filters.insert(.onlyWriteable)
+                        filters.insert(.excludeDisabled)
+
+                        if !choose.contains(.users) {
+                            filters.insert(.excludeUsers)
+                        }
+                        if !choose.contains(.bots) {
+                            filters.insert(.excludeBots)
+                        }
+                        if !choose.contains(.groups) {
+                            filters.insert(.excludeGroups)
+                        }
+                        if !choose.contains(.channels) {
+                            filters.insert(.excludeChannels)
+                        }
+                        
+                        if let navigationController = navigationController {
+                            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, filter: filters, hasChatListSelector: true, hasContactSelector: false, title: presentationData.strings.WebApp_SelectChat))
+                            controller.peerSelected = { peer in
+                                let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), attachBotStart: ChatControllerInitialAttachBotStart(botId: bot.peer.id, payload: payload), useExisting: true))
+                            }
+                            navigationController.pushViewController(controller)
+                        }
                     } else {
-                        presentError(presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError)
+                        if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
+                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: peerId, payload: payload), useExisting: true))
+                        } else {
+                            presentError(presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError)
+                        }
                     }
                 } else {
                     let _ = (context.engine.messages.getAttachMenuBot(botId: peerId)
                     |> deliverOnMainQueue).start(next: { bot in
-                        let peer = EnginePeer(bot.peer)
-                        let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, completion: {
+                        let choose = filterChooseTypes(choose, peerTypes: bot.peerTypes)
+                        
+                        let botPeer = EnginePeer(bot.peer)
+                        let controller = addWebAppToAttachmentController(context: context, peerName: botPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, completion: {
                             let _ = (context.engine.messages.addBotToAttachMenu(botId: peerId)
                             |> deliverOnMainQueue).start(error: { _ in
                                 presentError(presentationData.strings.WebApp_AddToAttachmentUnavailableError)
                             }, completed: {
-                                if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
-                                    let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: peer.id, payload: payload), useExisting: true))
+                                if let choose = choose {
+                                    var filters: ChatListNodePeersFilter = []
+                                    filters.insert(.onlyWriteable)
+                                    filters.insert(.excludeDisabled)
+
+                                    if !choose.contains(.users) {
+                                        filters.insert(.excludeUsers)
+                                    }
+                                    if !choose.contains(.bots) {
+                                        filters.insert(.excludeBots)
+                                    }
+                                    if !choose.contains(.groups) {
+                                        filters.insert(.excludeGroups)
+                                    }
+                                    if !choose.contains(.channels) {
+                                        filters.insert(.excludeChannels)
+                                    }
+                                    
+                                    if let navigationController = navigationController {
+                                        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, filter: filters, hasChatListSelector: true, hasContactSelector: false, title: presentationData.strings.WebApp_SelectChat))
+                                        controller.peerSelected = { peer in
+                                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload), useExisting: true))
+                                        }
+                                        navigationController.pushViewController(controller)
+                                    }
+                                } else {
+                                    if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
+                                        let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload), useExisting: true))
+                                    }
                                 }
                             })
                         })

@@ -635,6 +635,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var voiceChat: String?
                         var attach: String?
                         var startAttach: String?
+                        var choose: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -658,6 +659,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         attach = value
                                     } else if queryItem.name == "startattach" {
                                         startAttach = value
+                                    } else if queryItem.name == "choose" {
+                                        choose = value
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
@@ -696,6 +699,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     result += "?startattach=\(startAttach)"
                                 } else {
                                     result += "?startattach"
+                                }
+                                if let choose = choose {
+                                    result += "&choose=\(choose)"
                                 }
                             }
                             convertedUrl = result

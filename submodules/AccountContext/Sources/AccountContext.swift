@@ -176,6 +176,23 @@ public enum ResolvedUrlSettingsSection {
     case devices
 }
 
+public struct ResolvedBotChoosePeerTypes: OptionSet {
+    public var rawValue: UInt32
+    
+    public init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public static let users = ResolvedBotChoosePeerTypes(rawValue: 1)
+    public static let bots = ResolvedBotChoosePeerTypes(rawValue: 2)
+    public static let groups = ResolvedBotChoosePeerTypes(rawValue: 4)
+    public static let channels = ResolvedBotChoosePeerTypes(rawValue: 16)
+}
+
 public struct ResolvedBotAdminRights: OptionSet {
     public var rawValue: UInt32
     
@@ -263,7 +280,7 @@ public enum ResolvedUrl {
     case settings(ResolvedUrlSettingsSection)
     case joinVoiceChat(PeerId, String?)
     case importStickers
-    case startAttach(peerId: PeerId, payload: String?)
+    case startAttach(peerId: PeerId, payload: String?, choose: ResolvedBotChoosePeerTypes?)
     case invoice(slug: String, invoice: TelegramMediaInvoice)
     case premiumOffer(reference: String?)
 }

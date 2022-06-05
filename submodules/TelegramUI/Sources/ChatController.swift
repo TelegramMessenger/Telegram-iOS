@@ -10778,11 +10778,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
-        
-        if botId != nil && peer.id.namespace != Namespaces.Peer.CloudUser {
-            return
-        }
-        
+                
         let context = self.context
         
         let inputIsActive = self.presentationInterfaceState.inputMode == .text
