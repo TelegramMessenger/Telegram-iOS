@@ -20,7 +20,6 @@
 #import <MtProtoKit/MTDropResponseContext.h>
 #import <MtProtoKit/MTEncryption.h>
 #import <MtProtoKit/MTExportedAuthorizationData.h>
-#import <MtProtoKit/MTFileBasedKeychain.h>
 #import <MtProtoKit/MTGzip.h>
 #import <MtProtoKit/MTHttpRequestOperation.h>
 #import <MtProtoKit/MTIncomingMessage.h>
