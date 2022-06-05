@@ -378,9 +378,29 @@ public final class DeviceAccess {
                     }
                 case let .location(locationSubject):
                     let status = CLLocationManager.authorizationStatus()
+                    let hasPreciseLocation: Bool
+                    if #available(iOS 14.0, *) {
+                        if case .fullAccuracy = CLLocationManager().accuracyAuthorization {
+                            hasPreciseLocation = true
+                        } else {
+                            hasPreciseLocation = false
+                        }
+                    } else {
+                        hasPreciseLocation = true
+                    }
                     switch status {
                         case .authorizedAlways:
-                            completion(true)
+                            if case .live = locationSubject, !hasPreciseLocation {
+                                completion(false)
+                                if let presentationData = presentationData {
+                                    let text = presentationData.strings.AccessDenied_LocationPreciseDenied
+                                    present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                        openSettings()
+                                    })]), nil)
+                                }
+                            } else {
+                                completion(true)
+                            }
                         case .authorizedWhenInUse:
                             switch locationSubject {
                                 case .send, .tracking:

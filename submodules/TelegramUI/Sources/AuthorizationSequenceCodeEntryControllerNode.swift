@@ -178,6 +178,10 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
     }
     
+    func resetCode() {
+        self.codeInputView.text = ""
+    }
+    
     func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?) {
         self.codeType = codeType
         self.phoneNumber = number

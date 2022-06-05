@@ -195,16 +195,16 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.disposable = (combineLatest(queue: .mainQueue(),
             membersContext.state,
             self.presentationDataPromise.get(),
-            context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
+            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
         )
-        |> deliverOnMainQueue).start(next: { [weak self] state, presentationData, combinedView in
-            guard let strongSelf = self, let basicPeerView = combinedView.views[.basicPeer(peerId)] as? BasicPeerView, let enclosingPeer = basicPeerView.peer else {
+        |> deliverOnMainQueue).start(next: { [weak self] state, presentationData, enclosingPeer in
+            guard let strongSelf = self, let enclosingPeer = enclosingPeer else {
                 return
             }
             
-            strongSelf.enclosingPeer = enclosingPeer
+            strongSelf.enclosingPeer = enclosingPeer._asPeer()
             strongSelf.currentState = state
-            strongSelf.updateState(enclosingPeer: enclosingPeer, state: state, presentationData: presentationData)
+            strongSelf.updateState(enclosingPeer: enclosingPeer._asPeer(), state: state, presentationData: presentationData)
         })
         
         self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in

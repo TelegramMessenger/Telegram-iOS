@@ -20,6 +20,7 @@ import PresentationDataUtils
 import ChatInterfaceState
 import ChatPresentationInterfaceState
 import UndoUI
+import PremiumUI
 
 struct PeerSpecificPackData {
     let peer: Peer
@@ -164,7 +165,7 @@ func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemColle
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, strings: PresentationStrings, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false, reorderable: Bool = false) -> [ChatMediaInputPanelEntry] {
+func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, strings: PresentationStrings, premiumStickers: OrderedItemListView? = nil, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false, reorderable: Bool = false) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     if hasGifs {
         entries.append(.recentGifs(theme, strings, expanded))
@@ -202,8 +203,12 @@ func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: Ordere
     } else if case let .available(peer, false) = canInstallPeerSpecificPack {
         entries.append(.peerSpecific(theme: theme, peer: peer, expanded: expanded))
     }
-    var index = 0
     
+    if let premiumStickers = premiumStickers, !premiumStickers.items.isEmpty {
+        entries.append(.premium(theme, strings, expanded))
+    }
+    
+    var index = 0
     var sortedPacks: [(ItemCollectionId, StickerPackCollectionInfo, StickerPackItem?)] = []
     for (id, info, item) in view.collectionInfos {
         if let info = info as? StickerPackCollectionInfo, let item = item as? StickerPackItem {
@@ -256,7 +261,7 @@ func chatMediaInputPanelGifModeEntries(theme: PresentationTheme, strings: Presen
     return entries
 }
 
-func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, trendingPacks: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, trendingIsDismissed: Bool = false, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
+func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, trendingPacks: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, premiumStickers: OrderedItemListView? = nil, trendingIsDismissed: Bool = false, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme, hasPremium: Bool) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     if hasSearch && view.lower == nil {
@@ -279,7 +284,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
                     savedStickerIds.insert(item.file.fileId.id)
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
                     let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
-                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -3, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme))
+                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -3, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme, isLocked: stickerItem.file.isPremiumSticker && !hasPremium))
                 }
             }
         }
@@ -302,7 +307,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
                     if !savedStickerIds.contains(mediaId.id) {
                         let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
                         let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
-                        entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme))
+                        entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme, isLocked: stickerItem.file.isPremiumSticker && !hasPremium))
                         addedCount += 1
                     }
                 }
@@ -319,13 +324,26 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         }
         
         if let peerSpecificPack = peerSpecificPack {
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
+            
             for i in 0 ..< peerSpecificPack.items.count {
-                let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
-                
                 if let item = peerSpecificPack.items[i] as? StickerPackItem {
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
                     let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
-                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: canManagePeerSpecificPack, maybeManageable: hasAccessories, theme: theme))
+                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: canManagePeerSpecificPack, maybeManageable: hasAccessories, theme: theme, isLocked: stickerItem.file.isPremiumSticker && !hasPremium))
+                }
+            }
+        }
+        
+        if let premiumStickers = premiumStickers, !premiumStickers.items.isEmpty && hasPremium {
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_PremiumStickers.uppercased(), shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
+            for i in 0 ..< premiumStickers.items.count {
+                if let item = premiumStickers.items[i].contents.get(RecentMediaItem.self) {
+                    let file = item.media
+                    
+                    let index = ItemCollectionItemIndex(index: Int32(i), id: file.fileId.id)
+                    let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
+                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme, isLocked: stickerItem.file.isPremiumSticker && !hasPremium))
                 }
             }
         }
@@ -333,7 +351,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
     
     for entry in view.entries {
         if let item = entry.item as? StickerPackItem {
-            entries.append(.sticker(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId], canManagePeerSpecificPack: false, maybeManageable: hasAccessories, theme: theme))
+            entries.append(.sticker(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId], canManagePeerSpecificPack: false, maybeManageable: hasAccessories, theme: theme, isLocked: item.file.isPremiumSticker && !hasPremium))
         }
     }
     
@@ -712,27 +730,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     break
                 }
             }
-            let _ = (context.account.postbox.transaction { transaction -> Void in
-                let namespace = Namespaces.ItemCollection.CloudStickerPacks
-                let infos = transaction.getItemCollectionsInfos(namespace: namespace)
-                
-                var packDict: [ItemCollectionId: Int] = [:]
-                for i in 0 ..< infos.count {
-                    packDict[infos[i].0] = i
-                }
-                var tempSortedPacks: [(ItemCollectionId, ItemCollectionInfo)] = []
-                var processedPacks = Set<ItemCollectionId>()
-                for id in currentIds {
-                    if let index = packDict[id] {
-                        tempSortedPacks.append(infos[index])
-                        processedPacks.insert(id)
-                    }
-                }
-                let restPacks = infos.filter { !processedPacks.contains($0.0) }
-                let sortedPacks = restPacks + tempSortedPacks
-                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: .sync, noDelay: false)
-                transaction.replaceItemCollectionInfos(namespace: namespace, itemCollectionInfos: sortedPacks)
-            }
+            let _ = (context.engine.stickers.reorderStickerPacks(namespace: Namespaces.ItemCollection.CloudStickerPacks, itemIds: currentIds)
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 temporaryPackOrder.set(.single(nil))
                 
@@ -776,6 +774,10 @@ final class ChatMediaInputNode: ChatInputNode {
                     strongSelf.currentStickerPacksCollectionPosition = .navigate(index: nil, collectionId: collectionId)
                     strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil, collectionId: collectionId)))
                 } else if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue {
+                    strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring))
+                    strongSelf.currentStickerPacksCollectionPosition = .navigate(index: nil, collectionId: collectionId)
+                    strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil, collectionId: collectionId)))
+                } else if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue {
                     strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring))
                     strongSelf.currentStickerPacksCollectionPosition = .navigate(index: nil, collectionId: collectionId)
                     strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil, collectionId: collectionId)))
@@ -891,9 +893,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 return
             }
             
-            let _ = (context.account.postbox.transaction { transaction -> StickerPackCollectionInfo? in
-                return (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.stickerPack
-            }
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StickerPack(id: peerId))
             |> deliverOnMainQueue).start(next: { info in
                 guard let strongSelf = self else {
                     return
@@ -908,9 +908,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 var items: [ActionSheetItem] = []
                 items.append(ActionSheetButtonItem(title: strongSelf.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
-                    let _ = (context.account.postbox.transaction { transaction in
-                        clearRecentlyUsedStickers(transaction: transaction)
-                    }).start()
+                    let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
                 }))
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -942,10 +940,12 @@ final class ChatMediaInputNode: ChatInputNode {
         let itemCollectionsView = self.itemCollectionsViewPosition.get()
         |> distinctUntilChanged
         |> mapToSignal { position -> Signal<(ItemCollectionsView, StickerPacksCollectionUpdate), NoError> in
+            let orderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.PremiumStickers]
+            let namespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
             switch position {
                 case .initial:
                     var firstTime = true
-                    return context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50)
+                    return context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: namespaces, aroundIndex: nil, count: 50)
                     |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                         let update: StickerPacksCollectionUpdate
                         if firstTime {
@@ -958,7 +958,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
                 case let .scroll(aroundIndex):
                     var firstTime = true
-                    return context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 300)
+                    return context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: namespaces, aroundIndex: aroundIndex, count: 300)
                     |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                         let update: StickerPacksCollectionUpdate
                         if firstTime {
@@ -971,7 +971,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
                 case let .navigate(index, collectionId):
                     var firstTime = true
-                    return context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 300)
+                    return context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: namespaces, aroundIndex: index, count: 300)
                     |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                         let update: StickerPacksCollectionUpdate
                         if firstTime {
@@ -1064,23 +1064,17 @@ final class ChatMediaInputNode: ChatInputNode {
                     return false
                 }
             })
-            strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            strongSelf.controllerInteraction.presentController(controller, nil)
         }, getItemIsPreviewed: { item in
             return getItemIsPreviewedImpl?(item) ?? false
         }, openSearch: {
         })
         self.trendingInteraction = trendingInteraction
         
-        let preferencesViewKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
-        let reactions: Signal<[String], NoError> = context.account.postbox.combinedView(keys: [preferencesViewKey])
-        |> map { views -> [String] in
+        let reactions: Signal<[String], NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
+        |> map { appConfiguration -> [String] in
             let defaultReactions: [String] = ["👍", "👎", "😍", "😂", "😯", "😕", "😢", "😡", "💪", "👏", "🙈", "😒"]
-            guard let view = views.views[preferencesViewKey] as? PreferencesView else {
-                return defaultReactions
-            }
-            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
-                return defaultReactions
-            }
+            
             guard let data = appConfiguration.data, let emojis = data["gif_search_emojies"] as? [String] else {
                 return defaultReactions
             }
@@ -1107,11 +1101,11 @@ final class ChatMediaInputNode: ChatInputNode {
             }
             return animatedEmojiStickers
         }
-        
+                
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
         let transitionQueue = Queue()
-        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get(), reactions, self.panelIsFocusedPromise.get(), ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager), temporaryPackOrder.get(), animatedEmojiStickers)
-        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions, panelExpanded, dismissedTrendingStickerPacks, temporaryPackOrder, animatedEmojiStickers -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get(), reactions, self.panelIsFocusedPromise.get(), ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager), temporaryPackOrder.get(), animatedEmojiStickers, context.account.postbox.peerView(id: context.account.peerId))
+        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions, panelExpanded, dismissedTrendingStickerPacks, temporaryPackOrder, animatedEmojiStickers, peerView -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
             let (view, viewUpdate) = viewAndUpdate
             let previous = previousView.swap(view)
             var update = viewUpdate
@@ -1122,11 +1116,14 @@ final class ChatMediaInputNode: ChatInputNode {
             
             var savedStickers: OrderedItemListView?
             var recentStickers: OrderedItemListView?
+            var premiumStickers: OrderedItemListView?
             for orderedView in view.orderedItemListsViews {
                 if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
                     recentStickers = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudSavedStickers {
                     savedStickers = orderedView
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.PremiumStickers {
+                    premiumStickers = orderedView
                 }
             }
             
@@ -1140,9 +1137,12 @@ final class ChatMediaInputNode: ChatInputNode {
                 trendingIsDismissed = true
             }
                         
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, expanded: panelExpanded, reorderable: true)
+            let accountPeer = peerView.peers[peerView.peerId]
+            let hasPremium = accountPeer?.isPremium ?? false
+            
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, premiumStickers: hasPremium ? premiumStickers : nil, expanded: panelExpanded, reorderable: true)
             let gifPaneEntries = chatMediaInputPanelGifModeEntries(theme: theme, strings: strings, reactions: reactions, animatedEmojiStickers: animatedEmojiStickers, expanded: panelExpanded)
-            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, installedPacks: installedPacks, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme)
+            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, installedPacks: installedPacks, premiumStickers: premiumStickers, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme, hasPremium: hasPremium)
             
             if view.higher == nil {
                 var hasTopSeparator = true
@@ -1379,15 +1379,14 @@ final class ChatMediaInputNode: ChatInputNode {
             canSaveGif = false
         }
         
-        let _ = (self.context.account.postbox.transaction { transaction -> Bool in
-            if !canSaveGif {
-                return false
-            }
-            return isGifSaved(transaction: transaction, mediaId: file.file.media.fileId)
-        }
+        let _ = (self.context.engine.stickers.isGifSaved(id: file.file.media.fileId)
         |> deliverOnMainQueue).start(next: { [weak self] isGifSaved in
             guard let strongSelf = self else {
                 return
+            }
+            var isGifSaved = isGifSaved
+            if !canSaveGif {
+                isGifSaved = false
             }
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             
@@ -1462,9 +1461,32 @@ final class ChatMediaInputNode: ChatInputNode {
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: file.file).start()
                     
-                    strongSelf.controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                    let context = strongSelf.context
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controllerInteraction = strongSelf.controllerInteraction
+                    let _ = (toggleGifSaved(account: context.account, fileReference: file.file, saved: true)
+                    |> deliverOnMainQueue).start(next: { result in
+                        switch result {
+                            case .generic:
+                                controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                            case let .limitExceeded(limit, premiumLimit):
+                                let text: String
+                                if limit == premiumLimit {
+                                    text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                } else {
+                                    text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
+                                }
+                                controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                    if case .info = action {
+                                        let controller = PremiumIntroScreen(context: context, source: .savedGifs)
+                                        controllerInteraction.navigationController()?.pushViewController(controller)
+                                        return true
+                                    }
+                                    return false
+                                }), nil)
+                        }
+                    })
                 })))
             }
             
@@ -1502,9 +1524,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     
                     if let (itemNode, item) = searchContainerNode.itemAt(point: point.offsetBy(dx: -searchContainerNode.frame.minX, dy: -searchContainerNode.frame.minY)) {
                         if let item = item as? StickerPreviewPeekItem {
-                            return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                                return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                                }
+                            return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                             |> deliverOnMainQueue
                             |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                                 if let strongSelf = self {
@@ -1547,15 +1567,35 @@ final class ChatMediaInputNode: ChatInputNode {
                                         }
                                     }
                                     menuItems.append(
-                                        .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                        .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                             f(.default)
                                             
                                             if let strongSelf = self {
-                                                if isStarred {
-                                                    let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-                                                } else {
-                                                    let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-                                                }
+                                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                                let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                                |> deliverOnMainQueue).start(next: { result in
+                                                    switch result {
+                                                        case .generic:
+                                                            strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                        case let .limitExceeded(limit, premiumLimit):
+                                                            let text: String
+                                                            if limit == premiumLimit {
+                                                                text = strongSelf.strings.Premium_MaxFavedStickersFinalText
+                                                            } else {
+                                                                text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
+                                                            }
+                                                            strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                                if let strongSelf = self {
+                                                                    if case .info = action {
+                                                                        let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
+                                                                        strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
+                                                                        return true
+                                                                    }
+                                                                }
+                                                                return false
+                                                            }), nil)
+                                                    }
+                                                })
                                             }
                                         }))
                                     )
@@ -1587,7 +1627,13 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }
                                     })))
-                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
+                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                        strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
+                                    }))
                                 } else {
                                     return nil
                                 }
@@ -1619,11 +1665,19 @@ final class ChatMediaInputNode: ChatInputNode {
                             }
                             
                             if let (itemNode, item) = itemNodeAndItem {
-                                return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                                    return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                                }
+                                let accountPeerId = strongSelf.context.account.peerId
+                                return combineLatest(
+                                    strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId),
+                                    strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: accountPeerId)) |> map { peer -> Bool in
+                                        var hasPremium = false
+                                        if case let .user(user) = peer, user.isPremium {
+                                            hasPremium = true
+                                        }
+                                        return hasPremium
+                                    }
+                                )
                                 |> deliverOnMainQueue
-                                |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                                |> map { isStarred, hasPremium -> (ASDisplayNode, PeekControllerContent)? in
                                     if let strongSelf = self {
                                         var menuItems: [ContextMenuItem] = []
                                         if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
@@ -1665,15 +1719,35 @@ final class ChatMediaInputNode: ChatInputNode {
                                         }
                                         
                                         menuItems.append(
-                                            .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                            .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                                 f(.default)
                                                 
                                                 if let strongSelf = self {
-                                                    if isStarred {
-                                                        let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-                                                    } else {
-                                                        let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-                                                    }
+                                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                                    let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                                    |> deliverOnMainQueue).start(next: { result in
+                                                        switch result {
+                                                            case .generic:
+                                                                strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                            case let .limitExceeded(limit, premiumLimit):
+                                                                let text: String
+                                                                if limit == premiumLimit {
+                                                                    text = strongSelf.strings.Premium_MaxFavedStickersFinalText
+                                                                } else {
+                                                                    text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
+                                                                }
+                                                                strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                                    if let strongSelf = self {
+                                                                        if case .info = action {
+                                                                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
+                                                                            strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
+                                                                            return true
+                                                                        }
+                                                                    }
+                                                                    return false
+                                                                }), nil)
+                                                        }
+                                                    })
                                                 }
                                             }))
                                         )
@@ -1707,7 +1781,13 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }))
                                         )
-                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
+                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: { [weak self] in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                            strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
+                                        }))
                                     } else {
                                         return nil
                                     }
@@ -1743,6 +1823,25 @@ final class ChatMediaInputNode: ChatInputNode {
                 strongSelf.updatePreviewingItem(item: item, animated: true)
             }
         })
+        peekRecognizer.checkSingleTapActivationAtPoint = { [weak self] point in
+            guard let strongSelf = self else {
+                return false
+            }
+            
+            let pane = strongSelf.stickerPane
+            let panelPoint = strongSelf.view.convert(point, to: strongSelf.collectionListPanel.view)
+            if panelPoint.y < strongSelf.collectionListPanel.frame.maxY {
+                return false
+            }
+        
+            if pane.supernode != nil, pane.frame.contains(point) {
+                let itemNodeAndItem = pane.itemAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY))
+                if let item = itemNodeAndItem?.0 as? ChatMediaInputStickerGridItemNode, item.isLocked == true {
+                    return true
+                }
+            }
+            return false
+        }
         self.view.addGestureRecognizer(peekRecognizer)
         let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
         self.panRecognizer = panRecognizer

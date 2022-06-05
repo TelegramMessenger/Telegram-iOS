@@ -40,12 +40,16 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
                 return inputNode
             }
         case .inputButtons:
-            if let currentNode = currentNode as? ChatButtonKeyboardInputNode {
-                return currentNode
+            if chatPresentationInterfaceState.forceInputCommandsHidden {
+                return nil
             } else {
-                let inputNode = ChatButtonKeyboardInputNode(context: context, controllerInteraction: controllerInteraction)
-                inputNode.interfaceInteraction = interfaceInteraction
-                return inputNode
+                if let currentNode = currentNode as? ChatButtonKeyboardInputNode {
+                    return currentNode
+                } else {
+                    let inputNode = ChatButtonKeyboardInputNode(context: context, controllerInteraction: controllerInteraction)
+                    inputNode.interfaceInteraction = interfaceInteraction
+                    return inputNode
+                }
             }
         case .none, .text:
             return nil

@@ -437,7 +437,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 var argumentAttributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
                 argumentAttributes[1] = MarkdownAttributeSet(font: titleBoldFont, textColor: primaryTextColor, additionalAttributes: [:])
                 attributedString = addAttributesToStringWithRanges(formatWithArgumentRanges(baseString, ranges, [authorName, gameTitle ?? ""]), body: bodyAttributes, argumentAttributes: argumentAttributes)
-            case let .paymentSent(currency, totalAmount):
+            case let .paymentSent(currency, totalAmount, _, isRecurringInit, isRecurringUsed):
                 var invoiceMessage: EngineMessage?
                 for attribute in message.attributes {
                     if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
@@ -454,34 +454,53 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 
-                if let invoiceTitle = invoiceTitle {
-                    let botString: String
-                    if let peer = messageMainPeer(message) {
-                        botString = peer.compactDisplayTitle
+                let patternString: String
+                if isRecurringInit {
+                    if let _ = invoiceTitle {
+                        patternString = strings.Notification_PaymentSentRecurringInit
                     } else {
-                        botString = ""
+                        patternString = strings.Notification_PaymentSentRecurringInitNoTitle
                     }
-                    let mutableString = NSMutableAttributedString()
-                    mutableString.append(NSAttributedString(string: strings.Notification_PaymentSent, font: titleFont, textColor: primaryTextColor))
-                    
-                    var range = NSRange(location: NSNotFound, length: 0)
-                    
-                    range = (mutableString.string as NSString).range(of: "{amount}")
-                    if range.location != NSNotFound {
-                        mutableString.replaceCharacters(in: range, with: NSAttributedString(string: formatCurrencyAmount(totalAmount, currency: currency), font: titleBoldFont, textColor: primaryTextColor))
+                } else if isRecurringUsed {
+                    if let _ = invoiceTitle {
+                        patternString = strings.Notification_PaymentSentRecurringUsed
+                    } else {
+                        patternString = strings.Notification_PaymentSentRecurringUsedNoTitle
                     }
-                    range = (mutableString.string as NSString).range(of: "{name}")
-                    if range.location != NSNotFound {
-                        mutableString.replaceCharacters(in: range, with: NSAttributedString(string: botString, font: titleBoldFont, textColor: primaryTextColor))
+                } else {
+                    if let _ = invoiceTitle {
+                        patternString = strings.Notification_PaymentSent
+                    } else {
+                        patternString = strings.Notification_PaymentSentNoTitle
                     }
+                }
+                
+                let botString: String
+                if let peer = messageMainPeer(message) {
+                    botString = peer.compactDisplayTitle
+                } else {
+                    botString = ""
+                }
+                let mutableString = NSMutableAttributedString()
+                mutableString.append(NSAttributedString(string: patternString, font: titleFont, textColor: primaryTextColor))
+                
+                var range = NSRange(location: NSNotFound, length: 0)
+                
+                range = (mutableString.string as NSString).range(of: "{amount}")
+                if range.location != NSNotFound {
+                    mutableString.replaceCharacters(in: range, with: NSAttributedString(string: formatCurrencyAmount(totalAmount, currency: currency), font: titleBoldFont, textColor: primaryTextColor))
+                }
+                range = (mutableString.string as NSString).range(of: "{name}")
+                if range.location != NSNotFound {
+                    mutableString.replaceCharacters(in: range, with: NSAttributedString(string: botString, font: titleBoldFont, textColor: primaryTextColor))
+                }
+                if let invoiceTitle = invoiceTitle {
                     range = (mutableString.string as NSString).range(of: "{title}")
                     if range.location != NSNotFound {
                         mutableString.replaceCharacters(in: range, with: NSAttributedString(string: invoiceTitle, font: titleFont, textColor: primaryTextColor))
                     }
-                    attributedString = mutableString
-                } else {
-                    attributedString = NSAttributedString(string: strings.Message_PaymentSent(formatCurrencyAmount(totalAmount, currency: currency)).string, font: titleFont, textColor: primaryTextColor)
                 }
+                attributedString = mutableString
             case let .phoneCall(_, discardReason, _, _):
                 var titleString: String
                 let incoming: Bool

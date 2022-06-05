@@ -141,11 +141,14 @@ func telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: Int32, 
     return (immediateThumbnailData, representations)
 }
 
-func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMediaFile? {
+func telegramMediaFileFromApiDocument(_ document: Api.Document, noPremium: Bool = false) -> TelegramMediaFile? {
     switch document {
         case let .document(_, id, accessHash, fileReference, _, mimeType, size, thumbs, videoThumbs, dcId, attributes):
             var parsedAttributes = telegramMediaFileAttributesFromApiAttributes(attributes)
             parsedAttributes.append(.hintIsValidated)
+            if noPremium {
+                parsedAttributes.append(.NoPremium)
+            }
             
             let (immediateThumbnail, previewRepresentations) = telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: dcId, documentId: id, accessHash: accessHash, fileReference: fileReference.makeData(), sizes: thumbs ?? [])
             
@@ -164,7 +167,7 @@ func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMedia
                 }
             }
             
-            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
+            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: size, fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: size, attributes: parsedAttributes)
         case .documentEmpty:
             return nil
     }

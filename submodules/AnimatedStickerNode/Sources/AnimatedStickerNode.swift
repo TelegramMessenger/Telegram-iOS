@@ -144,7 +144,7 @@ public protocol AnimatedStickerNodeSource {
     var isVideo: Bool { get }
     
     func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError>
-    func directDataPath() -> Signal<String, NoError>
+    func directDataPath(attemptSynchronously: Bool) -> Signal<String?, NoError>
 }
 
 public final class AnimatedStickerNode: ASDisplayNode {
@@ -163,6 +163,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     public var completed: (Bool) -> Void = { _ in }
     public var frameUpdated: (Int, Int) -> Void = { _, _ in }
     public private(set) var currentFrameIndex: Int = 0
+    public private(set) var currentFrameCount: Int = 0
     private var playFromIndex: Int?
     
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
@@ -303,9 +304,10 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     strongSelf.play(firstFrame: true)
                 }
             }
-            self.disposable.set((source.directDataPath()
+            self.disposable.set((source.directDataPath(attemptSynchronously: false)
+            |> filter { $0 != nil }
             |> deliverOnMainQueue).start(next: { path in
-                f(path)
+                f(path!)
             }))
         case .cached:
             self.disposable.set((source.cachedDataPath(width: width, height: height)
@@ -373,6 +375,11 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     private var isSetUpForPlayback = false
+    
+    public func playOnce() {
+        self.playbackMode = .once
+        self.play()
+    }
         
     public func play(firstFrame: Bool = false, fromIndex: Int? = nil) {
         if !firstFrame {
@@ -452,6 +459,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             
                             strongSelf.frameUpdated(frame.index, frame.totalFrames)
                             strongSelf.currentFrameIndex = frame.index
+                            strongSelf.currentFrameCount = frame.totalFrames
                             
                             if frame.isLastFrame {
                                 var stopped = false
@@ -556,6 +564,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             
                             strongSelf.frameUpdated(frame.index, frame.totalFrames)
                             strongSelf.currentFrameIndex = frame.index
+                            strongSelf.currentFrameCount = frame.totalFrames;
                             
                             if frame.isLastFrame {
                                 var stopped = false

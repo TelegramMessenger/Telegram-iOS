@@ -29,11 +29,11 @@ import PresentationDataUtils
 import TelegramIntents
 import AccountUtils
 import CoreSpotlight
-import LightweightAccountData
 import TelegramAudio
 import DebugSettingsUI
 import BackgroundTasks
 import UIKitRuntimeUtils
+import InAppPurchaseManager
 
 #if canImport(AppCenter)
 import AppCenter
@@ -526,7 +526,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         self.hasActiveAudioSession.set(MediaManagerImpl.globalAudioSession.isActive())
         
-        let applicationBindings = TelegramApplicationBindings(isMainApp: true, appBundleId: baseAppBundleId, containerPath: appGroupUrl.path, appSpecificScheme: buildConfig.appSpecificUrlScheme, openUrl: { url in
+        let applicationBindings = TelegramApplicationBindings(isMainApp: true, appBundleId: baseAppBundleId, appBuildType: buildConfig.isAppStoreBuild ? .public : .internal, containerPath: appGroupUrl.path, appSpecificScheme: buildConfig.appSpecificUrlScheme, openUrl: { url in
             var parsedUrl = URL(string: url)
             if let parsed = parsedUrl {
                 if parsed.scheme == nil || parsed.scheme!.isEmpty {
@@ -679,6 +679,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 if buildConfig.isInternalBuild {
                     icons.append(PresentationAppIcon(name: "WhiteFilledIcon", imageName: "WhiteFilledIcon"))
                 }
+                
+                icons.append(PresentationAppIcon(name: "Premium", imageName: "Premium", isPremium: true))
+                icons.append(PresentationAppIcon(name: "PremiumBlack", imageName: "PremiumBlack", isPremium: true))
+                icons.append(PresentationAppIcon(name: "PremiumTurbo", imageName: "PremiumTurbo", isPremium: true))
+                
                 return icons
             } else {
                 return []
@@ -705,6 +710,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             UIDevice.current.setValue(value, forKey: "orientation")
             UINavigationController.attemptRotationToDeviceOrientation()
         })
+        
+        let inAppPurchaseManager = InAppPurchaseManager(premiumProductId: buildConfig.premiumIAPProductId)
 
         let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true)
         self.accountManager = accountManager
@@ -748,7 +755,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
-            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, inAppPurchaseManager: inAppPurchaseManager, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
                 self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
@@ -771,20 +778,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
             
             presentationDataPromise.set(sharedContext.presentationData)
-            
-            let rawAccounts = sharedContext.activeAccountContexts
-            |> map { _, contexts, _ -> [Account] in
-                return contexts.map({ $0.1.account })
-            }
-            let storeQueue = Queue()
-            let _ = (
-                sharedAccountInfos(accountManager: sharedContext.accountManager, accounts: rawAccounts)
-                |> then(Signal<StoredAccountInfos, NoError>.complete() |> delay(10.0, queue: storeQueue))
-                |> restart
-                |> deliverOn(storeQueue)
-            ).start(next: { infos in
-                storeAccountsData(rootPath: rootPath, accounts: infos)
-            })
             
             sharedContext.presentGlobalController = { [weak self] c, a in
                 guard let strongSelf = self else {
@@ -958,8 +951,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             |> mapToSignal { authAndAccounts -> Signal<(UnauthorizedAccount, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                 if let (primary, auth, accounts) = authAndAccounts {
                     let phoneNumbers = combineLatest(accounts.map { context -> Signal<(AccountRecordId, String, Bool)?, NoError> in
-                        return context.account.postbox.transaction { transaction -> (AccountRecordId, String, Bool)? in
-                            if let phone = (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone {
+                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                        |> map { peer -> (AccountRecordId, String, Bool)? in
+                            if case let .user(user) = peer, let phone = user.phone {
                                 return (context.account.id, phone, context.account.testingEnvironment)
                             } else {
                                 return nil
@@ -983,24 +977,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     return .single(nil)
                 }
             }
-            |> mapToSignal { accountAndOtherAccountPhoneNumbers -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
-                return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
-                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings)?.get(CallListSettings.self) ?? CallListSettings.defaultSettings
-                    }
-                |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
-                    if let (account, otherAccountPhoneNumbers) = accountAndOtherAccountPhoneNumbers {
-                        return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))? in
-                            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
-                            return (account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers)
-                        }
-                    } else {
-                        return .single(nil)
-                    }
-                }
-            }
             |> deliverOnMainQueue
             |> map { accountAndSettings -> UnauthorizedApplicationContext? in
-                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers in
+                return accountAndSettings.flatMap { account, otherAccountPhoneNumbers in
                     return UnauthorizedApplicationContext(apiId: buildConfig.apiId, apiHash: buildConfig.apiHash, sharedContext: sharedApplicationContext.sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers)
                 }
             }
@@ -1763,10 +1742,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     guard let context = self.contextValue?.context else {
                                         return true
                                     }
-                                    let _ = (context.account.postbox.transaction { transaction -> PeerId? in
+                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
+                                    |> map { contactList -> PeerId? in
                                         var result: PeerId?
-                                        for peerId in transaction.getContactPeerIds() {
-                                            if let peer = transaction.getPeer(peerId) as? TelegramUser, let peerPhoneNumber = peer.phone {
+                                        for peer in contactList.peers {
+                                            if case let .user(peer) = peer, let peerPhoneNumber = peer.phone {
                                                 if matchPhoneNumbers(phoneNumber, peerPhoneNumber) {
                                                     result = peer.id
                                                     break
@@ -1774,7 +1754,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                             }
                                         }
                                         return result
-                                    } |> deliverOnMainQueue).start(next: { peerId in
+                                    }
+                                    |> deliverOnMainQueue).start(next: { peerId in
                                         if let peerId = peerId {
                                             startCall(peerId.id._internalGetInt64Value())
                                         }
@@ -1813,8 +1794,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         |> take(1)
                         |> mapToSignal { primary, contexts, _ -> Signal<(AccountRecordId?, [AccountContext?]), NoError> in
                             return combineLatest(contexts.map { _, context, _ -> Signal<AccountContext?, NoError> in
-                                return context.account.postbox.transaction { transaction -> AccountContext? in
-                                    if transaction.getPeer(peerId) != nil {
+                                return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                |> map { peer -> AccountContext? in
+                                    if peer != nil {
                                         return context
                                     } else {
                                         return nil

@@ -836,7 +836,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 + (tgcalls::ProtocolVersion)protocolVersionFromLibraryVersion:(NSString *)version {
     if ([version isEqualToString:@"2.7.7"]) {
         return tgcalls::ProtocolVersion::V0;
-    } else if ([version isEqualToString:@"3.0.0"]) {
+    } else if ([version isEqualToString:@"5.0.0"]) {
         return tgcalls::ProtocolVersion::V1;
     } else {
         return tgcalls::ProtocolVersion::V0;
@@ -1396,7 +1396,8 @@ private:
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
     enableNoiseSuppression:(bool)enableNoiseSuppression
     disableAudioInput:(bool)disableAudioInput
-    preferX264:(bool)preferX264 {
+    preferX264:(bool)preferX264
+    logPath:(NSString * _Nonnull)logPath {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -1434,10 +1435,8 @@ private:
         bool disableOutgoingAudioProcessing = false;
 
         tgcalls::GroupConfig config;
-        config.need_log = false;
-#if DEBUG
         config.need_log = true;
-#endif
+        config.logPath.data = std::string(logPath.length == 0 ? "" : logPath.UTF8String);
 
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){

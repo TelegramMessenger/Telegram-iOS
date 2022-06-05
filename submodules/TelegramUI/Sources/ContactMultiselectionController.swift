@@ -117,11 +117,10 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             }
         })
         
-        self.limitsConfigurationDisposable = (context.account.postbox.transaction { transaction -> LimitsConfiguration in
-            return currentLimitsConfiguration(transaction: transaction)
-        } |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.limitsConfigurationDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.Limits())
+        |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
-                strongSelf.limitsConfiguration = value
+                strongSelf.limitsConfiguration = value._asLimits()
                 strongSelf.updateTitle()
                 strongSelf._limitsReady.set(.single(true))
             }
@@ -129,13 +128,16 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         
         switch self.mode {
         case let .chatSelection(_, selectedChats, additionalCategories, _):
-            let _ = (self.context.account.postbox.transaction { transaction -> [Peer] in
-                return selectedChats.compactMap(transaction.getPeer)
-            }
-            |> deliverOnMainQueue).start(next: { [weak self] peers in
+            let _ = (self.context.engine.data.get(
+                EngineDataList(
+                    selectedChats.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                )
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] peerList in
                 guard let strongSelf = self else {
                     return
                 }
+                let peers = peerList.compactMap { $0 }
                 if let additionalCategories = additionalCategories {
                     for i in 0 ..< additionalCategories.categories.count {
                         if additionalCategories.selectedCategories.contains(additionalCategories.categories[i].id) {
@@ -144,7 +146,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     }
                 }
                 strongSelf.contactsNode.editableTokens.append(contentsOf: peers.map { peer -> EditableTokenListToken in
-                    return EditableTokenListToken(id: peer.id, title: peerTokenTitle(accountPeerId: params.context.account.peerId, peer: peer, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil)
+                    return EditableTokenListToken(id: peer.id, title: peerTokenTitle(accountPeerId: params.context.account.peerId, peer: peer._asPeer(), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil)
                 })
                 strongSelf._peersReady.set(.single(true))
                 if strongSelf.isNodeLoaded {
@@ -216,7 +218,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, options: self.options, filters: self.filters)
+        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, options: self.options, filters: self.filters, limit: self.limit, reachedSelectionLimit: self.params.reachedLimit)
         switch self.contactsNode.contentNode {
         case let .contacts(contactsNode):
             self._listReady.set(contactsNode.ready)
@@ -264,6 +266,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                         }
                     }
                 case let .chats(chatsNode):
+                    let reachedLimit = strongSelf.params.reachedLimit
                     chatsNode.updateState { initialState in
                         var state = initialState
                         if state.selectedPeerIds.contains(peer.id) {
@@ -275,6 +278,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                         }
                         updatedCount = state.selectedPeerIds.count
                         if let limit = limit, let count = updatedCount, count > limit {
+                            reachedLimit?(Int32(count))
                             updatedCount = nil
                             removedTokenId = nil
                             addedToken = nil

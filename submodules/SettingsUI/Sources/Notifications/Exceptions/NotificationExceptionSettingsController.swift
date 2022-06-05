@@ -418,16 +418,20 @@ public func notificationPeerExceptionController(context: AccountContext, updated
         deleteSoundImpl?(sound, title)
     })
     
-    statePromise.set(context.account.postbox.transaction { transaction -> NotificationExceptionPeerState in
-        var state = NotificationExceptionPeerState(canRemove: mode.peerIds.contains(peer.id), notifications: transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings)
-        let globalSettings: GlobalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) ?? GlobalNotificationSettings.defaultSettings
+    statePromise.set(context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peer.id),
+        TelegramEngine.EngineData.Item.NotificationSettings.Global()
+    )
+    |> map { notificationSettings, globalNotificationSettings -> NotificationExceptionPeerState in
+        var state = NotificationExceptionPeerState(canRemove: mode.peerIds.contains(peer.id), notifications: notificationSettings._asNotificationSettings())
+        let globalSettings = globalNotificationSettings
         switch mode {
         case .channels:
-            state.defaultSound = globalSettings.effective.channels.sound
+            state.defaultSound = globalSettings.channels.sound._asMessageSound()
         case .groups:
-            state.defaultSound = globalSettings.effective.groupChats.sound
+            state.defaultSound = globalSettings.groupChats.sound._asMessageSound()
         case .users:
-            state.defaultSound = globalSettings.effective.privateChats.sound
+            state.defaultSound = globalSettings.privateChats.sound._asMessageSound()
         }
         let _ = stateValue.swap(state)
         return state

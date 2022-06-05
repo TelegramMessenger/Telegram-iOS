@@ -21,6 +21,10 @@ public class SecureIdLocalImageResource: TelegramMediaResource {
     public let localId: Int64
     public let source: TelegramMediaResource
     
+    public var size: Int64? {
+        return nil
+    }
+    
     public init(localId: Int64, source: TelegramMediaResource) {
         self.localId = localId
         self.source = source
@@ -61,7 +65,7 @@ public func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureId
         
         subscriber.putNext(.reset)
         
-        let fetch = fetchResource(resource.source, .single([(0 ..< Int.max, .default)]), nil)
+        let fetch = fetchResource(resource.source, .single([(0 ..< Int64.max, .default)]), nil)
         let buffer = Atomic<Buffer>(value: Buffer())
         let disposable = fetch.start(next: { result in
             switch result {
@@ -106,19 +110,19 @@ public func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureId
                             guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
                                 return
                             }
-                            data.copyBytes(to: bytes, from: range)
+                            data.copyBytes(to: bytes, from: Int(range.lowerBound) ..< Int(range.upperBound))
                         }
                     }
                 case let .dataPart(resourceOffset, data, range, _):
                     let _ = buffer.with { buffer in
-                        if buffer.data.count < resourceOffset + range.count {
-                            buffer.data.count = resourceOffset + range.count
+                        if buffer.data.count < Int(resourceOffset) + range.count {
+                            buffer.data.count = Int(resourceOffset) + range.count
                         }
                         buffer.data.withUnsafeMutableBytes { buffer -> Void in
                             guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
                                 return
                             }
-                            data.copyBytes(to: bytes.advanced(by: resourceOffset), from: range)
+                            data.copyBytes(to: bytes.advanced(by: Int(resourceOffset)), from: Int(range.lowerBound) ..< Int(range.upperBound))
                         }
                     }
             }
@@ -131,7 +135,7 @@ public func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureId
                     context.setBlendMode(.copy)
                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
                 }, scale: 1.0), let scaledData = scaledImage.jpegData(compressionQuality: 0.6) {
-                    subscriber.putNext(.dataPart(resourceOffset: 0, data: scaledData, range: 0 ..< scaledData.count, complete: true))
+                    subscriber.putNext(.dataPart(resourceOffset: 0, data: scaledData, range: 0 ..< Int64(scaledData.count), complete: true))
                     subscriber.putCompletion()
                 }
             }

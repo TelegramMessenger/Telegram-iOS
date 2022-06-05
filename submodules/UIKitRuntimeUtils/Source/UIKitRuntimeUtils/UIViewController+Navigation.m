@@ -43,6 +43,7 @@ static const void *inputAccessoryHeightProviderKey = &inputAccessoryHeightProvid
 static const void *interactiveTransitionGestureRecognizerTestKey = &interactiveTransitionGestureRecognizerTestKey;
 static const void *UIViewControllerHintWillBePresentedInPreviewingContextKey = &UIViewControllerHintWillBePresentedInPreviewingContextKey;
 static const void *disablesInteractiveModalDismissKey = &disablesInteractiveModalDismissKey;
+static const void *forceFullRefreshRateKey = &forceFullRefreshRateKey;
 
 static bool notyfyingShiftState = false;
 
@@ -90,6 +91,54 @@ static bool notyfyingShiftState = false;
 
 @end
 
+@interface CADisplayLink (FrameRateRangeOverride)
+
+- (void)_65087dc8_setPreferredFrameRateRange:(CAFrameRateRange)range API_AVAILABLE(ios(15.0));
+
+@end
+
+@implementation CADisplayLink (FrameRateRangeOverride)
+
+- (void)_65087dc8_setPreferredFrameRateRange:(CAFrameRateRange)range API_AVAILABLE(ios(15.0)) {
+    if ([self associatedObjectForKey:forceFullRefreshRateKey] != nil) {
+        float maxFps = [UIScreen mainScreen].maximumFramesPerSecond;
+        if (maxFps > 61.0f) {
+            range = CAFrameRateRangeMake(maxFps, maxFps, maxFps);
+        }
+    }
+    
+    [self _65087dc8_setPreferredFrameRateRange:range];
+}
+
+@end
+
+@implementation UIScrollView (FrameRateRangeOverride)
+
+- (void)fixScrollDisplayLink {
+    static NSString *scrollHeartbeatKey = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        scrollHeartbeatKey = [NSString stringWithFormat:@"_%@", @"scrollHeartbeat"];
+    });
+    
+    id value = [self valueForKey:scrollHeartbeatKey];
+    if ([value isKindOfClass:[CADisplayLink class]]) {
+        CADisplayLink *displayLink = (CADisplayLink *)value;
+        if ([displayLink associatedObjectForKey:forceFullRefreshRateKey] == nil) {
+            [displayLink setAssociatedObject:@true forKey:forceFullRefreshRateKey];
+            
+            if (@available(iOS 15.0, *)) {
+                float maxFps = [UIScreen mainScreen].maximumFramesPerSecond;
+                if (maxFps > 61.0f) {
+                    [displayLink setPreferredFrameRateRange:CAFrameRateRangeMake(maxFps, maxFps, maxFps)];
+                }
+            }
+        }
+    }
+}
+
+@end
+
 @implementation UIViewController (Navigation)
 
 + (void)load
@@ -105,6 +154,10 @@ static bool notyfyingShiftState = false;
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentingViewController) newSelector:@selector(_65087dc8_presentingViewController)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentViewController:animated:completion:) newSelector:@selector(_65087dc8_presentViewController:animated:completion:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(setNeedsStatusBarAppearanceUpdate) newSelector:@selector(_65087dc8_setNeedsStatusBarAppearanceUpdate)];
+        
+        if (@available(iOS 15.0, *)) {
+            [RuntimeUtils swizzleInstanceMethodOfClass:[CADisplayLink class] currentSelector:@selector(setPreferredFrameRateRange:) newSelector:@selector(_65087dc8_setPreferredFrameRateRange:)];
+        }
     });
 }
 

@@ -75,7 +75,6 @@ func chatHistoryEntriesForView(
         )
     }
         
-    
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)] = []
     var count = 0
     loop: for entry in view.entries {

@@ -7,12 +7,18 @@ private class AdMessagesHistoryContextImpl {
     final class CachedMessage: Equatable, Codable {
         enum CodingKeys: String, CodingKey {
             case opaqueId
+            case messageType
             case text
             case textEntities
             case media
             case target
             case messageId
             case startParam
+        }
+        
+        enum MessageType: Int32, Codable {
+            case sponsored = 0
+            case recommended = 1
         }
         
         enum Target: Equatable, Codable {
@@ -58,6 +64,7 @@ private class AdMessagesHistoryContextImpl {
         }
 
         public let opaqueId: Data
+        public let messageType: MessageType
         public let text: String
         public let textEntities: [MessageTextEntity]
         public let media: [Media]
@@ -67,6 +74,7 @@ private class AdMessagesHistoryContextImpl {
 
         public init(
             opaqueId: Data,
+            messageType: MessageType,
             text: String,
             textEntities: [MessageTextEntity],
             media: [Media],
@@ -75,6 +83,7 @@ private class AdMessagesHistoryContextImpl {
             startParam: String?
         ) {
             self.opaqueId = opaqueId
+            self.messageType = messageType
             self.text = text
             self.textEntities = textEntities
             self.media = media
@@ -87,7 +96,13 @@ private class AdMessagesHistoryContextImpl {
             let container = try decoder.container(keyedBy: CodingKeys.self)
 
             self.opaqueId = try container.decode(Data.self, forKey: .opaqueId)
-
+            
+            if let messageType = try container.decodeIfPresent(Int32.self, forKey: .messageType) {
+                self.messageType = MessageType(rawValue: messageType) ?? .sponsored
+            } else {
+                self.messageType = .sponsored
+            }
+            
             self.text = try container.decode(String.self, forKey: .text)
             self.textEntities = try container.decode([MessageTextEntity].self, forKey: .textEntities)
 
@@ -105,6 +120,7 @@ private class AdMessagesHistoryContextImpl {
             var container = encoder.container(keyedBy: CodingKeys.self)
 
             try container.encode(self.opaqueId, forKey: .opaqueId)
+            try container.encode(self.messageType.rawValue, forKey: .messageType)
             try container.encode(self.text, forKey: .text)
             try container.encode(self.textEntities, forKey: .textEntities)
 
@@ -122,6 +138,9 @@ private class AdMessagesHistoryContextImpl {
 
         public static func ==(lhs: CachedMessage, rhs: CachedMessage) -> Bool {
             if lhs.opaqueId != rhs.opaqueId {
+                return false
+            }
+            if lhs.messageType != rhs.messageType {
                 return false
             }
             if lhs.text != rhs.text {
@@ -160,7 +179,14 @@ private class AdMessagesHistoryContextImpl {
             case let .invite(invite):
                 target = .join(title: invite.title, joinHash: invite.joinHash)
             }
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, target: target))
+            let mappedMessageType: AdMessageAttribute.MessageType
+            switch self.messageType {
+            case .sponsored:
+                mappedMessageType = .sponsored
+            case .recommended:
+                mappedMessageType = .recommended
+            }
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, target: target))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -278,8 +304,6 @@ private class AdMessagesHistoryContextImpl {
             }, forKey: "messages")
         }
 
-        private static let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 5, highWaterItemCount: 10)
-
         public static func getCached(postbox: Postbox, peerId: PeerId) -> Signal<CachedState?, NoError> {
             return postbox.transaction { transaction -> CachedState? in
                 let key = ValueBoxKey(length: 8)
@@ -297,7 +321,7 @@ private class AdMessagesHistoryContextImpl {
             key.setInt64(0, value: peerId.toInt64())
             let id = ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAdMessageStates, key: key)
             if let state = state, let entry = CodableEntry(state) {
-                transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
+                transaction.putItemCacheEntry(id: id, entry: entry)
             } else {
                 transaction.removeItemCacheEntry(id: id)
             }
@@ -400,11 +424,13 @@ private class AdMessagesHistoryContextImpl {
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(_, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, message, entities):
+                            case let .sponsoredMessage(flags, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, message, entities):
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
                                 }
+                                
+                                let isRecommended = (flags & (1 << 5)) != 0
                                 
                                 let _ = chatInvite
                                 let _ = chatInviteHash
@@ -452,6 +478,7 @@ private class AdMessagesHistoryContextImpl {
                                 if let target = target {
                                     parsedMessages.append(CachedMessage(
                                         opaqueId: randomId.makeData(),
+                                        messageType: isRecommended ? .recommended : .sponsored,
                                         text: message,
                                         textEntities: parsedEntities,
                                         media: [],

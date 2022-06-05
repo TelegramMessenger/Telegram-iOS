@@ -36,7 +36,7 @@ private enum ShareSearchRecentEntryStableId: Hashable {
 
 private enum ShareSearchRecentEntry: Comparable, Identifiable {
     case topPeers(PresentationTheme, PresentationStrings)
-    case peer(index: Int, theme: PresentationTheme, peer: Peer, associatedPeer: Peer?, presence: PeerPresence?, PresentationStrings)
+    case peer(index: Int, theme: PresentationTheme, peer: Peer, associatedPeer: Peer?, presence: EnginePeer.Presence?, PresentationStrings)
     
     var stableId: ShareSearchRecentEntryStableId {
         switch self {
@@ -62,7 +62,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                     return false
                 }
             case let .peer(lhsIndex, lhsTheme, lhsPeer, lhsAssociatedPeer, lhsPresence, lhsStrings):
-                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && arePeerPresencesEqual(lhsPresence, rhsPresence) {
+                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && lhsPresence == rhsPresence {
                     return true
                 } else {
                     return false
@@ -93,7 +93,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                 if let associatedPeer = associatedPeer {
                     peers[associatedPeer.id] = associatedPeer
                 }
-                let peer = RenderedPeer(peerId: peer.id, peers: SimpleDictionary(peers))
+                let peer = EngineRenderedPeer(RenderedPeer(peerId: peer.id, peers: SimpleDictionary(peers)))
                 return ShareControllerPeerGridItem(context: context, theme: theme, strings: strings, peer: peer, presence: presence, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }
@@ -101,8 +101,8 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
 
 private struct ShareSearchPeerEntry: Comparable, Identifiable {
     let index: Int32
-    let peer: RenderedPeer?
-    let presence: PeerPresence?
+    let peer: EngineRenderedPeer?
+    let presence: EnginePeer.Presence?
     let theme: PresentationTheme
     let strings: PresentationStrings
     
@@ -262,7 +262,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
                         if !existingPeerIds.contains(accountPeer.id) {
                             existingPeerIds.insert(accountPeer.id)
-                            entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), presence: nil, theme: theme, strings: strings))
+                            entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(RenderedPeer(peer: accountPeer)), presence: nil, theme: theme, strings: strings))
                             index += 1
                         }
                     }
@@ -271,7 +271,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                         if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id {
                             if !existingPeerIds.contains(renderedPeer.peerId) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(renderedPeer.peerId)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: renderedPeer, presence: nil, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(renderedPeer), presence: nil, theme: theme, strings: strings))
                                 index += 1
                             }
                         }
@@ -289,7 +289,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             let peer = foundPeer.peer
                             if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: foundPeer.peer), presence: nil, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(RenderedPeer(peer: foundPeer.peer)), presence: nil, theme: theme, strings: strings))
                                 index += 1
                             }
                         }
@@ -298,7 +298,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             let peer = foundPeer.peer
                             if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: peer), presence: nil, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(RenderedPeer(peer: peer)), presence: nil, theme: theme, strings: strings))
                                 index += 1
                             }
                         }

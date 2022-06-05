@@ -135,7 +135,7 @@ public func _internal_cachedNotificationSoundList(transaction: Transaction) -> N
 
 func _internal_setCachedNotificationSoundList(transaction: Transaction, notificationSoundList: NotificationSoundList) {
     if let entry = CodableEntry(notificationSoundList) {
-        transaction.putItemCacheEntry(id: _internal_cachedNotificationSoundListCacheKey(), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 10))
+        transaction.putItemCacheEntry(id: _internal_cachedNotificationSoundListCacheKey(), entry: entry)
     }
 }
 
@@ -300,7 +300,7 @@ public enum UploadNotificationSoundError {
 }
 
 func _internal_uploadNotificationSound(account: Account, title: String, data: Data) -> Signal<NotificationSoundList.NotificationSound, UploadNotificationSoundError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false, tag: nil, hintFileSize: data.count, hintFileIsLarge: false, forceNoBigParts: true, useLargerParts: false, increaseParallelParts: false, useMultiplexedRequests: false, useCompression: false)
+    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: false, tag: nil, hintFileSize: Int64(data.count), hintFileIsLarge: false, forceNoBigParts: true, useLargerParts: false, increaseParallelParts: false, useMultiplexedRequests: false, useCompression: false)
     |> mapError { _ -> UploadNotificationSoundError in
         return .generic
     }

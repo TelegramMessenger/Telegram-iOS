@@ -434,9 +434,7 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                 }
             }).start(error: { [weak contactsController] error in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let _ = (context.account.postbox.transaction { transaction in
-                    return transaction.getPeer(peerId)
-                }
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> deliverOnMainQueue).start(next: { peer in
                     let text: String
                     switch error {
@@ -449,13 +447,13 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                         case .restricted:
                             text = presentationData.strings.Channel_ErrorAddBlocked
                         case .notMutualContact:
-                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        if case let .channel(peer) = peer, case .broadcast = peer.info {
                                 text = presentationData.strings.Channel_AddUserLeftError
                             } else {
                                 text = presentationData.strings.GroupInfo_AddUserLeftError
                             }
                         case let .bot(memberId):
-                            guard let peer = peer as? TelegramChannel else {
+                        guard case let .channel(peer) = peer else {
                                 presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 contactsController?.dismiss()
                                 return
@@ -479,6 +477,8 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                             text = presentationData.strings.Channel_BotDoesntSupportGroups
                         case .tooMuchBots:
                             text = presentationData.strings.Channel_TooMuchBots
+                        case .kicked:
+                            text = presentationData.strings.Channel_AddUserKickedError
                     }
                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     contactsController?.dismiss()

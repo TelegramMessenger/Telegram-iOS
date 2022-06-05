@@ -21,6 +21,38 @@ private func decodeStickerThumbnailData(_ data: Data) -> String {
     return string
 }
 
+public func generateStickerPlaceholderImage(data: Data?, size: CGSize, imageSize: CGSize, backgroundColor: UIColor?, foregroundColor: UIColor) -> UIImage? {
+    return generateImage(size, rotatedContext: { size, context in
+        if let backgroundColor = backgroundColor {
+            context.setFillColor(backgroundColor.cgColor)
+            context.setBlendMode(.copy)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(UIColor.clear.cgColor)
+        } else {
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(foregroundColor.cgColor)
+        }
+        
+        if let data = data {
+            var path = decodeStickerThumbnailData(data)
+            if !path.hasSuffix("z") {
+                path = "\(path)z"
+            }
+            let reader = PathDataReader(input: path)
+            let segments = reader.read()
+
+            let scale = max(size.width, size.height) / max(imageSize.width, imageSize.height)
+            context.scaleBy(x: scale, y: scale)
+            renderPath(segments, context: context)
+        } else {
+            let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), byRoundingCorners: [.topLeft, .topRight, .bottomLeft, .bottomRight], cornerRadii: CGSize(width: 10.0, height: 10.0))
+            UIGraphicsPushContext(context)
+            path.fill()
+            UIGraphicsPopContext()
+        }
+    })
+}
+
 public class StickerShimmerEffectNode: ASDisplayNode {
     private var backdropNode: ASDisplayNode?
     private let backgroundNode: ASDisplayNode
@@ -81,38 +113,10 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         
         self.backgroundNode.backgroundColor = foregroundColor
         
-        self.effectNode.update(backgroundColor: backgroundColor == nil ? .clear : foregroundColor, foregroundColor: shimmeringColor, horizontal: true)
+        self.effectNode.update(backgroundColor: backgroundColor == nil ? .clear : foregroundColor, foregroundColor: shimmeringColor, horizontal: true, effectSize: nil, globalTimeOffset: true, duration: nil)
         
         let bounds = CGRect(origin: CGPoint(), size: size)
-        let image = generateImage(size, rotatedContext: { size, context in
-            if let backgroundColor = backgroundColor {
-                context.setFillColor(backgroundColor.cgColor)
-                context.setBlendMode(.copy)
-                context.fill(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(UIColor.clear.cgColor)
-            } else {
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(UIColor.black.cgColor)
-            }
-            
-            if let data = data {
-                var path = decodeStickerThumbnailData(data)
-                if !path.hasSuffix("z") {
-                    path = "\(path)z"
-                }
-                let reader = PathDataReader(input: path)
-                let segments = reader.read()
-
-                let scale = max(size.width, size.height) / max(imageSize.width, imageSize.height)
-                context.scaleBy(x: scale, y: scale)
-                renderPath(segments, context: context)
-            } else {
-                let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), byRoundingCorners: [.topLeft, .topRight, .bottomLeft, .bottomRight], cornerRadii: CGSize(width: 10.0, height: 10.0))
-                UIGraphicsPushContext(context)
-                path.fill()
-                UIGraphicsPopContext()
-            }
-        })
+        let image = generateStickerPlaceholderImage(data: data, size: size, imageSize: imageSize, backgroundColor: backgroundColor, foregroundColor: .black)
                         
         if backgroundColor == nil {
             self.foregroundNode.image = nil

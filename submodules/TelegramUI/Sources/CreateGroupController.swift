@@ -551,9 +551,10 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             return state.editingName.composedTitle
         }
         
-        let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
-            return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
-        }
+        let _ = (context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+            TelegramEngine.EngineData.Item.Configuration.SearchBots()
+        )
         |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
@@ -703,7 +704,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
-                let controller = WebSearchController(context: context, peer: peer.flatMap(EnginePeer.init), chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
+                let controller = WebSearchController(context: context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
                     assetsController?.dismiss()
                     completedGroupPhotoImpl(result)
                 }))

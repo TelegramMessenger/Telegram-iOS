@@ -518,7 +518,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             #endif
             
             if !supplementary {
-                context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber))
+                context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber, mainDatacenterId: datacenterId))
             }
             
             /*#if DEBUG
@@ -1089,10 +1089,6 @@ class Keychain: NSObject, MTKeychain {
     
     func removeObject(forKey aKey: String!, group: String!) {
         self.remove(group + ":" + aKey)
-    }
-    
-    func dropGroup(_ group: String!) {
-        
     }
 }
 #if os(iOS)

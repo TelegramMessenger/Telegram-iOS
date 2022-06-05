@@ -6,7 +6,11 @@ set -x
 IPA_PATH="build/artifacts/Telegram.ipa"
 DSYM_PATH="build/artifacts/Telegram.DSYMs.zip"
 
-APPCENTER="/usr/local/bin/appcenter"
+if [ `which appcenter` ]; then
+    APPCENTER="$(which appcenter)"
+else
+    APPCENTER="/usr/local/bin/appcenter"
+fi
 
 $APPCENTER login --token "$API_TOKEN"
 

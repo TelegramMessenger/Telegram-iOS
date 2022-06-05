@@ -34,7 +34,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     private var appliedItem: ChatMessageItem?
     private var appliedForwardInfo: (Peer?, String?)?
     private var appliedHasAvatar = false
-    private var appliedCurrentlyPlaying = false
+    private var appliedCurrentlyPlaying: Bool?
     private var appliedAutomaticDownload = false
     private var avatarOffset: CGFloat?
     
@@ -97,7 +97,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             if !strongSelf.interactiveVideoNode.frame.contains(location) {
                 return false
             }
-            if strongSelf.appliedCurrentlyPlaying && !strongSelf.interactiveVideoNode.isPlaying {
+            if (strongSelf.appliedCurrentlyPlaying ?? false) && !strongSelf.interactiveVideoNode.isPlaying {
                 return strongSelf.interactiveVideoNode.frame.insetBy(dx: 0.15 * strongSelf.interactiveVideoNode.frame.width, dy: 0.15 * strongSelf.interactiveVideoNode.frame.height).contains(location)
             }
             if let action = strongSelf.gestureRecognized(gesture: .tap, location: location, recognizer: nil) {
@@ -127,7 +127,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 case let .openContextMenu(tapMessage, selectAll, subFrame):
                     strongSelf.recognizer?.cancel()
                     item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture)
-                    if strongSelf.appliedCurrentlyPlaying && strongSelf.interactiveVideoNode.isPlaying {
+                    if (strongSelf.appliedCurrentlyPlaying ?? false) && strongSelf.interactiveVideoNode.isPlaying {
                         strongSelf.wasPlaying = true
                         strongSelf.interactiveVideoNode.pause()
                     }
@@ -199,7 +199,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 if strongSelf.selectionNode != nil {
                     return false
                 }
-                if strongSelf.appliedCurrentlyPlaying && !strongSelf.interactiveVideoNode.isPlaying {
+                if (strongSelf.appliedCurrentlyPlaying ?? false) && !strongSelf.interactiveVideoNode.isPlaying {
                     return false
                 }
                 let action = item.controllerInteraction.canSetupReply(item.message)
@@ -880,42 +880,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     
     private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {
         switch gesture {
-        case .tap:
-            if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
-                if let item = self.item, let author = item.content.firstMessage.author {
-                    var openPeerId = item.effectiveAuthorId ?? author.id
-                    var navigate: ChatControllerInteractionNavigateToPeer
-                    
-                    if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                        navigate = .chat(textInputState: nil, subject: nil, peekData: nil)
-                    } else {
-                        navigate = .info
-                    }
-                    
-                    for attribute in item.content.firstMessage.attributes {
-                        if let attribute = attribute as? SourceReferenceMessageAttribute {
-                            openPeerId = attribute.messageId.peerId
-                            navigate = .chat(textInputState: nil, subject: .message(id: .id(attribute.messageId), highlight: true, timecode: nil), peekData: nil)
-                        }
-                    }
-                    
-                    return .optionalAction({
-                        if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
-                            item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
-                        } else {
-                            if !item.message.id.peerId.isReplies, let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
-                                if case .member = channel.participationStatus {
-                                } else {
-                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
-                                    return
-                                }
-                            }
-                            item.controllerInteraction.openPeer(openPeerId, navigate, MessageReference(item.message), item.message.peers[openPeerId])
-                        }
-                    })
-                }
-            }
-            
+        case .tap:            
             if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
                 if let item = self.item {
                     for attribute in item.message.attributes {
@@ -1098,7 +1063,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             selected = selectionState.selectedIds.contains(item.message.id)
             incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             
-            let offset: CGFloat = incoming || self.appliedCurrentlyPlaying ? 42.0 : 0.0
+            let offset: CGFloat = incoming || (self.appliedCurrentlyPlaying ?? false) ? 42.0 : 0.0
             
             if let selectionNode = self.selectionNode {
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))

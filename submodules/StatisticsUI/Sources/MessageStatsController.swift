@@ -185,17 +185,14 @@ private func messageStatsControllerEntries(data: MessageStats?, messages: Search
     return entries
 }
 
-public func messageStatsController(context: AccountContext, messageId: MessageId, cachedPeerData: CachedPeerData) -> ViewController {
+public func messageStatsController(context: AccountContext, messageId: MessageId, statsDatacenterId: Int32?) -> ViewController {
     var navigateToMessageImpl: ((MessageId) -> Void)?
     
     let actionsDisposable = DisposableSet()
     let dataPromise = Promise<MessageStats?>(nil)
     let messagesPromise = Promise<(SearchMessagesResult, SearchMessagesState)?>(nil)
     
-    var datacenterId: Int32 = 0
-    if let cachedData = cachedPeerData as? CachedChannelData {
-        datacenterId = cachedData.statsDatacenterId
-    }
+    let datacenterId: Int32 = statsDatacenterId ?? 0
         
     let statsContext = MessageStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, messageId: messageId)
     let dataSignal: Signal<MessageStats?, NoError> = statsContext.state

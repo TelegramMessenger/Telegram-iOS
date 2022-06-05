@@ -433,7 +433,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                 
                 let query = strongSelf.queryValue.query
                 if !query.isEmpty {
-                    let _ = addRecentWallpaperSearchQuery(postbox: strongSelf.context.account.postbox, string: query).start()
+                    let _ = addRecentWallpaperSearchQuery(engine: strongSelf.context.engine, string: query).start()
                 }
             }
         }, selectColor: { [weak self] color in
@@ -444,12 +444,10 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                 return query
             }, updateInterface: true)
         }, deleteRecentQuery: { query in
-            let _ = removeRecentWallpaperSearchQuery(postbox: context.account.postbox, string: query).start()
+            let _ = removeRecentWallpaperSearchQuery(engine: context.engine, string: query).start()
         })
         
-        let configuration = self.context.account.postbox.transaction { transaction -> SearchBotsConfiguration in
-            return currentSearchBotsConfiguration(transaction: transaction)
-        }
+        let configuration = self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
         
         let foundItems = self.queryPromise.get()
         |> mapToSignal { query -> Signal<([ThemeGridSearchEntry], Bool)?, NoError> in
@@ -571,7 +569,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         }
         
         let previousRecentItems = Atomic<[ThemeGridRecentEntry]?>(value: nil)
-        self.recentDisposable = (combineLatest(wallpaperSearchRecentQueries(postbox: self.context.account.postbox), self.presentationDataPromise.get())
+        self.recentDisposable = (combineLatest(wallpaperSearchRecentQueries(engine: self.context.engine), self.presentationDataPromise.get())
         |> deliverOnMainQueue).start(next: { [weak self] queries, presentationData in
             if let strongSelf = self {
                 var entries: [ThemeGridRecentEntry] = []
@@ -582,7 +580,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                 }
                 
                 let header = ChatListSearchItemHeader(type: .recentPeers, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.WebSearch_RecentSectionClear, action: {
-                    _ = clearRecentWallpaperSearchQueries(postbox: strongSelf.context.account.postbox).start()
+                    let _ = clearRecentWallpaperSearchQueries(engine: strongSelf.context.engine).start()
                 })
                 
                 let previousEntries = previousRecentItems.swap(entries)

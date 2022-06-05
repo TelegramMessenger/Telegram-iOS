@@ -6,8 +6,8 @@ import PassKit
 import ShimmerEffect
 
 enum BotCheckoutActionButtonState: Equatable {
-    case active(String)
-    case applePay
+    case active(text: String, isEnabled: Bool)
+    case applePay(isEnabled: Bool)
     case placeholder
 }
 
@@ -17,6 +17,7 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
     static var height: CGFloat = 52.0
 
     private var activeFillColor: UIColor
+    private var inactiveFillColor: UIColor
     private var foregroundColor: UIColor
 
     private let activeBackgroundNode: ASImageNode
@@ -28,17 +29,23 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
 
     private var placeholderNode: ShimmerEffectNode?
     
-    init(activeFillColor: UIColor, foregroundColor: UIColor) {
+    private var activeImage: UIImage?
+    private var inactiveImage: UIImage?
+    
+    init(activeFillColor: UIColor, inactiveFillColor: UIColor, foregroundColor: UIColor) {
         self.activeFillColor = activeFillColor
+        self.inactiveFillColor = inactiveFillColor
         self.foregroundColor = foregroundColor
-
+        
         let diameter: CGFloat = 20.0
+        self.activeImage = generateStretchableFilledCircleImage(diameter: diameter, color: activeFillColor)
+        self.inactiveImage = generateStretchableFilledCircleImage(diameter: diameter, color: inactiveFillColor)
         
         self.activeBackgroundNode = ASImageNode()
         self.activeBackgroundNode.displaysAsynchronously = false
         self.activeBackgroundNode.displayWithoutProcessing = true
         self.activeBackgroundNode.isLayerBacked = true
-        self.activeBackgroundNode.image = generateStretchableFilledCircleImage(diameter: diameter, color: activeFillColor)
+        self.activeBackgroundNode.image = self.activeImage
         
         self.labelNode = TextNode()
         self.labelNode.displaysAsynchronously = false
@@ -75,7 +82,7 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
         var labelSize = self.labelNode.bounds.size
         if let state = self.state {
             switch state {
-            case let .active(title):
+            case let .active(title, isEnabled):
                 if let applePayButton = self.applePayButton {
                     self.applePayButton = nil
                     applePayButton.removeFromSuperview()
@@ -85,12 +92,20 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
                     self.placeholderNode = nil
                     placeholderNode.removeFromSupernode()
                 }
+                
+                let image = isEnabled ? self.activeImage : self.inactiveImage
+                if let image = image, let currentImage = self.activeBackgroundNode.image, currentImage !== image {
+                    self.activeBackgroundNode.image = image
+                    self.activeBackgroundNode.layer.animate(from: currentImage.cgImage! as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.2)
+                } else {
+                    self.activeBackgroundNode.image = image
+                }
 
                 let makeLayout = TextNode.asyncLayout(self.labelNode)
                 let (labelLayout, labelApply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: self.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: size, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let _ = labelApply()
                 labelSize = labelLayout.size
-            case .applePay:
+            case let .applePay(isEnabled):
                 if self.applePayButton == nil {
                     if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                         let applePayButton: PKPaymentButton
@@ -102,6 +117,7 @@ final class BotCheckoutActionButton: HighlightableButtonNode {
                         applePayButton.addTarget(self, action: #selector(self.applePayButtonPressed), for: .touchUpInside)
                         self.view.addSubview(applePayButton)
                         self.applePayButton = applePayButton
+                        applePayButton.isEnabled = isEnabled
                     }
                 }
 

@@ -389,11 +389,12 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         }
         
         let removeItem: (String) -> Void = { id in
-            let _ = (context.account.postbox.transaction { transaction -> Signal<LocalizationInfo?, NoError> in
-                removeSavedLocalization(transaction: transaction, languageCode: id)
-                let state = transaction.getPreferencesEntry(key: PreferencesKeys.localizationListState)?.get(LocalizationListState.self)
+            let _ = context.engine.localization.removeSavedLocalization(languageCode: id).start()
+            
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.LocalizationList())
+            |> mapToSignal { state -> Signal<LocalizationInfo?, NoError> in
                 return context.sharedContext.accountManager.transaction { transaction -> LocalizationInfo? in
-                    if let settings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self), let state = state {
+                    if let settings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) {
                         if settings.primaryComponent.languageCode == id {
                             for item in state.availableOfficialLocalizations {
                                 if item.languageCode == "en" {
@@ -405,7 +406,6 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                     return nil
                 }
             }
-            |> switchToLatest
             |> deliverOnMainQueue).start(next: { [weak self] info in
                 if revealedCodeValue == id {
                     revealedCodeValue = nil
@@ -417,10 +417,17 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             })
         }
         
-        let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.localizationListState]))
         let previousState = Atomic<LocalizationListState?>(value: nil)
         let previousEntriesHolder = Atomic<([LanguageListEntry], PresentationTheme, PresentationStrings)?>(value: nil)
-        self.listDisposable = combineLatest(queue: .mainQueue(), context.account.postbox.combinedView(keys: [preferencesKey]), context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings, ApplicationSpecificSharedDataKeys.translationSettings]), self.presentationDataValue.get(), self.applyingCode.get(), revealedCode.get(), self.isEditing.get()).start(next: { [weak self] view, sharedData, presentationData, applyingCode, revealedCode, isEditing in
+        self.listDisposable = combineLatest(
+            queue: .mainQueue(),
+            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.LocalizationList()),
+            context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings, ApplicationSpecificSharedDataKeys.translationSettings]),
+            self.presentationDataValue.get(),
+            self.applyingCode.get(),
+            revealedCode.get(),
+            self.isEditing.get()
+        ).start(next: { [weak self] localizationListState, sharedData, presentationData, applyingCode, revealedCode, isEditing in
             guard let strongSelf = self else {
                 return
             }
@@ -449,8 +456,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 }
             }
             
-            let localizationListState = (view.views[preferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState]?.get(LocalizationListState.self)
-            if let localizationListState = localizationListState, !localizationListState.availableOfficialLocalizations.isEmpty {
+            if !localizationListState.availableOfficialLocalizations.isEmpty {
                 strongSelf.currentListState = localizationListState
                 
                 if #available(iOS 12.0, *) {
@@ -520,7 +526,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 if let strongSelf = self {
                     strongSelf.push(translationSettingsController(context: strongSelf.context))
                 }
-            }, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem, firstTime: previousEntriesAndPresentationData == nil, isLoading: entries.isEmpty, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings, animated: (previousEntriesAndPresentationData?.0.count ?? 0) != entries.count, crossfade: (previousState == nil) != (localizationListState == nil))
+            }, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem, firstTime: previousEntriesAndPresentationData == nil, isLoading: entries.isEmpty, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings, animated: (previousEntriesAndPresentationData?.0.count ?? 0) != entries.count, crossfade: (previousState == nil || previousState!.availableOfficialLocalizations.isEmpty) != localizationListState.availableOfficialLocalizations.isEmpty)
             strongSelf.enqueueTransition(transition)
         })
         self.updatedDisposable = context.engine.localization.synchronizedLocalizationListState().start()
@@ -685,7 +691,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: LocalizationListSearchContainerNode(context: self.context, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), cancel: { [weak self] in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: LocalizationListSearchContainerNode(context: self.context, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), inline: true, cancel: { [weak self] in
             self?.requestDeactivateSearch()
         })
         

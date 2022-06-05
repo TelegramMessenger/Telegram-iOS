@@ -33,6 +33,10 @@ public enum PostboxViewKey: Hashable {
     case topChatMessage(peerIds: [PeerId])
     case contacts(accountPeerId: PeerId?, includePresences: Bool)
     case deletedMessages(peerId: PeerId)
+    case notice(key: NoticeEntryKey)
+    case messageGroup(id: MessageId)
+    case isContact(id: PeerId)
+    case chatListIndex(id: PeerId)
 
     public func hash(into hasher: inout Hasher) {
         switch self {
@@ -109,6 +113,14 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(16)
         case let .deletedMessages(peerId):
             hasher.combine(peerId)
+        case let .notice(key):
+            hasher.combine(key)
+        case let .messageGroup(id):
+            hasher.combine(id)
+        case let .isContact(id):
+            hasher.combine(id)
+        case let .chatListIndex(id):
+            hasher.combine(id)
         }
     }
     
@@ -306,6 +318,30 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case let .notice(key):
+            if case .notice(key) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .messageGroup(id):
+            if case .messageGroup(id) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .isContact(id):
+            if case .isContact(id) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .chatListIndex(id):
+            if case .chatListIndex(id) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -376,5 +412,13 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableContactPeersView(postbox: postbox, accountPeerId: accountPeerId, includePresences: includePresences)
     case let .deletedMessages(peerId):
         return MutableDeletedMessagesView(peerId: peerId)
+    case let .notice(key):
+        return MutableLocalNoticeEntryView(postbox: postbox, key: key)
+    case let .messageGroup(id):
+        return MutableMessageGroupView(postbox: postbox, id: id)
+    case let .isContact(id):
+        return MutableIsContactView(postbox: postbox, id: id)
+    case let .chatListIndex(id):
+        return MutableChatListIndexView(postbox: postbox, id: id)
     }
 }

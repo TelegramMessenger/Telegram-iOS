@@ -388,7 +388,7 @@
 "Tour.Text5" = "**Telegram** lets you access your\nmessages from multiple devices.";
 
 "Tour.Title6" = "Free";
-"Tour.Text6" = "**Telegram** is free forever. No ads.\nNo subscription fees.";
+"Tour.Text6" = "**Telegram** isprovides free unlimited cloud storage\nfor chats and media.";
 
 "Tour.StartButton" = "Start Messaging";
 
@@ -2494,6 +2494,13 @@ Unused sets are archived when you add more.";
 
 "Message.PaymentSent" = "Payment: %@";
 "Notification.PaymentSent" = "You have just successfully transferred {amount} to {name} for {title}";
+"Notification.PaymentSentNoTitle" = "You have just successfully transferred {amount} to {name}";
+
+"Notification.PaymentSentRecurringInit" = "You have just successfully transferred {amount} to {name} for {title} and allowed future reccurrent payments";
+"Notification.PaymentSentRecurringInitNoTitle" = "You have just successfully transferred {amount} to {name} and allowed future reccurrent payments";
+
+"Notification.PaymentSentRecurringUsed" = "You have just successfully transferred {amount} to {name} for {title} via recurrent payments";
+"Notification.PaymentSentRecurringUsedNoTitle" = "You have just successfully transferred {amount} to {name} via recurrent payments";
 
 "Common.NotNow" = "Not Now";
 
@@ -6861,6 +6868,7 @@ Sorry for the inconvenience.";
 "Chat.NavigationNoChannels" = "You have no unread channels";
 
 "Message.SponsoredLabel" = "sponsored";
+"Message.RecommendedLabel" = "recommended";
 
 "Stickers.Favorites" = "Favorites";
 "Stickers.Recent" = "Recent";
@@ -7526,3 +7534,163 @@ Sorry for the inconvenience.";
 
 "Share.UploadProgress" = "Uploading • %d%";
 "Share.UploadDone" = "Done";
+
+"StickerPack.Share" = "Share Stickers";
+"StickerPack.CopyLink" = "Copy Link";
+
+"Stickers.PremiumStickers" = "Premium Stickers";
+
+"Channel.AddUserKickedError" = "Sorry, you can't add this user because they are on the list of Removed Users and you can't unban them.";
+"Channel.AddAdminKickedError" = "Sorry, you can't add this user as an admin because they are in the Removed Users list and you can't unban them.";
+
+"Premium.Stickers.Description" = "Unlock this sticker and more by subscribing to Telegram Premium.";
+"Premium.Stickers.Proceed" = "Unlock Premium Stickers";
+
+"Premium.Reactions.Proceed" = "Unlock Premium Reactions";
+
+"Premium.AppIcons.Proceed" = "Unlock Premium Icons";
+
+"AccessDenied.LocationPreciseDenied" = "To share your specific location in this chat, please go to Settings > Privacy > Location Services > Telegram and set Precise Location to On.";
+
+"Chat.MultipleTypingPair" = "%@ and %@";
+"Chat.MultipleTypingMore" = "%@ and %@ others";
+
+"Group.Username.RemoveExistingUsernamesOrExtendInfo" = "You have reserved too many public links. Try revoking a link from an older group or channel, or upgrade to **Telegram Premium** to double the limit to **%@** public links.";
+"Group.Username.RemoveExistingUsernamesFinalInfo" = "You have reserved too many public links. Try revoking the link from an older group or channel, or create a private one instead.";
+
+"OldChannels.TooManyCommunitiesText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
+"OldChannels.TooManyCommunitiesFinalText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one.";
+"OldChannels.LeaveCommunities_1" = "Leave %@ Community";
+"OldChannels.LeaveCommunities_any" = "Leave %@ Communities";
+
+"Premium.FileTooLarge" = "File Too Large";
+"Premium.LimitReached" = "Limit Reached";
+"Premium.IncreaseLimit" = "Increase Limit";
+
+"Premium.MaxFoldersCountText" = "You have reached the limit of **%1$@** folders. You can double the limit to **%2$@** folders by subscribing to **Telegram Premium**.";
+"Premium.MaxFoldersCountFinalText" = "Sorry, you can't create more than **%1$@** folders.";
+"Premium.MaxChatsInFolderText" = "Sorry, you can't add more than **%1$@** chats to a folder. You can increase this limit to **%2$@** by upgrading to **Telegram Premium**.";
+"Premium.MaxChatsInFolderFinalText" = "Sorry, you can't add more than **%@** chats to a folder.";
+"Premium.MaxFileSizeText" = "Double this limit to %@ per file by subscribing to **Telegram Premium**.";
+"Premium.MaxFileSizeFinalText" = "The document can't be sent, because it is larger than **%@**.";
+"Premium.MaxPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
+"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some of the currently pinned ones.";
+"Premium.MaxFavedStickersTitle" = "The Limit of %@ Stickers Reached";
+"Premium.MaxFavedStickersText" = "An older sticker was replaced with this one. You can [increase the limit]() to %@ stickers.";
+"Premium.MaxFavedStickersFinalText" = "An older sticker was replaced with this one.";
+"Premium.MaxSavedGifsTitle" = "The Limit of %@ GIFs Reached";
+"Premium.MaxSavedGifsText" = "An older GIF was replaced with this one. You can [increase the limit]() to %@ GIFS.";
+"Premium.MaxSavedGifsFinalText" = "An older GIF was replaced with this one.";
+"Premium.MaxAccountsText" = "You have reached the limit of **%@** connected accounts. You can free one place by subscribing to **Telegram Premium**.";
+"Premium.MaxAccountsFinalText" = "You have reached the limit of **%@** connected accounts.";
+
+"Premium.Free" = "Free";
+"Premium.Premium" = "Premium";
+
+"Premium.Title" = "Telegram Premium";
+"Premium.Description" = "Go **beyond the limits**, get **exclusive features** and support us by subscribing to **Telegram Premium**.";
+
+"Premium.PersonalTitle" = "[%@]() is a subscriber\nof Telegram Premium";
+"Premium.PersonalDescription" = "Owners of **Telegram Premium** accounts have exclusive access to multiple additional features.";
+
+"Premium.SubscribedTitle" = "You are all set!";
+"Premium.SubscribedDescription" = "Thank you for subsribing to **Telegram Premium**. Here's what is now unlocked.";
+
+"Premium.DoubledLimits" = "Doubled Limits";
+"Premium.DoubledLimitsInfo" = "Up to 1000 channels, 20 folders, 10 pins, 20 public links, 4 accounts and more.";
+
+"Premium.UploadSize" = "4 GB Upload Size";
+"Premium.UploadSizeInfo" = "Increased upload size from 2 GB to 4 GB per document, unlimited storage overall.";
+
+"Premium.FasterSpeed" = "Faster Download Speed";
+"Premium.FasterSpeedInfo" = "No more limits on the speed with which media and documents are downloaded.";
+
+"Premium.VoiceToText" = "Voice-to-Text Conversion";
+"Premium.VoiceToTextInfo" = "Ability to read the transcript of any incoming voice message.";
+
+"Premium.NoAds" = "No Ads";
+"Premium.NoAdsInfo" = "No more ads in public channels where Telegram sometimes shows ads.";
+
+"Premium.Reactions" = "Unique Reactions";
+"Premium.ReactionsInfo" = "Additional animated reactions on messages, available only to the Premium subscribers.";
+
+"Premium.ReactionsStandalone" = "Additional Reactions";
+"Premium.ReactionsStandaloneInfo" = "Unlock a wider range of reactions by subscribing to **Telegram Premium**.";
+
+"Premium.Stickers" = "Premium Stickers";
+"Premium.StickersInfo" = "Exclusive enlarged stickers featuring additional effects, updated monthly.";
+
+"Premium.ChatManagement" = "Advanced Chat Management";
+"Premium.ChatManagementInfo" = "Tools to set default folder, auto-archive and hide new chats.";
+
+"Premium.Badge" = "Profile Badge";
+"Premium.BadgeInfo" = "A badge next to your name showing that you are helping support Telegram.";
+
+"Premium.Avatar" = "Animated Profile Pictures";
+"Premium.AvatarInfo" = "Video avatars animated in chat lists and chats to allow for additional self-expression.";
+
+"Premium.AppIcon" = "Telegram App Icon";
+"Premium.AppIconInfo" = "Choose from a selection of Telegram app icons for your homescreen.";
+
+"Premium.AppIconStandalone" = "Additional App Icons";
+"Premium.AppIconStandaloneInfo" = "Unlock a wider range of app icons by subscribing to **Telegram Premium**.";
+
+"Premium.SubscribeFor" = "Subscribe for %@ / month";
+
+"Premium.AboutTitle" = "ABOUT TELEGRAM PREMIUM";
+"Premium.AboutText" = "While the free version of Telegram already gives its users more than any other messaging application, **Telegram Premium** pushes its capabilities even further.\n\n**Telegram Premium** is a paid option, because most Premium Features require additional expenses from Telegram to third parties such as data center providers and server manufacturers. Contributions from **Telegram Premium** users allow us to cover such costs and also help Telegram stay free for everyone.";
+
+"Premium.Terms" = "By purchasing a Premium subscription, you agree to our [Terms of Service](terms) and [Privacy Policy](privacy).";
+
+"Premium.ChargeInfo" = "Next charge: %1$@ on %2$@. [Cancel](cancel).";
+
+"Conversation.CopyProtectionSavingDisabledSecret" = "Saving is restricted";
+"Conversation.CopyProtectionForwardingDisabledSecret" = "Forwards are restricted";
+
+"Settings.Terms_URL" = "https://telegram.org/tos";
+"Settings.PrivacyPolicy_URL" = "https://telegram.org/privacy";
+
+"Stickers.PremiumPackInfoText" = "This pack contains premium stickers like this one.";
+"Stickers.PremiumPackView" = "View";
+
+"Conversation.PremiumUploadFileTooLarge" = "File could not be sent, because it is larger than 4 GB.\n\nYou can send as many files as you like, but each must be smaller than 4 GB.";
+
+"SponsoredMessageMenu.Hide" = "Hide";
+
+"ChatListFolder.MaxChatsInFolder" = "Sorry, you can't add more than %d chats to a folder.";
+
+"Conversation.SaveGif" = "Save GIF";
+
+"Premium.Limits.Title" = "Doubled Limits";
+"Premium.Limits.GroupsAndChannels" = "Groups and Channels";
+"Premium.Limits.PinnedChats" = "Pinned Chats";
+"Premium.Limits.PublicLinks" = "Public Links";
+"Premium.Limits.SavedGifs" = "Saved GIFs";
+"Premium.Limits.FavedStickers" = "Favorite Stickers";
+"Premium.Limits.Bio" = "Bio";
+"Premium.Limits.Captions" = "Captions";
+"Premium.Limits.Folders" = "Folders";
+"Premium.Limits.ChatsPerFolder" = "Chats per Folder";
+"Premium.Limits.Accounts" = "Connected Accounts";
+
+"Premium.Limits.GroupsAndChannelsInfo" = "Join up to 1000 channels and large groups";
+"Premium.Limits.PinnedChatsInfo" = "Pin up to 10 chats in your main chat list";
+"Premium.Limits.PublicLinksInfo" = "Reserve up to 20 [t.me/name]() links";
+"Premium.Limits.SavedGifsInfo" = "Save up to 400 GIFs in your Favorite GIFs";
+"Premium.Limits.FavedStickersInfo" = "Save up to 10 stickers in your Favorite stickers";
+"Premium.Limits.BioInfo" = "Add more symbols and use links in your bio";
+"Premium.Limits.CaptionsInfo" = "Use longer descriptions for your photos and videos";
+"Premium.Limits.FoldersInfo" = "Organize your chats into 20 folders";
+"Premium.Limits.ChatsPerFolderInfo" = "Add up to 200 chats into each of your folders";
+"Premium.Limits.AccountsInfo" = "Connect 4 accounts with different mobile numbers";
+
+"WebApp.Settings" = "Settings";
+
+"Bot.AccepRecurrentInfo" = "I accept [Terms of Service]() of **%1$@**";
+
+"Chat.AudioTranscriptionRateAction" = "Rate Transcription";
+"Chat.AudioTranscriptionFeedbackTip" = "Thank you for your feedback.";
+"Message.AudioTranscription.ErrorEmpty" = "No speech detected";
+"Message.AudioTranscription.ErrorTooLong" = "The audio is too long";
+
+"WebApp.SelectChat" = "Select Chat";

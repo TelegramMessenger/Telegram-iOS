@@ -38,5 +38,9 @@ final class ChatLoadingNode: ASDisplayNode {
         let activitySize = self.activityIndicator.measure(size)
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: displayRect.minX + floor((displayRect.width - activitySize.width) / 2.0) + self.offset.x, y: displayRect.minY + floor((displayRect.height - activitySize.height) / 2.0) + self.offset.y), size: activitySize))
     }
+    
+    var progressFrame: CGRect {
+        return self.backgroundNode.frame
+    }
 }
 

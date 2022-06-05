@@ -28,7 +28,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     
     private var needsSearchResultsTooltip = true
     
-    private var validLayout: (CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
+    private var validLayout: (width: CGFloat, leftInset: CGFloat,  rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, metrics: LayoutMetrics, isSecondary: Bool)?
     
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
@@ -38,8 +38,8 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
                     if let strongSelf = self, strongSelf.displayActivity != value {
                         strongSelf.displayActivity = value
                         strongSelf.activityIndicator.isHidden = !value
-                        if let interfaceState = strongSelf.presentationInterfaceState, let validLayout = strongSelf.validLayout {
-                            let _ = strongSelf.updateLayout(width: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, additionalSideInsets: validLayout.3, maxHeight: validLayout.4, isSecondary: validLayout.6, transition: .immediate, interfaceState: interfaceState, metrics: validLayout.5)
+                        if let interfaceState = strongSelf.presentationInterfaceState, let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
+                            let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
                         }
                     }
                 }))
@@ -127,8 +127,8 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        self.validLayout = (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary)
         
         if self.presentationInterfaceState != interfaceState {
             let themeUpdated = self.presentationInterfaceState?.theme !== interfaceState.theme

@@ -126,7 +126,7 @@ public func downloadAppUpdate(account: Account, source: String, messageId: Int32
                                             case let .Fetching(_, progress):
                                                 if let size = media.size {
                                                     if progress == 0 {
-                                                        subscriber.putNext(.started(size))
+                                                        subscriber.putNext(.started(Int(size)))
                                                     } else {
                                                         subscriber.putNext(.progress(Int(progress * Float(size)), Int(size)))
                                                     }

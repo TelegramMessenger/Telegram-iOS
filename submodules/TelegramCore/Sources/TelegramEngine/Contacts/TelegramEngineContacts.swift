@@ -58,5 +58,16 @@ public extension TelegramEngine {
                 return (peers.map(EnginePeer.init), presences.mapValues(EnginePeer.Presence.init))
             }
         }
+        
+        public func updateIsContactSynchronizationEnabled(isContactSynchronizationEnabled: Bool) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
+                    var settings = current?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
+                    settings.synchronizeContacts = isContactSynchronizationEnabled
+                    return PreferencesEntry(settings)
+                })
+            }
+            |> ignoreValues
+        }
     }
 }

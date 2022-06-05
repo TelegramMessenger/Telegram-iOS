@@ -190,20 +190,25 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .other(otherMedia):
                 params.dismissInput()
                 if let contact = otherMedia as? TelegramMediaContact {
-                    let _ = (params.context.account.postbox.transaction { transaction -> (Peer?, Bool?) in
-                        if let peerId = contact.peerId {
-                            return (transaction.getPeer(peerId), transaction.isPeerContact(peerId: peerId))
-                        } else {
-                            return (nil, nil)
-                        }
-                    } |> deliverOnMainQueue).start(next: { peer, isContact in
+                    let paramsSignal: Signal<(EnginePeer?, Bool), NoError>
+                    if let peerId = contact.peerId {
+                        paramsSignal = params.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                            TelegramEngine.EngineData.Item.Peer.IsContact(id: peerId)
+                        )
+                    } else {
+                        paramsSignal = .single((nil, false))
+                    }
+                    
+                    let _ = (paramsSignal
+                    |> deliverOnMainQueue).start(next: { peer, isContact in
                         let contactData: DeviceContactExtendedData
                         if let vCard = contact.vCardData, let vCardData = vCard.data(using: .utf8), let parsed = DeviceContactExtendedData(vcard: vCardData) {
                             contactData = parsed
                         } else {
                             contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName, lastName: contact.lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: contact.phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
                         }
-                        let controller = deviceContactInfoController(context: params.context, updatedPresentationData: params.updatedPresentationData, subject: .vcard(peer, nil, contactData), completed: nil, cancelled: nil)
+                        let controller = deviceContactInfoController(context: params.context, updatedPresentationData: params.updatedPresentationData, subject: .vcard(peer?._asPeer(), nil, contactData), completed: nil, cancelled: nil)
                         params.navigationController?.pushViewController(controller)
                     })
                     return true

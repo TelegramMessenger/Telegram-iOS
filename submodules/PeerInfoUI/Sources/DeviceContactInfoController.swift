@@ -865,12 +865,20 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
     var displayCopyContextMenuImpl: ((DeviceContactInfoEntryTag, String) -> Void)?
     
     let callImpl: (String) -> Void = { number in
-        let _ = (context.account.postbox.transaction { transaction -> TelegramUser? in
-            if let peer = subject.peer {
-                return transaction.getPeer(peer.id) as? TelegramUser
+        let user: Signal<TelegramUser?, NoError>
+        if let peer = subject.peer {
+            user = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id))
+            |> map { peer -> TelegramUser? in
+                if case let .user(user) = peer {
+                    return user
+                } else {
+                    return nil
+                }
             }
-            return nil
+        } else {
+            user = .single(nil)
         }
+        let _ = (user
         |> deliverOnMainQueue).start(next: { user in
             if let user = user, let phone = user.phone, formatPhoneNumber(phone) == formatPhoneNumber(number) {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -1137,10 +1145,11 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                                             |> mapToSignal { _ -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                                             }
                                             |> then(
-                                                context.account.postbox.transaction { transaction -> (DeviceContactStableId, DeviceContactExtendedData, Peer?)? in
-                                                    return (id, data, transaction.getPeer(peer.id))
-                                                }
+                                                context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id))
                                                 |> castError(AddContactError.self)
+                                                |> map { result -> (DeviceContactStableId, DeviceContactExtendedData, Peer?)? in
+                                                    return (id, data, result?._asPeer())
+                                                }
                                             )
                                         }
                                     default:
@@ -1151,10 +1160,11 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                                 |> castError(AddContactError.self)
                                 |> mapToSignal { peerId -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                                     if let peerId = peerId {
-                                        return context.account.postbox.transaction { transaction -> (DeviceContactStableId, DeviceContactExtendedData, Peer?)? in
-                                            return (id, data, transaction.getPeer(peerId))
-                                        }
+                                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                                         |> castError(AddContactError.self)
+                                        |> map { result -> (DeviceContactStableId, DeviceContactExtendedData, Peer?)? in
+                                            return (id, data, result?._asPeer())
+                                        }
                                     } else {
                                         return .single((id, data, nil))
                                     }

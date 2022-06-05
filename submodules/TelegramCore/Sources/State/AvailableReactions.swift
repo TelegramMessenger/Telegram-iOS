@@ -7,6 +7,7 @@ public final class AvailableReactions: Equatable, Codable {
     public final class Reaction: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
             case isEnabled
+            case isPremium
             case value
             case title
             case staticIcon
@@ -19,6 +20,7 @@ public final class AvailableReactions: Equatable, Codable {
         }
         
         public let isEnabled: Bool
+        public let isPremium: Bool
         public let value: String
         public let title: String
         public let staticIcon: TelegramMediaFile
@@ -31,6 +33,7 @@ public final class AvailableReactions: Equatable, Codable {
         
         public init(
             isEnabled: Bool,
+            isPremium: Bool,
             value: String,
             title: String,
             staticIcon: TelegramMediaFile,
@@ -42,6 +45,7 @@ public final class AvailableReactions: Equatable, Codable {
             centerAnimation: TelegramMediaFile?
         ) {
             self.isEnabled = isEnabled
+            self.isPremium = isPremium
             self.value = value
             self.title = title
             self.staticIcon = staticIcon
@@ -55,6 +59,9 @@ public final class AvailableReactions: Equatable, Codable {
         
         public static func ==(lhs: Reaction, rhs: Reaction) -> Bool {
             if lhs.isEnabled != rhs.isEnabled {
+                return false
+            }
+            if lhs.isPremium != rhs.isPremium {
                 return false
             }
             if lhs.value != rhs.value {
@@ -91,6 +98,7 @@ public final class AvailableReactions: Equatable, Codable {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
             self.isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
+            self.isPremium = try container.decodeIfPresent(Bool.self, forKey: .isPremium) ?? false
             
             self.value = try container.decode(String.self, forKey: .value)
             self.title = try container.decode(String.self, forKey: .title)
@@ -127,6 +135,7 @@ public final class AvailableReactions: Equatable, Codable {
             var container = encoder.container(keyedBy: CodingKeys.self)
             
             try container.encode(self.isEnabled, forKey: .isEnabled)
+            try container.encode(self.isPremium, forKey: .isPremium)
             
             try container.encode(self.value, forKey: .value)
             try container.encode(self.title, forKey: .title)
@@ -146,7 +155,7 @@ public final class AvailableReactions: Equatable, Codable {
     }
     
     private enum CodingKeys: String, CodingKey {
-        case hash
+        case newHash
         case reactions
     }
     
@@ -174,14 +183,14 @@ public final class AvailableReactions: Equatable, Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
-        self.hash = try container.decode(Int32.self, forKey: .hash)
+        self.hash = try container.decodeIfPresent(Int32.self, forKey: .newHash) ?? 0
         self.reactions = try container.decode([Reaction].self, forKey: .reactions)
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
-        try container.encode(self.hash, forKey: .hash)
+        try container.encode(self.hash, forKey: .newHash)
         try container.encode(self.reactions, forKey: .reactions)
     }
 }
@@ -205,11 +214,13 @@ private extension AvailableReactions.Reaction {
             guard let effectAnimationFile = telegramMediaFileFromApiDocument(effectAnimation) else {
                 return nil
             }
-            let aroundAnimationFile = aroundAnimation.flatMap(telegramMediaFileFromApiDocument)
-            let centerAnimationFile = centerIcon.flatMap(telegramMediaFileFromApiDocument)
+            let aroundAnimationFile = aroundAnimation.flatMap { telegramMediaFileFromApiDocument($0) }
+            let centerAnimationFile = centerIcon.flatMap { telegramMediaFileFromApiDocument($0) }
             let isEnabled = (flags & (1 << 0)) == 0
+            let isPremium = (flags & (1 << 2)) != 0
             self.init(
                 isEnabled: isEnabled,
+                isPremium: isPremium,
                 value: reaction,
                 title: title,
                 staticIcon: staticIconFile,
@@ -247,7 +258,7 @@ func _internal_setCachedAvailableReactions(transaction: Transaction, availableRe
     key.setInt64(0, value: 0)
     
     if let entry = CodableEntry(availableReactions) {
-        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.availableReactions, key: key), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 10))
+        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.availableReactions, key: key), entry: entry)
     }
 }
 

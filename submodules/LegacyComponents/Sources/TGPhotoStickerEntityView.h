@@ -14,6 +14,8 @@
 @property (nonatomic, readonly) TGPhotoPaintStickerEntity *entity;
 @property (nonatomic, readonly) bool isMirrored;
 
+@property (nonatomic, readonly) int64_t documentId;
+
 - (instancetype)initWithEntity:(TGPhotoPaintStickerEntity *)entity context:(id<TGPhotoPaintStickersContext>)context;
 - (void)mirror;
 - (UIImage *)image;
@@ -23,6 +25,8 @@
 - (void)play;
 - (void)pause;
 - (void)resetToStart;
+- (void)playFromFrame:(NSInteger)frameIndex;
+- (void)copyStickerView:(TGPhotoStickerEntityView *)view;
 
 - (CGRect)realBounds;
 

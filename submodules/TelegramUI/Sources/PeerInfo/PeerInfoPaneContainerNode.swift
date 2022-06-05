@@ -56,9 +56,9 @@ enum PeerInfoPaneKey: Int32 {
     case members
     case media
     case files
-    case links
-    case voice
     case music
+    case voice
+    case links
     case gifs
     case groupsInCommon
 }
@@ -877,11 +877,13 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         if let _ = data {
             if let previousAvailablePanes = previousAvailablePanes, previousAvailablePanes.isEmpty, !availablePanes.isEmpty {
                 self.shouldFadeIn = true
+                self.alpha = 0.0
             }
             
             let currentPaneKeys = Set<PeerInfoPaneKey>(self.currentPanes.keys)
             if previousPaneKeys.isEmpty && !currentPaneKeys.isEmpty && self.shouldFadeIn {
                 self.shouldFadeIn = false
+                self.alpha = 1.0
                 self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             }
         }

@@ -1474,6 +1474,24 @@ final class MessageHistoryTable: Table {
                 }
             }
             
+            var previousAttributes: [MessageAttribute] = []
+            let attributesData = previousMessage.attributesData.sharedBufferNoCopy()
+            if attributesData.length > 4 {
+                var attributeCount: Int32 = 0
+                attributesData.read(&attributeCount, offset: 0, length: 4)
+                for _ in 0 ..< attributeCount {
+                    var attributeLength: Int32 = 0
+                    attributesData.read(&attributeLength, offset: 0, length: 4)
+                    if let attribute = PostboxDecoder(buffer: MemoryBuffer(memory: attributesData.memory + attributesData.offset, capacity: Int(attributeLength), length: Int(attributeLength), freeWhenDone: false)).decodeRootObject() as? MessageAttribute {
+                        previousAttributes.append(attribute)
+                    }
+                    attributesData.skip(Int(attributeLength))
+                }
+            }
+            
+            var updatedAttributes = message.attributes
+            self.seedConfiguration.mergeMessageAttributes(previousAttributes, &updatedAttributes)
+            
             self.valueBox.remove(self.table, key: self.key(index), secure: true)
             
             let updatedIndex = message.index
@@ -1534,14 +1552,14 @@ final class MessageHistoryTable: Table {
                 for tag in previousTimestampBasedAttibutes.keys {
                     self.timeBasedAttributesTable.remove(tag: tag, id: previousMessage.id, operations: &timestampBasedMessageAttributesOperations)
                 }
-                for attribute in message.attributes {
+                for attribute in updatedAttributes {
                     if let (tag, timestamp) = attribute.automaticTimestampBasedAttribute {
                         self.timeBasedAttributesTable.set(tag: tag, id: message.id, timestamp: timestamp, operations: &timestampBasedMessageAttributesOperations)
                     }
                 }
             } else {
                 var updatedTimestampBasedAttibuteTags: [UInt16] = []
-                for attribute in message.attributes {
+                for attribute in updatedAttributes {
                     if let (tag, timestamp) = attribute.automaticTimestampBasedAttribute {
                         updatedTimestampBasedAttibuteTags.append(tag)
                         if previousTimestampBasedAttibutes[tag] != timestamp {
@@ -1778,9 +1796,9 @@ final class MessageHistoryTable: Table {
             
             let attributesBuffer = WriteBuffer()
             
-            var attributeCount: Int32 = Int32(message.attributes.count)
+            var attributeCount: Int32 = Int32(updatedAttributes.count)
             attributesBuffer.write(&attributeCount, offset: 0, length: 4)
-            for attribute in message.attributes {
+            for attribute in updatedAttributes {
                 sharedEncoder.reset()
                 sharedEncoder.encodeRootObject(attribute)
                 let attributeBuffer = sharedEncoder.memoryBuffer()

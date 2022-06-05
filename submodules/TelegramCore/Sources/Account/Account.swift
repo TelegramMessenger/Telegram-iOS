@@ -661,11 +661,11 @@ public enum AccountNetworkState: Equatable {
 }
 
 public final class AccountAuxiliaryMethods {
-    public let fetchResource: (Account, MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?
+    public let fetchResource: (Account, MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?
     public let fetchResourceMediaReferenceHash: (MediaResource) -> Signal<Data?, NoError>
     public let prepareSecretThumbnailData: (MediaResourceData) -> (PixelDimensions, Data)?
     
-    public init(fetchResource: @escaping (Account, MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>, prepareSecretThumbnailData: @escaping (MediaResourceData) -> (PixelDimensions, Data)?) {
+    public init(fetchResource: @escaping (Account, MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>, prepareSecretThumbnailData: @escaping (MediaResourceData) -> (PixelDimensions, Data)?) {
         self.fetchResource = fetchResource
         self.fetchResourceMediaReferenceHash = fetchResourceMediaReferenceHash
         self.prepareSecretThumbnailData = prepareSecretThumbnailData
@@ -1150,6 +1150,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedConfigurationUpdates(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedVoipConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedAppConfigurationUpdates(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedPremiumPromoConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedAutodownloadSettingsUpdates(accountManager: accountManager, network: self.network).start())
         self.managedOperationsDisposable.add(managedTermsOfServiceUpdates(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAppUpdateInfo(network: self.network, stateManager: self.stateManager).start())
@@ -1169,6 +1170,7 @@ public class Account {
             self.managedOperationsDisposable.add(managedAnimatedEmojiAnimationsUpdates(postbox: self.postbox, network: self.network).start())
         }
         self.managedOperationsDisposable.add(managedGreetingStickers(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedPremiumStickers(postbox: self.postbox, network: self.network).start())
 
         if !supplementary {
             let mediaBox = postbox.mediaBox
@@ -1342,37 +1344,55 @@ public func standaloneStateManager(
         useCaches: false,
         removeDatabaseOnError: false
     )
+    
+    Logger.shared.log("StandaloneStateManager", "Prepare request postbox")
 
     return postbox
     |> take(1)
     |> mapToSignal { result -> Signal<AccountStateManager?, NoError> in
         switch result {
         case .upgrading:
+            Logger.shared.log("StandaloneStateManager", "Received postbox: upgrading")
+            
             return .single(nil)
         case .error:
+            Logger.shared.log("StandaloneStateManager", "Received postbox: error")
+            
             return .single(nil)
         case let .postbox(postbox):
+            Logger.shared.log("StandaloneStateManager", "Received postbox: valid")
+            
             return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
                 return (nil, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self))
             }
             |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountStateManager?, NoError> in
+                Logger.shared.log("StandaloneStateManager", "Received settings")
+                
                 return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
                     let state = transaction.getState()
 
                     return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self))
                 }
                 |> mapToSignal { accountState, localizationSettings, proxySettings, networkSettings -> Signal<AccountStateManager?, NoError> in
+                    Logger.shared.log("StandaloneStateManager", "Received state")
+                    
                     let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
 
                     if let accountState = accountState {
                         switch accountState {
                         case _ as UnauthorizedAccountState:
+                            Logger.shared.log("StandaloneStateManager", "state is UnauthorizedAccountState")
+                            
                             return .single(nil)
                         case let authorizedState as AuthorizedAccountState:
+                            Logger.shared.log("StandaloneStateManager", "state is valid")
+                            
                             return postbox.transaction { transaction -> String? in
                                 return (transaction.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
                             }
                             |> mapToSignal { phoneNumber in
+                                Logger.shared.log("StandaloneStateManager", "received phone number")
+                                
                                 return initializedNetwork(
                                     accountId: id,
                                     arguments: networkArguments,
@@ -1387,6 +1407,8 @@ public func standaloneStateManager(
                                     phoneNumber: phoneNumber
                                 )
                                 |> map { network -> AccountStateManager? in
+                                    Logger.shared.log("StandaloneStateManager", "received network")
+                                    
                                     return AccountStateManager(
                                         accountPeerId: authorizedState.peerId,
                                         accountManager: accountManager,
@@ -1402,6 +1424,8 @@ public func standaloneStateManager(
                                 }
                             }
                         default:
+                            Logger.shared.log("StandaloneStateManager", "Unexpected accountState")
+                            
                             assertionFailure("Unexpected accountState \(accountState)")
                             return .single(nil)
                         }

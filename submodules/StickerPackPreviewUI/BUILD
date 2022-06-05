@@ -31,6 +31,10 @@ swift_library(
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/UndoUI:UndoUI",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/MoreButtonNode:MoreButtonNode",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/PremiumUI:PremiumUI",
+        "//submodules/OverlayStatusController:OverlayStatusController",
     ],
     visibility = [
         "//visibility:public",

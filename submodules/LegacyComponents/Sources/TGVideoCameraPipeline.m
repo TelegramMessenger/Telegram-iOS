@@ -918,10 +918,7 @@ static CGFloat angleOffsetFromPortraitOrientationToOrientation(AVCaptureVideoOri
 {
     if (![device respondsToSelector:@selector(setVideoZoomFactor:)])
         return false;
-    
-    if (device.position == AVCaptureDevicePositionFront)
-        return false;
-    
+
     return true;
 }
 

@@ -300,7 +300,7 @@ final class MessageHistoryReadStateTable: Table {
         return (nil, false)
     }
     
-    func applyIncomingMaxReadIndex(_ messageIndex: MessageIndex, topMessageIndex: MessageIndex?, incomingStatsInRange: (MessageIndex, MessageIndex) -> (count: Int, holes: Bool, readMesageIds: [MessageId])) -> (CombinedPeerReadState?, Bool, [MessageId]) {
+    func applyIncomingMaxReadIndex(_ messageIndex: MessageIndex, topMessageIndex: MessageIndex?, incomingStatsInRange: (MessageIndex, MessageIndex) -> (count: Int, holes: Bool, readMessageIds: [MessageId])) -> (CombinedPeerReadState?, Bool, [MessageId]) {
         if let states = self.get(messageIndex.id.peerId), let state = states.namespaces[messageIndex.id.namespace] {
             if traceReadStates {
                 print("[ReadStateTable] applyIncomingMaxReadIndex peerId: \(messageIndex.id.peerId), maxReadIndex: \(messageIndex) (before: \(states.namespaces))")
@@ -380,7 +380,7 @@ final class MessageHistoryReadStateTable: Table {
         return (nil, false, [])
     }
     
-    func applyInteractiveMaxReadIndex(postbox: PostboxImpl, messageIndex: MessageIndex, incomingStatsInRange: (MessageId.Namespace, MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), incomingIndexStatsInRange: (MessageIndex, MessageIndex) -> (count: Int, holes: Bool, readMesageIds: [MessageId]), topMessageId: (MessageId.Id, Bool)?, topMessageIndexByNamespace: (MessageId.Namespace) -> MessageIndex?) -> (combinedState: CombinedPeerReadState?, ApplyInteractiveMaxReadIdResult, readMesageIds: [MessageId]) {
+    func applyInteractiveMaxReadIndex(postbox: PostboxImpl, messageIndex: MessageIndex, incomingStatsInRange: (MessageId.Namespace, MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), incomingIndexStatsInRange: (MessageIndex, MessageIndex) -> (count: Int, holes: Bool, readMessageIds: [MessageId]), topMessageId: (MessageId.Id, Bool)?, topMessageIndexByNamespace: (MessageId.Namespace) -> MessageIndex?) -> (combinedState: CombinedPeerReadState?, ApplyInteractiveMaxReadIdResult, readMessageIds: [MessageId]) {
         if let states = self.get(messageIndex.id.peerId) {
             if let state = states.namespaces[messageIndex.id.namespace] {
                 switch state {

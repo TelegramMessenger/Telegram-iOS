@@ -147,10 +147,11 @@
 
                 id parsedMessage = [MTInternalMessageParser parseMessage:rpcResultMessage.data];
                 if ([parsedMessage isKindOfClass:[MTRpcError class]]) {
+                    MTRpcError *rpcError = (MTRpcError *)parsedMessage;
                     if (MTLogEnabled()) {
-                        MTRpcError *rpcError = (MTRpcError *)parsedMessage;
                         MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is error: %d: %@]", self, _currentMessageId, (int)rpcError.errorCode, rpcError.errorDescription);
                     }
+                    MTShortLog(@"[MTRequestMessageService#%p response for %" PRId64 " is error: %d: %@]", self, _currentMessageId, (int)rpcError.errorCode, rpcError.errorDescription);
                 }
                 
                 //boolTrue#997275b5 = Bool;

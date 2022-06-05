@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramPresentationData
+import Emoji
 
 private let alphanumericCharacters = CharacterSet.alphanumerics
 
@@ -21,12 +22,28 @@ public struct ChatTextInputAttributes {
 }
 
 public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedString {
-    let result = NSMutableAttributedString(string: text.string)
+    let sourceString = NSMutableAttributedString(attributedString: text)
+    while true {
+        var found = false
+        let fullRange = NSRange(sourceString.string.startIndex ..< sourceString.string.endIndex, in: sourceString.string)
+        sourceString.enumerateAttribute(NSAttributedString.Key.attachment, in: fullRange, options: [.longestEffectiveRangeNotRequired], using: { value, range, stop in
+            if let value = value as? EmojiTextAttachment {
+                sourceString.replaceCharacters(in: range, with: NSAttributedString(string: value.emoji))
+                stop.pointee = true
+                found = true
+            }
+        })
+        if !found {
+            break
+        }
+    }
+    
+    let result = NSMutableAttributedString(string: sourceString.string)
     let fullRange = NSRange(location: 0, length: result.length)
     
-    text.enumerateAttributes(in: fullRange, options: [], using: { attributes, range, _ in
+    sourceString.enumerateAttributes(in: fullRange, options: [], using: { attributes, range, _ in
         for (key, value) in attributes {
-            if ChatTextInputAttributes.allAttributes.contains(key) {
+            if ChatTextInputAttributes.allAttributes.contains(key) || key == NSAttributedString.Key.attachment {
                 result.addAttribute(key, value: value, range: range)
             }
         }
@@ -47,7 +64,7 @@ public struct ChatTextFontAttributes: OptionSet {
     public static let blockQuote = ChatTextFontAttributes(rawValue: 1 << 3)
 }
 
-public func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor, writingDirection: NSWritingDirection?, spoilersRevealed: Bool) -> NSAttributedString {
+public func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor, writingDirection: NSWritingDirection?, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((String) -> UIView)?) -> NSAttributedString {
     let result = NSMutableAttributedString(string: stateText.string)
     let fullRange = NSRange(location: 0, length: result.length)
     
@@ -117,6 +134,36 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
             }
         }
     })
+    
+    /*if #available(iOS 15, *), let emojiViewProvider = emojiViewProvider {
+        let _ = CustomTextAttachmentViewProvider.ensureRegistered
+        
+        var nextIndex: [String: Int] = [:]
+        
+        result.string.enumerateSubstrings(in: result.string.startIndex ..< result.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
+            if let substring = substring {
+                let emoji = substring.basicEmoji.0
+                
+                if !emoji.isEmpty && emoji.isSingleEmoji && availableEmojis.contains(emoji) {
+                    let index: Int
+                    if let value = nextIndex[emoji] {
+                        index = value
+                    } else {
+                        index = 0
+                    }
+                    nextIndex[emoji] = index + 1
+                    
+                    let attachment = EmojiTextAttachment(index: index, emoji: emoji, viewProvider: emojiViewProvider)
+                    attachment.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 16.0))
+                    
+                    result.replaceCharacters(in: NSRange(substringRange, in: result.string), with: NSAttributedString(attachment: attachment))
+                    
+                    stop = true
+                }
+            }
+        }
+    }*/
+    
     return result
 }
 
@@ -412,7 +459,7 @@ private func refreshTextUrls(text: NSString, initialAttributedText: NSAttributed
     }
 }
 
-public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat, spoilersRevealed: Bool) {
+public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((String) -> UIView)?) {
     guard let initialAttributedText = textNode.attributedText, initialAttributedText.length != 0 else {
         return
     }
@@ -427,16 +474,18 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
     var attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(initialAttributedText))
     refreshTextMentions(text: text, initialAttributedText: initialAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed)
+    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
     
     text = resultAttributedText.string as NSString
-    fullRange = NSRange(location: 0, length: initialAttributedText.length)
+    fullRange = NSRange(location: 0, length: text.length)
     attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(resultAttributedText))
     refreshTextUrls(text: text, initialAttributedText: resultAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed)
+    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
     
     if !resultAttributedText.isEqual(to: initialAttributedText) {
+        fullRange = NSRange(location: 0, length: textNode.textView.textStorage.length)
+        
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.font, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.foregroundColor, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.underlineStyle, range: fullRange)
@@ -508,9 +557,55 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
             }
         })
     }
+    
+    if #available(iOS 15, *), let emojiViewProvider = emojiViewProvider {
+        let _ = CustomTextAttachmentViewProvider.ensureRegistered
+        
+        var nextIndex: [String: Int] = [:]
+        
+        var count = 0
+        
+        let fullRange = NSRange(textNode.textView.textStorage.string.startIndex ..< textNode.textView.textStorage.string.endIndex, in: textNode.textView.textStorage.string)
+        textNode.textView.textStorage.enumerateAttribute(NSAttributedString.Key.attachment, in: fullRange, options: [], using: { value, _, _ in
+            if let _ = value as? EmojiTextAttachment {
+                count += 1
+            }
+        })
+        
+        while count < 10 {
+            var found = false
+            textNode.textView.textStorage.string.enumerateSubstrings(in: textNode.textView.textStorage.string.startIndex ..< textNode.textView.textStorage.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
+                if let substring = substring {
+                    let emoji = substring.basicEmoji.0
+                    
+                    if !emoji.isEmpty && emoji.isSingleEmoji && availableEmojis.contains(emoji) {
+                        let index: Int
+                        if let value = nextIndex[emoji] {
+                            index = value
+                        } else {
+                            index = 0
+                        }
+                        nextIndex[emoji] = index + 1
+                        
+                        let attachment = EmojiTextAttachment(index: index, emoji: emoji, viewProvider: emojiViewProvider)
+                        attachment.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 16.0))
+                        
+                        textNode.textView.textStorage.replaceCharacters(in: NSRange(substringRange, in: textNode.textView.textStorage.string), with: NSAttributedString(attachment: attachment))
+                        
+                        count += 1
+                        found = true
+                        stop = true
+                    }
+                }
+            }
+            if !found {
+                break
+            }
+        }
+    }
 }
 
-public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat, spoilersRevealed: Bool = false) {
+public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat, availableEmojis: Set<String>, emojiViewProvider: ((String) -> UIView)?, spoilersRevealed: Bool = false) {
     guard let initialAttributedText = textNode.attributedText, initialAttributedText.length != 0 else {
         return
     }
@@ -523,14 +618,14 @@ public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, th
     var text: NSString = initialAttributedText.string as NSString
     var fullRange = NSRange(location: 0, length: initialAttributedText.length)
     var attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(initialAttributedText))
-    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed)
+    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
     
     text = resultAttributedText.string as NSString
     fullRange = NSRange(location: 0, length: initialAttributedText.length)
     attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(resultAttributedText))
     refreshTextUrls(text: text, initialAttributedText: resultAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed)
+    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
     
     if !resultAttributedText.isEqual(to: initialAttributedText) {
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.font, range: fullRange)
@@ -804,4 +899,40 @@ public func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttribu
     }
     
     return text
+}
+
+private final class EmojiTextAttachment: NSTextAttachment {
+    let emoji: String
+    let viewProvider: (String) -> UIView
+    
+    init(index: Int, emoji: String, viewProvider: @escaping (String) -> UIView) {
+        self.emoji = emoji
+        self.viewProvider = viewProvider
+        
+        super.init(data: "\(emoji):\(index)".data(using: .utf8)!, ofType: "public.data")
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+@available(iOS 15, *)
+private final class CustomTextAttachmentViewProvider: NSTextAttachmentViewProvider {
+    static let ensureRegistered: Bool = {
+        NSTextAttachment.registerViewProviderClass(CustomTextAttachmentViewProvider.self, forFileType: "public.data")
+        
+        return true
+    }()
+    
+    override func loadView() {
+        super.loadView()
+        
+        if let attachment = self.textAttachment as? EmojiTextAttachment {
+            self.view = attachment.viewProvider(attachment.emoji)
+        } else {
+            self.view = UIView()
+            self.view!.backgroundColor = .clear
+        }
+    }
 }

@@ -216,7 +216,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
             
             let text = text.update(
                 component: MultilineTextComponent(
-                    text: NSAttributedString(string: environment.strings.CreateExternalStream_Text, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor, paragraphAlignment: .center),
+                    text: .plain(NSAttributedString(string: environment.strings.CreateExternalStream_Text, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor, paragraphAlignment: .center)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.1
@@ -228,7 +228,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
             let bottomText = Condition(mode == .create) {
                 bottomText.update(
                     component: MultilineTextComponent(
-                        text: NSAttributedString(string: environment.strings.CreateExternalStream_StartStreamingInfo, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor, paragraphAlignment: .center),
+                        text: .plain(NSAttributedString(string: environment.strings.CreateExternalStream_StartStreamingInfo, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor, paragraphAlignment: .center)),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.1
@@ -290,7 +290,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
             if let credentials = context.state.credentials {
                 let credentialsURLTitle = credentialsURLTitle.update(
                     component: MultilineTextComponent(
-                        text: NSAttributedString(string: environment.strings.CreateExternalStream_ServerUrl, font: Font.regular(14.0), textColor: environment.theme.list.itemPrimaryTextColor, paragraphAlignment: .left),
+                        text: .plain(NSAttributedString(string: environment.strings.CreateExternalStream_ServerUrl, font: Font.regular(14.0), textColor: environment.theme.list.itemPrimaryTextColor, paragraphAlignment: .left)),
                         horizontalAlignment: .left,
                         maximumNumberOfLines: 1
                     ),
@@ -300,7 +300,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                 
                 let credentialsKeyTitle = credentialsKeyTitle.update(
                     component: MultilineTextComponent(
-                        text: NSAttributedString(string: environment.strings.CreateExternalStream_StreamKey, font: Font.regular(14.0), textColor: environment.theme.list.itemPrimaryTextColor, paragraphAlignment: .left),
+                        text: .plain(NSAttributedString(string: environment.strings.CreateExternalStream_StreamKey, font: Font.regular(14.0), textColor: environment.theme.list.itemPrimaryTextColor, paragraphAlignment: .left)),
                         horizontalAlignment: .left,
                         maximumNumberOfLines: 1
                     ),
@@ -310,7 +310,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                 
                 let credentialsURLText = credentialsURLText.update(
                     component: MultilineTextComponent(
-                        text: NSAttributedString(string: credentials.url, font: Font.regular(16.0), textColor: environment.theme.list.itemAccentColor, paragraphAlignment: .left),
+                        text: .plain(NSAttributedString(string: credentials.url, font: Font.regular(16.0), textColor: environment.theme.list.itemAccentColor, paragraphAlignment: .left)),
                         horizontalAlignment: .left,
                         truncationType: .middle,
                         maximumNumberOfLines: 1
@@ -321,7 +321,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                 
                 let credentialsKeyText = credentialsKeyText.update(
                     component: MultilineTextComponent(
-                        text: NSAttributedString(string: credentials.streamKey, font: Font.regular(16.0), textColor: environment.theme.list.itemAccentColor, paragraphAlignment: .left),
+                        text: .plain(NSAttributedString(string: credentials.streamKey, font: Font.regular(16.0), textColor: environment.theme.list.itemAccentColor, paragraphAlignment: .left)),
                         horizontalAlignment: .left,
                         truncationType: .middle,
                         maximumNumberOfLines: 1

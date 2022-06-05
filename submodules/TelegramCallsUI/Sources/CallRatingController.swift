@@ -17,6 +17,7 @@ private final class CallRatingAlertContentNode: AlertContentNode {
     var rating: Int?
     
     private let titleNode: ASTextNode
+    private var starContainerNode: ASDisplayNode
     private let starNodes: [ASButtonNode]
     
     private let actionNodesSeparator: ASDisplayNode
@@ -37,6 +38,8 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 3
+        
+        self.starContainerNode = ASDisplayNode()
         
         var starNodes: [ASButtonNode] = []
         for _ in 0 ..< 5 {
@@ -65,10 +68,12 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         
         self.addSubnode(self.titleNode)
         
+        self.addSubnode(self.starContainerNode)
+        
         for node in self.starNodes {
             node.addTarget(self, action: #selector(self.starPressed(_:)), forControlEvents: .touchDown)
             node.addTarget(self, action: #selector(self.starReleased(_:)), forControlEvents: .touchUpInside)
-            self.addSubnode(node)
+            self.starContainerNode.addSubnode(node)
         }
         
         self.addSubnode(self.actionNodesSeparator)
@@ -86,6 +91,44 @@ private final class CallRatingAlertContentNode: AlertContentNode {
     
     deinit {
         self.disposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.starContainerNode.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+    }
+    
+    @objc func panGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
+        let location = gestureRecognizer.location(in: self.starContainerNode.view)
+        var selectedNode: ASButtonNode?
+        for node in self.starNodes {
+            if node.frame.contains(location) {
+                selectedNode = node
+                break
+            }
+        }
+        if let selectedNode = selectedNode {
+            switch gestureRecognizer.state {
+                case .began, .changed:
+                    self.starPressed(selectedNode)
+                case .ended:
+                    self.starReleased(selectedNode)
+                case .cancelled:
+                    self.resetStars()
+                default:
+                    break
+            }
+        } else {
+            self.resetStars()
+        }
+    }
+    
+    private func resetStars() {
+        for i in 0 ..< self.starNodes.count {
+            let node = self.starNodes[i]
+            node.isSelected = false
+        }
     }
     
     @objc func starPressed(_ sender: ASButtonNode) {
@@ -182,9 +225,10 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         
         let starSize = CGSize(width: 42.0, height: 38.0)
         let starsOrigin = floorToScreenPixels((resultWidth - starSize.width * 5.0) / 2.0)
+        self.starContainerNode.frame = CGRect(origin: CGPoint(x: starsOrigin, y: origin.y), size: CGSize(width: starSize.width * CGFloat(self.starNodes.count), height: starSize.height))
         for i in 0 ..< self.starNodes.count {
             let node = self.starNodes[i]
-            transition.updateFrame(node: node, frame: CGRect(x: starsOrigin + 42.0 * CGFloat(i), y: origin.y, width: starSize.width, height: starSize.height))
+            transition.updateFrame(node: node, frame: CGRect(x: starSize.width * CGFloat(i), y: 0.0, width: starSize.width, height: starSize.height))
         }
         origin.y += titleSize.height
         

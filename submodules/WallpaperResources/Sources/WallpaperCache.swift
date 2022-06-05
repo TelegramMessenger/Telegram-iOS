@@ -27,13 +27,14 @@ public final class CachedWallpaper: Codable {
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10000, highWaterItemCount: 20000)
-
 public func cachedWallpaper(account: Account, slug: String, settings: WallpaperSettings?, update: Bool = false) -> Signal<CachedWallpaper?, NoError> {
-    return account.postbox.transaction { transaction -> Signal<CachedWallpaper?, NoError> in
-        let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: Int64(bitPattern: slug.persistentHashValue))
-        if !update, let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, key: key))?.get(CachedWallpaper.self) {
+    let engine = TelegramEngine(account: account)
+    
+    let slugKey = ValueBoxKey(length: 8)
+    slugKey.setInt64(0, value: Int64(bitPattern: slug.persistentHashValue))
+    return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, id: slugKey))
+    |> mapToSignal { entry -> Signal<CachedWallpaper?, NoError> in
+        if !update, let entry = entry?.get(CachedWallpaper.self) {
             if let settings = settings {
                 return .single(CachedWallpaper(wallpaper: entry.wallpaper.withUpdatedSettings(settings)))
             } else {
@@ -46,45 +47,42 @@ public func cachedWallpaper(account: Account, slug: String, settings: WallpaperS
                 return .single(nil)
             }
             |> mapToSignal { wallpaper -> Signal<CachedWallpaper?, NoError> in
-                return account.postbox.transaction { transaction -> CachedWallpaper? in
-                    let key = ValueBoxKey(length: 8)
-                    key.setInt64(0, value: Int64(bitPattern: slug.persistentHashValue))
-                    let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, key: key)
-                    if var wallpaper = wallpaper {
-                        switch wallpaper {
-                        case let .file(file):
-                            wallpaper = .file(TelegramWallpaper.File(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file.withUpdatedResource(WallpaperDataResource(slug: slug)), settings: file.settings))
-                        default:
-                            break
-                        }
-                        if let entry = CodableEntry(CachedWallpaper(wallpaper: wallpaper)) {
-                            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
-                        }
-                        if let settings = settings {
-                            return CachedWallpaper(wallpaper: wallpaper.withUpdatedSettings(settings))
-                        } else {
-                            return CachedWallpaper(wallpaper: wallpaper)
-                        }
-                    } else {
-                        transaction.removeItemCacheEntry(id: id)
-                        return nil
+                let slugKey = ValueBoxKey(length: 8)
+                slugKey.setInt64(0, value: Int64(bitPattern: slug.persistentHashValue))
+                
+                if var wallpaper = wallpaper {
+                    switch wallpaper {
+                    case let .file(file):
+                        wallpaper = .file(TelegramWallpaper.File(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file.withUpdatedResource(WallpaperDataResource(slug: slug)), settings: file.settings))
+                    default:
+                        break
                     }
+                    
+                    let result: CachedWallpaper
+                    if let settings = settings {
+                        result = CachedWallpaper(wallpaper: wallpaper.withUpdatedSettings(settings))
+                    } else {
+                        result = CachedWallpaper(wallpaper: wallpaper)
+                    }
+                    return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, id: slugKey, item: CachedWallpaper(wallpaper: wallpaper))
+                    |> map { _ -> CachedWallpaper? in }
+                    |> then(.single(result))
+                } else {
+                    return engine.itemCache.remove(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, id: slugKey)
+                    |> map { _ -> CachedWallpaper? in }
+                    |> then(.single(nil))
                 }
             }
         }
-    } |> switchToLatest
+    }
 }
 
-public func updateCachedWallpaper(account: Account, wallpaper: TelegramWallpaper) {
+public func updateCachedWallpaper(engine: TelegramEngine, wallpaper: TelegramWallpaper) {
     guard case let .file(file) = wallpaper, file.id != 0 else {
         return
     }
-    let _ = (account.postbox.transaction { transaction in
-        let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: Int64(bitPattern: file.slug.persistentHashValue))
-        let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, key: key)
-        if let entry = CodableEntry(CachedWallpaper(wallpaper: wallpaper)) {
-            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
-        }
-    }).start()
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: Int64(bitPattern: file.slug.persistentHashValue))
+    
+    let _ = engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, id: key, item: CachedWallpaper(wallpaper: wallpaper)).start()
 }

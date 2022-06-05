@@ -13,6 +13,7 @@ import ContextUI
 import ItemListUI
 import SearchUI
 import ChatListSearchItemHeader
+import PremiumUI
 
 public enum ChatListNodeMode {
     case chatList
@@ -580,8 +581,6 @@ public enum ChatListGlobalScrollOption {
 }
 
 public enum ChatListNodeScrollPosition {
-    case auto
-    case autoUp
     case top
 }
 
@@ -618,6 +617,7 @@ public final class ChatListNode: ListView {
     public var updatePeerGrouping: ((EnginePeer.Id, Bool) -> Void)?
     public var presentAlert: ((String) -> Void)?
     public var present: ((ViewController) -> Void)?
+    public var push: ((ViewController) -> Void)?
     public var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     public var hidePsa: ((EnginePeer.Id) -> Void)?
     public var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
@@ -705,6 +705,9 @@ public final class ChatListNode: ListView {
     
     var isSelectionGestureEnabled = true
     
+    public var selectionLimit: Int32 = 100
+    public var reachedSelectionLimit: ((Int32) -> Void)?
+    
     public init(context: AccountContext, groupId: EngineChatList.Group, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.context = context
         self.groupId = groupId
@@ -743,27 +746,32 @@ public final class ChatListNode: ListView {
                 disabledPeerSelected(peer)
             }
         }, togglePeerSelected: { [weak self] peer in
+            guard let strongSelf = self else {
+                return
+            }
             var didBeginSelecting = false
             var count = 0
-            self?.updateState { state in
+            strongSelf.updateState { [weak self] state in
                 var state = state
                 if state.selectedPeerIds.contains(peer.id) {
                     state.selectedPeerIds.remove(peer.id)
                 } else {
-                    if state.selectedPeerIds.count < 100 {
+                    if state.selectedPeerIds.count < strongSelf.selectionLimit {
                         if state.selectedPeerIds.isEmpty {
                             didBeginSelecting = true
                         }
                         state.selectedPeerIds.insert(peer.id)
                         state.selectedPeerMap[peer.id] = peer
+                    } else {
+                        self?.reachedSelectionLimit?(Int32(state.selectedPeerIds.count))
                     }
                 }
                 count = state.selectedPeerIds.count
                 return state
             }
-            self?.selectionCountChanged?(count)
+            strongSelf.selectionCountChanged?(count)
             if didBeginSelecting {
-                self?.didBeginSelectingChats?()
+                strongSelf.didBeginSelectingChats?()
             }
         }, togglePeersSelection: { [weak self] peers, selected in
             self?.updateState { state in
@@ -828,28 +836,39 @@ public final class ChatListNode: ListView {
                 }
             }
         }, setItemPinned: { [weak self] itemId, _ in
-            let location: TogglePeerChatPinnedLocation
-            if let chatListFilter = chatListFilter {
-                location = .filter(chatListFilter.id)
-            } else {
-                location = .group(groupId._asGroup())
-            }
-            let _ = (context.engine.peers.toggleItemPinned(location: location, itemId: itemId)
-            |> deliverOnMainQueue).start(next: { result in
-                if let strongSelf = self {
-                    switch result {
-                    case .done:
-                        break
-                    case let .limitExceeded(maxCount):
-                        let text: String
-                        if chatListFilter != nil {
-                            text = strongSelf.currentState.presentationData.strings.DialogList_UnknownPinLimitError
-                        } else {
-                            text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").string
-                        }
-                        strongSelf.presentAlert?(text)
-                    }
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                let isPremium = peer?.isPremium ?? false
+                let location: TogglePeerChatPinnedLocation
+                if let chatListFilter = chatListFilter {
+                    location = .filter(chatListFilter.id)
+                } else {
+                    location = .group(groupId._asGroup())
                 }
+                let _ = (context.engine.peers.toggleItemPinned(location: location, itemId: itemId)
+                |> deliverOnMainQueue).start(next: { result in
+                    if let strongSelf = self {
+                        switch result {
+                        case .done:
+                            break
+                        case let .limitExceeded(count, _):
+                            if isPremium {
+                                let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {})
+                                strongSelf.push?(controller)
+                            } else {
+                                var replaceImpl: ((ViewController) -> Void)?
+                                let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
+                                    let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                    replaceImpl?(premiumScreen)
+                                })
+                                replaceImpl = { [weak controller] c in
+                                    controller?.replace(with: c)
+                                }
+                                strongSelf.push?(controller)
+                            }
+                        }
+                    }
+                })
             })
         }, setPeerMuted: { [weak self] peerId, _ in
             guard let strongSelf = self else {
@@ -874,7 +893,7 @@ public final class ChatListNode: ListView {
                 return
             }
             self?.setCurrentRemovingPeerId(peerId)
-            let _ = (togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId)
+            let _ = (context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
                     var state = state
@@ -978,7 +997,39 @@ public final class ChatListNode: ListView {
                             guard !filter.contains(.excludeSavedMessages) || !peer.peerId.isReplies else { return false }
                             guard !filter.contains(.excludeSecretChats) || peer.peerId.namespace != Namespaces.Peer.SecretChat else { return false }
                             guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
-
+                        
+                            if let peer = peer.peer {
+                                switch peer {
+                                    case let .user(user):
+                                        if user.botInfo != nil {
+                                            if filter.contains(.excludeBots) {
+                                                return false
+                                            }
+                                        } else {
+                                            if filter.contains(.excludeUsers) {
+                                                return false
+                                            }
+                                        }
+                                    case .legacyGroup:
+                                        if filter.contains(.excludeGroups) {
+                                            return false
+                                        }
+                                    case let .channel(channel):
+                                        switch channel.info {
+                                            case .broadcast:
+                                                if filter.contains(.excludeChannels) {
+                                                    return false
+                                                }
+                                            case .group:
+                                                if filter.contains(.excludeGroups) {
+                                                    return false
+                                                }
+                                        }
+                                    default:
+                                        break
+                                }
+                            }
+                                                
                             if filter.contains(.onlyGroupsAndChannels) {
                                 if case .channel = peer.chatMainPeer {
                                 } else if case .legacyGroup = peer.chatMainPeer {
@@ -1171,8 +1222,12 @@ public final class ChatListNode: ListView {
                 updatedScrollPosition = nil
             }
             
-            let filterData = filter.flatMap { filter -> ChatListItemFilterData in
-                return ChatListItemFilterData(excludesArchived: filter.data.excludeArchived)
+            let filterData = filter.flatMap { filter -> ChatListItemFilterData? in
+                if case let .filter(_, _, _, data) = filter {
+                    return ChatListItemFilterData(excludesArchived: data.excludeArchived)
+                } else {
+                    return nil
+                }
             }
             
             return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
@@ -1246,11 +1301,23 @@ public final class ChatListNode: ListView {
         }
         self.setChatListLocation(initialLocation)
         
-        let postbox = context.account.postbox
+        let engine = context.engine
         let previousPeerCache = Atomic<[EnginePeer.Id: EnginePeer]>(value: [:])
         let previousActivities = Atomic<ChatListNodePeerInputActivities?>(value: nil)
         self.activityStatusesDisposable = (context.account.allPeerInputActivities()
         |> mapToSignal { activitiesByPeerId -> Signal<[EnginePeer.Id: [(EnginePeer, PeerInputActivity)]], NoError> in
+            var activitiesByPeerId = activitiesByPeerId
+            for key in activitiesByPeerId.keys {
+                activitiesByPeerId[key]?.removeAll(where: { _, activity in
+                    switch activity {
+                    case .interactingWithEmoji:
+                        return true
+                    default:
+                        return false
+                    }
+                })
+            }
+            
             var foundAllPeers = true
             var cachedResult: [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] = [:]
             previousPeerCache.with { dict -> Void in
@@ -1273,7 +1340,18 @@ public final class ChatListNode: ListView {
             if foundAllPeers {
                 return .single(cachedResult)
             } else {
-                return postbox.transaction { transaction -> [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] in
+                return engine.data.get(EngineDataMap(
+                    activitiesByPeerId.keys.filter { key in
+                        if case .global = key.category {
+                            return false
+                        } else {
+                            return true
+                        }
+                    }.map { key in
+                        return TelegramEngine.EngineData.Item.Peer.Peer(id: key.peerId)
+                    }
+                ))
+                |> map { peerMap -> [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] in
                     var result: [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] = [:]
                     var peerCache: [EnginePeer.Id: EnginePeer] = [:]
                     for (chatPeerId, activities) in activitiesByPeerId {
@@ -1283,9 +1361,9 @@ public final class ChatListNode: ListView {
                         var chatResult: [(EnginePeer, PeerInputActivity)] = []
                         
                         for (peerId, activity) in activities {
-                            if let peer = transaction.getPeer(peerId) {
-                                chatResult.append((EnginePeer(peer), activity))
-                                peerCache[peerId] = EnginePeer(peer)
+                            if let maybePeer = peerMap[peerId], let peer = maybePeer {
+                                chatResult.append((peer, activity))
+                                peerCache[peerId] = peer
                             }
                         }
                         
@@ -1782,12 +1860,14 @@ public final class ChatListNode: ListView {
             }
             
             var options = transition.options
-            if !options.contains(.AnimateInsertion) {
-                options.insert(.PreferSynchronousDrawing)
-                options.insert(.PreferSynchronousResourceLoading)
-            }
-            if options.contains(.AnimateCrossfade) && !self.isDeceleratingAfterTracking {
-                options.insert(.PreferSynchronousDrawing)
+            if self.view.window != nil {
+                if !options.contains(.AnimateInsertion) {
+                    options.insert(.PreferSynchronousDrawing)
+                    options.insert(.PreferSynchronousResourceLoading)
+                }
+                if options.contains(.AnimateCrossfade) && !self.isDeceleratingAfterTracking {
+                    options.insert(.PreferSynchronousDrawing)
+                }
             }
             
             var scrollToItem = transition.scrollToItem
@@ -1865,29 +1945,6 @@ public final class ChatListNode: ListView {
     
     public func scrollToPosition(_ position: ChatListNodeScrollPosition) {
         if let view = self.chatListView?.originalView {
-            if case .auto = position {
-                switch self.visibleContentOffset() {
-                    case .none, .unknown:
-                        if let maxVisibleChatListIndex = self.currentlyVisibleLatestChatListIndex() {
-                            self.scrollToEarliestUnread(earlierThan: maxVisibleChatListIndex)
-                            return
-                        }
-                    case let .known(offset):
-                        if offset <= 0.0 {
-                            self.scrollToEarliestUnread(earlierThan: nil)
-                            return
-                        } else {
-                            if let maxVisibleChatListIndex = self.currentlyVisibleLatestChatListIndex() {
-                                self.scrollToEarliestUnread(earlierThan: maxVisibleChatListIndex)
-                                return
-                            }
-                        }
-                }
-            } else if case .autoUp = position, let maxVisibleChatListIndex = self.currentlyVisibleLatestChatListIndex() {
-                self.scrollToEarliestUnread(earlierThan: maxVisibleChatListIndex)
-                return
-            }
-            
             if view.laterIndex == nil {
                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else {
@@ -1908,7 +1965,7 @@ public final class ChatListNode: ListView {
     
     private func relativeUnreadChatListIndex(position: EngineChatList.RelativePosition) -> Signal<EngineChatList.Item.Index?, NoError> {
         let groupId = self.groupId
-        let postbox = self.context.account.postbox
+        let engine = self.context.engine
         return self.context.sharedContext.accountManager.transaction { transaction -> Signal<EngineChatList.Item.Index?, NoError> in
             var filter = true
             if let inAppNotificationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)?.get(InAppNotificationSettings.self) {
@@ -1917,29 +1974,9 @@ public final class ChatListNode: ListView {
                         filter = true
                 }
             }
-            return postbox.transaction { transaction -> EngineChatList.Item.Index? in
-                return transaction.getRelativeUnreadChatListIndex(filtered: filter, position: position._asPosition(), groupId: groupId._asGroup())
-            }
+            return engine.messages.getRelativeUnreadChatListIndex(filtered: filter, position: position, groupId: groupId)
         }
         |> switchToLatest
-    }
-    
-    public func scrollToEarliestUnread(earlierThan: EngineChatList.Item.Index?) {
-        let _ = (relativeUnreadChatListIndex(position: .earlier(than: earlierThan)) |> deliverOnMainQueue).start(next: { [weak self] index in
-            guard let strongSelf = self else {
-                return
-            }
-            
-            if let index = index {
-                let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: self?.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound
-                    , scrollPosition: .center(.top), animated: true, filter: strongSelf.chatListFilter)
-                strongSelf.setChatListLocation(location)
-            } else {
-                let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound
-                    , scrollPosition: .top(0.0), animated: true, filter: strongSelf.chatListFilter)
-                strongSelf.setChatListLocation(location)
-            }
-        })
     }
     
     public func selectChat(_ option: ChatListSelectionOption) {
@@ -1988,13 +2025,14 @@ public final class ChatListNode: ListView {
                 } else {
                     position = .later(than: nil)
                 }
-                let postbox = self.context.account.postbox
+                let engine = self.context.engine
                 let _ = (relativeUnreadChatListIndex(position: position)
                 |> mapToSignal { index -> Signal<(EngineChatList.Item.Index, EnginePeer)?, NoError> in
                     if let index = index {
-                        return postbox.transaction { transaction -> (EngineChatList.Item.Index, EnginePeer)? in
-                            return transaction.getPeer(index.messageIndex.id.peerId).flatMap { peer -> (EngineChatList.Item.Index, EnginePeer)? in
-                                (index, EnginePeer(peer))
+                        return engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: index.messageIndex.id.peerId))
+                        |> map { peer -> (EngineChatList.Item.Index, EnginePeer)? in
+                            return peer.flatMap { peer -> (EngineChatList.Item.Index, EnginePeer)? in
+                                (index, peer)
                             }
                         }
                     } else {
@@ -2034,9 +2072,7 @@ public final class ChatListNode: ListView {
                     self.peerSelected?(target.1, false, false, nil)
                 }
             case let .peerId(peerId):
-                let _ = (self.context.account.postbox.transaction { transaction -> EnginePeer? in
-                    return transaction.getPeer(peerId).flatMap(EnginePeer.init)
-                }
+                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                     guard let strongSelf = self, let peer = peer else {
                         return
@@ -2259,13 +2295,13 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
     
     if let chatListFilters = chatListFilters {
         var result = ""
-        for filter in chatListFilters {
-            let predicate = chatListFilterPredicate(filter: filter.data)
+        for case let .filter(_, title, _, data) in chatListFilters {
+            let predicate = chatListFilterPredicate(filter: data)
             if predicate.includes(peer: peer._asPeer(), groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: hasUnseenMentions) {
                 if !result.isEmpty {
                     result.append(", ")
                 }
-                result.append(filter.title)
+                result.append(title)
             }
         }
         

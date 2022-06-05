@@ -18,6 +18,7 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/AccountContext:AccountContext",
         "//submodules/ReactionSelectionNode:ReactionSelectionNode",
+        "//submodules/Markdown:Markdown",
     ],
     visibility = [
         "//visibility:public",

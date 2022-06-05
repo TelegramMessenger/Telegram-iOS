@@ -12,6 +12,7 @@ import AccountContext
 import PhotoResources
 import AppBundle
 import ManagedAnimationNode
+import RangeSet
 
 private func generateBackground(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 20.0, height: 10.0 + 8.0), rotatedContext: { size, context in
@@ -401,7 +402,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                             strongSelf.currentFileReference = fileReference
                             if let size = fileReference.media.size {
                                 strongSelf.scrubberNode.bufferingStatus = strongSelf.postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
-                                |> map { ranges -> (IndexSet, Int) in
+                                |> map { ranges -> (RangeSet<Int64>, Int64) in
                                     return (ranges, size)
                                 }
                             } else {

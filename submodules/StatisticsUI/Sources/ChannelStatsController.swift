@@ -410,7 +410,7 @@ private func channelStatsControllerEntries(data: ChannelStats?, messages: [Messa
     return entries
 }
 
-public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
+public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, statsDatacenterId: Int32?) -> ViewController {
     var openMessageStatsImpl: ((MessageId) -> Void)?
     var contextActionImpl: ((MessageId, ASDisplayNode, ContextGesture?) -> Void)?
     
@@ -418,10 +418,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let dataPromise = Promise<ChannelStats?>(nil)
     let messagesPromise = Promise<MessageHistoryView?>(nil)
     
-    var datacenterId: Int32 = 0
-    if let cachedData = cachedPeerData as? CachedChannelData {
-        datacenterId = cachedData.statsDatacenterId
-    }
+    let datacenterId: Int32 = statsDatacenterId ?? 0
         
     let statsContext = ChannelStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, peerId: peerId)
     let dataSignal: Signal<ChannelStats?, NoError> = statsContext.state
@@ -505,7 +502,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         controller?.clearItemNodesHighlight(animated: true)
     }
     openMessageStatsImpl = { [weak controller] messageId in
-        controller?.push(messageStatsController(context: context, messageId: messageId, cachedPeerData: cachedPeerData))
+        controller?.push(messageStatsController(context: context, messageId: messageId, statsDatacenterId: statsDatacenterId))
     }
     contextActionImpl = { [weak controller] messageId, sourceNode, gesture in
         guard let controller = controller, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {
@@ -544,7 +541,7 @@ private final class ChannelStatsContextExtractedContentSource: ContextExtractedC
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {

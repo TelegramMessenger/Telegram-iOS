@@ -363,6 +363,10 @@ static NSString * const kCompContainerAnimationKey = @"play";
   } else {
     NSTimeInterval duration = (ABS(toEndFrame.floatValue - fromStartFrame.floatValue) / _sceneModel.framerate.floatValue);
     CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"currentFrame"];
+    if (@available(iOS 15.0, *)) {
+      float maxFps = UIScreen.mainScreen.maximumFramesPerSecond;
+      [animation setPreferredFrameRateRange:CAFrameRateRangeMake(maxFps, maxFps, maxFps)];
+    }
     animation.speed = _animationSpeed;
     animation.fromValue = fromStartFrame;
     animation.toValue = toEndFrame;

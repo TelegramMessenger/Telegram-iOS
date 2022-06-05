@@ -12,6 +12,7 @@ import RadialStatusNode
 import PhotoResources
 import TelegramUniversalVideoContent
 import FileMediaResourceStatus
+import HierarchyTrackingLayer
 
 struct ChatMessageInstantVideoItemLayoutResult {
     let contentSize: CGSize
@@ -32,6 +33,17 @@ enum ChatMessageInteractiveInstantVideoNodeStatusType {
 }
 
 class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
+    private var hierarchyTrackingLayer: HierarchyTrackingLayer?
+    private var trackingIsInHierarchy: Bool = false {
+        didSet {
+            if self.trackingIsInHierarchy != oldValue {
+                Queue.mainQueue().justDispatch {
+                    self.videoNode?.canAttachContent = self.shouldAcquireVideoContext
+                }
+            }
+        }
+    }
+    
     private var videoNode: UniversalVideoNode?
     private let secretVideoPlaceholderBackground: ASImageNode
     private let secretVideoPlaceholder: TransformImageNode
@@ -68,7 +80,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private let fetchedThumbnailDisposable = MetaDisposable()
     
     private var shouldAcquireVideoContext: Bool {
-        if self.visibility {
+        if self.visibility && self.trackingIsInHierarchy {
             return true
         } else {
             return false
@@ -130,6 +142,23 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             return .waitForSingleTap
         }
         self.view.addGestureRecognizer(recognizer)
+        
+        let hierarchyTrackingLayer = HierarchyTrackingLayer()
+        hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.trackingIsInHierarchy = true
+        }
+        
+        hierarchyTrackingLayer.didExitHierarchy = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.trackingIsInHierarchy = false
+        }
+        self.hierarchyTrackingLayer = hierarchyTrackingLayer
+        self.layer.addSublayer(hierarchyTrackingLayer)
     }
     
     func asyncLayout() -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ maximumDisplaySize: CGSize, _ scaleProgress: CGFloat, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ListViewItemUpdateAnimation) -> Void) {
@@ -817,10 +846,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     switch fetchStatus {
                         case .Fetching:
                             if item.message.flags.isSending {
-                                let messageId = item.message.id
-                                let _ = item.context.account.postbox.transaction({ transaction -> Void in
-                                    item.context.engine.messages.deleteMessages(transaction: transaction, ids: [messageId])
-                                }).start()
+                                let _ = item.context.engine.messages.deleteMessagesInteractively(messageIds: [item.message.id], type: .forEveryone).start()
                             } else {
                                 messageMediaFileCancelInteractiveFetch(context: item.context, messageId: item.message.id, file: file)
                             }

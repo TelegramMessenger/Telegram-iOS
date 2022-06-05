@@ -59,6 +59,12 @@ open class ViewControllerComponentContainer: ViewController {
         case `default`
     }
     
+    public enum StatusBarStyle {
+        case none
+        case ignore
+        case `default`
+    }
+    
     public final class Environment: Equatable {
         public let statusBarHeight: CGFloat
         public let navigationHeight: CGFloat
@@ -66,6 +72,7 @@ open class ViewControllerComponentContainer: ViewController {
         public let isVisible: Bool
         public let theme: PresentationTheme
         public let strings: PresentationStrings
+        public let dateTimeFormat: PresentationDateTimeFormat
         public let controller: () -> ViewController?
         
         public init(
@@ -75,6 +82,7 @@ open class ViewControllerComponentContainer: ViewController {
             isVisible: Bool,
             theme: PresentationTheme,
             strings: PresentationStrings,
+            dateTimeFormat: PresentationDateTimeFormat,
             controller: @escaping () -> ViewController?
         ) {
             self.statusBarHeight = statusBarHeight
@@ -83,6 +91,7 @@ open class ViewControllerComponentContainer: ViewController {
             self.isVisible = isVisible
             self.theme = theme
             self.strings = strings
+            self.dateTimeFormat = dateTimeFormat
             self.controller = controller
         }
         
@@ -109,17 +118,26 @@ open class ViewControllerComponentContainer: ViewController {
             if lhs.strings !== rhs.strings {
                 return false
             }
+            if lhs.dateTimeFormat != rhs.dateTimeFormat {
+                return false
+            }
             
             return true
         }
     }
     
+    public final class AnimateInTransition {
+    }
+    
+    public final class AnimateOutTransition {
+    }
+    
     public final class Node: ViewControllerTracingNode {
-        private var presentationData: PresentationData
+        fileprivate var presentationData: PresentationData
         private weak var controller: ViewControllerComponentContainer?
         
-        private let component: AnyComponent<ViewControllerComponentContainer.Environment>
-        private let theme: PresentationTheme?
+        private var component: AnyComponent<ViewControllerComponentContainer.Environment>
+        var theme: PresentationTheme?
         public let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
         
         private var currentIsVisible: Bool = false
@@ -149,6 +167,7 @@ open class ViewControllerComponentContainer: ViewController {
                 isVisible: self.currentIsVisible,
                 theme: self.theme ?? self.presentationData.theme,
                 strings: self.presentationData.strings,
+                dateTimeFormat: self.presentationData.dateTimeFormat,
                 controller: { [weak self] in
                     return self?.controller
                 }
@@ -164,7 +183,7 @@ open class ViewControllerComponentContainer: ViewController {
             transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: layout.size), completion: nil)
         }
         
-        func updateIsVisible(isVisible: Bool) {
+        func updateIsVisible(isVisible: Bool, animated: Bool) {
             if self.currentIsVisible == isVisible {
                 return
             }
@@ -173,7 +192,16 @@ open class ViewControllerComponentContainer: ViewController {
             guard let currentLayout = self.currentLayout else {
                 return
             }
-            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: .immediate)
+            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: animated ? Transition(animation: .none).withUserData(isVisible ? AnimateInTransition() : AnimateOutTransition()) : .immediate)
+        }
+        
+        func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: Transition) {
+            self.component = component
+            
+            guard let currentLayout = self.currentLayout else {
+                return
+            }
+            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: transition)
         }
     }
     
@@ -182,28 +210,66 @@ open class ViewControllerComponentContainer: ViewController {
     }
     
     private let context: AccountContext
-    private let theme: PresentationTheme?
+    private var theme: PresentationTheme?
     private let component: AnyComponent<ViewControllerComponentContainer.Environment>
     
-    public init<C: Component>(context: AccountContext, component: C, navigationBarAppearance: NavigationBarAppearance, theme: PresentationTheme? = nil) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
+    private var presentationDataDisposable: Disposable?
+    private var validLayout: ContainerViewLayout?
+    
+    public init<C: Component>(context: AccountContext, component: C, navigationBarAppearance: NavigationBarAppearance, statusBarStyle: StatusBarStyle = .default, theme: PresentationTheme? = nil) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
         self.context = context
         self.component = AnyComponent(component)
         self.theme = theme
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let navigationBarPresentationData: NavigationBarPresentationData?
         switch navigationBarAppearance {
         case .none:
             navigationBarPresentationData = nil
         case .transparent:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: context.sharedContext.currentPresentationData.with { $0 }, hideBackground: true, hideBadge: false, hideSeparator: true)
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true)
         case .default:
-            navigationBarPresentationData = NavigationBarPresentationData(presentationData: context.sharedContext.currentPresentationData.with { $0 })
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData)
         }
         super.init(navigationBarPresentationData: navigationBarPresentationData)
+        
+        self.presentationDataDisposable = (self.context.sharedContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.node.presentationData = presentationData
+        
+                switch statusBarStyle {
+                    case .none:
+                        strongSelf.statusBar.statusBarStyle = .Hide
+                    case .ignore:
+                        strongSelf.statusBar.statusBarStyle = .Ignore
+                    case .default:
+                        strongSelf.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
+                }
+                
+                if let layout = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                }
+            }
+        })
+        
+        switch statusBarStyle {
+            case .none:
+                self.statusBar.statusBarStyle = .Hide
+            case .ignore:
+                self.statusBar.statusBarStyle = .Ignore
+            case .default:
+                self.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
     }
     
     override open func loadDisplayNode() {
@@ -215,13 +281,17 @@ open class ViewControllerComponentContainer: ViewController {
     override open func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.node.updateIsVisible(isVisible: true)
+        self.node.updateIsVisible(isVisible: true, animated: true)
     }
     
     override open func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
-        self.node.updateIsVisible(isVisible: false)
+        self.node.updateIsVisible(isVisible: false, animated: animated)
+    }
+    
+    open override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        super.dismiss(animated: flag, completion: completion)
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -229,6 +299,11 @@ open class ViewControllerComponentContainer: ViewController {
         
         let navigationHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
         
+        self.validLayout = layout
         self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+    }
+    
+    public func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: Transition) {
+        self.node.updateComponent(component: component, transition: transition)
     }
 }

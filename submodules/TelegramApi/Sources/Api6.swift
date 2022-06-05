@@ -1,4 +1,44 @@
 public extension Api {
+    enum InlineBotSwitchPM: TypeConstructorDescription {
+        case inlineBotSwitchPM(text: String, startParam: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inlineBotSwitchPM(let text, let startParam):
+                    if boxed {
+                        buffer.appendInt32(1008755359)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    serializeString(startParam, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inlineBotSwitchPM(let text, let startParam):
+                return ("inlineBotSwitchPM", [("text", String(describing: text)), ("startParam", String(describing: startParam))])
+    }
+    }
+    
+        public static func parse_inlineBotSwitchPM(_ reader: BufferReader) -> InlineBotSwitchPM? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InlineBotSwitchPM.inlineBotSwitchPM(text: _1!, startParam: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InlineQueryPeerType: TypeConstructorDescription {
         case inlineQueryPeerTypeBroadcast
         case inlineQueryPeerTypeChat
@@ -1074,62 +1114,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputDocument: TypeConstructorDescription {
-        case inputDocument(id: Int64, accessHash: Int64, fileReference: Buffer)
-        case inputDocumentEmpty
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputDocument(let id, let accessHash, let fileReference):
-                    if boxed {
-                        buffer.appendInt32(448771445)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeBytes(fileReference, buffer: buffer, boxed: false)
-                    break
-                case .inputDocumentEmpty:
-                    if boxed {
-                        buffer.appendInt32(1928391342)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputDocument(let id, let accessHash, let fileReference):
-                return ("inputDocument", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("fileReference", String(describing: fileReference))])
-                case .inputDocumentEmpty:
-                return ("inputDocumentEmpty", [])
-    }
-    }
-    
-        public static func parse_inputDocument(_ reader: BufferReader) -> InputDocument? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputDocument.inputDocument(id: _1!, accessHash: _2!, fileReference: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputDocumentEmpty(_ reader: BufferReader) -> InputDocument? {
-            return Api.InputDocument.inputDocumentEmpty
         }
     
     }

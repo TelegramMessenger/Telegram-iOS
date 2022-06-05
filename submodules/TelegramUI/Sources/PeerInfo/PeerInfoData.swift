@@ -124,6 +124,7 @@ final class TelegramGlobalSettings {
     let privacySettings: AccountPrivacySettings?
     let unreadTrendingStickerPacks: Int
     let archivedStickerPacks: [ArchivedStickerPackItem]?
+    let userLimits: EngineConfiguration.UserLimits
     let hasPassport: Bool
     let hasWatchApp: Bool
     let enableQRLogin: Bool
@@ -143,6 +144,7 @@ final class TelegramGlobalSettings {
         privacySettings: AccountPrivacySettings?,
         unreadTrendingStickerPacks: Int,
         archivedStickerPacks: [ArchivedStickerPackItem]?,
+        userLimits: EngineConfiguration.UserLimits,
         hasPassport: Bool,
         hasWatchApp: Bool,
         enableQRLogin: Bool
@@ -161,6 +163,7 @@ final class TelegramGlobalSettings {
         self.privacySettings = privacySettings
         self.unreadTrendingStickerPacks = unreadTrendingStickerPacks
         self.archivedStickerPacks = archivedStickerPacks
+        self.userLimits = userLimits
         self.hasPassport = hasPassport
         self.hasWatchApp = hasWatchApp
         self.enableQRLogin = enableQRLogin
@@ -173,7 +176,7 @@ final class PeerInfoScreenData {
     let cachedData: CachedPeerData?
     let status: PeerInfoStatusData?
     let notificationSettings: TelegramPeerNotificationSettings?
-    let globalNotificationSettings: GlobalNotificationSettings?
+    let globalNotificationSettings: EngineGlobalNotificationSettings?
     let isContact: Bool
     let availablePanes: [PeerInfoPaneKey]
     let groupsInCommon: GroupsInCommonContext?
@@ -191,7 +194,7 @@ final class PeerInfoScreenData {
         cachedData: CachedPeerData?,
         status: PeerInfoStatusData?,
         notificationSettings: TelegramPeerNotificationSettings?,
-        globalNotificationSettings: GlobalNotificationSettings?,
+        globalNotificationSettings: EngineGlobalNotificationSettings?,
         isContact: Bool,
         availablePanes: [PeerInfoPaneKey],
         groupsInCommon: GroupsInCommonContext?,
@@ -313,13 +316,13 @@ enum PeerInfoMembersData: Equatable {
     }
 }
 
-private func peerInfoScreenInputData(context: AccountContext, peerId: PeerId, isSettings: Bool) -> Signal<PeerInfoScreenInputData, NoError> {
-    return context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
-    |> map { view -> PeerInfoScreenInputData in
-        guard let peer = (view.views[.basicPeer(peerId)] as? BasicPeerView)?.peer else {
+private func peerInfoScreenInputData(context: AccountContext, peerId: EnginePeer.Id, isSettings: Bool) -> Signal<PeerInfoScreenInputData, NoError> {
+    return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+    |> map { peer -> PeerInfoScreenInputData in
+        guard let peer = peer else {
             return .none
         }
-        if let user = peer as? TelegramUser {
+        if case let .user(user) = peer {
             if isSettings && user.id == context.account.peerId {
                 return .settings
             } else {
@@ -333,15 +336,15 @@ private func peerInfoScreenInputData(context: AccountContext, peerId: PeerId, is
                 }
                 return .user(userId: user.id, secretChatId: nil, kind: kind)
             }
-        } else if let channel = peer as? TelegramChannel {
+        } else if case let .channel(channel) = peer {
             if case .group = channel.info {
                 return .group(groupId: channel.id)
             } else {
                 return .channel
             }
-        } else if let group = peer as? TelegramGroup {
+        } else if case let .legacyGroup(group) = peer {
             return .group(groupId: group.id)
-        } else if let secretChat = peer as? TelegramSecretChat {
+        } else if case let .secretChat(secretChat) = peer {
             return .user(userId: secretChat.regularPeerId, secretChatId: peer.id, kind: .user)
         } else {
             return .none
@@ -410,44 +413,67 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         hasPassport,
         (context.watchManager?.watchAppInstalled ?? .single(false)),
         context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
-        getServerProvidedSuggestions(account: context.account)
+        getServerProvidedSuggestions(account: context.account),
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
         )
-        |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions -> PeerInfoScreenData in
-            let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
-            let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
-            
-            let proxySettings: ProxySettings = sharedPreferences.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) ?? ProxySettings.defaultSettings
-            let inAppNotificationSettings: InAppNotificationSettings = sharedPreferences.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
-            
-            let unreadTrendingStickerPacks = featuredStickerPacks.reduce(0, { count, item -> Int in
-                return item.unread ? count + 1 : count
-            })
-            
-            var enableQRLogin = false
-            if let appConfiguration = accountPreferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self), let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR {
-                enableQRLogin = true
-            }
-            
-            let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber), suggestPasswordConfirmation: suggestions.contains(.validatePassword), accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions?.0, webSessionsContext: accountSessions?.2, otherSessionsCount: accountSessions?.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
-            
-            return PeerInfoScreenData(
-                peer: peerView.peers[peerId],
-                chatPeer: peerView.peers[peerId],
-                cachedData: peerView.cachedData,
-                status: nil,
-                notificationSettings: nil,
-                globalNotificationSettings: nil,
-                isContact: false,
-                availablePanes: [],
-                groupsInCommon: nil,
-                linkedDiscussionPeer: nil,
-                members: nil,
-                encryptionKeyFingerprint: nil,
-                globalSettings: globalSettings,
-                invitations: nil,
-                requests: nil,
-                requestsContext: nil
-            )
+    )
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits -> PeerInfoScreenData in
+        let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
+        let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
+        
+        let proxySettings: ProxySettings = sharedPreferences.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) ?? ProxySettings.defaultSettings
+        let inAppNotificationSettings: InAppNotificationSettings = sharedPreferences.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
+        
+        let unreadTrendingStickerPacks = featuredStickerPacks.reduce(0, { count, item -> Int in
+            return item.unread ? count + 1 : count
+        })
+        
+        var enableQRLogin = false
+        if let appConfiguration = accountPreferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self), let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR {
+            enableQRLogin = true
+        }
+        
+        let peer = peerView.peers[peerId]
+        let globalSettings = TelegramGlobalSettings(
+            suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber),
+            suggestPasswordConfirmation: suggestions.contains(.validatePassword),
+            accountsAndPeers: accountsAndPeers,
+            activeSessionsContext: accountSessions?.0,
+            webSessionsContext: accountSessions?.2,
+            otherSessionsCount: accountSessions?.1,
+            proxySettings: proxySettings,
+            notificationAuthorizationStatus: notificationsAuthorizationStatus,
+            notificationWarningSuppressed: notificationsWarningSuppressed,
+            notificationExceptions: notificationExceptions,
+            inAppNotificationSettings: inAppNotificationSettings,
+            privacySettings: privacySettings,
+            unreadTrendingStickerPacks: unreadTrendingStickerPacks,
+            archivedStickerPacks: archivedStickerPacks,
+            userLimits: peer?.isPremium == true ? limits.1 : limits.0,
+            hasPassport: hasPassport,
+            hasWatchApp: hasWatchApp,
+            enableQRLogin: enableQRLogin)
+        
+        return PeerInfoScreenData(
+            peer: peer,
+            chatPeer: peer,
+            cachedData: peerView.cachedData,
+            status: nil,
+            notificationSettings: nil,
+            globalNotificationSettings: nil,
+            isContact: false,
+            availablePanes: [],
+            groupsInCommon: nil,
+            linkedDiscussionPeer: nil,
+            members: nil,
+            encryptionKeyFingerprint: nil,
+            globalSettings: globalSettings,
+            invitations: nil,
+            requests: nil,
+            requestsContext: nil
+        )
     }
 }
 
@@ -565,33 +591,20 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 return disposable
             }
             |> distinctUntilChanged
-            let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
-            var combinedKeys: [PostboxViewKey] = []
-            combinedKeys.append(globalNotificationsKey)
+            
+            var secretChatKeyFingerprint: Signal<EngineSecretChatKeyFingerprint?, NoError> = .single(nil)
             if let secretChatId = secretChatId {
-                combinedKeys.append(.peerChatState(peerId: secretChatId))
+                secretChatKeyFingerprint = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.SecretChatKeyFingerprint(id: secretChatId))
             }
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId),
-                context.account.postbox.combinedView(keys: combinedKeys),
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
+                secretChatKeyFingerprint,
                 status
             )
-            |> map { peerView, availablePanes, combinedView, status -> PeerInfoScreenData in
-                var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
-                if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
-                    if let settings = preferencesView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
-                        globalNotificationSettings = settings
-                    }
-                }
-                
-                var encryptionKeyFingerprint: SecretChatKeyFingerprint?
-                if let secretChatId = secretChatId, let peerChatStateView = combinedView.views[.peerChatState(peerId: secretChatId)] as? PeerChatStateView {
-                    if let peerChatState = peerChatStateView.chatState?.getLegacy() as? SecretChatState {
-                        encryptionKeyFingerprint = peerChatState.keyFingerprint
-                    }
-                }
-                
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
                     if cachedData.commonGroupCount != 0 {
@@ -632,10 +645,6 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             }
             |> distinctUntilChanged
             
-            let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
-            var combinedKeys: [PostboxViewKey] = []
-            combinedKeys.append(globalNotificationsKey)
-            
             let invitationsContextPromise = Promise<PeerExportedInvitationsContext?>(nil)
             let invitationsStatePromise = Promise<PeerExportedInvitationsState?>(nil)
             
@@ -645,21 +654,14 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId),
-                context.account.postbox.combinedView(keys: combinedKeys),
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
                 status,
                 invitationsContextPromise.get(),
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
                 requestsStatePromise.get()
             )
-            |> map { peerView, availablePanes, combinedView, status, currentInvitationsContext, invitations, currentRequestsContext, requests -> PeerInfoScreenData in
-                var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
-                if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
-                    if let settings = preferencesView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
-                        globalNotificationSettings = settings
-                    }
-                }
-                
+            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests -> PeerInfoScreenData in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -795,10 +797,6 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             }
             |> distinctUntilChanged
             
-            let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
-            var combinedKeys: [PostboxViewKey] = []
-            combinedKeys.append(globalNotificationsKey)
-            
             let invitationsContextPromise = Promise<PeerExportedInvitationsContext?>(nil)
             let invitationsStatePromise = Promise<PeerExportedInvitationsState?>(nil)
             
@@ -808,7 +806,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             return combineLatest(queue: .mainQueue(),
                 context.account.viewTracker.peerView(groupId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: groupId),
-                context.account.postbox.combinedView(keys: combinedKeys),
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
                 status,
                 membersData,
                 invitationsContextPromise.get(),
@@ -816,14 +814,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 requestsContextPromise.get(),
                 requestsStatePromise.get()
             )
-            |> map { peerView, availablePanes, combinedView, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests -> PeerInfoScreenData in
-                var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
-                if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
-                    if let settings = preferencesView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
-                        globalNotificationSettings = settings
-                    }
-                }
-                
+            |> map { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests -> PeerInfoScreenData in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer

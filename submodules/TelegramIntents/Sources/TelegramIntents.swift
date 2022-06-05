@@ -76,13 +76,19 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                     if case .chat = intentContext, settings.onlyShared {
                         return .single([])
                     }
-                    return account.postbox.transaction { transaction -> [(Peer, SendMessageIntentSubject)] in
+                    
+                    return TelegramEngine(account: account).data.get(
+                        EngineDataMap(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
+                        EngineDataMap(peerIds.map(TelegramEngine.EngineData.Item.Peer.IsContact.init)),
+                        EngineDataMap(peerIds.map(TelegramEngine.EngineData.Item.Messages.ChatListGroup.init))
+                    )
+                    |> map { peerMap, isContactMap, chatListGroupMap -> [(Peer, SendMessageIntentSubject)] in
                         var peers: [(Peer, SendMessageIntentSubject)] = []
                         for peerId in peerIds {
-                            if peerId.namespace != Namespaces.Peer.SecretChat, let peer = transaction.getPeer(peerId) {
+                            if peerId.namespace != Namespaces.Peer.SecretChat, let maybePeer = peerMap[peerId], let peer = maybePeer {
                                 var subject: SendMessageIntentSubject?
-                                let chatListIndex = transaction.getPeerChatListIndex(peerId)
-                                if chatListIndex?.0 == Namespaces.PeerGroup.archive {
+                                let chatListGroup = chatListGroupMap[peerId]
+                                if chatListGroup == .archive {
                                     continue
                                 }
                                 if peerId.namespace == Namespaces.Peer.CloudUser {
@@ -91,7 +97,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                                             continue
                                         }
                                         subject = .savedMessages
-                                    } else if transaction.isPeerContact(peerId: peerId) {
+                                    } else if let isContact = isContactMap[peerId], isContact {
                                         if !settings.contacts {
                                             continue
                                         }
@@ -107,7 +113,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                                          continue
                                     }
                                     subject = .group
-                                } else if let peer = peer as? TelegramChannel {
+                                } else if case let .channel(peer) = peer {
                                     if case .group = peer.info {
                                         if !settings.groups {
                                             continue
@@ -121,7 +127,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                                 }
                                 
                                 if let subject = subject {
-                                    peers.append((peer, subject))
+                                    peers.append((peer._asPeer(), subject))
                                 }
                             }
                         }

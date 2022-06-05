@@ -216,6 +216,10 @@
                                       animationWithKeyPath:event];
     theAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
     theAnimation.fromValue = [[self presentationLayer] valueForKey:event];
+    if (@available(iOS 15.0, *)) {
+      float maxFps = UIScreen.mainScreen.maximumFramesPerSecond;
+      [theAnimation setPreferredFrameRateRange:CAFrameRateRangeMake(maxFps, maxFps, maxFps)];
+    }
     return theAnimation;
   }
   return [super actionForKey:event];

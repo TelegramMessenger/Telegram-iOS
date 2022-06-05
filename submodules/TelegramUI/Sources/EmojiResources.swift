@@ -25,6 +25,10 @@ public struct EmojiThumbnailResourceId {
 public class EmojiThumbnailResource: TelegramMediaResource {
     public let emoji: String
     
+    public var size: Int64? {
+        return nil
+    }
+    
     public init(emoji: String) {
         self.emoji = emoji
     }
@@ -66,6 +70,10 @@ public struct EmojiSpriteResourceId {
 public class EmojiSpriteResource: TelegramMediaResource {
     public let packId: UInt8
     public let stickerId: UInt8
+    
+    public var size: Int64? {
+        return nil
+    }
     
     public init(packId: UInt8, stickerId: UInt8) {
         self.packId = packId
@@ -277,7 +285,7 @@ func fetchEmojiSpriteResource(account: Account, resource: EmojiSpriteResource) -
 
                     subscriber.putNext(.reset)
 
-                    let fetch = fetchResource(sticker.file.resource, .single([(0 ..< Int.max, .default)]), nil)
+                    let fetch = fetchResource(sticker.file.resource, .single([(0 ..< Int64.max, .default)]), nil)
                     let buffer = Atomic<Buffer>(value: Buffer())
                     let disposable = fetch.start(next: { result in
                         switch result {
@@ -314,18 +322,18 @@ func fetchEmojiSpriteResource(account: Account, resource: EmojiSpriteResource) -
                                     buffer.data.withUnsafeMutableBytes { rawBytes -> Void in
                                         let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
 
-                                        data.copyBytes(to: bytes, from: range)
+                                        data.copyBytes(to: bytes, from: Int(range.lowerBound) ..< Int(range.upperBound))
                                     }
                                 }
                             case let .dataPart(resourceOffset, data, range, _):
                                 let _ = buffer.with { buffer in
-                                    if buffer.data.count < resourceOffset + range.count {
-                                        buffer.data.count = resourceOffset + range.count
+                                    if buffer.data.count < Int(resourceOffset) + range.count {
+                                        buffer.data.count = Int(resourceOffset) + range.count
                                     }
                                     buffer.data.withUnsafeMutableBytes { rawBytes -> Void in
                                         let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
 
-                                        data.copyBytes(to: bytes.advanced(by: resourceOffset), from: range)
+                                        data.copyBytes(to: bytes.advanced(by: Int(resourceOffset)), from: Int(range.lowerBound) ..< Int(range.upperBound))
                                     }
                                 }
                         }
@@ -334,7 +342,7 @@ func fetchEmojiSpriteResource(account: Account, resource: EmojiSpriteResource) -
                             return WebP.convert(fromWebP: buffer.data)
                         }
                         if let image = image, let data = image.pngData() {
-                            subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+                            subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< Int64(data.count), complete: true))
                             subscriber.putCompletion()
                         }
                     })

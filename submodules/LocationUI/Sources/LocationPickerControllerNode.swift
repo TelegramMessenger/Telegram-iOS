@@ -420,12 +420,12 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     let home: Signal<(Double, Double)?, NoError>
                     let work: Signal<(Double, Double)?, NoError>
                     if let address = homeAddress {
-                        home = geocodeAddress(postbox: context.account.postbox, address: address)
+                        home = geocodeAddress(engine: context.engine, address: address)
                     } else {
                         home = .single(nil)
                     }
                     if let address = workAddress {
-                        work = geocodeAddress(postbox: context.account.postbox, address: address)
+                        work = geocodeAddress(engine: context.engine, address: address)
                     } else {
                         work = .single(nil)
                     }

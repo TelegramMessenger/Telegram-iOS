@@ -12,6 +12,9 @@ import FastBlur
 import Svg
 import GZip
 import AppBundle
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import HierarchyTrackingLayer
 
 private let motionAmount: CGFloat = 32.0
 
@@ -427,6 +430,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         var isLight: Bool
     }
     private static var cachedSharedPattern: (PatternKey, UIImage)?
+    
+    //private var inlineAnimationNodes: [(AnimatedStickerNode, CGPoint)] = []
+    //private let hierarchyTrackingLayer = HierarchyTrackingLayer()
+    //private var activateInlineAnimationTimer: SwiftSignalKit.Timer?
 
     private let _isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     var isReady: Signal<Bool, NoError> {
@@ -453,7 +460,47 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         self.addSubnode(self.contentNode)
         self.addSubnode(self.patternImageNode)
         
-        //self.view.addSubview(self.bakedBackgroundView)
+        /*let animationList: [(String, CGPoint)] = [
+            ("ptrnCAT_1162_1918", CGPoint(x: 1162 - 256, y: 1918 - 256)),
+            ("ptrnDOG_0440_2284", CGPoint(x: 440 - 256, y: 2284 - 256)),
+            ("ptrnGLOB_0438_1553", CGPoint(x: 438 - 256, y: 1553 - 256)),
+            ("ptrnSLON_0906_1033", CGPoint(x: 906 - 256, y: 1033 - 256))
+        ]
+        for (animation, relativePosition) in animationList {
+            let animationNode = AnimatedStickerNode()
+            animationNode.automaticallyLoadFirstFrame = true
+            animationNode.autoplay = true
+            //self.inlineAnimationNodes.append((animationNode, relativePosition))
+            self.patternImageNode.addSubnode(animationNode)
+            animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animation), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+        }
+        
+        self.layer.addSublayer(self.hierarchyTrackingLayer)
+        self.hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            for (animationNode, _) in strongSelf.inlineAnimationNodes {
+                animationNode.visibility = true
+            }
+            strongSelf.activateInlineAnimationTimer = SwiftSignalKit.Timer(timeout: 5.0, repeat: true, completion: {
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                strongSelf.inlineAnimationNodes[Int.random(in: 0 ..< strongSelf.inlineAnimationNodes.count)].0.play()
+            }, queue: .mainQueue())
+            strongSelf.activateInlineAnimationTimer?.start()
+        }
+        self.hierarchyTrackingLayer.didExitHierarchy = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            for (animationNode, _) in strongSelf.inlineAnimationNodes {
+                animationNode.visibility = false
+            }
+            strongSelf.activateInlineAnimationTimer?.invalidate()
+        }*/
     }
 
     deinit {
@@ -599,6 +646,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     self.patternImageNode.layer.compositingFilter = "softLightBlendMode"
                 }
             }
+            
             self.patternImageNode.isHidden = false
             let invertPattern = intensity < 0
             if invertPattern {
@@ -676,7 +724,23 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                         guard let strongSelf = self else {
                             return
                         }
+                        
                         if let generator = generator {
+                            /*generator = { arguments in
+                                let scale = arguments.scale ?? UIScreenScale
+                                let context = DrawingContext(size: arguments.drawingSize, scale: scale, clear: true)
+                                
+                                context.withFlippedContext { c in
+                                    if let path = getAppBundle().path(forResource: "PATTERN_static", ofType: "svg"), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                        if let image = drawSvgImage(data, CGSize(width: arguments.drawingSize.width * scale, height: arguments.drawingSize.height * scale), .clear, .black, false) {
+                                            c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: arguments.drawingSize))
+                                        }
+                                    }
+                                }
+                                
+                                return context
+                            }*/
+                            
                             strongSelf.validPatternImage = ValidPatternImage(wallpaper: wallpaper, generate: generator)
                             strongSelf.validPatternGeneratedImage = nil
                             if let size = strongSelf.validLayout {
@@ -795,6 +859,13 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         }
 
         self.loadPatternForSizeIfNeeded(size: size, transition: transition)
+        
+        /*for (animationNode, relativePosition) in self.inlineAnimationNodes {
+            let sizeNorm = CGSize(width: 1440, height: 2960)
+            let animationSize = CGSize(width: 512.0 / sizeNorm.width * size.width, height: 512.0 / sizeNorm.height * size.height)
+            animationNode.frame = CGRect(origin: CGPoint(x: relativePosition.x / sizeNorm.width * size.width, y: relativePosition.y / sizeNorm.height * size.height), size: animationSize)
+            animationNode.updateLayout(size: animationNode.frame.size)
+        }*/
                 
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
@@ -1704,7 +1775,13 @@ private let sharedStorage = WallpaperBackgroundNodeMergedImpl.SharedStorage()
 
 public func createWallpaperBackgroundNode(context: AccountContext, forChatDisplay: Bool, useSharedAnimationPhase: Bool = false, useExperimentalImplementation: Bool = false) -> WallpaperBackgroundNode {
     if forChatDisplay && useExperimentalImplementation {
+        #if DEBUG
+        if #available(iOS 13.0, iOSApplicationExtension 13.0, *) {
+            return MetalWallpaperBackgroundNode()
+        }
+        #else
         return WallpaperBackgroundNodeMergedImpl(context: context, storage: useSharedAnimationPhase ? sharedStorage : nil)
+        #endif
     }
 
     return WallpaperBackgroundNodeImpl(context: context, useSharedAnimationPhase: useSharedAnimationPhase)

@@ -511,21 +511,21 @@ public final class PeerChannelMemberCategoriesContextsManager {
                 let updatedIds = Set(idList)
                 if previousIds != updatedIds {
                     previousIds = updatedIds
-                    let key: PostboxViewKey = .peerPresences(peerIds: updatedIds)
-                    statusesDisposable.set((postbox.combinedView(keys: [key])
-                    |> map { view -> Int32 in
+                    
+                    statusesDisposable.set((engine.data.subscribe(EngineDataMap(
+                        updatedIds.map(TelegramEngine.EngineData.Item.Peer.Presence.init)
+                    ))
+                    |> map { presenceMap -> Int32 in
                         var count: Int32 = 0
                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                        if let presences = (view.views[key] as? PeerPresencesView)?.presences {
-                            for (_, presence) in presences {
-                                if let presence = presence as? TelegramUserPresence {
-                                    let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(presence), relativeTo: Int32(timestamp))
-                                    switch relativeStatus {
-                                    case .online:
-                                        count += 1
-                                    default:
-                                        break
-                                    }
+                        for (_, presence) in presenceMap {
+                            if let presence = presence {
+                                let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
+                                switch relativeStatus {
+                                case .online:
+                                    count += 1
+                                default:
+                                    break
                                 }
                             }
                         }

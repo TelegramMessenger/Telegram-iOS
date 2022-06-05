@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import Display
 import SolidRoundedButtonNode
 import SwiftSignalKit
-import OverlayStatusController
 import AnimationUI
 import AccountContext
 import TelegramPresentationData

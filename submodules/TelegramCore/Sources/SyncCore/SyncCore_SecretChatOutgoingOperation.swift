@@ -49,10 +49,10 @@ public enum SecretChatOutgoingFileReference: PostboxCoding {
 
 public struct SecretChatOutgoingFile: PostboxCoding {
     public let reference: SecretChatOutgoingFileReference
-    public let size: Int32
+    public let size: Int64
     public let key: SecretFileEncryptionKey
     
-    public init(reference: SecretChatOutgoingFileReference, size: Int32, key: SecretFileEncryptionKey) {
+    public init(reference: SecretChatOutgoingFileReference, size: Int64, key: SecretFileEncryptionKey) {
         self.reference = reference
         self.size = size
         self.key = key
@@ -60,13 +60,17 @@ public struct SecretChatOutgoingFile: PostboxCoding {
     
     public init(decoder: PostboxDecoder) {
         self.reference = decoder.decodeObjectForKey("r", decoder: { SecretChatOutgoingFileReference(decoder: $0) }) as! SecretChatOutgoingFileReference
-        self.size = decoder.decodeInt32ForKey("s", orElse: 0)
+        if let size = decoder.decodeOptionalInt64ForKey("s64") {
+            self.size = size
+        } else {
+            self.size = Int64(decoder.decodeInt32ForKey("s", orElse: 0))
+        }
         self.key = SecretFileEncryptionKey(aesKey: decoder.decodeBytesForKey("k")!.makeData(), aesIv: decoder.decodeBytesForKey("i")!.makeData())
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.reference, forKey: "r")
-        encoder.encodeInt32(self.size, forKey: "s")
+        encoder.encodeInt64(self.size, forKey: "s64")
         encoder.encodeBytes(MemoryBuffer(data: self.key.aesKey), forKey: "k")
         encoder.encodeBytes(MemoryBuffer(data: self.key.aesIv), forKey: "i")
     }

@@ -526,8 +526,8 @@ class StickerPaneTrendingListGridItemNode: GridItemNode {
             self.dismissButtonNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridDismissImage(item.theme), for: [])
         }
         
-        let leftInset: CGFloat = 12.0
-        let rightInset: CGFloat = 16.0
+        let leftInset: CGFloat = 9.0
+        let rightInset: CGFloat = 18.0 + UIScreenPixel
         let topOffset: CGFloat = 9.0
         
         let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.StickerPacksSettings_FeaturedPacks.uppercased(), font: titleFont, textColor: item.theme.chat.inputMediaPanel.stickersSectionTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

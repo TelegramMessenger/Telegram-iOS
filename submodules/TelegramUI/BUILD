@@ -21,6 +21,13 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+#filegroup(
+#    name = "Icons",
+#    srcs = glob([
+#        "Telegram-iOS/Icons.xcassets/**/*",
+#    ], exclude = ["Telegram-iOS/Icons.xcassets/**/.*"]),
+#)
+
 internal_bundle_ids = [
     "org.telegram.Telegram-iOS",
 ]
@@ -63,7 +70,6 @@ swift_library(
         "//submodules/TelegramVoip:TelegramVoip",
         "//submodules/DeviceAccess:DeviceAccess",
         "//submodules/WatchCommon/Host:WatchCommon",
-        "//submodules/LightweightAccountData:LightweightAccountData",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/BuildConfigExtra:BuildConfigExtra",
         "//submodules/rlottie:RLottieBinding",
@@ -267,6 +273,20 @@ swift_library(
         "//submodules/PeerInfoUI/CreateExternalMediaStreamScreen:CreateExternalMediaStreamScreen",
         "//submodules/TranslateUI:TranslateUI",
         "//submodules/BrowserUI:BrowserUI",
+        "//submodules/PremiumUI:PremiumUI",
+        "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        "//submodules/Utils/RangeSet:RangeSet",
+        "//submodules/InAppPurchaseManager:InAppPurchaseManager",
+        "//submodules/TelegramUI/Components/AudioTranscriptionButtonComponent:AudioTranscriptionButtonComponent",
+        "//submodules/TelegramUI/Components/AudioWaveformComponent:AudioWaveformComponent",
+        "//submodules/TelegramUI/Components/EditableChatTextNode:EditableChatTextNode",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
+        "//submodules/TelegramUI/Components/EmojiKeyboard:EmojiKeyboard",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/LottieAnimationCache:LottieAnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/Media/ConvertOpusToAAC:ConvertOpusToAAC",
+        "//submodules/Media/LocalAudioTranscription:LocalAudioTranscription",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

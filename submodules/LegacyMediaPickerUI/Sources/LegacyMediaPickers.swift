@@ -402,6 +402,7 @@ public func legacyEnqueueVideoMessage(account: Account, data: Data, correlationI
 public struct LegacyAssetPickerEnqueueMessage {
     public var message: EnqueueMessage
     public var uniqueId: String?
+    public var isFile: Bool
 }
 
 public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signal<[LegacyAssetPickerEnqueueMessage], Void> {
@@ -462,7 +463,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                                             }
                                             
-                                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
+                                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId, isFile: false))
                                         }
                                     }
                                 case let .asset(asset):
@@ -485,7 +486,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                         attributes.append(TextEntitiesMessageAttribute(entities: entities))
                                     }
                                     
-                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
+                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId, isFile: false))
                                 case .tempFile:
                                     break
                             }
@@ -515,7 +516,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                         attributes.append(TextEntitiesMessageAttribute(entities: entities))
                                     }
                                     
-                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
+                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId, isFile: true))
                                 case let .asset(asset):
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
@@ -529,7 +530,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                         attributes.append(TextEntitiesMessageAttribute(entities: entities))
                                     }
                                     
-                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
+                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId, isFile: true))
                                 default:
                                     break
                             }
@@ -664,7 +665,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
                             
-                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
+                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId, isFile: asFile))
                     }
                 }
             }

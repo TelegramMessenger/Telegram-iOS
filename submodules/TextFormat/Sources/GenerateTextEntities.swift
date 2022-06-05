@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import Emoji
 
 private let whitelistedHosts: Set<String> = Set([
     "telegram.org",
@@ -142,8 +143,29 @@ private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, 
     }
 }
 
-public func generateChatInputTextEntities(_ text: NSAttributedString) -> [MessageTextEntity] {
+public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimatedEmojisInText: Int? = nil) -> [MessageTextEntity] {
     var entities: [MessageTextEntity] = []
+    
+    if let maxAnimatedEmojisInText = maxAnimatedEmojisInText, maxAnimatedEmojisInText != 0 {
+        var count = 0
+        text.string.enumerateSubstrings(in: text.string.startIndex ..< text.string.endIndex, options: [.byComposedCharacterSequences], { substring, substringRange, _, stop in
+            if let substring = substring {
+                let emoji = substring.basicEmoji.0
+                
+                if !emoji.isEmpty && emoji.isSingleEmoji {
+                    let mappedRange = NSRange(substringRange, in: text.string)
+                    
+                    entities.append(MessageTextEntity(range: mappedRange.lowerBound ..< mappedRange.upperBound, type: .AnimatedEmoji(nil)))
+                    
+                    count += 1
+                    if count >= maxAnimatedEmojisInText {
+                        stop = true
+                    }
+                }
+            }
+        })
+    }
+
     text.enumerateAttributes(in: NSRange(location: 0, length: text.length), options: [], using: { attributes, range, _ in
         for (key, value) in attributes {
             if key == ChatTextInputAttributes.bold {

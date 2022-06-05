@@ -293,6 +293,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/addstickers/\(set)"
                         }
                     }
+                } else if parsedUrl.host == "invoice" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var slug: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "slug" {
+                                        slug = value
+                                    }
+                                }
+                            }
+                        }
+                        if let slug = slug {
+                            convertedUrl = "https://t.me/invoice/\(slug)"
+                        }
+                    }
                 } else if parsedUrl.host == "setlanguage" {
                     if let components = URLComponents(string: "/?" + query) {
                         var lang: String?
@@ -482,11 +498,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                         
                         if let id = id, !id.isEmpty, let idValue = Int64(id), idValue > 0 {
-                            let _ = (context.account.postbox.transaction { transaction -> Peer? in
-                                return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(idValue)))
-                            }
+                            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(idValue))))
                             |> deliverOnMainQueue).start(next: { peer in
-                                if let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                                if let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                                     navigationController?.pushViewController(controller)
                                 }
                             })
@@ -621,6 +635,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var voiceChat: String?
                         var attach: String?
                         var startAttach: String?
+                        var choose: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -644,6 +659,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         attach = value
                                     } else if queryItem.name == "startattach" {
                                         startAttach = value
+                                    } else if queryItem.name == "choose" {
+                                        choose = value
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
@@ -683,6 +700,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 } else {
                                     result += "?startattach"
                                 }
+                                if let choose = choose {
+                                    result += "&choose=\(choose)"
+                                }
                             }
                             convertedUrl = result
                         }
@@ -708,6 +728,20 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             return
                         }
                     }
+                } else if parsedUrl.host == "premium_offer" {
+                    var reference: String?
+                    if let components = URLComponents(string: "/?" + query) {
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "ref" {
+                                        reference = value
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    handleResolvedUrl(.premiumOffer(reference: reference))
                 }
             } else {
                 if parsedUrl.host == "importStickers" {
@@ -727,6 +761,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             handleResolvedUrl(.settings(section))
                         }
                     }
+                } else if parsedUrl.host == "premium_offer" {
+                    handleResolvedUrl(.premiumOffer(reference: nil))
                 }
             }
             

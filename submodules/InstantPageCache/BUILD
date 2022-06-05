@@ -15,6 +15,8 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/PersistentStringHash:PersistentStringHash",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/UrlHandling:UrlHandling",
     ],
     visibility = [
         "//visibility:public",

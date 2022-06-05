@@ -48,9 +48,8 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
         }
     }
     if let id = context.liveLocationManager?.internalMessageForPeerId(peerId) {
-        let _ = (context.account.postbox.transaction { transaction -> EngineMessage? in
-            return transaction.getMessage(id).flatMap(EngineMessage.init)
-        } |> deliverOnMainQueue).start(next: presentImpl)
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: id))
+        |> deliverOnMainQueue).start(next: presentImpl)
     } else if let liveLocationManager = context.liveLocationManager {
         let _ = (liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId)
         |> take(1)
@@ -878,28 +877,24 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             |> map { peer in
                 return [FoundPeer(peer: peer, subscribers: nil)]
             }
-            let cachedData = context.account.postbox.transaction { transaction -> CachedPeerData? in
-                return transaction.getPeerCachedData(peerId: peerId)
-            }
             
-            let _ = (combineLatest(currentAccountPeer, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId), cachedData)
-            |> map { currentAccountPeer, availablePeers, cachedData -> ([FoundPeer], CachedPeerData?) in
+            let _ = (combineLatest(
+                currentAccountPeer,
+                context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId),
+                context.engine.data.get(TelegramEngine.EngineData.Item.Peer.CallJoinAsPeerId(id: peerId))
+            )
+            |> map { currentAccountPeer, availablePeers, callJoinAsPeerId -> ([FoundPeer], EnginePeer.Id?) in
                 var result = currentAccountPeer
                 result.append(contentsOf: availablePeers)
-                return (result, cachedData)
+                return (result, callJoinAsPeerId)
             }
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] peers, cachedData in
+            |> deliverOnMainQueue).start(next: { [weak self] peers, callJoinAsPeerId in
                 guard let strongSelf = self else {
                     return
                 }
                 
-                var defaultJoinAsPeerId: PeerId?
-                if let cachedData = cachedData as? CachedChannelData {
-                    defaultJoinAsPeerId = cachedData.callJoinPeerId
-                } else if let cachedData = cachedData as? CachedGroupData {
-                    defaultJoinAsPeerId = cachedData.callJoinPeerId
-                }
+                let defaultJoinAsPeerId: PeerId? = callJoinAsPeerId
                                 
                 if peers.count == 1, let peer = peers.first {
                     completion(peer.peer.id)

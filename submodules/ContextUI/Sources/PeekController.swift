@@ -64,6 +64,8 @@ public final class PeekController: ViewController, ContextControllerProtocol {
     
     public var visibilityUpdated: ((Bool) -> Void)?
     
+    public var getOverlayViews: (() -> [UIView])?
+    
     private var animatedIn = false
     
     public init(presentationData: PresentationData, content: PeekControllerContent, sourceNode: @escaping () -> ASDisplayNode?) {

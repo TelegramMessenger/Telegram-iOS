@@ -317,7 +317,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             
                             Queue.concurrentDefaultQueue().async {
                                 if let message = strongSelf.message, !message.isCopyProtected() && !imageReference.media.flags.contains(.hasStickers) {
-                                    strongSelf.recognitionDisposable.set((recognizedContent(postbox: strongSelf.context.account.postbox, image: { return generate(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))?.generateImage() }, messageId: message.id)
+                                    strongSelf.recognitionDisposable.set((recognizedContent(engine: strongSelf.context.engine, image: { return generate(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))?.generateImage() }, messageId: message.id)
                                     |> deliverOnMainQueue).start(next: { [weak self] results in
                                         if let strongSelf = self {
                                             strongSelf.recognizedContentNode?.removeFromSupernode()
@@ -356,6 +356,13 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                     case .translate:
                                                         if let parentController = strongSelf.baseNavigationController()?.topViewController as? ViewController {
                                                             let controller = TranslateScreen(context: strongSelf.context, text: string, fromLanguage: nil)
+                                                            controller.pushController = { [weak parentController] c in
+                                                                (parentController?.navigationController as? NavigationController)?._keepModalDismissProgress = true
+                                                                parentController?.push(c)
+                                                            }
+                                                            controller.presentController = { [weak parentController] c in
+                                                                parentController?.present(c, in: .window(.root))
+                                                            }
                                                             parentController.present(controller, in: .window(.root))
                                                         }
                                                     }

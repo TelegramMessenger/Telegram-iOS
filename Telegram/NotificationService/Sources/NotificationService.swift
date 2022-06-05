@@ -437,6 +437,7 @@ private struct NotificationContent: CustomStringConvertible {
     var category: String?
     var userInfo: [AnyHashable: Any] = [:]
     var attachments: [UNNotificationAttachment] = []
+    var silent = false
 
     var senderPerson: INPerson?
     var senderImage: INImage?
@@ -469,13 +470,18 @@ private struct NotificationContent: CustomStringConvertible {
 
             self.senderImage = image
 
+            var displayName: String = peer.debugDisplayTitle
+            if self.silent {
+                displayName = "\(displayName) 🔕"
+            }
+            
             var personNameComponents = PersonNameComponents()
-            personNameComponents.nickname = peer.debugDisplayTitle
-
+            personNameComponents.nickname = displayName
+            
             self.senderPerson = INPerson(
                 personHandle: INPersonHandle(value: "\(peer.id.toInt64())", type: .unknown),
                 nameComponents: personNameComponents,
-                displayName: peer.debugDisplayTitle,
+                displayName: displayName,
                 image: image,
                 contactIdentifier: nil,
                 customIdentifier: "\(peer.id.toInt64())",
@@ -489,7 +495,11 @@ private struct NotificationContent: CustomStringConvertible {
         var content = UNMutableNotificationContent()
 
         if let title = self.title {
-            content.title = title
+            if self.silent {
+                content.title = "\(title) 🔕"
+            } else {
+                content.title = title
+            }
         }
         if let subtitle = self.subtitle {
             content.subtitle = subtitle
@@ -564,6 +574,31 @@ private struct NotificationContent: CustomStringConvertible {
         }
 
         return content
+    }
+}
+
+private func getCurrentRenderedTotalUnreadCount(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox) -> Signal<(Int32, RenderedTotalUnreadCountType), NoError> {
+    let counters = postbox.transaction { transaction -> ChatListTotalUnreadState in
+        return transaction.getTotalUnreadState(groupId: .root)
+    }
+    return combineLatest(
+        accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+        |> take(1),
+        counters
+    )
+    |> map { sharedData, totalReadCounters -> (Int32, RenderedTotalUnreadCountType) in
+        let inAppSettings: InAppNotificationSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) {
+            inAppSettings = value
+        } else {
+            inAppSettings = .defaultSettings
+        }
+        let type: RenderedTotalUnreadCountType
+        switch inAppSettings.totalUnreadCountDisplayStyle {
+            case .filtered:
+                type = .filtered
+        }
+        return (totalReadCounters.count(for: inAppSettings.totalUnreadCountDisplayStyle.category, in: inAppSettings.totalUnreadCountDisplayCategory.statsType, with: inAppSettings.totalUnreadCountIncludeTags), type)
     }
 }
 
@@ -912,9 +947,7 @@ private final class NotificationServiceHandler {
 
                             if let silentString = payloadJson["silent"] as? String {
                                 if let silentValue = Int(silentString), silentValue != 0 {
-                                    if let title = content.title {
-                                        content.title = "\(title) 🔕"
-                                    }
+                                    content.silent = true
                                 }
                             }
                             if var attachmentDataString = payloadJson["attachb64"] as? String {
@@ -1062,7 +1095,7 @@ private final class NotificationServiceHandler {
                                             if let resource = fetchResource {
                                                 if let _ = strongSelf.stateManager?.postbox.mediaBox.completedResourcePath(resource) {
                                                 } else {
-                                                    let intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int(Int32.max), MediaBoxFetchPriority.maximum)])
+                                                    let intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int64.max, MediaBoxFetchPriority.maximum)])
                                                     fetchMediaSignal = Signal { subscriber in
                                                         let collectedData = Atomic<Data>(value: Data())
                                                         return standaloneMultipartFetch(
@@ -1113,7 +1146,7 @@ private final class NotificationServiceHandler {
                                                 if let path = strongSelf.stateManager?.postbox.mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
                                                     fetchNotificationSoundSignal = .single(data)
                                                 } else {
-                                                    let intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int(Int32.max), MediaBoxFetchPriority.maximum)])
+                                                    let intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int64.max, MediaBoxFetchPriority.maximum)])
                                                     fetchNotificationSoundSignal = Signal { subscriber in
                                                         let collectedData = Atomic<Data>(value: Data())
                                                         return standaloneMultipartFetch(

@@ -1220,7 +1220,7 @@ public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32]
                 datacenterId: data.datacenterId,
                 fileId: data.fileId,
                 accessHash: data.fileAccessHash,
-                size: data.fileSize,
+                size: Int64(data.fileSize),
                 fileReference: Data(),
                 fileName: "pattern.tgv"
             ),
@@ -1241,7 +1241,7 @@ public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32]
             videoThumbnails: [],
             immediateThumbnailData: nil,
             mimeType: "application/x-tgwallpattern",
-            size: data.fileSize,
+            size: Int64(data.fileSize),
             attributes: [
                 .ImageSize(size: PixelDimensions(width: 1440, height: 2960)),
                 .FileName(fileName: "pattern.tgv")

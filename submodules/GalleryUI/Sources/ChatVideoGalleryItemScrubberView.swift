@@ -7,6 +7,7 @@ import Postbox
 import Display
 import UniversalMediaPlayer
 import TelegramPresentationData
+import RangeSet
 
 private let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
 
@@ -22,6 +23,8 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     private let infoNode: ASTextNode
     private let scrubberNode: MediaPlayerScrubbingNode
     
+    private let hapticFeedback = HapticFeedback()
+    
     private var playbackStatus: MediaPlayerStatus?
     private var chapters: [MediaPlayerScrubbingChapter] = []
     
@@ -32,6 +35,8 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     private var leftTimestampNodePushed = false
     private var rightTimestampNodePushed = false
     private var infoNodePushed = false
+    
+    private var currentChapter: MediaPlayerScrubbingChapter?
     
     var hideWhenDurationIsUnknown = false {
         didSet {
@@ -172,20 +177,51 @@ final class ChatVideoGalleryItemScrubberView: UIView {
             self.chapterDisposable.set((mappedStatus
             |> deliverOnMainQueue).start(next: { [weak self] status in
                 if let strongSelf = self, status.duration > 1.0, strongSelf.chapters.count > 0 {
-                    var text: String = ""
-                    
+                    let previousChapter = strongSelf.currentChapter
+                    var currentChapter: MediaPlayerScrubbingChapter?
                     for chapter in strongSelf.chapters {
                         if chapter.start > status.timestamp {
                             break
                         } else {
-                            text = chapter.title
+                            currentChapter = chapter
                         }
                     }
                     
-                    strongSelf.infoNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .white)
-                    
-                    if let (size, leftInset, rightInset) = strongSelf.containerLayout {
-                        strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+                    if let chapter = currentChapter, chapter != previousChapter {
+                        strongSelf.currentChapter = chapter
+
+                        if strongSelf.scrubberNode.isScrubbing {
+                            strongSelf.hapticFeedback.impact(.light)
+                        }
+                        
+                        if let previousChapter = previousChapter, !strongSelf.infoNode.alpha.isZero {
+                            if let snapshotView = strongSelf.infoNode.view.snapshotView(afterScreenUpdates: false) {
+                                snapshotView.frame = strongSelf.infoNode.frame
+                                strongSelf.infoNode.view.superview?.addSubview(snapshotView)
+                                
+                                let offset: CGFloat = 30.0
+                                let snapshotTargetPosition: CGPoint
+                                let nodeStartPosition: CGPoint
+                                if previousChapter.start < chapter.start {
+                                    snapshotTargetPosition = CGPoint(x: -offset, y: 0.0)
+                                    nodeStartPosition = CGPoint(x: offset, y: 0.0)
+                                } else {
+                                    snapshotTargetPosition = CGPoint(x: offset, y: 0.0)
+                                    nodeStartPosition = CGPoint(x: -offset, y: 0.0)
+                                }
+                                snapshotView.layer.animatePosition(from: CGPoint(), to: snapshotTargetPosition, duration: 0.2, removeOnCompletion: false, additive: true)
+                                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                    snapshotView?.removeFromSuperview()
+                                })
+                                strongSelf.infoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                strongSelf.infoNode.layer.animatePosition(from: nodeStartPosition, to: CGPoint(), duration: 0.2, additive: true)
+                            }
+                        }
+                        strongSelf.infoNode.attributedText = NSAttributedString(string: chapter.title, font: textFont, textColor: .white)
+                        
+                        if let (size, leftInset, rightInset) = strongSelf.containerLayout {
+                            strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+                        }
                     }
                 }
             }))
@@ -220,11 +256,11 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         }))
     }
     
-    func setBufferingStatusSignal(_ status: Signal<(IndexSet, Int)?, NoError>?) {
+    func setBufferingStatusSignal(_ status: Signal<(RangeSet<Int64>, Int64)?, NoError>?) {
         self.scrubberNode.bufferingStatus = status
     }
     
-    func setFetchStatusSignal(_ fetchStatus: Signal<MediaResourceStatus, NoError>?, strings: PresentationStrings, decimalSeparator: String, fileSize: Int?) {
+    func setFetchStatusSignal(_ fetchStatus: Signal<MediaResourceStatus, NoError>?, strings: PresentationStrings, decimalSeparator: String, fileSize: Int64?) {
         let formatting = DataSizeStringFormatting(strings: strings, decimalSeparator: decimalSeparator)
         if let fileSize = fileSize {
             if let fetchStatus = fetchStatus {

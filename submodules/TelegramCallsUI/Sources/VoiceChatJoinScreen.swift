@@ -73,14 +73,12 @@ public final class VoiceChatJoinScreen: ViewController {
         let invite = self.invite
         let signal = context.engine.calls.updatedCurrentPeerGroupCall(peerId: peerId)
         |> castError(GetCurrentGroupCallError.self)
-        |> mapToSignal { call -> Signal<(Peer, GroupCallSummary)?, GetCurrentGroupCallError> in
+        |> mapToSignal { call -> Signal<(EnginePeer, GroupCallSummary)?, GetCurrentGroupCallError> in
             if let call = call {
-                let peer = context.account.postbox.transaction { transaction -> Peer? in
-                    return transaction.getPeer(peerId)
-                }
+                let peer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> castError(GetCurrentGroupCallError.self)
                 return combineLatest(peer, context.engine.calls.getCurrentGroupCall(callId: call.id, accessHash: call.accessHash))
-                |> map { peer, call -> (Peer, GroupCallSummary)? in
+                |> map { peer, call -> (EnginePeer, GroupCallSummary)? in
                     if let peer = peer, let call = call {
                         return (peer, call)
                     } else {
@@ -92,9 +90,7 @@ public final class VoiceChatJoinScreen: ViewController {
             }
         }
         
-        let cachedData = context.account.postbox.transaction { transaction -> CachedPeerData? in
-            return transaction.getPeerCachedData(peerId: peerId)
-        }
+        let callJoinAsPeerId = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.CallJoinAsPeerId(id: peerId))
         |> castError(GetCurrentGroupCallError.self)
         
         let currentGroupCall: Signal<(PresentationGroupCall, Int64, Bool)?, GetCurrentGroupCallError>
@@ -124,7 +120,7 @@ public final class VoiceChatJoinScreen: ViewController {
             currentGroupCall = .single(nil)
         }
             
-        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData, currentGroupCall).start(next: { [weak self] peerAndCall, availablePeers, cachedData, currentGroupCallIdAndCanUnmute in
+        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId) |> castError(GetCurrentGroupCallError.self), callJoinAsPeerId, currentGroupCall).start(next: { [weak self] peerAndCall, availablePeers, callJoinAsPeerId, currentGroupCallIdAndCanUnmute in
             if let strongSelf = self {
                 if let (peer, call) = peerAndCall {
                     if let (currentGroupCall, currentGroupCallId, canUnmute) = currentGroupCallIdAndCanUnmute, call.info.id == currentGroupCallId {
@@ -137,19 +133,14 @@ public final class VoiceChatJoinScreen: ViewController {
                         return
                     }
                     
-                    var defaultJoinAsPeerId: PeerId?
-                    if let cachedData = cachedData as? CachedChannelData {
-                        defaultJoinAsPeerId = cachedData.callJoinPeerId
-                    } else if let cachedData = cachedData as? CachedGroupData {
-                        defaultJoinAsPeerId = cachedData.callJoinPeerId
-                    }
+                    let defaultJoinAsPeerId: PeerId? = callJoinAsPeerId
                     
                     let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title, scheduleTimestamp: call.info.scheduleTimestamp, subscribedToScheduled: call.info.subscribedToScheduled, isStream: call.info.isStream)
                     if availablePeers.count > 0 && defaultJoinAsPeerId == nil {
                         strongSelf.dismiss()
                         strongSelf.join(activeCall)
                     } else {
-                        strongSelf.controllerNode.setPeer(call: activeCall, peer: peer, title: call.info.title, memberCount: call.info.participantCount, isStream: call.info.isStream)
+                        strongSelf.controllerNode.setPeer(call: activeCall, peer: peer._asPeer(), title: call.info.title, memberCount: call.info.participantCount, isStream: call.info.isStream)
                     }
                 } else {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }

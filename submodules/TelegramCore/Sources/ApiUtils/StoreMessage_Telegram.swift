@@ -280,9 +280,9 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaGeoLive(_, geo, heading, period, proximityNotificationRadius):
             let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period, liveProximityNotificationRadius: proximityNotificationRadius, heading: heading)
             return (mediaMap, nil)
-        case let .messageMediaDocument(_, document, ttlSeconds):
+        case let .messageMediaDocument(flags, document, ttlSeconds):
             if let document = document {
-                if let mediaFile = telegramMediaFileFromApiDocument(document) {
+                if let mediaFile = telegramMediaFileFromApiDocument(document, noPremium: (flags & (1 << 3)) != 0) {
                     return (mediaFile, ttlSeconds)
                 }
             } else {
@@ -336,44 +336,46 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
     var result: [MessageTextEntity] = []
     for entity in entities {
         switch entity {
-            case .messageEntityUnknown, .inputMessageEntityMentionName:
-                break
-            case let .messageEntityMention(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Mention))
-            case let .messageEntityHashtag(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Hashtag))
-            case let .messageEntityBotCommand(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BotCommand))
-            case let .messageEntityUrl(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Url))
-            case let .messageEntityEmail(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Email))
-            case let .messageEntityBold(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Bold))
-            case let .messageEntityItalic(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
-            case let .messageEntityCode(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Code))
-            case let .messageEntityPre(offset, length, _):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre))
-            case let .messageEntityTextUrl(offset, length, url):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextUrl(url: url)))
-            case let .messageEntityMentionName(offset, length, userId):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextMention(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)))))
-            case let .messageEntityPhone(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .PhoneNumber))
-            case let .messageEntityCashtag(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Hashtag))
-            case let .messageEntityUnderline(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Underline))
-            case let .messageEntityStrike(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Strikethrough))
-            case let .messageEntityBlockquote(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BlockQuote))
-            case let .messageEntityBankCard(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BankCard))
-            case let .messageEntitySpoiler(offset, length):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Spoiler))
+        case .messageEntityUnknown, .inputMessageEntityMentionName:
+            break
+        case let .messageEntityMention(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Mention))
+        case let .messageEntityHashtag(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Hashtag))
+        case let .messageEntityBotCommand(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BotCommand))
+        case let .messageEntityUrl(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Url))
+        case let .messageEntityEmail(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Email))
+        case let .messageEntityBold(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Bold))
+        case let .messageEntityItalic(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
+        case let .messageEntityCode(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Code))
+        case let .messageEntityPre(offset, length, _):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre))
+        case let .messageEntityTextUrl(offset, length, url):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextUrl(url: url)))
+        case let .messageEntityMentionName(offset, length, userId):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextMention(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)))))
+        case let .messageEntityPhone(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .PhoneNumber))
+        case let .messageEntityCashtag(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Hashtag))
+        case let .messageEntityUnderline(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Underline))
+        case let .messageEntityStrike(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Strikethrough))
+        case let .messageEntityBlockquote(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BlockQuote))
+        case let .messageEntityBankCard(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BankCard))
+        case let .messageEntitySpoiler(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Spoiler))
+        case let .messageEntityAnimatedEmoji(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .AnimatedEmoji(nil)))
         }
     }
     return result

@@ -189,10 +189,10 @@ private func ensureThemeVisible(listNode: ListView, emoticon: String?, animated:
     }
     if let resultNode = resultNode {
         var nodeToEnsure = resultNode
-        if case let .visible(resultVisibility) = resultNode.visibility, resultVisibility == 1.0 {
-            if let previousNode = previousNode, case let .visible(previousVisibility) = previousNode.visibility, previousVisibility < 0.5 {
+        if case let .visible(resultVisibility, _) = resultNode.visibility, resultVisibility == 1.0 {
+            if let previousNode = previousNode, case let .visible(previousVisibility, _) = previousNode.visibility, previousVisibility < 0.5 {
                 nodeToEnsure = previousNode
-            } else if let nextNode = nextNode, case let .visible(nextVisibility) = nextNode.visibility, nextVisibility < 0.5 {
+            } else if let nextNode = nextNode, case let .visible(nextVisibility, _) = nextNode.visibility, nextVisibility < 0.5 {
                 nodeToEnsure = nextNode
             }
         }

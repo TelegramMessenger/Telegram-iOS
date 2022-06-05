@@ -3,9 +3,6 @@ import Postbox
 import SwiftSignalKit
 import MurMurHash32
 
-
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
-
 public enum CachedStickerPackResult {
     case none
     case fetching
@@ -14,10 +11,10 @@ public enum CachedStickerPackResult {
 
 func cacheStickerPack(transaction: Transaction, info: StickerPackCollectionInfo, items: [StickerPackItem], reference: StickerPackReference? = nil) {
     if let entry = CodableEntry(CachedStickerPack(info: info, items: items, hash: info.hash)) {
-        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(info.id)), entry: entry, collectionSpec: collectionSpec)
+        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(info.id)), entry: entry)
     }
     if let entry = CodableEntry(CachedStickerPack(info: info, items: items, hash: info.hash)) {
-        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(shortName: info.shortName.lowercased())), entry: entry, collectionSpec: collectionSpec)
+        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(shortName: info.shortName.lowercased())), entry: entry)
     }
     
     if let reference = reference {
@@ -38,7 +35,7 @@ func cacheStickerPack(transaction: Transaction, info: StickerPackCollectionInfo,
         }
         if let namespace = namespace, let id = id {
             if let entry = CodableEntry(CachedStickerPack(info: info, items: items, hash: info.hash)) {
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id))), entry: entry, collectionSpec: collectionSpec)
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id))), entry: entry)
             }
         }
     }

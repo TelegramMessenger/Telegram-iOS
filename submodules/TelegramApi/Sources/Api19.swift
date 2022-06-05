@@ -599,6 +599,7 @@ public extension Api {
         case updateStickerSets
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
         case updateTheme(theme: Api.Theme)
+        case updateTranscribedAudio(flags: Int32, peer: Api.Peer, msgId: Int32, transcriptionId: Int64, text: String)
         case updateUserName(userId: Int64, firstName: String, lastName: String, username: String)
         case updateUserPhone(userId: Int64, phone: String)
         case updateUserPhoto(userId: Int64, date: Int32, photo: Api.UserProfilePhoto, previous: Api.Bool)
@@ -1423,6 +1424,16 @@ public extension Api {
                     }
                     theme.serialize(buffer, true)
                     break
+                case .updateTranscribedAudio(let flags, let peer, let msgId, let transcriptionId, let text):
+                    if boxed {
+                        buffer.appendInt32(8703322)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt64(transcriptionId, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
                 case .updateUserName(let userId, let firstName, let lastName, let username):
                     if boxed {
                         buffer.appendInt32(-1007549728)
@@ -1667,6 +1678,8 @@ public extension Api {
                 return ("updateStickerSetsOrder", [("flags", String(describing: flags)), ("order", String(describing: order))])
                 case .updateTheme(let theme):
                 return ("updateTheme", [("theme", String(describing: theme))])
+                case .updateTranscribedAudio(let flags, let peer, let msgId, let transcriptionId, let text):
+                return ("updateTranscribedAudio", [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("transcriptionId", String(describing: transcriptionId)), ("text", String(describing: text))])
                 case .updateUserName(let userId, let firstName, let lastName, let username):
                 return ("updateUserName", [("userId", String(describing: userId)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName)), ("username", String(describing: username))])
                 case .updateUserPhone(let userId, let phone):
@@ -3320,6 +3333,31 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.Update.updateTheme(theme: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateTranscribedAudio(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int64?
+            _4 = reader.readInt64()
+            var _5: String?
+            _5 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.Update.updateTranscribedAudio(flags: _1!, peer: _2!, msgId: _3!, transcriptionId: _4!, text: _5!)
             }
             else {
                 return nil
