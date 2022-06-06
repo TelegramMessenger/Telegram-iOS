@@ -799,6 +799,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         private(set) var configuration = PremiumIntroConfiguration.defaultValue
         private(set) var promoConfiguration: PremiumPromoConfiguration?
         
+        private var stickersDisposable: Disposable?
         private var preloadDisposableSet =  DisposableSet()
         
         init(context: AccountContext, source: PremiumSource) {
@@ -839,11 +840,31 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     }
                 }
             })
+            
+            let stickersKey: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudPremiumStickers)
+            self.stickersDisposable = (self.context.account.postbox.combinedView(keys: [stickersKey])
+            |> deliverOnMainQueue).start(next: { [weak self] views in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let view = views.views[stickersKey] as? OrderedItemListView {
+                    for item in view.items {
+                        if let mediaItem = item.contents.get(RecentMediaItem.self) {
+                            let file = mediaItem.media
+                            strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .standalone(media: file), resource: file.resource).start())
+                            if let effect = file.videoThumbnails.first {
+                                strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .standalone(media: file), resource: effect.resource).start())
+                            }
+                        }
+                    }
+                }
+            })
         }
         
         deinit {
             self.disposable?.dispose()
             self.preloadDisposableSet.dispose()
+            self.stickersDisposable?.dispose()
         }
     }
     
