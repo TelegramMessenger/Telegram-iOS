@@ -107,7 +107,7 @@ public final class AudioTranscriptionButtonComponent: Component {
                 let animationSize = self.animationView.update(
                     transition: transition,
                     component: AnyComponent(LottieAnimationComponent(
-                        animation: LottieAnimationComponent.Animation(
+                        animation: LottieAnimationComponent.AnimationItem(
                             name: animationName,
                             colors: [
                                 "icon.Group 3.Stroke 1": foregroundColor,
@@ -139,7 +139,7 @@ public final class AudioTranscriptionButtonComponent: Component {
                 let _ = progressAnimationView.update(
                     transition: transition,
                     component: AnyComponent(LottieAnimationComponent(
-                        animation: LottieAnimationComponent.Animation(
+                        animation: LottieAnimationComponent.AnimationItem(
                             name: "voicets_progress",
                             colors: [
                                 "Rectangle 60.Rectangle 60.Stroke 1": foregroundColor

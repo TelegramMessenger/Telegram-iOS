@@ -667,13 +667,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 guard let strongSelf = self else {
                     return
                 }
-                let animation: LottieAnimationComponent.Animation?
+                let animation: LottieAnimationComponent.AnimationItem?
                 let progressValue: Double?
                 switch state {
                 case let .downloading(progress):
                     strongSelf.hasDownloads = true
                     
-                    animation = LottieAnimationComponent.Animation(
+                    animation = LottieAnimationComponent.AnimationItem(
                         name: "anim_search_downloading",
                         colors: [
                             "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
@@ -689,7 +689,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 case .hasUnseen:
                     strongSelf.hasDownloads = true
                     
-                    animation = LottieAnimationComponent.Animation(
+                    animation = LottieAnimationComponent.AnimationItem(
                         name: "anim_search_downloaded",
                         colors: [
                             "Fill 2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
