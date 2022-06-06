@@ -89,7 +89,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     
     case publicLinkHeader(PresentationTheme, String)
     case publicLinkAvailability(PresentationTheme, String, Bool)
-    case linksLimitInfo(PresentationTheme, String, Int32, Int32)
+    case linksLimitInfo(PresentationTheme, String, Int32, Int32, Int32, Bool)
     case editablePublicLink(PresentationTheme, PresentationStrings, String, String)
     case privateLinkHeader(PresentationTheme, String)
     case privateLink(PresentationTheme, ExportedInvitation?, [EnginePeer], Int32, Bool)
@@ -228,12 +228,12 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-        case let .linksLimitInfo(lhsTheme, lhsText, lhsLimit, lhsPremiumLimit):
-            if case let .linksLimitInfo(rhsTheme, rhsText, rhsLimit, rhsPremiumLimit) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsLimit == rhsLimit, lhsPremiumLimit == rhsPremiumLimit {
-                return true
-            } else {
-                return false
-            }
+            case let .linksLimitInfo(lhsTheme, lhsText, lhsCount, lhsLimit, lhsPremiumLimit, lhsIsPremiumDisabled):
+                if case let .linksLimitInfo(rhsTheme, rhsText, rhsCount, rhsLimit, rhsPremiumLimit, rhsIsPremiumDisabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsCount == rhsCount, lhsLimit == rhsLimit, lhsPremiumLimit == rhsPremiumLimit, lhsIsPremiumDisabled == rhsIsPremiumDisabled {
+                    return true
+                } else {
+                    return false
+                }
             case let .privateLinkHeader(lhsTheme, lhsTitle):
                 if case let .privateLinkHeader(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
                     return true
@@ -394,8 +394,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 let attr = NSMutableAttributedString(string: text, textColor: value ? theme.list.freeTextColor : theme.list.freeTextErrorColor)
                 attr.addAttribute(.font, value: Font.regular(13), range: NSMakeRange(0, attr.length))
                 return ItemListActivityTextItem(displayActivity: value, presentationData: presentationData, text: attr, sectionId: self.section)
-            case let .linksLimitInfo(theme, text, limit, premiumLimit):
-                return IncreaseLimitHeaderItem(theme: theme, strings: presentationData.strings, icon: .link, count: limit, premiumCount: premiumLimit, text: text, sectionId: self.section)
+            case let .linksLimitInfo(theme, text, count, limit, premiumLimit, isPremiumDisabled):
+                return IncreaseLimitHeaderItem(theme: theme, strings: presentationData.strings, icon: .link, count: count, limit: limit, premiumCount: premiumLimit, text: text, isPremiumDisabled: isPremiumDisabled, sectionId: self.section)
             case let .privateLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .privateLink(_, invite, peers, importersCount, displayImporters):
@@ -728,9 +728,9 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     displayAvailability = publicChannelsToRevoke != nil && !(publicChannelsToRevoke!.isEmpty)
                 }
                 
-                if displayAvailability {
+                if !"".isEmpty && displayAvailability {
                     if let publicChannelsToRevoke = publicChannelsToRevoke {
-                        entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(20)").string, limits.maxPublicLinksCount, premiumLimits.maxPublicLinksCount))
+//                        entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(20)").string, limits.maxPublicLinksCount, premiumLimits.maxPublicLinksCount))
                         
                         var index: Int32 = 0
                         for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
@@ -859,7 +859,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         switch mode {
             case .revokeNames:
                 if let publicChannelsToRevoke = publicChannelsToRevoke {
-                    entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(20)").string, 10, 20))
+//                    entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(20)").string, limits.maxPublicLinksCount, premiumLimits.maxPublicLinksCount))
                     
                     entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesInfo, false))
                     var index: Int32 = 0
@@ -922,7 +922,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         
                         if displayAvailability {
                             if let publicChannelsToRevoke = publicChannelsToRevoke {
-                                entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(20)").string, 10, 20))
+//                                entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(20)").string, limits.maxPublicLinksCount, premiumLimits.maxPublicLinksCount))
                                 
                                 entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesInfo, false))
                                 var index: Int32 = 0
@@ -1352,7 +1352,8 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     let signal = combineLatest(
         presentationData,
         statePromise.get() |> deliverOnMainQueue,
-        peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue,
+        peerView,
+        peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue,
         importersContext,
         importersState.get(),
         context.engine.data.get(

@@ -862,6 +862,7 @@ open class ItemListControllerNode: ASDisplayNode {
                 updateFooterItem = true
             }
             if updateFooterItem {
+                let hadFooter = self.footerItem != nil
                 self.footerItem = transition.footerItem
                 if let footerItem = transition.footerItem {
                     let updatedNode = footerItem.node(current: self.footerItemNode)
@@ -870,13 +871,27 @@ open class ItemListControllerNode: ASDisplayNode {
                     }
                     if self.footerItemNode !== updatedNode {
                         self.footerItemNode = updatedNode
+                        
+                        let footerHeight: CGFloat
                         if let validLayout = self.validLayout {
-                            let _ = updatedNode.updateLayout(layout: validLayout.0, transition: .immediate)
+                            footerHeight = updatedNode.updateLayout(layout: validLayout.0, transition: .immediate)
+                        } else {
+                            footerHeight = 100.0
                         }
                         self.addSubnode(updatedNode)
+                        
+                        if !hadFooter && !transition.firstTime {
+                            updatedNode.layer.animatePosition(from: CGPoint(x: 0.0, y: footerHeight), to: .zero, duration: 0.25, additive: true)
+                        }
                     }
                 } else if let footerItemNode = self.footerItemNode {
-                    footerItemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak footerItemNode] _ in
+                    let footerHeight: CGFloat
+                    if let validLayout = self.validLayout {
+                        footerHeight = footerItemNode.updateLayout(layout: validLayout.0, transition: .immediate)
+                    } else {
+                        footerHeight = 100.0
+                    }
+                    footerItemNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: footerHeight), duration: 0.25, removeOnCompletion: false, additive: true, completion: { [weak footerItemNode] _ in
                         footerItemNode?.removeFromSupernode()
                     })
                     self.footerItemNode = nil
