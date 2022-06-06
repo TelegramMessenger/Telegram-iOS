@@ -44,6 +44,7 @@ private class PremiumLimitAnimationComponent: Component {
     private let textColor: UIColor
     private let badgeText: String?
     private let badgePosition: CGFloat
+    private let isPremiumDisabled: Bool
     
     init(
         iconName: String?,
@@ -51,7 +52,8 @@ private class PremiumLimitAnimationComponent: Component {
         activeColors: [UIColor],
         textColor: UIColor,
         badgeText: String?,
-        badgePosition: CGFloat
+        badgePosition: CGFloat,
+        isPremiumDisabled: Bool
     ) {
         self.iconName = iconName
         self.inactiveColor = inactiveColor
@@ -59,6 +61,7 @@ private class PremiumLimitAnimationComponent: Component {
         self.textColor = textColor
         self.badgeText = badgeText
         self.badgePosition = badgePosition
+        self.isPremiumDisabled = isPremiumDisabled
     }
     
     static func ==(lhs: PremiumLimitAnimationComponent, rhs: PremiumLimitAnimationComponent) -> Bool {
@@ -78,6 +81,9 @@ private class PremiumLimitAnimationComponent: Component {
             return false
         }
         if lhs.badgePosition != rhs.badgePosition {
+            return false
+        }
+        if lhs.isPremiumDisabled != rhs.isPremiumDisabled {
             return false
         }
         return true
@@ -182,43 +188,40 @@ private class PremiumLimitAnimationComponent: Component {
         private var didPlayAppearanceAnimation = false
         func playAppearanceAnimation(component: PremiumLimitAnimationComponent, availableSize: CGSize) {
             self.badgeView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.4, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
-            
-            let now = self.badgeView.layer.convertTime(CACurrentMediaTime(), from: nil)
-            
+                        
             let positionAnimation = CABasicAnimation(keyPath: "position.x")
             positionAnimation.fromValue = NSValue(cgPoint: CGPoint(x: 0.0, y: 0.0))
             positionAnimation.toValue = NSValue(cgPoint: self.badgeView.center)
             positionAnimation.duration = 0.5
             positionAnimation.fillMode = .forwards
-            positionAnimation.beginTime = now
-            
-            let rotateAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-            rotateAnimation.fromValue = 0.0 as NSNumber
-            rotateAnimation.toValue = 0.2 as NSNumber
-            rotateAnimation.isAdditive = true
-            rotateAnimation.duration = 0.2
-            rotateAnimation.beginTime = now + 0.5
-            rotateAnimation.fillMode = .forwards
-            rotateAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            self.badgeView.layer.add(positionAnimation, forKey: "appearance1")
+           
             
             Queue.mainQueue().after(0.5, {
+                let rotateAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+                rotateAnimation.fromValue = 0.0 as NSNumber
+                rotateAnimation.toValue = 0.2 as NSNumber
+                rotateAnimation.duration = 0.2
+                rotateAnimation.fillMode = .forwards
+                rotateAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                rotateAnimation.isRemovedOnCompletion = false
+                self.badgeView.layer.add(rotateAnimation, forKey: "appearance2")
+                
                 if !self.badgeView.isHidden {
                     self.hapticFeedback.impact(.light)
                 }
+                
+                Queue.mainQueue().after(0.2) {
+                    let returnAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+                    returnAnimation.fromValue = 0.2 as NSNumber
+                    returnAnimation.toValue = 0.0 as NSNumber
+                    returnAnimation.duration = 0.18
+                    returnAnimation.fillMode = .forwards
+                    returnAnimation.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                    self.badgeView.layer.add(returnAnimation, forKey: "appearance3")
+                    self.badgeView.layer.removeAnimation(forKey: "appearance2")
+                }
             })
-            
-            let returnAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-            returnAnimation.fromValue = 0.2 as NSNumber
-            returnAnimation.toValue = 0.0 as NSNumber
-            returnAnimation.isAdditive = true
-            returnAnimation.duration = 0.18
-            returnAnimation.beginTime = now + 0.5 + 0.2
-            returnAnimation.fillMode = .forwards
-            returnAnimation.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            
-            self.badgeView.layer.add(positionAnimation, forKey: "appearance1")
-            self.badgeView.layer.add(rotateAnimation, forKey: "appearance2")
-            self.badgeView.layer.add(returnAnimation, forKey: "appearance3")
             
             self.badgeView.alpha = 1.0
             self.badgeView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
@@ -241,12 +244,14 @@ private class PremiumLimitAnimationComponent: Component {
             let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - lineHeight), size: CGSize(width: availableSize.width, height: lineHeight))
             self.container.frame = containerFrame
             
-            self.inactiveBackground.frame = CGRect(origin: .zero, size: CGSize(width: containerFrame.width / 2.0, height: lineHeight))
-            self.activeContainer.frame = CGRect(origin: CGPoint(x: containerFrame.width / 2.0, y: 0.0), size: CGSize(width: containerFrame.width / 2.0, height: lineHeight))
-            
-            self.activeBackground.bounds = CGRect(origin: .zero, size: CGSize(width: containerFrame.width * 3.0 / 2.0, height: lineHeight))
-            if self.activeBackground.animation(forKey: "movement") == nil {
-                self.activeBackground.position = CGPoint(x: containerFrame.width * 3.0 / 4.0 - self.activeBackground.frame.width * 0.35, y: lineHeight / 2.0)
+            if !component.isPremiumDisabled {
+                self.inactiveBackground.frame = CGRect(origin: .zero, size: CGSize(width: containerFrame.width / 2.0, height: lineHeight))
+                self.activeContainer.frame = CGRect(origin: CGPoint(x: containerFrame.width / 2.0, y: 0.0), size: CGSize(width: containerFrame.width / 2.0, height: lineHeight))
+                
+                self.activeBackground.bounds = CGRect(origin: .zero, size: CGSize(width: containerFrame.width * 3.0 / 2.0, height: lineHeight))
+                if self.activeBackground.animation(forKey: "movement") == nil {
+                    self.activeBackground.position = CGPoint(x: containerFrame.width * 3.0 / 4.0 - self.activeBackground.frame.width * 0.35, y: lineHeight / 2.0)
+                }
             }
             
             let countWidth: CGFloat
@@ -276,24 +281,41 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeMaskTailView.frame = CGRect(origin: CGPoint(x: badgeSize.width - 44.0, y: badgeSize.height - 36.0), size: CGSize(width: 44.0, height: 36.0))
             
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeSize)
-            if component.badgePosition > 1.0 - .ulpOfOne {
+            
+            var badgePosition = component.badgePosition
+            if component.isPremiumDisabled {
+                badgePosition = 0.5
+            }
+            if badgePosition > 1.0 - .ulpOfOne {
                 self.badgeView.layer.anchorPoint = CGPoint(x: 1.0, y: 1.0)
                 
                 self.badgeMaskTailView.isHidden = false
                 self.badgeMaskArrowView.isHidden = true
                 
-                self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * component.badgePosition + 3.0, y: 82.0)
+                if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
+                    
+                } else {
+                    self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * badgePosition + 3.0, y: 82.0)
+                }
             } else {
                 self.badgeView.layer.anchorPoint = CGPoint(x: 0.5, y: 1.0)
                 
                 self.badgeMaskTailView.isHidden = true
-                self.badgeMaskArrowView.isHidden = false
+                self.badgeMaskArrowView.isHidden = component.isPremiumDisabled
                 
-                self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * component.badgePosition, y: 82.0)
+                if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
+                    
+                } else {
+                    self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * badgePosition, y: 82.0)
+                }
                 
                 if self.badgeView.frame.maxX > availableSize.width {
                     let delta = self.badgeView.frame.maxX - availableSize.width - 6.0
-                    self.badgeView.center = self.badgeView.center.offsetBy(dx: -delta, dy: 0.0)
+                    if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
+                        
+                    } else {
+                        self.badgeView.center = self.badgeView.center.offsetBy(dx: -delta, dy: 0.0)
+                    }
                 }
             }
             self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeSize.width * 3.0, height: badgeSize.height))
@@ -304,7 +326,16 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeIcon.frame = CGRect(x: 15.0, y: 9.0, width: 30.0, height: 30.0)
             self.badgeCountLabel.frame = CGRect(x: badgeSize.width - countWidth - 11.0, y: 10.0, width: countWidth, height: 48.0)
             
-            if !self.didPlayAppearanceAnimation {
+            if component.isPremiumDisabled {
+                if !self.didPlayAppearanceAnimation {
+                    self.didPlayAppearanceAnimation = true
+                    
+                    self.badgeView.alpha = 1.0
+                    if let badgeText = component.badgeText {
+                        self.badgeCountLabel.configure(with: badgeText, duration: 0.3)
+                    }
+                }
+            } else if !self.didPlayAppearanceAnimation {
                 self.didPlayAppearanceAnimation = true
                 self.playAppearanceAnimation(component: component, availableSize: availableSize)
             }
@@ -396,6 +427,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
     let badgeIconName: String?
     let badgeText: String?
     let badgePosition: CGFloat
+    let isPremiumDisabled: Bool
     
     public init(
         inactiveColor: UIColor,
@@ -408,7 +440,8 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         activeTitleColor: UIColor,
         badgeIconName: String?,
         badgeText: String?,
-        badgePosition: CGFloat
+        badgePosition: CGFloat,
+        isPremiumDisabled: Bool
     ) {
         self.inactiveColor = inactiveColor
         self.activeColors = activeColors
@@ -421,6 +454,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         self.badgeIconName = badgeIconName
         self.badgeText = badgeText
         self.badgePosition = badgePosition
+        self.isPremiumDisabled = isPremiumDisabled
     }
     
     public static func ==(lhs: PremiumLimitDisplayComponent, rhs: PremiumLimitDisplayComponent) -> Bool {
@@ -457,6 +491,9 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         if lhs.badgePosition != rhs.badgePosition {
             return false
         }
+        if lhs.isPremiumDisabled != rhs.isPremiumDisabled {
+            return false
+        }
         return true
     }
     
@@ -473,62 +510,6 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
             let height: CGFloat = 120.0
             let lineHeight: CGFloat = 30.0
             
-            let inactiveTitle = inactiveTitle.update(
-                component: MultilineTextComponent(
-                    text: .plain(
-                        NSAttributedString(
-                            string: component.inactiveTitle,
-                            font: Font.semibold(15.0),
-                            textColor: component.inactiveTitleColor
-                        )
-                    )
-                ),
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-            
-            let inactiveValue = inactiveValue.update(
-                component: MultilineTextComponent(
-                    text: .plain(
-                        NSAttributedString(
-                            string: component.inactiveValue,
-                            font: Font.semibold(15.0),
-                            textColor: component.inactiveTitleColor
-                        )
-                    )
-                ),
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-            
-            let activeTitle = activeTitle.update(
-                component: MultilineTextComponent(
-                    text: .plain(
-                        NSAttributedString(
-                            string: component.activeTitle,
-                            font: Font.semibold(15.0),
-                            textColor: component.activeTitleColor
-                        )
-                    )
-                ),
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-            
-            let activeValue = activeValue.update(
-                component: MultilineTextComponent(
-                    text: .plain(
-                        NSAttributedString(
-                            string: component.activeValue,
-                            font: Font.semibold(15.0),
-                            textColor: component.activeTitleColor
-                        )
-                    )
-                ),
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-            
             let animation = animation.update(
                 component: PremiumLimitAnimationComponent(
                     iconName: component.badgeIconName,
@@ -536,7 +517,8 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                     activeColors: component.activeColors,
                     textColor: component.activeTitleColor,
                     badgeText: component.badgeText,
-                    badgePosition: component.badgePosition
+                    badgePosition: component.badgePosition,
+                    isPremiumDisabled: component.isPremiumDisabled
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: height),
                 transition: context.transition
@@ -546,22 +528,80 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: height / 2.0))
             )
             
-            context.add(inactiveTitle
-                .position(CGPoint(x: inactiveTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
-            )
-            
-            context.add(inactiveValue
-                .position(CGPoint(x: context.availableSize.width / 2.0 - inactiveValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
-            )
-            
-            context.add(activeTitle
-                .position(CGPoint(x: context.availableSize.width / 2.0 + activeTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
-            )
-            
-            context.add(activeValue
-                .position(CGPoint(x: context.availableSize.width - activeValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
-            )
-            
+            if !component.isPremiumDisabled {
+                let inactiveTitle = inactiveTitle.update(
+                    component: MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: component.inactiveTitle,
+                                font: Font.semibold(15.0),
+                                textColor: component.inactiveTitleColor
+                            )
+                        )
+                    ),
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                
+                let inactiveValue = inactiveValue.update(
+                    component: MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: component.inactiveValue,
+                                font: Font.semibold(15.0),
+                                textColor: component.inactiveTitleColor
+                            )
+                        )
+                    ),
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                
+                let activeTitle = activeTitle.update(
+                    component: MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: component.activeTitle,
+                                font: Font.semibold(15.0),
+                                textColor: component.activeTitleColor
+                            )
+                        )
+                    ),
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                
+                let activeValue = activeValue.update(
+                    component: MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: component.activeValue,
+                                font: Font.semibold(15.0),
+                                textColor: component.activeTitleColor
+                            )
+                        )
+                    ),
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                
+                context.add(inactiveTitle
+                    .position(CGPoint(x: inactiveTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
+                )
+                
+                context.add(inactiveValue
+                    .position(CGPoint(x: context.availableSize.width / 2.0 - inactiveValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
+                )
+                
+                context.add(activeTitle
+                    .position(CGPoint(x: context.availableSize.width / 2.0 + activeTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
+                )
+                
+                context.add(activeValue
+                    .position(CGPoint(x: context.availableSize.width - activeValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
+                )
+            }
+                           
             return CGSize(width: context.availableSize.width, height: height)
         }
     }
@@ -656,6 +696,9 @@ private final class LimitSheetContent: CombinedComponent {
             let state = context.state
             let subject = component.subject
             
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+            let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
+            
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let textSideInset: CGFloat = 24.0 + environment.safeInsets.left
             
@@ -684,7 +727,7 @@ private final class LimitSheetContent: CombinedComponent {
             var titleText = strings.Premium_LimitReached
             var buttonAnimationName = "premium_x2"
             let iconName: String
-            let badgeText: String
+            var badgeText: String
             var string: String
             let defaultValue: String
             let premiumValue: String
@@ -703,6 +746,11 @@ private final class LimitSheetContent: CombinedComponent {
                     if !state.isPremium && badgePosition > 0.5 {
                         string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
                     }
+                
+                    if isPremiumDisabled {
+                        badgeText = "\(limit)"
+                        string = strings.Premium_MaxFoldersCountNoPremiumText("\(limit)").string
+                    }
                 case .chatsPerFolder:
                     let limit = state.limits.maxFolderChatsCount
                     let premiumLimit = state.premiumLimits.maxFolderChatsCount
@@ -712,6 +760,11 @@ private final class LimitSheetContent: CombinedComponent {
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                
+                    if isPremiumDisabled {
+                        badgeText = "\(limit)"
+                        string = strings.Premium_MaxChatsInFolderNoPremiumText("\(limit)").string
+                    }
                 case .pins:
                     let limit = state.limits.maxPinnedChatCount
                     let premiumLimit = state.premiumLimits.maxPinnedChatCount
@@ -721,6 +774,11 @@ private final class LimitSheetContent: CombinedComponent {
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                
+                    if isPremiumDisabled {
+                        badgeText = "\(limit)"
+                        string = strings.Premium_MaxPinsNoPremiumText("\(limit)").string
+                    }
                 case .files:
                     let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
                     let premiumLimit = Int64(state.premiumLimits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
@@ -731,6 +789,11 @@ private final class LimitSheetContent: CombinedComponent {
                     premiumValue = component.count != 4 ? dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
                     badgePosition = component.count == 4 ? 1.0 : 0.5
                     titleText = strings.Premium_FileTooLarge
+                
+                    if isPremiumDisabled {
+                        badgeText = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
+                        string = strings.Premium_MaxFileSizeNoPremiumText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
+                    }
                 case .accounts:
                     let limit = 3
                     let premiumLimit = component.count + 1
@@ -745,6 +808,11 @@ private final class LimitSheetContent: CombinedComponent {
                         badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                     }
                     buttonAnimationName = "premium_addone"
+                
+                    if isPremiumDisabled {
+                        badgeText = "\(limit)"
+                        string = strings.Premium_MaxAccountsNoPremiumText("\(limit)").string
+                    }
             }
             var reachedMaximumLimit = badgePosition >= 1.0
             if case .folders = subject, !state.isPremium {
@@ -784,16 +852,26 @@ private final class LimitSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
+            let gradientColors: [UIColor]
+            if isPremiumDisabled {
+                gradientColors = [
+                    UIColor(rgb: 0x007afe),
+                    UIColor(rgb: 0x5494ff)
+                ]
+            } else {
+                gradientColors = [
+                    UIColor(rgb: 0x0077ff),
+                    UIColor(rgb: 0x6b93ff),
+                    UIColor(rgb: 0x8878ff),
+                    UIColor(rgb: 0xe46ace)
+                ]
+            }
+            
             if state.initialized {
                 let limit = limit.update(
                     component: PremiumLimitDisplayComponent(
                         inactiveColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5),
-                        activeColors: [
-                            UIColor(rgb: 0x0077ff),
-                            UIColor(rgb: 0x6b93ff),
-                            UIColor(rgb: 0x8878ff),
-                            UIColor(rgb: 0xe46ace)
-                        ],
+                        activeColors: gradientColors,
                         inactiveTitle: strings.Premium_Free,
                         inactiveValue: defaultValue,
                         inactiveTitleColor: theme.list.itemPrimaryTextColor,
@@ -802,7 +880,8 @@ private final class LimitSheetContent: CombinedComponent {
                         activeTitleColor: .white,
                         badgeIconName: iconName,
                         badgeText: badgeText,
-                        badgePosition: badgePosition
+                        badgePosition: badgePosition,
+                        isPremiumDisabled: isPremiumDisabled
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
                     transition: .immediate
@@ -812,47 +891,50 @@ private final class LimitSheetContent: CombinedComponent {
                 )
             }
             
+            let isIncreaseButton = !reachedMaximumLimit && !isPremiumDisabled
             let button = button.update(
                 component: SolidRoundedButtonComponent(
-                    title: !reachedMaximumLimit ? strings.Premium_IncreaseLimit : strings.Common_OK,
+                    title: isIncreaseButton ? strings.Premium_IncreaseLimit : strings.Common_OK,
                     
                     theme: SolidRoundedButtonComponent.Theme(
                         backgroundColor: .black,
-                        backgroundColors: [
-                            UIColor(rgb: 0x0077ff),
-                            UIColor(rgb: 0x6b93ff),
-                            UIColor(rgb: 0x8878ff),
-                            UIColor(rgb: 0xe46ace)
-                        ],
+                        backgroundColors: gradientColors,
                         foregroundColor: .white
                     ),
                     font: .bold,
                     fontSize: 17.0,
                     height: 50.0,
                     cornerRadius: 10.0,
-                    gloss: !reachedMaximumLimit,
-                    animationName: !reachedMaximumLimit ? buttonAnimationName : nil,
+                    gloss: isIncreaseButton,
+                    animationName: isIncreaseButton ? buttonAnimationName : nil,
                     iconPosition: .right,
                     action: { [weak component] in
                         guard let component = component else {
                             return
                         }
                         component.dismiss()
-                        component.action()
+                        if isIncreaseButton {
+                            component.action()
+                        }
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
                 transition: context.transition
             )
             
+            var textOffset: CGFloat = 228.0
+            if isPremiumDisabled {
+                textOffset -= 68.0
+            }
+            
             context.add(title
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: 28.0))
             )
             context.add(text
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: 228.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
             )
             
-            let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: 228.0 + ceil(text.size.height / 2.0) + 38.0), size: button.size)
+            let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil(text.size.height / 2.0) + 38.0), size: button.size)
             context.add(button
                 .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
             )

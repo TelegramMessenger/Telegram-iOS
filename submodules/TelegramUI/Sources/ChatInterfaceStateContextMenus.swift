@@ -394,12 +394,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             })
         })))
         
-        if !chatPresentationInterfaceState.isPremium {
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        if !chatPresentationInterfaceState.isPremium && !premiumConfiguration.isPremiumDisabled {
             actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { c, _ in
                 c.dismiss(completion: {
-                    controllerInteraction.navigationController()?.pushViewController(PremiumIntroScreen(context: context, source: .ads))
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = PremiumDemoScreen(context: context, subject: .noAds, action: {
+                        let controller = PremiumIntroScreen(context: context, source: .ads)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    controllerInteraction.navigationController()?.pushViewController(controller)
                 })
             })))
         }
@@ -1225,8 +1234,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                 case .generic:
                                                     controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                                                 case let .limitExceeded(limit, premiumLimit):
+                                                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                                     let text: String
-                                                    if limit == premiumLimit {
+                                                    if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
                                                         text = presentationData.strings.Premium_MaxSavedGifsFinalText
                                                     } else {
                                                         text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string

@@ -502,8 +502,9 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                                     case .generic:
                                                         strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), with: nil)
                                                     case let .limitExceeded(limit, premiumLimit):
+                                                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                         let text: String
-                                                        if limit == premiumLimit {
+                                                        if limit == premiumLimit || premiumConfiguration.isPremiumDisabled  {
                                                             text = strongSelf.presentationData.strings.Premium_MaxFavedStickersFinalText
                                                         } else {
                                                             text = strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
@@ -589,8 +590,9 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                             case .generic:
                                             strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), with: nil)
                                             case let .limitExceeded(limit, premiumLimit):
+                                                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                 let text: String
-                                                if limit == premiumLimit {
+                                                if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
                                                     text = strongSelf.presentationData.strings.Premium_MaxFavedStickersFinalText
                                                 } else {
                                                     text = strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string

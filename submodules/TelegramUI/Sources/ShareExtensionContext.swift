@@ -193,7 +193,10 @@ public class ShareRootControllerImpl {
             }, applicationInForeground: .single(false), applicationIsActive: .single(false), clearMessageNotifications: { _ in
             }, pushIdleTimerExtension: {
                 return EmptyDisposable
-            }, openSettings: {}, openAppStorePage: {}, registerForNotifications: { _ in }, requestSiriAuthorization: { _ in }, siriAuthorization: { return .notDetermined }, getWindowHost: {
+            }, openSettings: {
+            }, openAppStorePage: {
+            }, openSubscriptions: {
+            }, registerForNotifications: { _ in }, requestSiriAuthorization: { _ in }, siriAuthorization: { return .notDetermined }, getWindowHost: {
                 return nil
             }, presentNativeController: { _ in
             }, dismissNativeController: {

@@ -1320,35 +1320,40 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             
             super.init()
             
+            let availableProducts: Signal<[InAppPurchaseManager.Product], NoError>
             if let inAppPurchaseManager = context.inAppPurchaseManager {
-                let otherPeerName: Signal<String?, NoError>
-                if case let .profile(peerId) = source {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                    |> map { peer -> String? in
-                        return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                    }
-                } else {
-                    otherPeerName = .single(nil)
-                }
-                
-                self.disposable = combineLatest(
-                    queue: Queue.mainQueue(),
-                    inAppPurchaseManager.availableProducts,
-                    context.account.postbox.peerView(id: context.account.peerId)
-                    |> map { view -> Bool in
-                        return view.peers[view.peerId]?.isPremium ?? false
-                    },
-                    otherPeerName
-                ).start(next: { [weak self] products, isPremium, otherPeerName in
-                    if let strongSelf = self {
-                        strongSelf.premiumProduct = products.first
-                        strongSelf.isPremium = isPremium
-                        strongSelf.otherPeerName = otherPeerName
-                        strongSelf.updated(transition: .immediate)
-                    }
-                })
+                availableProducts = inAppPurchaseManager.availableProducts
+            } else {
+                availableProducts = .single([])
             }
+            
+            let otherPeerName: Signal<String?, NoError>
+            if case let .profile(peerId) = source {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> map { peer -> String? in
+                    return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                }
+            } else {
+                otherPeerName = .single(nil)
+            }
+            
+            self.disposable = combineLatest(
+                queue: Queue.mainQueue(),
+                availableProducts,
+                context.account.postbox.peerView(id: context.account.peerId)
+                |> map { view -> Bool in
+                    return view.peers[view.peerId]?.isPremium ?? false
+                },
+                otherPeerName
+            ).start(next: { [weak self] products, isPremium, otherPeerName in
+                if let strongSelf = self {
+                    strongSelf.premiumProduct = products.first
+                    strongSelf.isPremium = isPremium
+                    strongSelf.otherPeerName = otherPeerName
+                    strongSelf.updated(transition: .immediate)
+                }
+            })
         }
         
         deinit {

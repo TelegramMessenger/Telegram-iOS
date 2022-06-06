@@ -1259,8 +1259,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                                     case .generic:
                                                     controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
                                                     case let .limitExceeded(limit, premiumLimit):
+                                                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                                         let text: String
-                                                        if limit == premiumLimit {
+                                                        if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
                                                             text = presentationData.strings.Premium_MaxSavedGifsFinalText
                                                         } else {
                                                             text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
@@ -1453,8 +1454,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                     case .generic:
                                         controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
                                     case let .limitExceeded(limit, premiumLimit):
+                                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                         let text: String
-                                        if limit == premiumLimit {
+                                        if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
                                             text = presentationData.strings.Premium_MaxSavedGifsFinalText
                                         } else {
                                             text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string

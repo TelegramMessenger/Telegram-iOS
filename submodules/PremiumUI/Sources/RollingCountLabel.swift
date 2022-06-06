@@ -30,7 +30,6 @@ open class RollingLabel: UILabel {
     open var showSymbol = false
     private var scrollLayers: [CAScrollLayer] = []
     private var scrollLabels: [UILabel] = []
-    private let duration = 1.12
     private let durationOffset = 0.2
     private let textsNotAnimated = [","]
         
@@ -38,26 +37,26 @@ open class RollingLabel: UILabel {
         self.suffix = suffix
     }
     
-    func configure(with string: String) {
-        fullText = string
+    func configure(with string: String, duration: Double = 0.9) {
+        self.fullText = string
         
-        clean()
-        setupSubviews()
+        self.clean()
+        self.setupSubviews()
         
         self.text = " "
-        self.animate()
+        self.animate(duration: duration)
     }
     
-    private func animate(ascending: Bool = true) {
-        createAnimations(ascending: ascending)
+    private func animate(ascending: Bool = true, duration: Double) {
+        self.createAnimations(ascending: ascending, duration: duration)
     }
     
     private func clean() {
         self.text = nil
         self.subviews.forEach { $0.removeFromSuperview() }
         self.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
-        scrollLayers.removeAll()
-        scrollLabels.removeAll()
+        self.scrollLayers.removeAll()
+        self.scrollLabels.removeAll()
     }
     
     private func setupSubviews() {
@@ -168,7 +167,7 @@ open class RollingLabel: UILabel {
         }
     }
     
-    private func createAnimations(ascending: Bool) {
+    private func createAnimations(ascending: Bool, duration: Double) {
         var offset: CFTimeInterval = 0.0
         
         for scrollLayer in scrollLayers {

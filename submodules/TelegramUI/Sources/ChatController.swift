@@ -1029,7 +1029,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     actions.context = strongSelf.context
-                                        
+                                 
+                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
+                    
                     if canAddMessageReactions(message: topMessage), let availableReactions = availableReactions, let allowedReactions = allowedReactions {
                         var hasPremiumPlaceholder = false
                         filterReactions: for reaction in availableReactions.reactions {
@@ -1067,7 +1069,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 largeApplicationAnimation: reaction.effectAnimation
                             )))
                         }
-                        if hasPremiumPlaceholder {
+                        
+                        if hasPremiumPlaceholder && !premiumConfiguration.isPremiumDisabled {
                             actions.reactionItems.append(.premium)
                         }
                     }
@@ -7973,8 +7976,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 case .generic:
                                     strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: nil, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: true, action: { _ in return false }), with: nil)
                                 case let .limitExceeded(limit, premiumLimit):
+                                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                     let text: String
-                                    if limit == premiumLimit {
+                                    if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
                                         text = strongSelf.presentationData.strings.Premium_MaxFavedStickersFinalText
                                     } else {
                                         text = strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
@@ -12391,6 +12395,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func displayPremiumStickerTooltip(file: TelegramMediaFile, message: Message) {
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+        guard !premiumConfiguration.isPremiumDisabled else {
+            return
+        }
+        
         var currentOverlayController: UndoOverlayController?
         
         self.window?.forEachController({ controller in

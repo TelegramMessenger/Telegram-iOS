@@ -219,6 +219,14 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
         
         return contentHeight
     }
+    
+    func animateErrorIfNeeded() {
+        for (_, itemNode) in self.itemNodes {
+            if let itemNode = itemNode as? PeerInfoScreenMultilineInputItemNode {
+                itemNode.animateErrorIfNeeded()
+            }
+        }
+    }
 }
 
 final class PeerInfoSelectionPanelNode: ASDisplayNode {
@@ -724,9 +732,12 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         interaction.openSettings(.language)
     }))
     
-    items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: "Telegram Premium", icon: PresentationResourcesSettings.premium, action: {
-        interaction.openSettings(.premium)
-    }))
+    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    if !premiumConfiguration.isPremiumDisabled {
+        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: presentationData.strings.Settings_Premium, icon: PresentationResourcesSettings.premium, action: {
+            interaction.openSettings(.premium)
+        }))
+    }
     
     /*items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: "Payment Method", icon: PresentationResourcesSettings.language, action: {
         interaction.openPaymentMethod()
@@ -2633,7 +2644,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 })
                 strongSelf.controller?.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, style: .plain, target: strongSelf, action: #selector(strongSelf.editingCancelPressed)), animated: true)
             case .done, .cancel:
-                (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.3, curve: .linear))
                 strongSelf.view.endEditing(true)
                 if case .done = key {
                     guard let data = strongSelf.data else {
@@ -2645,6 +2655,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             let firstName = strongSelf.headerNode.editingContentNode.editingTextForKey(.firstName) ?? ""
                             let lastName = strongSelf.headerNode.editingContentNode.editingTextForKey(.lastName) ?? ""
                             let bio = strongSelf.state.updatingBio
+                            
+                            if let bio = bio {
+                                if Int32(bio.count) > strongSelf.context.userLimits.maxAboutLength {
+                                    for (_, section) in strongSelf.editingSections {
+                                        section.animateErrorIfNeeded()
+                                    }
+                                    strongSelf.hapticFeedback?.error()
+                                    return
+                                }
+                            }
                             
                             if peer.firstName != firstName || peer.lastName != lastName || (bio != nil && bio != cachedData.about) {
                                 var updateNameSignal: Signal<Void, NoError> = .complete()
@@ -2886,6 +2906,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }, completion: nil)
                     strongSelf.controller?.navigationItem.setLeftBarButton(nil, animated: true)
                 }
+                (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.3, curve: .linear))
             case .select:
                 strongSelf.state = strongSelf.state.withSelectedMessageIds(Set())
                 if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -2980,11 +3001,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 
-                let controller = PremiumIntroScreen(context: strongSelf.context, source: .profile(strongSelf.peerId))
-                controller.sourceView = sourceView
-                controller.containerView = strongSelf.controller?.navigationController?.view
-                controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
-                strongSelf.controller?.push(controller)
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
+                if !premiumConfiguration.isPremiumDisabled {
+                    let controller = PremiumIntroScreen(context: strongSelf.context, source: .profile(strongSelf.peerId))
+                    controller.sourceView = sourceView
+                    controller.containerView = strongSelf.controller?.navigationController?.view
+                    controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
+                    strongSelf.controller?.push(controller)
+                }
             }
             
             self.headerNode.displayAvatarContextMenu = { [weak self] node, gesture in

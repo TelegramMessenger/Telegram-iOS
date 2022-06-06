@@ -145,8 +145,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                                 case .generic:
                                                     strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                 case let .limitExceeded(limit, premiumLimit):
+                                                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                     let text: String
-                                                    if limit == premiumLimit {
+                                                    if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
                                                         text = strongSelf.strings.Premium_MaxFavedStickersFinalText
                                                     } else {
                                                         text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
