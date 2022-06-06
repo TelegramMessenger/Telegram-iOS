@@ -649,6 +649,9 @@ public final class SolidRoundedButtonView: UIView {
         self.buttonBackgroundNode = UIImageView()
         self.buttonBackgroundNode.clipsToBounds = true
         self.buttonBackgroundNode.layer.cornerRadius = cornerRadius
+        if #available(iOS 13.0, *) {
+            self.buttonBackgroundNode.layer.cornerCurve = .continuous
+        }
         
         self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         if theme.backgroundColors.count > 1 {

@@ -114,7 +114,7 @@ public final class MultilineTextComponent: Component {
     }
     
     public final class View: ImmediateTextView {
-        public func update(component: MultilineTextComponent, availableSize: CGSize) -> CGSize {
+        public func update(component: MultilineTextComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             let attributedString: NSAttributedString
             switch component.text {
             case let .plain(string):
@@ -122,6 +122,8 @@ public final class MultilineTextComponent: Component {
             case let .markdown(text, attributes):
                 attributedString = parseMarkdownIntoAttributedString(text, attributes: attributes)
             }
+            
+            let previousText = self.attributedText?.string
                                         
             self.attributedText = attributedString
             self.maximumNumberOfLines = component.maximumNumberOfLines
@@ -137,6 +139,18 @@ public final class MultilineTextComponent: Component {
             self.highlightAttributeAction = component.highlightAction
             self.tapAttributeAction = component.tapAction
             self.longTapAttributeAction = component.longTapAction
+                        
+            if case let .curve(duration, _) = transition.animation, let previousText = previousText, previousText != attributedString.string {
+                if let snapshotView = self.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.center = self.center
+                    self.superview?.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+                }
+            }
             
             let size = self.updateLayout(availableSize)
                  
@@ -149,6 +163,6 @@ public final class MultilineTextComponent: Component {
     }
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize)
+        return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

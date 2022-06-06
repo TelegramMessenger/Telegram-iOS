@@ -680,7 +680,6 @@ public protocol SharedAccountContext: AnyObject {
     var locationManager: DeviceLocationManager? { get }
     var callManager: PresentationCallManager? { get }
     var contactDataManager: DeviceContactDataManager? { get }
-    var inAppPurchaseManager: InAppPurchaseManager? { get }
     
     var activeAccountContexts: Signal<(primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?), NoError> { get }
     var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> { get }
@@ -861,6 +860,7 @@ public protocol AccountContext: AnyObject {
     var peerChannelMemberCategoriesContextsManager: PeerChannelMemberCategoriesContextsManager { get }
     var wallpaperUploadManager: WallpaperUploadManager? { get }
     var watchManager: WatchManager? { get }
+    var inAppPurchaseManager: InAppPurchaseManager? { get }
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }

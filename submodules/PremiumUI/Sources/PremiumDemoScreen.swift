@@ -894,7 +894,7 @@ private final class DemoSheetContent: CombinedComponent {
                     font: .bold,
                     fontSize: 17.0,
                     height: 50.0,
-                    cornerRadius: 10.0,
+                    cornerRadius: 11.0,
                     gloss: state.isPremium != true,
                     animationName: isStandalone && component.subject == .uniqueReactions ? "premium_unlock" : nil,
                     iconPosition: .right,
