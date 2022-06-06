@@ -160,7 +160,8 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                             activeTitleColor: .white,
                             badgeIconName: badgeIconName,
                             badgeText: "\(item.count)",
-                            badgePosition: CGFloat(item.count) / CGFloat(item.premiumCount)
+                            badgePosition: CGFloat(item.count) / CGFloat(item.premiumCount),
+                            isPremiumDisabled: false
                         )),
                         environment: {},
                         containerSize: CGSize(width: layout.size.width - params.leftInset - params.rightInset, height: 200.0)
