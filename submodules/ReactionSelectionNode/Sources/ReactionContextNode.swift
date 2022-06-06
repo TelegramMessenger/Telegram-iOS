@@ -1207,7 +1207,9 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             }
         }
                 
-        additionalAnimationNode.completed = { _ in
+        additionalAnimationNode.completed = { [weak additionalAnimationNode] _ in
+            additionalAnimationNode?.alpha = 0.0
+            additionalAnimationNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
             additionalAnimationCompleted = true
             intermediateCompletion()
             if forceSmallEffectAnimation {

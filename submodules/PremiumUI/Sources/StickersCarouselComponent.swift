@@ -297,7 +297,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         
         super.init()
         
-//        self.clipsToBounds = true
+        self.clipsToBounds = true
         
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.tapNode)
@@ -323,7 +323,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     @objc private func stickerTapped(_ gestureRecognizer: UITapGestureRecognizer) {
-        self.previousInteractionTimestamp = CACurrentMediaTime()
+        self.previousInteractionTimestamp = CACurrentMediaTime() + 1.0
         
         guard self.animator == nil, self.scrollStartPosition == nil else {
             return
@@ -334,23 +334,23 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        self.scrollTo(index, playAnimation: true, duration: 0.4)
+        self.scrollTo(index, playAnimation: true, immediately: true, duration: 0.4)
     }
     
     func animateIn() {
-        self.scrollTo(1, playAnimation: true, duration: 0.5, clockwise: true)
+        self.scrollTo(1, playAnimation: true, immediately: true, duration: 0.5, clockwise: true)
         
         if self.timer == nil {
             self.previousInteractionTimestamp = CACurrentMediaTime()
-            self.timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+            self.timer = SwiftSignalKit.Timer(timeout: 0.2, repeat: true, completion: { [weak self] in
                 if let strongSelf = self {
                     let currentTimestamp = CACurrentMediaTime()
-                    if currentTimestamp > strongSelf.previousInteractionTimestamp + 4.0 {
+                    if currentTimestamp > strongSelf.previousInteractionTimestamp + 2.0 {
                         var nextIndex = strongSelf.currentIndex - 1
                         if nextIndex < 0 {
                             nextIndex = strongSelf.stickers.count + nextIndex
                         }
-                        strongSelf.scrollTo(nextIndex, playAnimation: true, duration: 0.85, clockwise: true)
+                        strongSelf.scrollTo(nextIndex, playAnimation: true, immediately: true, duration: 0.85, clockwise: true)
                         strongSelf.previousInteractionTimestamp = currentTimestamp
                     }
                 }
@@ -359,7 +359,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func scrollTo(_ index: Int, playAnimation: Bool, duration: Double, clockwise: Bool? = nil) {
+    func scrollTo(_ index: Int, playAnimation: Bool, immediately: Bool, duration: Double, clockwise: Bool? = nil) {
         guard index >= 0 && index < self.stickers.count else {
             return
         }
@@ -387,6 +387,10 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
+        if immediately {
+            self.playSelectedSticker(index: index)
+        }
+        
         self.animator = DisplayLinkAnimator(duration: duration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] t in
             let t = listViewAnimationCurveSystem(t)
             var updatedPosition = startPosition + change * t
@@ -402,8 +406,8 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }, completion: { [weak self] in
             self?.animator = nil
-            if playAnimation {
-                self?.playSelectedSticker()
+            if playAnimation && !immediately {
+                self?.playSelectedSticker(index: index)
             }
         })
     }
@@ -428,9 +432,8 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         self.ignoreContentOffsetChange = false
     }
     
-    func playSelectedSticker() {
-        let delta = self.positionDelta
-        let index = max(0, Int(round(self.currentPosition / delta)) % self.stickers.count)
+    func playSelectedSticker(index: Int?) {
+        let index = index ?? max(0, Int(round(self.currentPosition / self.positionDelta)) % self.stickers.count)
         
         guard !self.playingIndices.contains(index) else {
             return
@@ -464,7 +467,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     private let hapticFeedback = HapticFeedback()
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if scrollView.isTracking {
-            self.previousInteractionTimestamp = CACurrentMediaTime()
+            self.previousInteractionTimestamp = CACurrentMediaTime() + 1.0
         }
         
         if let animator = self.animator {
@@ -518,21 +521,21 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
-            self.previousInteractionTimestamp = CACurrentMediaTime()
+            self.previousInteractionTimestamp = CACurrentMediaTime() + 1.0
             
             self.resetScrollPosition()
             
             let delta = self.positionDelta
             let index = max(0, Int(round(self.currentPosition / delta)) % self.stickers.count)
-            self.scrollTo(index, playAnimation: true, duration: 0.2)
+            self.scrollTo(index, playAnimation: true, immediately: true, duration: 0.2)
         }
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        self.previousInteractionTimestamp = CACurrentMediaTime()
+        self.previousInteractionTimestamp = CACurrentMediaTime() + 1.0
         
         self.resetScrollPosition()
-        self.playSelectedSticker()
+        self.playSelectedSticker(index: nil)
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -595,6 +598,9 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 itemNode.updateAbsoluteRect(itemFrame, within: size)
                 itemNode.setVisible(isVisible)
+                
+                let isCentral = self.scrollNode.view.isTracking || i == self.currentIndex
+                itemNode.setCentral(isCentral)
                 
                 itemNode.frame = CGRect(origin: CGPoint(), size: itemFrame.size)
                 itemNode.updateLayout(size: itemFrame.size, transition: transition)

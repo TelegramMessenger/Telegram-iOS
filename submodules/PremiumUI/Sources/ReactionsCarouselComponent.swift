@@ -171,7 +171,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     @objc private func reactionTapped(_ gestureRecognizer: UITapGestureRecognizer) {
-        self.previousInteractionTimestamp = CACurrentMediaTime()
+        self.previousInteractionTimestamp = CACurrentMediaTime() + 1.0
         
         if let animator = self.animator {
             animator.invalidate()
@@ -210,17 +210,17 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     func animateIn(fast: Bool) {
         let duration: Double = fast ? 1.4 : 2.2
         let delay: Double = fast ? 0.5 : 0.8
-        self.scrollTo(1, playReaction: false, immediately: false, duration: duration, damping: 0.75, clockwise: true)
+        self.scrollTo(1, playReaction: false, immediately: true, duration: duration, damping: 0.75, clockwise: true)
         Queue.mainQueue().after(delay, {
             self.playReaction(index: 1)
         })
         
         if self.timer == nil {
             self.previousInteractionTimestamp = CACurrentMediaTime()
-            self.timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+            self.timer = SwiftSignalKit.Timer(timeout: 0.2, repeat: true, completion: { [weak self] in
                 if let strongSelf = self {
                     let currentTimestamp = CACurrentMediaTime()
-                    if currentTimestamp > strongSelf.previousInteractionTimestamp + 4.0 {
+                    if currentTimestamp > strongSelf.previousInteractionTimestamp + 2.0 {
                         var nextIndex = strongSelf.currentIndex - 1
                         if nextIndex < 0 {
                             nextIndex = strongSelf.reactions.count + nextIndex
@@ -437,7 +437,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     private let hapticFeedback = HapticFeedback()
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if scrollView.isTracking {
-            self.previousInteractionTimestamp = CACurrentMediaTime()
+            self.previousInteractionTimestamp = CACurrentMediaTime() + 1.0
         }
         
         if let animator = self.animator {
@@ -491,7 +491,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
-            self.previousInteractionTimestamp = CACurrentMediaTime()
+            self.previousInteractionTimestamp = CACurrentMediaTime() + 1.0
             
             self.resetScrollPosition()
             
@@ -502,7 +502,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        self.previousInteractionTimestamp = CACurrentMediaTime()
+        self.previousInteractionTimestamp = CACurrentMediaTime() + 1.0
         
         self.resetScrollPosition()
         self.playReaction(index: nil)
