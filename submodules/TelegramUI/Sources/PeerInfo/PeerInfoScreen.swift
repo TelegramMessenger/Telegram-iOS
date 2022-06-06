@@ -219,6 +219,14 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
         
         return contentHeight
     }
+    
+    func animateErrorIfNeeded() {
+        for (_, itemNode) in self.itemNodes {
+            if let itemNode = itemNode as? PeerInfoScreenMultilineInputItemNode {
+                itemNode.animateErrorIfNeeded()
+            }
+        }
+    }
 }
 
 final class PeerInfoSelectionPanelNode: ASDisplayNode {
@@ -2636,7 +2644,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 })
                 strongSelf.controller?.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, style: .plain, target: strongSelf, action: #selector(strongSelf.editingCancelPressed)), animated: true)
             case .done, .cancel:
-                (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.3, curve: .linear))
                 strongSelf.view.endEditing(true)
                 if case .done = key {
                     guard let data = strongSelf.data else {
@@ -2648,6 +2655,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             let firstName = strongSelf.headerNode.editingContentNode.editingTextForKey(.firstName) ?? ""
                             let lastName = strongSelf.headerNode.editingContentNode.editingTextForKey(.lastName) ?? ""
                             let bio = strongSelf.state.updatingBio
+                            
+                            if let bio = bio {
+                                if Int32(bio.count) > strongSelf.context.userLimits.maxAboutLength {
+                                    for (_, section) in strongSelf.editingSections {
+                                        section.animateErrorIfNeeded()
+                                    }
+                                    strongSelf.hapticFeedback?.error()
+                                    return
+                                }
+                            }
                             
                             if peer.firstName != firstName || peer.lastName != lastName || (bio != nil && bio != cachedData.about) {
                                 var updateNameSignal: Signal<Void, NoError> = .complete()
@@ -2889,6 +2906,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }, completion: nil)
                     strongSelf.controller?.navigationItem.setLeftBarButton(nil, animated: true)
                 }
+                (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.3, curve: .linear))
             case .select:
                 strongSelf.state = strongSelf.state.withSelectedMessageIds(Set())
                 if let (layout, navigationHeight) = strongSelf.validLayout {

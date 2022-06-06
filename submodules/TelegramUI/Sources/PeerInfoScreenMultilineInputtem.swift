@@ -29,7 +29,7 @@ final class PeerInfoScreenMultilineInputItem: PeerInfoScreenItem {
     }
 }
 
-private final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode {
+final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode {
     private let bottomSeparatorNode: ASDisplayNode
     private let maskNode: ASImageNode
     
@@ -117,5 +117,9 @@ private final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode
         transition.updateAlpha(node: self.bottomSeparatorNode, alpha: bottomItem == nil ? 0.0 : 1.0)
         
         return height
+    }
+    
+    func animateErrorIfNeeded() {
+        self.itemNode?.animateErrorIfNeeded()
     }
 }
