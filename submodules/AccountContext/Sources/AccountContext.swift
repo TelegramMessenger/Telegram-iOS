@@ -51,6 +51,7 @@ public final class TelegramApplicationBindings {
     public let pushIdleTimerExtension: () -> Disposable
     public let openSettings: () -> Void
     public let openAppStorePage: () -> Void
+    public let openSubscriptions: () -> Void
     public let registerForNotifications: (@escaping (Bool) -> Void) -> Void
     public let requestSiriAuthorization: (@escaping (Bool) -> Void) -> Void
     public let siriAuthorization: () -> AccessType
@@ -62,7 +63,7 @@ public final class TelegramApplicationBindings {
     public let requestSetAlternateIconName: (String?, @escaping (Bool) -> Void) -> Void
     public let forceOrientation: (UIInterfaceOrientation) -> Void
     
-    public init(isMainApp: Bool, appBundleId: String, appBuildType: TelegramAppBuildType, containerPath: String, appSpecificScheme: String, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void, openAppStorePage: @escaping () -> Void, registerForNotifications: @escaping (@escaping (Bool) -> Void) -> Void, requestSiriAuthorization: @escaping (@escaping (Bool) -> Void) -> Void, siriAuthorization: @escaping () -> AccessType, getWindowHost: @escaping () -> WindowHost?, presentNativeController: @escaping (UIViewController) -> Void, dismissNativeController: @escaping () -> Void, getAvailableAlternateIcons: @escaping () -> [PresentationAppIcon], getAlternateIconName: @escaping () -> String?, requestSetAlternateIconName: @escaping (String?, @escaping (Bool) -> Void) -> Void, forceOrientation: @escaping (UIInterfaceOrientation) -> Void) {
+    public init(isMainApp: Bool, appBundleId: String, appBuildType: TelegramAppBuildType, containerPath: String, appSpecificScheme: String, openUrl: @escaping (String) -> Void, openUniversalUrl: @escaping (String, TelegramApplicationOpenUrlCompletion) -> Void, canOpenUrl: @escaping (String) -> Bool, getTopWindow: @escaping () -> UIWindow?, displayNotification: @escaping (String) -> Void, applicationInForeground: Signal<Bool, NoError>, applicationIsActive: Signal<Bool, NoError>, clearMessageNotifications: @escaping ([MessageId]) -> Void, pushIdleTimerExtension: @escaping () -> Disposable, openSettings: @escaping () -> Void, openAppStorePage: @escaping () -> Void, openSubscriptions: @escaping () -> Void, registerForNotifications: @escaping (@escaping (Bool) -> Void) -> Void, requestSiriAuthorization: @escaping (@escaping (Bool) -> Void) -> Void, siriAuthorization: @escaping () -> AccessType, getWindowHost: @escaping () -> WindowHost?, presentNativeController: @escaping (UIViewController) -> Void, dismissNativeController: @escaping () -> Void, getAvailableAlternateIcons: @escaping () -> [PresentationAppIcon], getAlternateIconName: @escaping () -> String?, requestSetAlternateIconName: @escaping (String?, @escaping (Bool) -> Void) -> Void, forceOrientation: @escaping (UIInterfaceOrientation) -> Void) {
         self.isMainApp = isMainApp
         self.appBundleId = appBundleId
         self.appBuildType = appBuildType
@@ -79,6 +80,7 @@ public final class TelegramApplicationBindings {
         self.pushIdleTimerExtension = pushIdleTimerExtension
         self.openSettings = openSettings
         self.openAppStorePage = openAppStorePage
+        self.openSubscriptions = openSubscriptions
         self.registerForNotifications = registerForNotifications
         self.requestSiriAuthorization = requestSiriAuthorization
         self.siriAuthorization = siriAuthorization
@@ -884,4 +886,24 @@ public protocol AccountContext: AnyObject {
     func scheduleGroupCall(peerId: PeerId)
     func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription)
     func requestCall(peerId: PeerId, isVideo: Bool, completion: @escaping () -> Void)
+}
+
+public struct PremiumConfiguration {
+    public static var defaultValue: PremiumConfiguration {
+        return PremiumConfiguration(isPremiumDisabled: false)
+    }
+    
+    public let isPremiumDisabled: Bool
+    
+    fileprivate init(isPremiumDisabled: Bool) {
+        self.isPremiumDisabled = isPremiumDisabled
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
+        if let data = appConfiguration.data, let value = data["premium_purchase_blocked"] as? Bool {
+            return PremiumConfiguration(isPremiumDisabled: value)
+        } else {
+            return .defaultValue
+        }
+    }
 }

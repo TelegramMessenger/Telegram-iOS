@@ -64,7 +64,18 @@ final class AppIconsDemoComponent: Component {
             
             if self.imageViews.isEmpty {
                 for icon in component.appIcons {
-                    if let image = UIImage(named: icon.imageName, in: getAppBundle(), compatibleWith: nil) {
+                    let image: UIImage?
+                    switch icon.imageName {
+                        case "Premium":
+                            image = UIImage(bundleImageName: "Premium/Icons/Premium")
+                        case "PremiumBlack":
+                            image = UIImage(bundleImageName: "Premium/Icons/Black")
+                        case "PremiumTurbo":
+                            image = UIImage(bundleImageName: "Premium/Icons/Turbo")
+                        default:
+                            image = nil
+                    }
+                    if let image = image {
                         let imageView = UIImageView(frame: CGRect(origin: .zero, size: CGSize(width: 90.0, height: 90.0)))
                         imageView.clipsToBounds = true
                         imageView.layer.cornerRadius = 24.0

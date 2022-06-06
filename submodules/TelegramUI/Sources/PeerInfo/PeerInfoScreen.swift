@@ -724,9 +724,12 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         interaction.openSettings(.language)
     }))
     
-    items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: "Telegram Premium", icon: PresentationResourcesSettings.premium, action: {
-        interaction.openSettings(.premium)
-    }))
+    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    if !premiumConfiguration.isPremiumDisabled {
+        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: presentationData.strings.Settings_Premium, icon: PresentationResourcesSettings.premium, action: {
+            interaction.openSettings(.premium)
+        }))
+    }
     
     /*items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: "Payment Method", icon: PresentationResourcesSettings.language, action: {
         interaction.openPaymentMethod()
@@ -2980,11 +2983,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 
-                let controller = PremiumIntroScreen(context: strongSelf.context, source: .profile(strongSelf.peerId))
-                controller.sourceView = sourceView
-                controller.containerView = strongSelf.controller?.navigationController?.view
-                controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
-                strongSelf.controller?.push(controller)
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
+                if !premiumConfiguration.isPremiumDisabled {
+                    let controller = PremiumIntroScreen(context: strongSelf.context, source: .profile(strongSelf.peerId))
+                    controller.sourceView = sourceView
+                    controller.containerView = strongSelf.controller?.navigationController?.view
+                    controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
+                    strongSelf.controller?.push(controller)
+                }
             }
             
             self.headerNode.displayAvatarContextMenu = { [weak self] node, gesture in

@@ -209,7 +209,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 animationNode.updateLayout(size: imageSize)
                 
                 if let additionalAnimationNode = self.additionalAnimationNode {
-                    additionalAnimationNode.frame = imageFrame.offsetBy(dx: -imageFrame.width * 0.245 + 21, dy: -1.0).insetBy(dx: -imageFrame.width * 0.245, dy: -imageFrame.height * 0.245)
+                    additionalAnimationNode.frame = imageFrame.offsetBy(dx: -imageFrame.width * 0.245 + 21.0, dy: -1.0).insetBy(dx: -imageFrame.width * 0.245, dy: -imageFrame.height * 0.245)
                     additionalAnimationNode.updateLayout(size: additionalAnimationNode.frame.size)
                 }
             }

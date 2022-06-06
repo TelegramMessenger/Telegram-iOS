@@ -416,11 +416,16 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
     
     let currentAppIcon: PresentationAppIcon?
-    let appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons()
+    var appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons()
     if let alternateIconName = context.sharedContext.applicationBindings.getAlternateIconName() {
         currentAppIcon = appIcons.filter { $0.name == alternateIconName }.first
     } else {
         currentAppIcon = appIcons.filter { $0.isDefault }.first
+    }
+    
+    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    if premiumConfiguration.isPremiumDisabled {
+        appIcons = appIcons.filter { !$0.isPremium } 
     }
     
     let availableAppIcons: Signal<[PresentationAppIcon], NoError> = .single(appIcons)

@@ -640,31 +640,6 @@ private final class StickerPackContainer: ASDisplayNode {
             
             self.currentStickerPack = (info, items, installed)
             
-            if installed {
-                let text: String
-                if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-                    text = self.presentationData.strings.StickerPack_RemoveStickerCount(info.count)
-                } else {
-                    text = self.presentationData.strings.StickerPack_RemoveMaskCount(info.count)
-                }
-                self.buttonNode.setTitle(text, with: Font.regular(17.0), with: self.presentationData.theme.list.itemDestructiveColor, for: .normal)
-                self.buttonNode.setBackgroundImage(nil, for: [])
-            } else {
-                let text: String
-                if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-                    text = self.presentationData.strings.StickerPack_AddStickerCount(info.count)
-                } else {
-                    text = self.presentationData.strings.StickerPack_AddMaskCount(info.count)
-                }
-                self.buttonNode.setTitle(text, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemCheckColors.foregroundColor, for: .normal)
-                let roundedAccentBackground = generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setFillColor(self.presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-                })?.stretchableImage(withLeftCapWidth: 11, topCapHeight: 11)
-                self.buttonNode.setBackgroundImage(roundedAccentBackground, for: [])
-            }
-            
             if self.titleNode.attributedText == nil {
                 if let titlePlaceholderNode = self.titlePlaceholderNode {
                     self.titlePlaceholderNode = nil
@@ -677,6 +652,9 @@ private final class StickerPackContainer: ASDisplayNode {
             self.titleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
             
             updateLayout = true
+            
+            
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
             
             var generalItems: [StickerPackItem] = []
             var premiumItems: [StickerPackItem] = []
@@ -711,11 +689,39 @@ private final class StickerPackContainer: ASDisplayNode {
                 addItem(item, false, false)
             }
             
-            if !premiumItems.isEmpty {
-                for item in premiumItems {
-                    addItem(item, true, !hasPremium)
+            if !premiumConfiguration.isPremiumDisabled {
+                if !premiumItems.isEmpty {
+                    for item in premiumItems {
+                        addItem(item, true, !hasPremium)
+                    }
                 }
             }
+            
+            if installed {
+                let text: String
+                if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
+                    text = self.presentationData.strings.StickerPack_RemoveStickerCount(Int32(entries.count))
+                } else {
+                    text = self.presentationData.strings.StickerPack_RemoveMaskCount(Int32(entries.count))
+                }
+                self.buttonNode.setTitle(text, with: Font.regular(17.0), with: self.presentationData.theme.list.itemDestructiveColor, for: .normal)
+                self.buttonNode.setBackgroundImage(nil, for: [])
+            } else {
+                let text: String
+                if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
+                    text = self.presentationData.strings.StickerPack_AddStickerCount(Int32(entries.count))
+                } else {
+                    text = self.presentationData.strings.StickerPack_AddMaskCount(Int32(entries.count))
+                }
+                self.buttonNode.setTitle(text, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemCheckColors.foregroundColor, for: .normal)
+                let roundedAccentBackground = generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setFillColor(self.presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+                })?.stretchableImage(withLeftCapWidth: 11, topCapHeight: 11)
+                self.buttonNode.setBackgroundImage(roundedAccentBackground, for: [])
+            }
+            
         }
         let previousEntries = self.currentEntries
         self.currentEntries = entries

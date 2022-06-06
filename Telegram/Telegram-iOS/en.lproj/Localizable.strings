@@ -7705,3 +7705,5 @@ Sorry for the inconvenience.";
 "Premium.Purchase.ErrorUnknown" = "An error occurred. Please try again.";
 "Premium.Purchase.ErrorNetwork" = "Please check your internet connection and try again.";
 "Premium.Purchase.ErrorNotAllowed" = "The device is not not allowed to make the payment.";
+
+"Settings.Premium" = "Telegram Premium";

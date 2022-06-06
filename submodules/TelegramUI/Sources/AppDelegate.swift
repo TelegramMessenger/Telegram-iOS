@@ -33,6 +33,7 @@ import TelegramAudio
 import DebugSettingsUI
 import BackgroundTasks
 import UIKitRuntimeUtils
+import StoreKit
 
 #if canImport(AppCenter)
 import AppCenter
@@ -620,6 +621,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }, openAppStorePage: {
             let appStoreId = buildConfig.appStoreId
             if let url = URL(string: "itms-apps://itunes.apple.com/app/id\(appStoreId)") {
+                UIApplication.shared.openURL(url)
+            }
+        }, openSubscriptions: {
+            if #available(iOS 15, *), let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                Task {
+                    try await AppStore.showManageSubscriptions(in: scene)
+                }
+            } else if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
                 UIApplication.shared.openURL(url)
             }
         }, registerForNotifications: { completion in
