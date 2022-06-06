@@ -427,7 +427,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1262252875] = { return Api.MessageAction.parse_messageActionWebViewDataSent($0) }
     dict[1205698681] = { return Api.MessageAction.parse_messageActionWebViewDataSentMe($0) }
     dict[546203849] = { return Api.MessageEntity.parse_inputMessageEntityMentionName($0) }
-    dict[1592721940] = { return Api.MessageEntity.parse_messageEntityAnimatedEmoji($0) }
     dict[1981704948] = { return Api.MessageEntity.parse_messageEntityBankCard($0) }
     dict[34469328] = { return Api.MessageEntity.parse_messageEntityBlockquote($0) }
     dict[-1117713463] = { return Api.MessageEntity.parse_messageEntityBold($0) }
