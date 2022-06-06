@@ -38,6 +38,8 @@ load(
     "telegram_enable_siri",
     "telegram_enable_watch",
     "telegram_is_non_dev_account",
+    "telegram_bundle_name",
+    "telegram_bundle_display_name",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -299,6 +301,7 @@ alternate_icon_folders = [
     "WhiteFilledIcon",
     "New1",
     "New2",
+    "Cloudballon",
 ]
 
 [
@@ -592,8 +595,10 @@ plist_fragment(
     template =
     """
     <key>CFBundleDisplayName</key>
-    <string>Telegram</string>
-    """
+    <string>{telegram_bundle_display_name}</string>
+    """.format(
+        telegram_bundle_display_name = telegram_bundle_display_name,
+    )
 )
 
 plist_fragment(
@@ -640,13 +645,14 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.watchkitapp.watchkitextension</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>WKExtensionDelegateClassName</key>
     <string>TGExtensionDelegate</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -660,7 +666,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.watchkitapp</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
@@ -672,6 +678,7 @@ plist_fragment(
     <string>APPL</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1127,7 +1134,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.Share</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1164,6 +1171,7 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1218,7 +1226,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.NotificationContent</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1240,6 +1248,7 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1325,7 +1334,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.Widget</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1339,6 +1348,7 @@ plist_fragment(
     </array>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1435,7 +1445,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.SiriIntents</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1464,6 +1474,7 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1566,7 +1577,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.BroadcastUpload</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1580,6 +1591,7 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1660,7 +1672,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.NotificationService</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1679,6 +1691,7 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1746,11 +1759,11 @@ plist_fragment(
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_display_name}</string>
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}</string>
     <key>CFBundleName</key>
-    <string>Telegram</string>
+    <string>{telegram_bundle_name}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>
@@ -1903,6 +1916,8 @@ plist_fragment(
     <true/>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_name = telegram_bundle_name,
+        telegram_bundle_display_name = telegram_bundle_display_name,
     )
 )
 
