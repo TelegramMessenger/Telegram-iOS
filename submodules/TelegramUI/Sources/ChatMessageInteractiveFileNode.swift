@@ -870,7 +870,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.descriptionNode.frame = descriptionFrame
                             strongSelf.descriptionMeasuringNode.frame = CGRect(origin: CGPoint(), size: descriptionMeasuringLayout.size)
                             
-                            if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
+                            /*if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
                                 strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
                                 
                                 switch updatedAudioTranscriptionState {
@@ -882,7 +882,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             } else if strongSelf.isWaitingForCollapse {
                                 strongSelf.isWaitingForCollapse = false
                                 info?.setInvertOffsetDirection()
-                            }
+                            }*/
+                            
+                            info?.setInvertOffsetDirection()
                             
                             if let consumableContentIcon = consumableContentIcon {
                                 if strongSelf.consumableContentNode.supernode == nil {
@@ -918,10 +920,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             let textFrame = CGRect(origin: CGPoint(x: arguments.layoutConstants.text.bubbleInsets.left - arguments.layoutConstants.file.bubbleInsets.left, y: statusReferenceFrame.maxY + 1.0), size: textLayout.size)
                             let textClippingFrame = CGRect(origin: textFrame.origin, size: CGSize(width: textFrame.width, height: textFrame.height + 8.0))
                             if textString != nil {
-                                strongSelf.textClippingNode.frame = textClippingFrame
-                                strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: textFrame.size)
-                                
                                 if strongSelf.textClippingNode.supernode == nil {
+                                    strongSelf.textClippingNode.frame = textClippingFrame
+                                    strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: textFrame.size)
+                                    
                                     strongSelf.addSubnode(strongSelf.textClippingNode)
                                     if animation.isAnimated {
                                         strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -943,6 +945,29 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                             })
                                         }
                                     }
+                                } else if animation.isAnimated && strongSelf.textClippingNode.bounds.size.height != textClippingFrame.size.height {
+                                    if let maskImage = generateGradientImage(size: CGSize(width: 8.0, height: 10.0), colors: [UIColor.black, UIColor.black, UIColor.clear], locations: [0.0, 0.1, 1.0], direction: .vertical) {
+                                        let maskView = UIImageView(image: maskImage.stretchableImage(withLeftCapWidth: 0, topCapHeight: 1))
+                                        strongSelf.textClippingNode.view.mask = maskView
+                                        
+                                        maskView.frame = CGRect(origin: CGPoint(), size: CGSize(width: strongSelf.textClippingNode.bounds.width, height: strongSelf.textClippingNode.bounds.height))
+                                        animation.animator.updateFrame(layer: maskView.layer, frame: CGRect(origin: CGPoint(), size: textClippingFrame.size), completion: { [weak maskView] _ in
+                                            maskView?.removeFromSuperview()
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            strongSelf.textClippingNode.view.mask = nil
+                                        })
+                                        
+                                        animation.animator.updateFrame(layer: strongSelf.textClippingNode.layer, frame: textClippingFrame, completion: nil)
+                                        strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: textFrame.size)
+                                    } else {
+                                        strongSelf.textClippingNode.frame = textClippingFrame
+                                        strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: textFrame.size)
+                                    }
+                                } else {
+                                    strongSelf.textClippingNode.frame = textClippingFrame
+                                    strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: textFrame.size)
                                 }
                             } else {
                                 if strongSelf.textClippingNode.supernode != nil {
