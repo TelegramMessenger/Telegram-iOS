@@ -141,12 +141,26 @@ typedef enum {
             @"Tour.StartButton"
         ];
         
+        NSString *appTitle = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
+        if (appTitle == nil) {
+            appTitle = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleDisplayName"];
+        }
+        if (appTitle == nil) {
+            appTitle = @"Telegram";
+        }
+        NSString *originalTitle = @"Telegram";
+        
         NSMutableDictionary *englishStrings = [[NSMutableDictionary alloc] init];
         NSBundle *bundle = [NSBundle bundleWithPath:[[NSBundle mainBundle] pathForResource:@"en" ofType:@"lproj"]];
         for (NSString *key in stringKeys) {
             if (bundle != nil) {
                 NSString *value = [bundle localizedStringForKey:key value:key table:nil];
                 if (value != nil) {
+                    if (![appTitle isEqualToString:originalTitle]) {
+                        if ([value rangeOfString:originalTitle].location != NSNotFound) {
+                            value = [value stringByReplacingOccurrencesOfString:originalTitle withString:appTitle];
+                        }
+                    }
                     englishStrings[key] = value;
                 } else {
                     englishStrings[key] = key;
@@ -593,7 +607,8 @@ typedef enum {
     }
     set_intro_background_color(red, green, blue);
     
-    set_telegram_textures(setup_texture(@"telegram_sphere.png", color), setup_texture(@"telegram_plane1.png", color));
+    set_telegram_textures(setup_texture(@"cloudballon1.png", color), setup_texture(@"cloudballon2.png", color));
+//    set_telegram_textures(setup_texture(@"telegram_sphere.png", color), setup_texture(@"telegram_plane1.png", color));
     
     set_ic_textures(setup_texture(@"ic_bubble_dot.png", color), setup_texture(@"ic_bubble.png", color), setup_texture(@"ic_cam_lens.png", color), setup_texture(@"ic_cam.png", color), setup_texture(@"ic_pencil.png", color), setup_texture(@"ic_pin.png", color), setup_texture(@"ic_smile_eye.png", color), setup_texture(@"ic_smile.png", color), setup_texture(@"ic_videocam.png", color));
     

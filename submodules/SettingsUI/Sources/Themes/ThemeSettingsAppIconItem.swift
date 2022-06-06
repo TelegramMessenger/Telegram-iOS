@@ -321,6 +321,8 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     name = item.strings.Appearance_AppIconNew1
                                 case "New2":
                                     name = item.strings.Appearance_AppIconNew2
+                                case "Cloudballon":
+                                    name = item.strings.Appearance_AppIconCloudballon
                                 default:
                                     break
                             }

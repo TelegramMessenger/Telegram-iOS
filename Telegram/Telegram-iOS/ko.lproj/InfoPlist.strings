@@ -1,5 +1,5 @@
 /* Localized versions of Info.plist keys */
-"CFBundleDisplayName" = "텔레그램";
+
 "NSContactsUsageDescription" = "Telegram will continuously upload your contacts to its heavily encrypted cloud servers to let you connect with your friends across all your devices.";
 "NSLocationWhenInUseUsageDescription" = "친구에게 회원님의 위치를 전송할 경우 위치를 지도에 표시하기 위해 텔레그램이 위치 정보에 접근할 수 있어야 합니다.";
 "NSLocationAlwaysUsageDescription" = "친구에게 회원님의 위치를 전송할 경우 위치를 지도에 표시하기 위해 텔레그램이 위치 정보에 접근할 수 있어야 합니다. 애플워치에 위치 전송을 위해서도 필요합니다.";
