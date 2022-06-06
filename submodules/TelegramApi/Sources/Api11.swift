@@ -1,7 +1,6 @@
 public extension Api {
     enum MessageEntity: TypeConstructorDescription {
         case inputMessageEntityMentionName(offset: Int32, length: Int32, userId: Api.InputUser)
-        case messageEntityAnimatedEmoji(offset: Int32, length: Int32)
         case messageEntityBankCard(offset: Int32, length: Int32)
         case messageEntityBlockquote(offset: Int32, length: Int32)
         case messageEntityBold(offset: Int32, length: Int32)
@@ -31,13 +30,6 @@ public extension Api {
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
                     userId.serialize(buffer, true)
-                    break
-                case .messageEntityAnimatedEmoji(let offset, let length):
-                    if boxed {
-                        buffer.appendInt32(1592721940)
-                    }
-                    serializeInt32(offset, buffer: buffer, boxed: false)
-                    serializeInt32(length, buffer: buffer, boxed: false)
                     break
                 case .messageEntityBankCard(let offset, let length):
                     if boxed {
@@ -182,8 +174,6 @@ public extension Api {
         switch self {
                 case .inputMessageEntityMentionName(let offset, let length, let userId):
                 return ("inputMessageEntityMentionName", [("offset", String(describing: offset)), ("length", String(describing: length)), ("userId", String(describing: userId))])
-                case .messageEntityAnimatedEmoji(let offset, let length):
-                return ("messageEntityAnimatedEmoji", [("offset", String(describing: offset)), ("length", String(describing: length))])
                 case .messageEntityBankCard(let offset, let length):
                 return ("messageEntityBankCard", [("offset", String(describing: offset)), ("length", String(describing: length))])
                 case .messageEntityBlockquote(let offset, let length):
@@ -239,20 +229,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageEntity.inputMessageEntityMentionName(offset: _1!, length: _2!, userId: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_messageEntityAnimatedEmoji(_ reader: BufferReader) -> MessageEntity? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityAnimatedEmoji(offset: _1!, length: _2!)
             }
             else {
                 return nil
