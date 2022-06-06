@@ -648,7 +648,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if isPlaying, let animationNode = self.animationNode as? AnimatedStickerNode {
             var alreadySeen = true
-            if item.message.flags.contains(.Incoming) {
+            if isEmoji {
+                if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                    alreadySeen = false
+                }
+            } else if item.message.flags.contains(.Incoming) {
                 if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
                     if unreadRange.contains(item.message.id.id) {
                         if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {

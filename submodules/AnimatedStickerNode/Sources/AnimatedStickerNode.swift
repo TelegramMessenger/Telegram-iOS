@@ -290,7 +290,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 if let directData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
                     strongSelf.directData = (directData, path, width, height, cachePathPrefix, source.fitzModifier, source.isVideo)
                 }
-                if case let .still(position) = playbackMode {
+                if case let .still(position) = strongSelf.playbackMode {
                     strongSelf.seekTo(position)
                 } else if strongSelf.isPlaying || strongSelf.autoplay {
                     if strongSelf.autoplay {
