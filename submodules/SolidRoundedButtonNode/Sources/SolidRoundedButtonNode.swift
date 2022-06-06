@@ -66,6 +66,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private let gloss: Bool
     
     private let buttonBackgroundNode: ASImageNode
+    private var buttonBackgroundAnimationView: UIImageView?
     
     private var shimmerView: ShimmerEffectForegroundView?
     private var borderView: UIView?
@@ -173,6 +174,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.buttonBackgroundNode = ASImageNode()
         self.buttonBackgroundNode.displaysAsynchronously = false
         self.buttonBackgroundNode.clipsToBounds = true
+        
+        self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         if theme.backgroundColors.count > 1 {
             self.buttonBackgroundNode.backgroundColor = nil
             
@@ -182,9 +185,12 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                 locations.append(delta * CGFloat(i))
             }
             self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: height), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
-        } else {
-            self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
+            
+            let buttonBackgroundAnimationView = UIImageView()
+            buttonBackgroundAnimationView.image = generateGradientImage(size: CGSize(width: 200.0, height: height), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+            self.buttonBackgroundAnimationView = buttonBackgroundAnimationView
         }
+        
         self.buttonBackgroundNode.cornerRadius = cornerRadius
                 
         self.buttonNode = HighlightTrackingButtonNode()
@@ -244,34 +250,92 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             self.buttonBackgroundNode.layer.cornerCurve = .continuous
         }
         
+        if let buttonBackgroundAnimationView = self.buttonBackgroundAnimationView {
+            self.buttonBackgroundNode.view.addSubview(buttonBackgroundAnimationView)
+        }
+        
+        self.setupGloss()
+    }
+    
+    private func setupGloss() {
         if self.gloss {
-            let shimmerView = ShimmerEffectForegroundView()
-            self.shimmerView = shimmerView
-            
-            if #available(iOS 13.0, *) {
-                shimmerView.layer.cornerCurve = .continuous
-                shimmerView.layer.cornerRadius = self.buttonCornerRadius
+            if self.shimmerView == nil {
+                let shimmerView = ShimmerEffectForegroundView()
+                self.shimmerView = shimmerView
+                
+                if #available(iOS 13.0, *) {
+                    shimmerView.layer.cornerCurve = .continuous
+                    shimmerView.layer.cornerRadius = self.buttonCornerRadius
+                }
+                
+                let borderView = UIView()
+                borderView.isUserInteractionEnabled = false
+                self.borderView = borderView
+                
+                let borderMaskView = UIView()
+                borderMaskView.layer.borderWidth = 1.0 + UIScreenPixel
+                borderMaskView.layer.borderColor = UIColor.white.cgColor
+                borderMaskView.layer.cornerRadius = self.buttonCornerRadius
+                borderView.mask = borderMaskView
+                self.borderMaskView = borderMaskView
+                
+                let borderShimmerView = ShimmerEffectForegroundView()
+                self.borderShimmerView = borderShimmerView
+                borderView.addSubview(borderShimmerView)
+                
+                self.view.insertSubview(shimmerView, belowSubview: self.buttonNode.view)
+                self.view.insertSubview(borderView, belowSubview: self.buttonNode.view)
+                
+                self.updateShimmerParameters()
+                
+                if let width = self.validLayout {
+                    _ = self.updateLayout(width: width, transition: .immediate)
+                }
             }
+        } else if self.shimmerView != nil {
+            self.shimmerView?.removeFromSuperview()
+            self.borderView?.removeFromSuperview()
+            self.borderMaskView?.removeFromSuperview()
+            self.borderShimmerView?.removeFromSuperview()
             
-            let borderView = UIView()
-            borderView.isUserInteractionEnabled = false
-            self.borderView = borderView
+            self.shimmerView = nil
+            self.borderView = nil
+            self.borderMaskView = nil
+            self.borderShimmerView = nil
+        }
+    }
+    
+    private func setupGradientAnimations() {
+        guard let buttonBackgroundAnimationView = self.buttonBackgroundAnimationView else {
+            return
+        }
+
+        if let _ = buttonBackgroundAnimationView.layer.animation(forKey: "movement") {
+        } else {
+            let offset = (buttonBackgroundAnimationView.frame.width - self.frame.width) / 2.0
+            let previousValue = buttonBackgroundAnimationView.center.x
+            var newValue: CGFloat = offset
+            if offset - previousValue < buttonBackgroundAnimationView.frame.width * 0.25 {
+                newValue -= buttonBackgroundAnimationView.frame.width * 0.35
+            }
+            buttonBackgroundAnimationView.center = CGPoint(x: newValue, y: buttonBackgroundAnimationView.bounds.size.height / 2.0)
             
-            let borderMaskView = UIView()
-            borderMaskView.layer.borderWidth = 1.0 + UIScreenPixel
-            borderMaskView.layer.borderColor = UIColor.white.cgColor
-            borderMaskView.layer.cornerRadius = self.buttonCornerRadius
-            borderView.mask = borderMaskView
-            self.borderMaskView = borderMaskView
+            CATransaction.begin()
             
-            let borderShimmerView = ShimmerEffectForegroundView()
-            self.borderShimmerView = borderShimmerView
-            borderView.addSubview(borderShimmerView)
+            let animation = CABasicAnimation(keyPath: "position.x")
+            animation.duration = 4.5
+            animation.fromValue = previousValue
+            animation.toValue = newValue
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             
-            self.view.insertSubview(shimmerView, belowSubview: self.buttonNode.view)
-            self.view.insertSubview(borderView, belowSubview: self.buttonNode.view)
-            
-            self.updateShimmerParameters()
+            CATransaction.setCompletionBlock { [weak self] in
+//                if let isCurrentlyInHierarchy = self?.isCurrentlyInHierarchy, isCurrentlyInHierarchy {
+                    self?.setupGradientAnimations()
+//                }
+            }
+
+            buttonBackgroundAnimationView.layer.add(animation, forKey: "movement")
+            CATransaction.commit()
         }
     }
     
@@ -354,6 +418,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                 animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
         }
+        
+        self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         if theme.backgroundColors.count > 1 {
             self.buttonBackgroundNode.backgroundColor = nil
             
@@ -363,9 +429,17 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                 locations.append(delta * CGFloat(i))
             }
             self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: self.buttonHeight), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+            
+            if self.buttonBackgroundAnimationView == nil {
+                let buttonBackgroundAnimationView = UIImageView()
+                self.buttonBackgroundAnimationView = buttonBackgroundAnimationView
+                self.buttonBackgroundNode.view.addSubview(buttonBackgroundAnimationView)
+            }
+            
+            self.buttonBackgroundAnimationView?.image = self.buttonBackgroundNode.image
         } else {
-            self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
             self.buttonBackgroundNode.image = nil
+            self.buttonBackgroundAnimationView?.image = nil
         }
         
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)
@@ -405,6 +479,14 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             
             shimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: width * 4.0, y: 0.0), size: buttonSize), within: CGSize(width: width * 9.0, height: buttonHeight))
             borderShimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: width * 4.0, y: 0.0), size: buttonSize), within: CGSize(width: width * 9.0, height: buttonHeight))
+        }
+        
+        if let buttonBackgroundAnimationView = self.buttonBackgroundAnimationView {
+            buttonBackgroundAnimationView.bounds = CGRect(origin: CGPoint(), size: CGSize(width: buttonSize.width * 2.4, height: buttonSize.height))
+            if buttonBackgroundAnimationView.layer.animation(forKey: "movement") == nil {
+                buttonBackgroundAnimationView.center = CGPoint(x: buttonSize.width * 2.4 / 2.0 - buttonBackgroundAnimationView.frame.width * 0.35, y: buttonSize.height / 2.0)
+            }
+            self.setupGradientAnimations()
         }
         
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
@@ -663,7 +745,7 @@ public final class SolidRoundedButtonView: UIView {
             self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: height), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
             
             let buttonBackgroundAnimationView = UIImageView()
-            buttonBackgroundAnimationView.image = generateGradientImage(size: CGSize(width: 200.0, height: height), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+            buttonBackgroundAnimationView.image = self.buttonBackgroundNode.image
             self.buttonBackgroundNode.addSubview(buttonBackgroundAnimationView)
             self.buttonBackgroundAnimationView = buttonBackgroundAnimationView
         }
@@ -723,6 +805,10 @@ public final class SolidRoundedButtonView: UIView {
             self.setupGloss()
         }
     }
+        
+    required public init(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
     
     private func setupGloss() {
         if self.gloss {
@@ -770,10 +856,6 @@ public final class SolidRoundedButtonView: UIView {
             self.borderMaskView = nil
             self.borderShimmerView = nil
         }
-    }
-    
-    required public init(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
     
     private func setupGradientAnimations() {
@@ -943,8 +1025,10 @@ public final class SolidRoundedButtonView: UIView {
                 locations.append(delta * CGFloat(i))
             }
             self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: self.buttonHeight), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+            self.buttonBackgroundAnimationView?.image = self.buttonBackgroundNode.image
         } else {
             self.buttonBackgroundNode.image = nil
+            self.buttonBackgroundAnimationView?.image = nil
         }
         
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)

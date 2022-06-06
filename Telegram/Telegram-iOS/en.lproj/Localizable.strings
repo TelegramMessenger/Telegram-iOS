@@ -7559,6 +7559,7 @@ Sorry for the inconvenience.";
 "Group.Username.RemoveExistingUsernamesFinalInfo" = "You have reserved too many public links. Try revoking the link from an older group or channel, or create a private one instead.";
 
 "OldChannels.TooManyCommunitiesText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
+"OldChannels.TooManyCommunitiesNoPremiumText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one. We are working to let you increase this limit in the future.";
 "OldChannels.TooManyCommunitiesFinalText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one.";
 "OldChannels.LeaveCommunities_1" = "Leave %@ Community";
 "OldChannels.LeaveCommunities_any" = "Leave %@ Communities";
