@@ -278,6 +278,7 @@ swift_library(
         "//submodules/Utils/RangeSet:RangeSet",
         "//submodules/InAppPurchaseManager:InAppPurchaseManager",
         "//submodules/TelegramUI/Components/AudioTranscriptionButtonComponent:AudioTranscriptionButtonComponent",
+        "//submodules/TelegramUI/Components/AudioTranscriptionPendingIndicatorComponent:AudioTranscriptionPendingIndicatorComponent",
         "//submodules/TelegramUI/Components/AudioWaveformComponent:AudioWaveformComponent",
         "//submodules/TelegramUI/Components/EditableChatTextNode:EditableChatTextNode",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",

@@ -7698,7 +7698,7 @@ Sorry for the inconvenience.";
 "Chat.AudioTranscriptionRateAction" = "Rate Transcription";
 "Chat.AudioTranscriptionFeedbackTip" = "Thank you for your feedback.";
 "Message.AudioTranscription.ErrorEmpty" = "No speech detected";
-"Message.AudioTranscription.ErrorTooLong" = "The audio is too long";
+"Message.AudioTranscription.ErrorTooLong" = "This voice message is too long to transcribe";
 
 "WebApp.SelectChat" = "Select Chat";
 
