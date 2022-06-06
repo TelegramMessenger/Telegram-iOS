@@ -798,7 +798,7 @@ public final class MediaStreamComponent: CombinedComponent {
                             size: CGSize(width: 22.0, height: 22.0)
                         ))),
                         AnyComponentWithIdentity(id: "a", component: AnyComponent(LottieAnimationComponent(
-                            animation: LottieAnimationComponent.Animation(
+                            animation: LottieAnimationComponent.AnimationItem(
                                 name: "anim_profilemore",
                                 colors: [
                                     "Point 2.Group 1.Fill 1": whiteColor,

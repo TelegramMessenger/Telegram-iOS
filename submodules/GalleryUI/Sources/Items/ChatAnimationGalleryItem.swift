@@ -154,7 +154,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
                 guard let strongSelf = self else {
                     return
                 }
-                if let json = try? JSONSerialization.jsonObject(with: next, options: []) as? [AnyHashable: Any] {
+                if let json = try? JSONSerialization.jsonObject(with: next, options: []) as? [String: Any] {
                     let containerSize = CGSize(width: 640.0, height: 640.0)
                     strongSelf.animationNode.setAnimation(json: json)
                     strongSelf.zoomableContent = (containerSize, strongSelf.containerNode)

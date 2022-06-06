@@ -25,6 +25,7 @@ import ShimmerEffect
 import ConvertOpusToAAC
 import LocalAudioTranscription
 import TextSelectionNode
+import AudioTranscriptionPendingIndicatorComponent
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -138,6 +139,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var waveformScrubbingNode: MediaPlayerScrubbingNode?*/
     
     private var audioTranscriptionButton: ComponentHostView<Empty>?
+    private var transcriptionPendingIndicator: ComponentHostView<Empty>?
     private let textNode: TextNode
     private let textClippingNode: ASDisplayNode
     private var textSelectionNode: TextSelectionNode?
@@ -634,7 +636,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 let descriptionMaxWidth = max(descriptionLayout.size.width, descriptionMeasuringLayout.size.width)
                 let textFont = arguments.presentationData.messageFont
-                let textString: NSAttributedString?
+                var textString: NSAttributedString?
                 var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
                 
                 let transcribedText = transcribedText(message: arguments.message)
@@ -650,14 +652,24 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? audioTranscriptionState
                 
+                var displayTrailingAnimatedDots = false
+                
+                /*#if DEBUG
+                if "".isEmpty {
+                    displayTrailingAnimatedDots = true
+                }
+                #endif*/
+                
                 if let transcribedText = transcribedText, case .expanded = effectiveAudioTranscriptionState {
                     switch transcribedText {
                     case let .success(text, isPending):
-                        var resultText = text
+                        textString = NSAttributedString(string: text, font: textFont, textColor: messageTheme.primaryTextColor)
                         if isPending {
-                            resultText += " [...]"
+                            let modifiedString = NSMutableAttributedString(attributedString: textString!)
+                            modifiedString.append(NSAttributedString(string: "...", font: textFont, textColor: .clear))
+                            displayTrailingAnimatedDots = true
+                            textString = modifiedString
                         }
-                        textString = NSAttributedString(string: resultText, font: textFont, textColor: messageTheme.primaryTextColor)
                     case let .error(error):
                         let errorTextFont = Font.regular(floor(arguments.presentationData.fontSize.baseDisplaySize * 15.0 / 17.0))
                         let errorText: String
@@ -870,10 +882,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.descriptionNode.frame = descriptionFrame
                             strongSelf.descriptionMeasuringNode.frame = CGRect(origin: CGPoint(), size: descriptionMeasuringLayout.size)
                             
-                            /*if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
+                            if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
                                 strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
+                            }
                                 
-                                switch updatedAudioTranscriptionState {
+                                /*switch updatedAudioTranscriptionState {
                                 case .expanded:
                                     info?.setInvertOffsetDirection()
                                 default:
@@ -1000,6 +1013,30 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     } else {
                                         strongSelf.textClippingNode.removeFromSupernode()
                                     }
+                                }
+                            }
+                            
+                            if displayTrailingAnimatedDots {
+                                let transcriptionPendingIndicator: ComponentHostView<Empty>
+                                if let current = strongSelf.transcriptionPendingIndicator {
+                                    transcriptionPendingIndicator = current
+                                } else {
+                                    transcriptionPendingIndicator = ComponentHostView<Empty>()
+                                    strongSelf.transcriptionPendingIndicator = transcriptionPendingIndicator
+                                    strongSelf.textClippingNode.view.addSubview(transcriptionPendingIndicator)
+                                }
+                                let indicatorSize = transcriptionPendingIndicator.update(
+                                    transition: .immediate,
+                                    component: AnyComponent(AudioTranscriptionPendingIndicatorComponent(color: messageTheme.primaryTextColor)),
+                                    environment: {},
+                                    containerSize: CGSize(width: 100.0, height: 100.0)
+                                )
+                                
+                                transcriptionPendingIndicator.frame = CGRect(origin: CGPoint(x: strongSelf.textNode.frame.minX + textLayout.trailingLineWidth + 2.0, y: strongSelf.textNode.frame.maxY - indicatorSize.height - 6.0), size: indicatorSize)
+                            } else {
+                                if let transcriptionPendingIndicator = strongSelf.transcriptionPendingIndicator {
+                                    strongSelf.transcriptionPendingIndicator = nil
+                                    transcriptionPendingIndicator.removeFromSuperview()
                                 }
                             }
                             

@@ -970,7 +970,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
     
     private weak var targetView: UIView?
     
-    private var colorCallbacks: [LOTColorValueCallback] = []
+    //private var colorCallbacks: [LOTColorValueCallback] = []
     
     override public init() {
         super.init()
@@ -1081,8 +1081,8 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         additionalAnimationNode.updateLayout(size: effectFrame.size)
         self.addSubnode(additionalAnimationNode)
         
-        if !isLarge, !avatarPeers.isEmpty, let url = getAppBundle().url(forResource: "effectavatar", withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
-            let view = LOTAnimationView(model: composition, in: getAppBundle())
+        if !isLarge, !avatarPeers.isEmpty, let url = getAppBundle().url(forResource: "effectavatar", withExtension: "json"), let composition = Animation.filepath(url.path) {
+            let view = AnimationView(animation: composition)
             view.animationSpeed = 1.0
             view.backgroundColor = nil
             view.isOpaque = false
@@ -1107,12 +1107,16 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                     avatarNode.transform = CATransform3DMakeScale(200.0 / 40.0, 200.0 / 40.0, 1.0)
                     avatarContainer.addSubnode(avatarNode)
                     
-                    view.addSubview(avatarContainer, toKeypathLayer: LOTKeypath(string: "Avatar \(i).Ellipse 1"))
+                    let animationSubview = AnimationSubview()
+                    animationSubview.addSubview(avatarContainer)
+                    
+                    view.addSubview(animationSubview, forLayerAt: AnimationKeypath(keypath: "Avatar \(i).Ellipse 1"))
                 }
                 
-                let colorCallback = LOTColorValueCallback(color: UIColor.clear.cgColor)
+                view.setValueProvider(ColorValueProvider(UIColor.clear.lottieColorValue), keypath: AnimationKeypath(keypath: "Avatar \(i).Ellipse 1.Fill 1.Color"))
+                /*let colorCallback = LOTColorValueCallback(color: UIColor.clear.cgColor)
                 self.colorCallbacks.append(colorCallback)
-                view.setValueDelegate(colorCallback, for: LOTKeypath(string: "Avatar \(i).Ellipse 1.Fill 1.Color"))
+                view.setValueDelegate(colorCallback, for: LOTKeypath(string: "Avatar \(i).Ellipse 1.Fill 1.Color"))*/
             }
             
             view.frame = additionalAnimationNode.bounds
