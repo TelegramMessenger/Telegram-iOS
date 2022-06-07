@@ -654,16 +654,18 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 var displayTrailingAnimatedDots = false
                 
-                /*#if DEBUG
-                if "".isEmpty {
-                    displayTrailingAnimatedDots = true
-                }
-                #endif*/
-                
                 if let transcribedText = transcribedText, case .expanded = effectiveAudioTranscriptionState {
                     switch transcribedText {
                     case let .success(text, isPending):
                         textString = NSAttributedString(string: text, font: textFont, textColor: messageTheme.primaryTextColor)
+                        
+                        /*#if DEBUG
+                        var isPending = isPending
+                        if "".isEmpty {
+                            isPending = true
+                        }
+                        #endif*/
+                        
                         if isPending {
                             let modifiedString = NSMutableAttributedString(attributedString: textString!)
                             modifiedString.append(NSAttributedString(string: "...", font: textFont, textColor: .clear))
@@ -1027,12 +1029,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 }
                                 let indicatorSize = transcriptionPendingIndicator.update(
                                     transition: .immediate,
-                                    component: AnyComponent(AudioTranscriptionPendingIndicatorComponent(color: messageTheme.primaryTextColor)),
+                                    component: AnyComponent(AudioTranscriptionPendingIndicatorComponent(color: messageTheme.primaryTextColor, font: textFont)),
                                     environment: {},
                                     containerSize: CGSize(width: 100.0, height: 100.0)
                                 )
                                 
-                                transcriptionPendingIndicator.frame = CGRect(origin: CGPoint(x: strongSelf.textNode.frame.minX + textLayout.trailingLineWidth + 2.0, y: strongSelf.textNode.frame.maxY - indicatorSize.height - 6.0), size: indicatorSize)
+                                transcriptionPendingIndicator.frame = CGRect(origin: CGPoint(x: strongSelf.textNode.frame.minX + textLayout.trailingLineWidth - indicatorSize.width + 1.0, y: strongSelf.textNode.frame.maxY - indicatorSize.height - 6.0), size: indicatorSize)
                             } else {
                                 if let transcriptionPendingIndicator = strongSelf.transcriptionPendingIndicator {
                                     strongSelf.transcriptionPendingIndicator = nil

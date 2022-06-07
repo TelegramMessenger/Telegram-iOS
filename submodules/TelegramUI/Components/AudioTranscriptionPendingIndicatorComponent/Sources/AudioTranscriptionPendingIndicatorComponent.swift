@@ -6,13 +6,18 @@ import Display
 
 public final class AudioTranscriptionPendingIndicatorComponent: Component {
     public let color: UIColor
+    public let font: UIFont
     
-    public init(color: UIColor) {
+    public init(color: UIColor, font: UIFont) {
         self.color = color
+        self.font = font
     }
     
     public static func ==(lhs: AudioTranscriptionPendingIndicatorComponent, rhs: AudioTranscriptionPendingIndicatorComponent) -> Bool {
-        if lhs.color !== rhs.color {
+        if lhs.color != rhs.color {
+            return false
+        }
+        if lhs.font != rhs.font {
             return false
         }
         return true
@@ -61,6 +66,10 @@ public final class AudioTranscriptionPendingIndicatorComponent: Component {
             let dotSize: CGFloat = 2.0
             let spacing: CGFloat = 3.0
             
+            var stringSize = NSAttributedString(string: "...", font: component.font, textColor: .black).boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil).size
+            stringSize.width = ceil(stringSize.width)
+            stringSize.height = ceil(stringSize.height)
+            
             if self.component?.color != component.color {
                 if let dotImage = generateFilledCircleImage(diameter: dotSize, color: component.color) {
                     for dotLayer in self.dotLayers {
@@ -77,7 +86,7 @@ public final class AudioTranscriptionPendingIndicatorComponent: Component {
                 self.dotLayers[i].frame = CGRect(origin: CGPoint(x: CGFloat(i) * (dotSize + spacing), y: 0.0), size: CGSize(width: dotSize, height: dotSize))
             }
             
-            return CGSize(width: min(availableSize.width, size.width), height: min(availableSize.height, size.height))
+            return CGSize(width: min(availableSize.width, stringSize.width), height: min(availableSize.height, size.height))
         }
     }
     
