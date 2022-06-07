@@ -4,6 +4,8 @@ import Postbox
 public struct PremiumPromoConfiguration: Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case status
+        case currency
+        case monthlyAmount
         case statusEntities
         case videos
     }
@@ -36,12 +38,17 @@ public struct PremiumPromoConfiguration: Codable, Equatable {
     public var statusEntities: [MessageTextEntity]
     public var videos: [String: TelegramMediaFile]
     
+    public var currency: String
+    public var monthlyAmount: Int64
+    
     public static var defaultValue: PremiumPromoConfiguration {
-        return PremiumPromoConfiguration(status: "", statusEntities: [], videos: [:])
+        return PremiumPromoConfiguration(status: "", statusEntities: [], videos: [:], currency: "", monthlyAmount: 0)
     }
     
-    init(status: String, statusEntities: [MessageTextEntity], videos: [String: TelegramMediaFile]) {
+    init(status: String, statusEntities: [MessageTextEntity], videos: [String: TelegramMediaFile], currency: String, monthlyAmount: Int64) {
         self.status = status
+        self.currency = currency
+        self.monthlyAmount = monthlyAmount
         self.statusEntities = statusEntities
         self.videos = videos
     }
@@ -58,6 +65,10 @@ public struct PremiumPromoConfiguration: Codable, Equatable {
             videos[pair.key] = pair.value
         }
         self.videos = videos
+        
+        self.currency = try container.decode(String.self, forKey: .currency)
+        self.monthlyAmount = try container.decode(Int64.self, forKey: .monthlyAmount)
+
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -65,6 +76,8 @@ public struct PremiumPromoConfiguration: Codable, Equatable {
 
         try container.encode(self.status, forKey: .status)
         try container.encode(self.statusEntities, forKey: .statusEntities)
+        try container.encode(self.currency, forKey: .currency)
+        try container.encode(self.monthlyAmount, forKey: .monthlyAmount)
         
         var pairs: [DictionaryPair] = []
         for (key, file) in self.videos {
