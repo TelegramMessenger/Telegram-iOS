@@ -125,8 +125,7 @@ private class StickerNode: ASDisplayNode {
                 let additionalAnimationNode = AnimatedStickerNode()
                 
                 let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(effect.resource.id)
-                let _ = pathPrefix
-                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 1.4), height: Int(fittedDimensions.height * 1.4), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 1.4), height: Int(fittedDimensions.height * 1.4), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
                 self.additionalAnimationNode = additionalAnimationNode
             }
         } else {
