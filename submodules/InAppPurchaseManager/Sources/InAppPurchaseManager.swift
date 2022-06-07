@@ -187,7 +187,7 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 let transactionState: TransactionState?
                 switch transaction.transactionState {
                     case .purchased:
-                        let transactionIdentifier = transaction.original?.transactionIdentifier ?? transaction.transactionIdentifier
+                        let transactionIdentifier = transaction.transactionIdentifier
                         transactionState = .purchased(transactionId: transactionIdentifier)
                         if let transactionIdentifier = transactionIdentifier {
                             self.disposableSet.set(
@@ -196,11 +196,11 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                                 }, completed: {
                                     queue.finishTransaction(transaction)
                                 }),
-                                forKey: transaction.transactionIdentifier ?? ""
+                                forKey: transactionIdentifier
                             )
                         }
                     case .restored:
-                        let transactionIdentifier = transaction.original?.transactionIdentifier ?? transaction.transactionIdentifier
+                        let transactionIdentifier = transaction.transactionIdentifier
                         transactionState = .restored(transactionId: transactionIdentifier)
                         if let transactionIdentifier = transactionIdentifier {
                             self.disposableSet.set(
@@ -209,7 +209,7 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                                 }, completed: {
                                     queue.finishTransaction(transaction)
                                 }),
-                                forKey: transaction.transactionIdentifier ?? ""
+                                forKey: transactionIdentifier
                             )
                         }
                     case .failed:

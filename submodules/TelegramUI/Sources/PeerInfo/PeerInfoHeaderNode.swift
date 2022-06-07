@@ -3090,7 +3090,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if !self.backgroundNode.frame.contains(point) {
             return nil
         }
-        if self.currentCredibilityIcon == .premium {
+        
+        if self.currentCredibilityIcon == .premium && !(self.state?.isEditing ?? false) {
             let iconFrame = self.titleCredibilityIconNode.view.convert(self.titleCredibilityIconNode.bounds, to: self.view)
             let expandedIconFrame = self.titleExpandedCredibilityIconNode.view.convert(self.titleExpandedCredibilityIconNode.bounds, to: self.view)
             if expandedIconFrame.contains(point) && self.isAvatarExpanded {
