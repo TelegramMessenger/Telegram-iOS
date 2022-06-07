@@ -11,7 +11,7 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
         guard let url = getAppBundle().url(forResource: "LockWait", withExtension: "json"), let animation = Animation.filepath(url.path)
         else { return AnimationView() }
         
-        let view = AnimationView(animation: animation)
+        let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
         view.loopMode = .autoReverse
         view.backgroundColor = .clear
         view.isOpaque = false
@@ -22,7 +22,7 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
         guard let url = getAppBundle().url(forResource: "Lock", withExtension: "json"), let animation = Animation.filepath(url.path)
         else { return AnimationView() }
         
-        let view = AnimationView(animation: animation)
+        let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
         view.backgroundColor = .clear
         view.isOpaque = false
         return view

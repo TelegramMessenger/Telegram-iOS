@@ -138,7 +138,7 @@ public final class LottieAnimationComponent: Component {
                     self.didPlayToCompletion = false
                     
                     if let url = getAppBundle().url(forResource: component.animation.name, withExtension: "json"), let animation = Animation.filepath(url.path) {
-                        let view = AnimationView(animation: animation)
+                        let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                         switch component.animation.mode {
                         case .still, .animateTransitionFromPrevious:
                             view.loopMode = .playOnce
