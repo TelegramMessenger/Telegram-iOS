@@ -588,6 +588,7 @@ public final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource 
         let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
         
         guard let animation = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil, cacheKey: "") else {
+            print("Could not load sticker data")
             return nil
         }
         self.animation = animation

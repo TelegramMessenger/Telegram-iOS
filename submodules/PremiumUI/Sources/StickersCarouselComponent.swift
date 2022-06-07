@@ -97,13 +97,13 @@ private class StickerNode: ASDisplayNode {
     
     private var setupTimestamp: Double?
     
-    init(context: AccountContext, file: TelegramMediaFile) {
+    init(context: AccountContext, file: TelegramMediaFile, forceIsPremium: Bool) {
         self.context = context
         self.file = file
         
         self.imageNode = TransformImageNode()
     
-        if file.isPremiumSticker {
+        if file.isPremiumSticker || forceIsPremium {
             let animationNode = AnimatedStickerNode()
             animationNode.automaticallyLoadFirstFrame = true
             self.animationNode = animationNode
@@ -124,8 +124,11 @@ private class StickerNode: ASDisplayNode {
                 let source = AnimatedStickerResourceSource(account: self.context.account, resource: effect.resource, fitzModifier: nil)
                 let additionalAnimationNode = AnimatedStickerNode()
                 
-                let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(effect.resource.id)
-                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 1.4), height: Int(fittedDimensions.height * 1.4), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
+                var pathPrefix: String?
+                pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(effect.resource.id)
+                pathPrefix = nil
+                
+                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 1.33), height: Int(fittedDimensions.height * 1.33), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
                 self.additionalAnimationNode = additionalAnimationNode
             }
         } else {
@@ -592,7 +595,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
                 if let current = self.itemNodes[i] {
                     itemNode = current
                 } else {
-                    itemNode = StickerNode(context: self.context, file: self.stickers[i])
+                    itemNode = StickerNode(context: self.context, file: self.stickers[i], forceIsPremium: true)
                     containerNode.addSubnode(itemNode)
                     self.itemNodes[i] = itemNode
                 }
