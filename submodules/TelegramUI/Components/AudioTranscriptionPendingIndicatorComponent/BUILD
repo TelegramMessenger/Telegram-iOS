@@ -13,6 +13,7 @@ swift_library(
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/AppBundle:AppBundle",
         "//submodules/Display:Display",
+        "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
     ],
     visibility = [
         "//visibility:public",
