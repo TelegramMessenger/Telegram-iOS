@@ -54,10 +54,11 @@ private func updatePremiumPromoConfiguration(transaction: Transaction, _ f: (Pre
 private extension PremiumPromoConfiguration {
     init(apiPremiumPromo: Api.help.PremiumPromo) {
         switch apiPremiumPromo {
-            case let .premiumPromo(statusText, statusEntities, videoSections, videoFiles, _, _):
+            case let .premiumPromo(statusText, statusEntities, videoSections, videoFiles, currency, monthlyAmount):
                 self.status = statusText
                 self.statusEntities = messageTextEntitiesFromApiEntities(statusEntities)
-                
+                self.currency = currency
+                self.monthlyAmount = monthlyAmount
                 var videos: [String: TelegramMediaFile] = [:]
                 for (key, document) in zip(videoSections, videoFiles) {
                     if let file = telegramMediaFileFromApiDocument(document) {
