@@ -1392,6 +1392,8 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }
     }
     
+    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(
         presentationData,
@@ -1417,10 +1419,12 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         
         var rightNavigationButton: ItemListNavigationButton?
         if case .revokeNames = mode {
-            footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: presentationData.strings.Premium_IncreaseLimit, colorful: true, action: {
-                let controller = PremiumIntroScreen(context: context, source: .publicLinks)
-                pushControllerImpl?(controller)
-            })
+            if !premiumConfiguration.isPremiumDisabled {
+                footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: presentationData.strings.Premium_IncreaseLimit, colorful: true, action: {
+                    let controller = PremiumIntroScreen(context: context, source: .publicLinks)
+                    pushControllerImpl?(controller)
+                })
+            }
         } else {
             if let peer = peer as? TelegramChannel {
                 var doneEnabled = true
@@ -1692,7 +1696,6 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 title = presentationData.strings.Premium_LimitReached
         }
 
-        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let entries = channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, importers: importers, state: state, limits: limits, premiumLimits: premiumLimits, isPremium: isPremium, isPremiumDisabled: premiumConfiguration.isPremiumDisabled)
         
         var focusItemTag: ItemListItemTag?

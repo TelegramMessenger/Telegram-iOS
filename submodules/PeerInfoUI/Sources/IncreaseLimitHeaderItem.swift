@@ -114,13 +114,17 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
         self.view.addSubview(hostView)
         
         if let (component, containerSize, layout, textSize) = self.params {
-            let size = hostView.update(
+            var size = hostView.update(
                 transition: .immediate,
                 component: component,
                 environment: {},
                 containerSize: containerSize
             )
             hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -30.0), size: size)
+            
+            if let item = self.item, item.isPremiumDisabled {
+                size.height -= 54.0
+            }
             
             let textSpacing: CGFloat = -6.0
             self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textSize.width) / 2.0), y: size.height + textSpacing), size: textSize)
@@ -144,7 +148,11 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize = CGSize(width: params.width, height: topInset + badgeHeight + textSpacing + textLayout.size.height + bottomInset)
+            var contentSize = CGSize(width: params.width, height: topInset + badgeHeight + textSpacing + textLayout.size.height + bottomInset)
+            if item.isPremiumDisabled {
+                contentSize.height -= 54.0
+            }
+            
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -196,12 +204,15 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                     let _ = textApply()
                     
                     if let hostView = strongSelf.hostView {
-                        let size = hostView.update(
+                        var size = hostView.update(
                             transition: .immediate,
                             component: component,
                             environment: {},
                             containerSize: containerSize
                         )
+                        if item.isPremiumDisabled {
+                            size.height -= 54.0
+                        }
                         hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -30.0), size: size)
                         strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textLayout.size.width) / 2.0), y: size.height + textSpacing), size: textLayout.size)
                     }

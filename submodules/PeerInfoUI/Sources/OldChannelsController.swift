@@ -279,6 +279,8 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
     
     var previousPeersWereEmpty = true
     
+    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(
         queue: Queue.mainQueue(),
@@ -337,7 +339,7 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
         }
         
         let footerItem: IncreaseLimitFooterItem?
-        if state.isSearching && state.selectedPeers.count == 0 {
+        if (state.isSearching || premiumConfiguration.isPremiumDisabled) && state.selectedPeers.count == 0 {
             footerItem = nil
         } else {
             footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: buttonText, colorful: colorful, action: {
