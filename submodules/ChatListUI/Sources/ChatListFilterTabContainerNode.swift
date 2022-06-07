@@ -88,7 +88,7 @@ private final class ItemNode: ASDisplayNode {
     
     private var theme: PresentationTheme?
     
-    init(pressed: @escaping (Bool) -> Void, requestedDeletion: @escaping () -> Void, contextGesture: @escaping (ContextExtractedContentContainingNode, ContextGesture) -> Void) {
+    init(pressed: @escaping (Bool) -> Void, requestedDeletion: @escaping () -> Void, contextGesture: @escaping (ContextExtractedContentContainingNode, ContextGesture, Bool) -> Void) {
         self.pressed = pressed
         self.requestedDeletion = requestedDeletion
         
@@ -170,7 +170,7 @@ private final class ItemNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            contextGesture(strongSelf.extractedContainerNode, gesture)
+            contextGesture(strongSelf.extractedContainerNode, gesture, strongSelf.isDisabled)
         }
         
         self.extractedContainerNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
@@ -467,7 +467,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
     var tabSelected: ((ChatListFilterTabEntryId, Bool) -> Void)?
     var tabRequestedDeletion: ((ChatListFilterTabEntryId) -> Void)?
     var addFilter: (() -> Void)?
-    var contextGesture: ((Int32?, ContextExtractedContentContainingNode, ContextGesture) -> Void)?
+    var contextGesture: ((Int32?, ContextExtractedContentContainingNode, ContextGesture, Bool) -> Void)?
     
     private var reorderingGesture: ReorderingGestureRecognizer?
     private var reorderingItem: ChatListFilterTabEntryId?
@@ -739,7 +739,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                     self?.tabSelected?(filter.id, disabled)
                 }, requestedDeletion: { [weak self] in
                     self?.tabRequestedDeletion?(filter.id)
-                }, contextGesture: { [weak self] sourceNode, gesture in
+                }, contextGesture: { [weak self] sourceNode, gesture, isDisabled in
                     guard let strongSelf = self else {
                         return
                     }
@@ -748,9 +748,9 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                     strongSelf.scrollNode.view.setContentOffset(strongSelf.scrollNode.view.contentOffset, animated: false)
                     switch filter {
                     case let .filter(id, _, _):
-                        strongSelf.contextGesture?(id, sourceNode, gesture)
+                        strongSelf.contextGesture?(id, sourceNode, gesture, isDisabled)
                     default:
-                        strongSelf.contextGesture?(nil, sourceNode, gesture)
+                        strongSelf.contextGesture?(nil, sourceNode, gesture, isDisabled)
                     }
                 })
                 self.itemNodes[filter.id] = itemNode

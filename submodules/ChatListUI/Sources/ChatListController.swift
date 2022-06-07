@@ -267,22 +267,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let isFirstFilter = strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter == strongSelf.chatListDisplayNode.containerNode.availableFilters.first?.filter
                     
                     if offset <= navigationBarSearchContentHeight + 1.0 && !isFirstFilter {
-                        let _ = (strongSelf.context.engine.peers.currentChatListFilters()
-                        |> deliverOnMainQueue).start(next: { [weak self] filters in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            let targetTab: ChatListFilterTabEntryId
-                            let firstFilter = filters.first ?? .allChats
-                            switch firstFilter {
-                                case .allChats:
-                                    targetTab = .all
-                                case let .filter(id, _, _, _):
-                                    targetTab = .filter(id)
-                            }
-                                                            
-                            strongSelf.selectTab(id: targetTab)
-                        })
+                        let firstFilter = strongSelf.chatListDisplayNode.containerNode.availableFilters.first ?? .all
+                        let targetTab: ChatListFilterTabEntryId
+                        switch firstFilter {
+                            case .all:
+                                targetTab = .all
+                            case let .filter(filter):
+                                targetTab = .filter(filter.id)
+                        }
+                        strongSelf.selectTab(id: targetTab)
                     } else {
                         if let searchContentNode = strongSelf.searchContentNode {
                             searchContentNode.updateExpansionProgress(1.0, animated: true)
@@ -1262,11 +1255,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             strongSelf.setToolbar(toolbar, transition: transition)
         }))
         
-        self.tabContainerNode.tabSelected = { [weak self] id, disabled in
+        self.tabContainerNode.tabSelected = { [weak self] id, isDisabled in
             guard let strongSelf = self else {
                 return
             }
-            if disabled {
+            if isDisabled {
                 let context = strongSelf.context
                 var replaceImpl: ((ViewController) -> Void)?
                 let controller = PremiumLimitScreen(context: context, subject: .folders, count: strongSelf.tabContainerNode.filtersCount, action: {
@@ -1296,7 +1289,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
-        let tabContextGesture: (Int32?, ContextExtractedContentContainingNode, ContextGesture, Bool) -> Void = { [weak self] id, sourceNode, gesture, keepInPlace in
+        let tabContextGesture: (Int32?, ContextExtractedContentContainingNode, ContextGesture, Bool, Bool) -> Void = { [weak self] id, sourceNode, gesture, keepInPlace, isDisabled in
             guard let strongSelf = self else {
                 return
             }
@@ -1319,24 +1312,37 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             guard let strongSelf = self else {
                                 return
                             }
-                            let _ = (strongSelf.context.engine.peers.currentChatListFilters()
-                            |> deliverOnMainQueue).start(next: { presetList in
-                                guard let strongSelf = self else {
-                                    return
+                            if isDisabled {
+                                let context = strongSelf.context
+                                var replaceImpl: ((ViewController) -> Void)?
+                                let controller = PremiumLimitScreen(context: context, subject: .folders, count: strongSelf.tabContainerNode.filtersCount, action: {
+                                    let controller = PremiumIntroScreen(context: context, source: .folders)
+                                    replaceImpl?(controller)
+                                })
+                                replaceImpl = { [weak controller] c in
+                                    controller?.replace(with: c)
                                 }
-                                var found = false
-                                for filter in presetList {
-                                    if filter.id == id {
-                                        strongSelf.push(chatListFilterPresetController(context: strongSelf.context, currentPreset: filter, updated: { _ in }))
-                                        f(.dismissWithoutContent)
-                                        found = true
-                                        break
+                                strongSelf.push(controller)
+                            } else {
+                                let _ = (strongSelf.context.engine.peers.currentChatListFilters()
+                                |> deliverOnMainQueue).start(next: { presetList in
+                                    guard let strongSelf = self else {
+                                        return
                                     }
-                                }
-                                if !found {
-                                    f(.default)
-                                }
-                            })
+                                    var found = false
+                                    for filter in presetList {
+                                        if filter.id == id {
+                                            strongSelf.push(chatListFilterPresetController(context: strongSelf.context, currentPreset: filter, updated: { _ in }))
+                                            f(.dismissWithoutContent)
+                                            found = true
+                                            break
+                                        }
+                                    }
+                                    if !found {
+                                        f(.default)
+                                    }
+                                })
+                            }
                         })
                     })))
                     
@@ -1349,62 +1355,75 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     return
                                 }
                                 
-                                let _ = combineLatest(
-                                    queue: Queue.mainQueue(),
-                                    context.engine.data.get(
-                                        TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
-                                        TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
-                                        TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
-                                    ),
-                                    strongSelf.context.engine.peers.currentChatListFilters()
-                                ).start(next: { result, presetList in
-                                    guard let strongSelf = self else {
-                                        return
+                                if isDisabled {
+                                    let context = strongSelf.context
+                                    var replaceImpl: ((ViewController) -> Void)?
+                                    let controller = PremiumLimitScreen(context: context, subject: .folders, count: strongSelf.tabContainerNode.filtersCount, action: {
+                                        let controller = PremiumIntroScreen(context: context, source: .folders)
+                                        replaceImpl?(controller)
+                                    })
+                                    replaceImpl = { [weak controller] c in
+                                        controller?.replace(with: c)
                                     }
-                                    var found = false
-                                    for filter in presetList {
-                                        if filter.id == id, case let .filter(_, _, _, data) = filter {
-                                            let (accountPeer, limits, premiumLimits) = result
-                                            let isPremium = accountPeer?.isPremium ?? false
-                                            
-                                            let limit = limits.maxFolderChatsCount
-                                            let premiumLimit = premiumLimits.maxFolderChatsCount
-                                            
-                                            if data.includePeers.peers.count >= premiumLimit {
-                                                let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(data.includePeers.peers.count), action: {})
-                                                strongSelf.push(controller)
-                                                f(.dismissWithoutContent)
-                                                return
-                                            } else if data.includePeers.peers.count >= limit && !isPremium {
-                                                var replaceImpl: ((ViewController) -> Void)?
-                                                let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(data.includePeers.peers.count), action: {
-                                                    let controller = PremiumIntroScreen(context: context, source: .chatsPerFolder)
-                                                    replaceImpl?(controller)
-                                                })
-                                                replaceImpl = { [weak controller] c in
-                                                    controller?.replace(with: c)
-                                                }
-                                                strongSelf.push(controller)
-                                                f(.dismissWithoutContent)
-                                                return
-                                            }
-                                            
-                                            let _ = (strongSelf.context.engine.peers.currentChatListFilters()
-                                            |> deliverOnMainQueue).start(next: { filters in
-                                                guard let strongSelf = self else {
+                                    strongSelf.push(controller)
+                                } else {
+                                    let _ = combineLatest(
+                                        queue: Queue.mainQueue(),
+                                        context.engine.data.get(
+                                            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                                            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+                                            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+                                        ),
+                                        strongSelf.context.engine.peers.currentChatListFilters()
+                                    ).start(next: { result, presetList in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        var found = false
+                                        for filter in presetList {
+                                            if filter.id == id, case let .filter(_, _, _, data) = filter {
+                                                let (accountPeer, limits, premiumLimits) = result
+                                                let isPremium = accountPeer?.isPremium ?? false
+                                                
+                                                let limit = limits.maxFolderChatsCount
+                                                let premiumLimit = premiumLimits.maxFolderChatsCount
+                                                
+                                                if data.includePeers.peers.count >= premiumLimit {
+                                                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(data.includePeers.peers.count), action: {})
+                                                    strongSelf.push(controller)
+                                                    f(.dismissWithoutContent)
+                                                    return
+                                                } else if data.includePeers.peers.count >= limit && !isPremium {
+                                                    var replaceImpl: ((ViewController) -> Void)?
+                                                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(data.includePeers.peers.count), action: {
+                                                        let controller = PremiumIntroScreen(context: context, source: .chatsPerFolder)
+                                                        replaceImpl?(controller)
+                                                    })
+                                                    replaceImpl = { [weak controller] c in
+                                                        controller?.replace(with: c)
+                                                    }
+                                                    strongSelf.push(controller)
+                                                    f(.dismissWithoutContent)
                                                     return
                                                 }
-                                                strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter, allFilters: filters, limit: limits.maxFolderChatsCount, premiumLimit: premiumLimits.maxFolderChatsCount, isPremium: isPremium))
-                                                f(.dismissWithoutContent)
-                                            })
-                                            found = true
-                                            break
+                                                
+                                                let _ = (strongSelf.context.engine.peers.currentChatListFilters()
+                                                |> deliverOnMainQueue).start(next: { filters in
+                                                    guard let strongSelf = self else {
+                                                        return
+                                                    }
+                                                    strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter, allFilters: filters, limit: limits.maxFolderChatsCount, premiumLimit: premiumLimits.maxFolderChatsCount, isPremium: isPremium))
+                                                    f(.dismissWithoutContent)
+                                                })
+                                                found = true
+                                                break
+                                            }
                                         }
-                                    }
-                                    if !found {
-                                        f(.default)
-                                    }
-                                })
+                                        if !found {
+                                            f(.default)
+                                        }
+                                    })
+                                }
                             })
                         })))
                         
@@ -1472,11 +1491,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
             })
         }
-        self.tabContainerNode.contextGesture = { id, sourceNode, gesture in
-            tabContextGesture(id, sourceNode, gesture, false)
+        self.tabContainerNode.contextGesture = { id, sourceNode, gesture, isDisabled in
+            tabContextGesture(id, sourceNode, gesture, false, isDisabled)
         }
-        self.chatListDisplayNode.inlineTabContainerNode.contextGesture = { id, sourceNode, gesture in
-            tabContextGesture(id, sourceNode, gesture, true)
+        self.chatListDisplayNode.inlineTabContainerNode.contextGesture = { id, sourceNode, gesture, isDisabled in
+            tabContextGesture(id, sourceNode, gesture, true, isDisabled)
         }
         
         if case .group = self.groupId {
