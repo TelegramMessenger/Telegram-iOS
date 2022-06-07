@@ -800,10 +800,6 @@ public final class SolidRoundedButtonView: UIView {
         if #available(iOS 13.0, *) {
             self.buttonBackgroundNode.layer.cornerCurve = .continuous
         }
-        
-        if gloss {
-            self.setupGloss()
-        }
     }
         
     required public init(coder: NSCoder) {
@@ -1004,8 +1000,10 @@ public final class SolidRoundedButtonView: UIView {
             compositingFilter = nil
         }
         
-        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: false, duration: 3.0, horizontal: true)
-        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: false, duration: 3.0, horizontal: true)
+        let globalTimeOffset = self.icon == nil
+        
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 3.0, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 3.0, horizontal: true)
         
         shimmerView.layer.compositingFilter = compositingFilter
         borderShimmerView.layer.compositingFilter = compositingFilter
@@ -1049,6 +1047,8 @@ public final class SolidRoundedButtonView: UIView {
     
     private func updateLayout(width: CGFloat, previousSubtitle: String?, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = width
+        
+        self.setupGloss()
         
         let buttonSize = CGSize(width: width, height: self.buttonHeight)
         let buttonFrame = CGRect(origin: CGPoint(), size: buttonSize)

@@ -15,6 +15,7 @@ import AccountContext
 import AppBundle
 import ZipArchive
 import WebKit
+import InAppPurchaseManager
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -87,13 +88,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case inlineStickers(Bool)
     case localTranscription(Bool)
     case enableReactionOverrides(Bool)
-    case snow(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case voiceConference
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
     case enableVoipTcp(Bool)
+    case resetInAppPurchases(PresentationTheme)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -109,7 +110,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, .enableReactionOverrides, .snow:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, . enableReactionOverrides, .resetInAppPurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -190,7 +191,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 32
         case .enableReactionOverrides:
             return 33
-        case .snow:
+        case .resetInAppPurchases:
             return 34
         case .playerEmbedding:
             return 35
@@ -980,17 +981,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         settings.enableReactionOverrides = value
                         if !value {
                             settings.accountReactionEffectOverrides.removeAll()
+                            settings.accountStickerEffectOverrides.removeAll()
                         }
-                        return PreferencesEntry(settings)
-                    })
-                }).start()
-            })
-        case let .snow(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Snow", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.snow = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -1050,6 +1042,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return PreferencesEntry(settings)
                     })
                 }).start()
+            })
+        case .resetInAppPurchases:
+            return ItemListActionItem(presentationData: presentationData, title: "Reset IAP Transactions", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.context?.inAppPurchaseManager?.finishAllTransactions()
             })
         case let .hostInfo(_, string):
             return ItemListTextItem(presentationData: presentationData, text: .plain(string), sectionId: self.section)
@@ -1115,6 +1111,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         if case .internal = sharedContext.applicationBindings.appBuildType {
             entries.append(.enableReactionOverrides(experimentalSettings.enableReactionOverrides))
         }
+        entries.append(.resetInAppPurchases(presentationData.theme))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }

@@ -1034,14 +1034,14 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 let controller = internalChatListFilterExcludeChatsController(context: context, filter: filter, allFilters: filters, applyAutomatically: false, updated: { filter in
                     skipStateAnimation = true
                     updateState { state in
-                        var state = state
-                        state.additionallyIncludePeers = filter.data?.includePeers.peers ?? []
-                        state.additionallyExcludePeers = filter.data?.excludePeers ?? []
-                        state.includeCategories = filter.data?.categories ?? []
-                        state.excludeRead = filter.data?.excludeRead ?? false
-                        state.excludeMuted = filter.data?.excludeMuted ?? false
-                        state.excludeArchived = filter.data?.excludeArchived ?? false
-                        return state
+                        var updatedState = state
+                        updatedState.additionallyIncludePeers = filter.data?.includePeers.peers ?? []
+                        updatedState.additionallyExcludePeers = filter.data?.excludePeers ?? []
+                        updatedState.includeCategories = filter.data?.categories ?? []
+                        updatedState.excludeRead = filter.data?.excludeRead ?? false
+                        updatedState.excludeMuted = filter.data?.excludeMuted ?? false
+                        updatedState.excludeArchived = filter.data?.excludeArchived ?? false
+                        return updatedState
                     }
                 })
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -1125,7 +1125,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 var found = false
                 for i in 0 ..< filters.count {
                     if filters[i].id == updatedFilter.id, case let .filter(_, _, _, data) = filters[i] {
-                        var updatedData = data
+                        var updatedData = updatedFilter.data ?? data
                         var includePeers = updatedData.includePeers
                         includePeers.setPeers(state.additionallyIncludePeers)
                         updatedData.includePeers = includePeers

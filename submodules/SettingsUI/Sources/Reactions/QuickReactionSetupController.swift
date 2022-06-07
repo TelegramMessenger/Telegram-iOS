@@ -186,7 +186,8 @@ private func quickReactionSetupControllerEntries(
     availableReactions: AvailableReactions?,
     images: [String: (image: UIImage, isAnimation: Bool)],
     reactionSettings: ReactionSettings,
-    state: QuickReactionSetupControllerState
+    state: QuickReactionSetupControllerState,
+    isPremium: Bool
 ) -> [QuickReactionSetupControllerEntry] {
     var entries: [QuickReactionSetupControllerEntry] = []
     
@@ -207,6 +208,10 @@ private func quickReactionSetupControllerEntries(
         var index = 0
         for availableReaction in availableReactions.reactions {
             if !availableReaction.isEnabled {
+                continue
+            }
+            
+            if !isPremium && availableReaction.isPremium {
                 continue
             }
             
@@ -332,10 +337,12 @@ public func quickReactionSetupController(
         statePromise.get(),
         context.engine.stickers.availableReactions(),
         settings,
-        images
+        images,
+        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
     )
     |> deliverOnMainQueue
-    |> map { presentationData, state, availableReactions, settings, images -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, availableReactions, settings, images, accountPeer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let isPremium = accountPeer?.isPremium ?? false
         let title: String = presentationData.strings.Settings_QuickReactionSetup_Title
         
         let entries = quickReactionSetupControllerEntries(
@@ -343,7 +350,8 @@ public func quickReactionSetupController(
             availableReactions: availableReactions,
             images: images,
             reactionSettings: settings,
-            state: state
+            state: state,
+            isPremium: isPremium
         )
         
         let controllerState = ItemListControllerState(

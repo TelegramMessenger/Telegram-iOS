@@ -807,7 +807,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             
             super.init()
             
-            self.disposable = (context.engine.data.get(
+            self.disposable = (context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Configuration.App(),
                 TelegramEngine.EngineData.Item.Configuration.PremiumPromo()
             )
@@ -840,6 +840,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     }
                 }
             })
+            
+            let _ = updatePremiumPromoConfigurationOnce(account: context.account).start()
             
             let stickersKey: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudPremiumStickers)
             self.stickersDisposable = (self.context.account.postbox.combinedView(keys: [stickersKey])
@@ -1187,11 +1189,11 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     },
                     tapAction: { attributes, _ in
                         if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String,
-                           let controller = environment.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
-                            if url.hasPrefix("https://") {
+                            let controller = environment.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
+                            if url.hasPrefix("https://apps.apple.com/account/subscriptions") {
+                                controller.context.sharedContext.applicationBindings.openSubscriptions()
+                            } else if url.hasPrefix("https://") {
                                 controller.context.sharedContext.openExternalUrl(context: controller.context, urlContext: .generic, url: url, forceExternal: true, presentationData: controller.context.sharedContext.currentPresentationData.with({$0}), navigationController: nil, dismissInput: {})
-                            } else if url == "cancel" {
-                                
                             } else {
                                 let context = controller.context
                                 let signal: Signal<ResolvedUrl, NoError>?
@@ -1362,9 +1364,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.disposable = combineLatest(
                 queue: Queue.mainQueue(),
                 availableProducts,
-                context.account.postbox.peerView(id: context.account.peerId)
-                |> map { view -> Bool in
-                    return view.peers[view.peerId]?.isPremium ?? false
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                |> map { peer -> Bool in
+                    return peer?.isPremium ?? false
                 },
                 otherPeerName
             ).start(next: { [weak self] products, isPremium, otherPeerName in
@@ -1418,6 +1420,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
 
                                 }, completed: { [weak self] in
                                     if let strongSelf = self {
+                                        let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
                                         strongSelf.isPremium = true
                                         strongSelf.updated(transition: .easeInOut(duration: 0.25))
                                         strongSelf.completion()

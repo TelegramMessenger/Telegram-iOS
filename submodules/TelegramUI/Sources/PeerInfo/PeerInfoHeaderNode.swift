@@ -2300,6 +2300,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let themeUpdated = self.presentationData?.theme !== presentationData.theme
         self.presentationData = presentationData
         
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+        
         let credibilityIcon: CredibilityIcon
         if let peer = peer {
             if peer.isFake {
@@ -2308,7 +2310,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 credibilityIcon = .scam
             } else if peer.isVerified {
                 credibilityIcon = .verified
-            } else if peer.isPremium {
+            } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                 credibilityIcon = .premium
             } else {
                 credibilityIcon = .none
