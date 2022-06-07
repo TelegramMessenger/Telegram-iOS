@@ -334,7 +334,6 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
     private var credibilityIconNode: ASImageNode?
-    private var verificationIconNode: ASImageNode?
     private let statusNode: TextNode
     private var badgeBackgroundNode: ASImageNode?
     private var badgeTextNode: TextNode?
