@@ -8,6 +8,7 @@ final class PeerInfoScreenMultilineInputItem: PeerInfoScreenItem {
     let text: String
     let placeholder: String
     let textUpdated: (String) -> Void
+    let action: () -> Void
     let maxLength: Int?
     
     init(
@@ -15,12 +16,14 @@ final class PeerInfoScreenMultilineInputItem: PeerInfoScreenItem {
         text: String,
         placeholder: String,
         textUpdated: @escaping (String) -> Void,
+        action: @escaping () -> Void,
         maxLength: Int?
     ) {
         self.id = id
         self.text = text
         self.placeholder = placeholder
         self.textUpdated = textUpdated
+        self.action = action
         self.maxLength = maxLength
     }
     
@@ -61,8 +64,10 @@ final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode {
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
-        let inputItem = ItemListMultilineInputItem(presentationData: ItemListPresentationData(presentationData), text: item.text, placeholder: item.placeholder, maxLength: item.maxLength.flatMap { ItemListMultilineInputItemTextLimit(value: $0, display: true) }, sectionId: 0, style: .blocks, textUpdated: { updatedText in
+        let inputItem = ItemListMultilineInputItem(presentationData: ItemListPresentationData(presentationData), text: item.text, placeholder: item.placeholder, maxLength: item.maxLength.flatMap { ItemListMultilineInputItemTextLimit(value: $0, display: true) }, sectionId: 0, style: .blocks, returnKeyType: .done, textUpdated: { updatedText in
             item.textUpdated(updatedText)
+        }, action: {
+            item.action()
         }, noInsets: true)
             
         let params = ListViewItemLayoutParams(width: width, leftInset: safeInsets.left, rightInset: safeInsets.right, availableHeight: 1000.0)

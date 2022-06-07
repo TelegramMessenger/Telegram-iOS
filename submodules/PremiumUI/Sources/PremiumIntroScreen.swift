@@ -1189,11 +1189,11 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     },
                     tapAction: { attributes, _ in
                         if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String,
-                           let controller = environment.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
-                            if url.hasPrefix("https://") {
+                            let controller = environment.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
+                            if url.hasPrefix("https://apps.apple.com/account/subscriptions") {
+                                controller.context.sharedContext.applicationBindings.openSubscriptions()
+                            } else if url.hasPrefix("https://") {
                                 controller.context.sharedContext.openExternalUrl(context: controller.context, urlContext: .generic, url: url, forceExternal: true, presentationData: controller.context.sharedContext.currentPresentationData.with({$0}), navigationController: nil, dismissInput: {})
-                            } else if url == "cancel" {
-                                
                             } else {
                                 let context = controller.context
                                 let signal: Signal<ResolvedUrl, NoError>?

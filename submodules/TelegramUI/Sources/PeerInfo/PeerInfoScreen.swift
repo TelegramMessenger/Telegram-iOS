@@ -485,6 +485,7 @@ private final class PeerInfoInteraction {
     let openAddMember: () -> Void
     let openQrCode: () -> Void
     let editingOpenReactionsSetup: () -> Void
+    let dismissInput: () -> Void
     
     init(
         openUsername: @escaping (String) -> Void,
@@ -527,7 +528,8 @@ private final class PeerInfoInteraction {
         openFaq: @escaping (String?) -> Void,
         openAddMember: @escaping () -> Void,
         openQrCode: @escaping () -> Void,
-        editingOpenReactionsSetup: @escaping () -> Void
+        editingOpenReactionsSetup: @escaping () -> Void,
+        dismissInput: @escaping () -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -570,6 +572,7 @@ private final class PeerInfoInteraction {
         self.openAddMember = openAddMember
         self.openQrCode = openQrCode
         self.editingOpenReactionsSetup = editingOpenReactionsSetup
+        self.dismissInput = dismissInput
     }
 }
 
@@ -817,6 +820,8 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     if let cachedData = data.cachedData as? CachedUserData {
         items[.bio]!.append(PeerInfoScreenMultilineInputItem(id: ItemBio, text: state.updatingBio ?? (cachedData.about ?? ""), placeholder: presentationData.strings.UserInfo_About_Placeholder, textUpdated: { updatedText in
             interaction.updateBio(updatedText)
+        }, action: {
+            interaction.dismissInput()
         }, maxLength: Int(data.globalSettings?.userLimits.maxAboutLength ?? 70)))
         items[.bio]!.append(PeerInfoScreenCommentItem(id: ItemBioHelp, text: presentationData.strings.Settings_About_Help))
     }
@@ -1838,6 +1843,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             },
             editingOpenReactionsSetup: { [weak self] in
                 self?.editingOpenReactionsSetup()
+            },
+            dismissInput: { [weak self] in
+                self?.view.endEditing(true)
             }
         )
         
@@ -6268,17 +6276,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 push(usernameSetupController(context: self.context))
             case .addAccount:
                 var maximumAvailableAccounts: Int = 3
-                if self.data?.peer?.isPremium == true {
+                if self.data?.peer?.isPremium == true && !self.context.account.testingEnvironment {
                     maximumAvailableAccounts = 4
                 }
                 var count: Int = 1
                 if let settings = self.data?.globalSettings {
-                    for (_, peer, _) in settings.accountsAndPeers {
-                        if peer.isPremium {
-                            maximumAvailableAccounts = 4
+                    for (accountContext, peer, _) in settings.accountsAndPeers {
+                        if !accountContext.account.testingEnvironment {
+                            if peer.isPremium {
+                                maximumAvailableAccounts = 4
+                            }
+                            count += 1
                         }
                     }
-                    count += settings.accountsAndPeers.count
                 }
                 if count >= maximumAvailableAccounts {
                     let context = self.context

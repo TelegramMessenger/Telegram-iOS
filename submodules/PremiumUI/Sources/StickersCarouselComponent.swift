@@ -80,7 +80,7 @@ final class StickersCarouselComponent: Component {
     }
 }
 
-private let itemSize = CGSize(width: 220.0, height: 220.0)
+private let itemSize = CGSize(width: 200.0, height: 200.0)
 
 private class StickerNode: ASDisplayNode {
     private let context: AccountContext
@@ -109,7 +109,7 @@ private class StickerNode: ASDisplayNode {
             self.animationNode = animationNode
             
             let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
-            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0))
+            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 240.0, height: 240.0))
             
             let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
             animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width * 1.6), height: Int(fittedDimensions.height * 1.6), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
@@ -239,7 +239,7 @@ private class StickerNode: ASDisplayNode {
     }
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        let boundingSize = CGSize(width: 240.0, height: 240.0)
+        let boundingSize = itemSize
             
         if let dimensitons = self.file.dimensions {
             let imageSize = dimensitons.cgSize.aspectFitted(boundingSize)

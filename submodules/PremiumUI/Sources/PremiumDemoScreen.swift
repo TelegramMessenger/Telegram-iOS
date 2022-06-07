@@ -341,12 +341,15 @@ private final class DemoPagerComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        private var ignoreContentOffsetChange = false
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            guard let component = self.component else {
+            guard let component = self.component, !self.ignoreContentOffsetChange else {
                 return
             }
 
+            self.ignoreContentOffsetChange = true
             let _ = self.update(component: component, availableSize: self.bounds.size, transition: .immediate)
+            self.ignoreContentOffsetChange = false
         }
         
         func update(component: DemoPagerComponent, availableSize: CGSize, transition: Transition) -> CGSize {
@@ -652,7 +655,7 @@ private final class DemoSheetContent: CombinedComponent {
                                     context: component.context,
                                     position: .top,
                                     videoFile: configuration.videos["faster_download"],
-                                    hasStars: true
+                                    decoration: .fasterStars
                                 )),
                                 title: strings.Premium_FasterSpeed,
                                 text: strings.Premium_FasterSpeedInfo,
@@ -757,7 +760,8 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoFile: configuration.videos["profile_badge"]
+                                    videoFile: configuration.videos["profile_badge"],
+                                    decoration: .badgeStars
                                 )),
                                 title: strings.Premium_Badge,
                                 text: strings.Premium_BadgeInfo,

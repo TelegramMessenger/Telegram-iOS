@@ -796,7 +796,7 @@ private final class LimitSheetContent: CombinedComponent {
                     }
                 case .accounts:
                     let limit = 3
-                    let premiumLimit = component.count + 1
+                    let premiumLimit = limit + 1
                     iconName = "Premium/Account"
                     badgeText = "\(component.count)"
                     string = component.count >= premiumLimit ? strings.Premium_MaxAccountsFinalText("\(premiumLimit)").string : strings.Premium_MaxAccountsText("\(limit)").string
@@ -805,7 +805,7 @@ private final class LimitSheetContent: CombinedComponent {
                     if component.count == limit {
                         badgePosition = 0.5
                     } else {
-                        badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                        badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
                     }
                     buttonAnimationName = "premium_addone"
                 

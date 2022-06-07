@@ -140,16 +140,18 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
         |> deliverOnMainQueue
         ).start(next: { accountAndPeer, accountsAndPeers in
             var maximumAvailableAccounts: Int = 3
-            if accountAndPeer?.1.isPremium == true {
+            if accountAndPeer?.1.isPremium == true && !context.account.testingEnvironment {
                 maximumAvailableAccounts = 4
             }
             var count: Int = 1
-            for (_, peer, _) in accountsAndPeers {
-                if peer.isPremium {
-                    maximumAvailableAccounts = 4
+            for (accountContext, peer, _) in accountsAndPeers {
+                if !accountContext.account.testingEnvironment {
+                    if peer.isPremium {
+                        maximumAvailableAccounts = 4
+                    }
+                    count += 1
                 }
             }
-            count += accountsAndPeers.count
             
             if count >= maximumAvailableAccounts {
                 var replaceImpl: ((ViewController) -> Void)?

@@ -187,25 +187,22 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 let transactionState: TransactionState?
                 switch transaction.transactionState {
                     case .purchased:
-                        if transaction.original == nil {
-                            transactionState = .purchased(transactionId: transaction.transactionIdentifier)
-                            if let transactionIdentifier = transaction.transactionIdentifier {
-                                self.disposableSet.set(
-                                    self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier, receipt: getReceiptData() ?? Data(), restore: false).start(error: { _ in
-                                        queue.finishTransaction(transaction)
-                                    }, completed: {
-                                        queue.finishTransaction(transaction)
-                                    }),
-                                    forKey: transaction.transactionIdentifier ?? ""
-                                )
-                            }
-                        } else {
-                            transactionState = nil
-                            queue.finishTransaction(transaction)
+                        let transactionIdentifier = transaction.original?.transactionIdentifier ?? transaction.transactionIdentifier
+                        transactionState = .purchased(transactionId: transactionIdentifier)
+                        if let transactionIdentifier = transactionIdentifier {
+                            self.disposableSet.set(
+                                self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier, receipt: getReceiptData() ?? Data(), restore: false).start(error: { _ in
+                                    queue.finishTransaction(transaction)
+                                }, completed: {
+                                    queue.finishTransaction(transaction)
+                                }),
+                                forKey: transaction.transactionIdentifier ?? ""
+                            )
                         }
                     case .restored:
-                        transactionState = .restored(transactionId: transaction.original?.transactionIdentifier)
-                        if let transactionIdentifier = transaction.original?.transactionIdentifier {
+                        let transactionIdentifier = transaction.original?.transactionIdentifier ?? transaction.transactionIdentifier
+                        transactionState = .restored(transactionId: transactionIdentifier)
+                        if let transactionIdentifier = transactionIdentifier {
                             self.disposableSet.set(
                                 self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier, receipt: getReceiptData() ?? Data(), restore: true).start(error: { _ in
                                     queue.finishTransaction(transaction)

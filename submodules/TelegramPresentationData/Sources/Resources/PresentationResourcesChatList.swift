@@ -232,12 +232,12 @@ public struct PresentationResourcesChatList {
                         context.saveGState()
                         context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
 
-                        context.setFillColor(theme.chatList.unreadBadgeActiveBackgroundColor.cgColor)
+                        context.setFillColor(theme.list.itemCheckColors.fillColor.cgColor)
                         context.fill(CGRect(origin: CGPoint(), size: size))
                         context.restoreGState()
                         
                         context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
-                        context.setFillColor(theme.chatList.unreadBadgeActiveTextColor.cgColor)
+                        context.setFillColor(theme.list.itemCheckColors.foregroundColor.cgColor)
                         context.fill(CGRect(origin: CGPoint(), size: size))
                     }
                 }, opaque: false)
@@ -255,7 +255,7 @@ public struct PresentationResourcesChatList {
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
 
-                        context.setFillColor(theme.chatList.unreadBadgeActiveBackgroundColor.cgColor)
+                        context.setFillColor(theme.list.itemCheckColors.fillColor.cgColor)
                         context.fill(CGRect(origin: CGPoint(), size: size))
                     }
                 }, opaque: false)

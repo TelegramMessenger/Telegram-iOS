@@ -106,14 +106,19 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             
             let initialVelocity = !delta.isZero ? velocity.y / delta : 0.0
             
-            targetContentOffset.pointee = scrollView.contentOffset
+            let currentContentOffset = scrollView.contentOffset
+            targetContentOffset.pointee = currentContentOffset
             if velocity.y > 300.0 {
                 self.animateOut(initialVelocity: initialVelocity, completion: {
                     self.dismiss?(false)
                 })
             } else {
-                if contentOffset < scrollView.contentSize.height * 0.333 {
-                    scrollView.setContentOffset(CGPoint(x: 0.0, y: scrollView.contentSize.height - scrollView.contentInset.top), animated: true)
+                if contentOffset < scrollView.contentSize.height * 0.1 {
+                    if contentOffset < 0.0 {
+                        
+                    } else {
+                        scrollView.setContentOffset(CGPoint(x: 0.0, y: scrollView.contentSize.height - scrollView.contentInset.top), animated: true)
+                    }
                 } else {
                     self.animateOut(initialVelocity: initialVelocity, completion: {
                         self.dismiss?(false)

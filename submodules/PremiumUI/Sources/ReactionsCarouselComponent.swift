@@ -427,10 +427,17 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         )
     }
     
-    private var scrollStartPosition: (contentOffset: CGFloat, position: CGFloat)?
+    private var scrollStartPosition: (contentOffset: CGFloat, position: CGFloat, inverse: Bool)?
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        if self.scrollStartPosition == nil {
-            self.scrollStartPosition = (scrollView.contentOffset.x, self.currentPosition)
+        var inverse = false
+        let tapLocation = scrollView.panGestureRecognizer.location(in: scrollView)
+        if tapLocation.y < scrollView.frame.height / 2.0 {
+            inverse = true
+        }
+        if let scrollStartPosition = self.scrollStartPosition {
+            self.scrollStartPosition = (scrollStartPosition.contentOffset, scrollStartPosition.position, inverse)
+        } else {
+            self.scrollStartPosition = (scrollView.contentOffset.x, self.currentPosition, inverse)
         }
     }
      
@@ -445,12 +452,15 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             self.animator = nil
         }
         
-        guard !self.ignoreContentOffsetChange, let (startContentOffset, startPosition) = self.scrollStartPosition else {
+        guard !self.ignoreContentOffsetChange, let (startContentOffset, startPosition, inverse) = self.scrollStartPosition else {
             return
         }
 
         let delta = scrollView.contentOffset.x - startContentOffset
-        let positionDelta = delta * -0.001
+        var positionDelta = delta * -0.001
+        if inverse {
+            positionDelta *= -1.0
+        }
         var updatedPosition = startPosition + positionDelta
         while updatedPosition >= 1.0 {
             updatedPosition -= 1.0
@@ -470,12 +480,14 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let size = self.validLayout {
+            self.ignoreContentOffsetChange = true
             self.updateLayout(size: size, transition: .immediate)
+            self.ignoreContentOffsetChange = false
         }
     }
     
     func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
-        guard let (startContentOffset, _) = self.scrollStartPosition, abs(velocity.x) > 0.0 else {
+        guard let (startContentOffset, _, _) = self.scrollStartPosition, abs(velocity.x) > 0.0 else {
             return
         }
         
