@@ -2197,12 +2197,14 @@ public final class ContextController: ViewController, StandalonePresentableContr
         public var content: Content
         public var context: AccountContext?
         public var reactionItems: [ReactionContextItem]
+        public var disablePositionLock: Bool
         public var tip: Tip?
 
-        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], tip: Tip? = nil) {
+        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], disablePositionLock: Bool = false, tip: Tip? = nil) {
             self.content = content
             self.context = context
             self.reactionItems = reactionItems
+            self.disablePositionLock = disablePositionLock
             self.tip = tip
         }
 
@@ -2210,6 +2212,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.content = .list([])
             self.context = nil
             self.reactionItems = []
+            self.disablePositionLock = false
             self.tip = nil
         }
     }

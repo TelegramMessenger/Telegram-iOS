@@ -15,6 +15,7 @@ import MultilineTextComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
+import TelegramUIPreferences
 
 private final class GradientBackgroundComponent: Component {
     public let colors: [UIColor]
@@ -520,6 +521,27 @@ private final class DemoSheetContent: CombinedComponent {
             
             super.init()
             
+            let accountSpecificReactionOverrides: [ExperimentalUISettings.AccountReactionOverrides.Item]
+            if self.context.sharedContext.immediateExperimentalUISettings.enableReactionOverrides, let value = self.context.sharedContext.immediateExperimentalUISettings.accountReactionEffectOverrides.first(where: { $0.accountId == self.context.account.id.int64 }) {
+                accountSpecificReactionOverrides = value.items
+            } else {
+                accountSpecificReactionOverrides = []
+            }
+            
+            let reactionOverrideMessages = self.context.engine.data.get(
+                EngineDataMap(accountSpecificReactionOverrides.map(\.messageId).map(TelegramEngine.EngineData.Item.Messages.Message.init))
+            )
+            
+            let accountSpecificStickerOverrides: [ExperimentalUISettings.AccountReactionOverrides.Item]
+            if self.context.sharedContext.immediateExperimentalUISettings.enableReactionOverrides, let value = self.context.sharedContext.immediateExperimentalUISettings.accountStickerEffectOverrides.first(where: { $0.accountId == self.context.account.id.int64 }) {
+                accountSpecificStickerOverrides = value.items
+            } else {
+                accountSpecificStickerOverrides = []
+            }
+            let stickerOverrideMessages = self.context.engine.data.get(
+                EngineDataMap(accountSpecificStickerOverrides.map(\.messageId).map(TelegramEngine.EngineData.Item.Messages.Message.init))
+            )
+            
             let stickersKey: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudPremiumStickers)
             self.disposable = (combineLatest(
                 queue: Queue.mainQueue(),
@@ -539,9 +561,33 @@ private final class DemoSheetContent: CombinedComponent {
                 self.context.engine.data.get(
                     TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId),
                     TelegramEngine.EngineData.Item.Configuration.PremiumPromo()
-                )
+                ),
+                reactionOverrideMessages,
+                stickerOverrideMessages
             )
-            |> map { reactions, items, data -> ([AvailableReactions.Reaction], [TelegramMediaFile], Bool?, PremiumPromoConfiguration?) in
+            |> map { reactions, items, data, reactionOverrideMessages, stickerOverrideMessages -> ([AvailableReactions.Reaction], [TelegramMediaFile], Bool?, PremiumPromoConfiguration?) in
+                var reactionOverrides: [String: TelegramMediaFile] = [:]
+                for item in accountSpecificReactionOverrides {
+                    if let maybeMessage = reactionOverrideMessages[item.messageId], let message = maybeMessage {
+                        for media in message.media {
+                            if let file = media as? TelegramMediaFile, file.fileId == item.mediaId {
+                                reactionOverrides[item.key] = file
+                            }
+                        }
+                    }
+                }
+                
+                var stickerOverrides: [String: TelegramMediaFile] = [:]
+                for item in accountSpecificStickerOverrides {
+                    if let maybeMessage = stickerOverrideMessages[item.messageId], let message = maybeMessage {
+                        for media in message.media {
+                            if let file = media as? TelegramMediaFile, file.fileId == item.mediaId {
+                                stickerOverrides[item.key] = file
+                            }
+                        }
+                    }
+                }
+                
                 if let reactions = reactions {
                     var result: [TelegramMediaFile] = []
                     if let items = items {
@@ -551,7 +597,49 @@ private final class DemoSheetContent: CombinedComponent {
                             }
                         }
                     }
-                    return (reactions.reactions.filter({ $0.isPremium }), result, data.0?.isPremium ?? false, data.1)
+                    return (reactions.reactions.filter({ $0.isPremium }).map { reaction -> AvailableReactions.Reaction in
+                        var aroundAnimation = reaction.aroundAnimation
+                        if let replacementFile = reactionOverrides[reaction.value] {
+                            aroundAnimation = replacementFile
+                        }
+                        
+                        return AvailableReactions.Reaction(
+                            isEnabled: reaction.isEnabled,
+                            isPremium: reaction.isPremium,
+                            value: reaction.value,
+                            title: reaction.title,
+                            staticIcon: reaction.staticIcon,
+                            appearAnimation: reaction.appearAnimation,
+                            selectAnimation: reaction.selectAnimation,
+                            activateAnimation: reaction.activateAnimation,
+                            effectAnimation: reaction.effectAnimation,
+                            aroundAnimation: aroundAnimation,
+                            centerAnimation: reaction.centerAnimation
+                        )
+                    }, result.map { file -> TelegramMediaFile in
+                        for attribute in file.attributes {
+                            switch attribute {
+                            case let .Sticker(displayText, _, _):
+                                if let replacementFile = stickerOverrides[displayText], let dimensions = replacementFile.dimensions {
+                                    let _ = dimensions
+                                    return TelegramMediaFile(
+                                        fileId: file.fileId,
+                                        partialReference: file.partialReference,
+                                        resource: file.resource,
+                                        previewRepresentations: file.previewRepresentations,
+                                        videoThumbnails: [TelegramMediaFile.VideoThumbnail(dimensions: dimensions, resource: replacementFile.resource)],
+                                        immediateThumbnailData: file.immediateThumbnailData,
+                                        mimeType: file.mimeType,
+                                        size: file.size,
+                                        attributes: file.attributes
+                                    )
+                                }
+                            default:
+                                break
+                            }
+                        }
+                        return file
+                    }, data.0?.isPremium ?? false, data.1)
                 } else {
                     return ([], [], nil, nil)
                 }

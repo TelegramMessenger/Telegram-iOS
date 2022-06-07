@@ -1076,7 +1076,13 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             additionalAnimation = itemNode.item.applicationAnimation
         }
         
-        additionalAnimationNode.setup(source: AnimatedStickerResourceSource(account: itemNode.context.account, resource: additionalAnimation.resource), width: Int(effectFrame.width * 2.0), height: Int(effectFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: itemNode.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(additionalAnimation.resource.id)))
+        var additionalCachePathPrefix: String?
+        additionalCachePathPrefix = itemNode.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(additionalAnimation.resource.id)
+        //#if DEBUG
+        additionalCachePathPrefix = nil
+        //#endif
+        
+        additionalAnimationNode.setup(source: AnimatedStickerResourceSource(account: itemNode.context.account, resource: additionalAnimation.resource), width: Int(effectFrame.width * 1.33), height: Int(effectFrame.height * 1.33), playbackMode: .once, mode: .direct(cachePathPrefix: additionalCachePathPrefix))
         additionalAnimationNode.frame = effectFrame
         additionalAnimationNode.updateLayout(size: effectFrame.size)
         self.addSubnode(additionalAnimationNode)

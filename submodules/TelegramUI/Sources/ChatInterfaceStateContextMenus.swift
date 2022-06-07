@@ -768,6 +768,132 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }
             }
+            
+            if context.sharedContext.immediateExperimentalUISettings.enableReactionOverrides {
+                for media in message.media {
+                    if let file = media as? TelegramMediaFile, file.isAnimatedSticker {
+                        actions.append(.action(ContextMenuActionItem(text: "Set as Reaction Effect", icon: { _ in
+                            return nil
+                        }, action: { c, _ in
+                            let subItems: Signal<ContextController.Items, NoError> = context.engine.stickers.availableReactions()
+                            |> map { reactions -> ContextController.Items in
+                                var subActions: [ContextMenuItem] = []
+                                
+                                if let reactions = reactions {
+                                    for reaction in reactions.reactions {
+                                        if !reaction.isEnabled || !reaction.isPremium {
+                                            continue
+                                        }
+                                        
+                                        subActions.append(.action(ContextMenuActionItem(text: reaction.value, icon: { _ in
+                                            return nil
+                                        }, action: { _, f in
+                                            let _ = updateExperimentalUISettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
+                                                var settings = settings
+                                                
+                                                var currentItems: [ExperimentalUISettings.AccountReactionOverrides.Item]
+                                                if let value = settings.accountReactionEffectOverrides.first(where: { $0.accountId == context.account.id.int64 }) {
+                                                    currentItems = value.items
+                                                } else {
+                                                    currentItems = []
+                                                }
+                                                
+                                                currentItems.removeAll(where: { $0.key == reaction.value })
+                                                currentItems.append(ExperimentalUISettings.AccountReactionOverrides.Item(
+                                                    key: reaction.value,
+                                                    messageId: message.id,
+                                                    mediaId: file.fileId
+                                                ))
+                                                
+                                                settings.accountReactionEffectOverrides.removeAll(where: { $0.accountId == context.account.id.int64 })
+                                                settings.accountReactionEffectOverrides.append(ExperimentalUISettings.AccountReactionOverrides(accountId: context.account.id.int64, items: currentItems))
+                                                
+                                                return settings
+                                            }).start()
+                                            
+                                            f(.default)
+                                        })))
+                                    }
+                                }
+                                
+                                return ContextController.Items(content: .list(subActions), disablePositionLock: true, tip: nil)
+                            }
+                            
+                            c.pushItems(items: subItems)
+                        })))
+                        
+                        actions.append(.action(ContextMenuActionItem(text: "Set as Sticker Effect", icon: { _ in
+                            return nil
+                        }, action: { c, _ in
+                            let stickersKey: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudPremiumStickers)
+                            let subItems: Signal<ContextController.Items, NoError> = context.account.postbox.combinedView(keys: [stickersKey])
+                            |> map { views -> [String] in
+                                if let view = views.views[stickersKey] as? OrderedItemListView, !view.items.isEmpty {
+                                    return view.items.compactMap { item -> String? in
+                                        guard let mediaItem = item.contents.get(RecentMediaItem.self) else {
+                                            return nil
+                                        }
+                                        let file = mediaItem.media
+                                        for attribute in file.attributes {
+                                            switch attribute {
+                                            case let .Sticker(text, _, _):
+                                                return text
+                                            default:
+                                                break
+                                            }
+                                        }
+                                        return nil
+                                    }
+                                } else {
+                                    return []
+                                }
+                            }
+                            |> map { stickerNames -> ContextController.Items in
+                                var subActions: [ContextMenuItem] = []
+                                
+                                for stickerName in stickerNames {
+                                    subActions.append(.action(ContextMenuActionItem(text: stickerName, icon: { _ in
+                                        return nil
+                                    }, action: { _, f in
+                                        let _ = updateExperimentalUISettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
+                                            var settings = settings
+                                            
+                                            var currentItems: [ExperimentalUISettings.AccountReactionOverrides.Item]
+                                            if let value = settings.accountStickerEffectOverrides.first(where: { $0.accountId == context.account.id.int64 }) {
+                                                currentItems = value.items
+                                            } else {
+                                                currentItems = []
+                                            }
+                                            
+                                            currentItems.removeAll(where: { $0.key == stickerName })
+                                            currentItems.append(ExperimentalUISettings.AccountReactionOverrides.Item(
+                                                key: stickerName,
+                                                messageId: message.id,
+                                                mediaId: file.fileId
+                                            ))
+                                            
+                                            settings.accountStickerEffectOverrides.removeAll(where: { $0.accountId == context.account.id.int64 })
+                                            settings.accountStickerEffectOverrides.append(ExperimentalUISettings.AccountReactionOverrides(accountId: context.account.id.int64, items: currentItems))
+                                            
+                                            return settings
+                                        }).start()
+                                        
+                                        f(.default)
+                                    })))
+                                }
+                                
+                                return ContextController.Items(content: .list(subActions), disablePositionLock: true, tip: nil)
+                            }
+                            
+                            c.pushItems(items: subItems)
+                        })))
+                        
+                        actions.append(.separator)
+                        
+                        break
+                    }
+                }
+            }
         }
         
         var isReplyThreadHead = false

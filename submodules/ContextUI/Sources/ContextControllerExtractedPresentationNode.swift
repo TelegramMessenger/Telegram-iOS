@@ -320,7 +320,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     
     func pushItems(items: ContextController.Items) {
         let currentScrollingState = self.getCurrentScrollingState()
-        let positionLock = self.getActionsStackPositionLock()
+        var positionLock: CGFloat?
+        if !items.disablePositionLock {
+            positionLock = self.getActionsStackPositionLock()
+        }
         self.actionsStackNode.push(item: makeContextControllerActionsStackItem(items: items), currentScrollingState: currentScrollingState, positionLock: positionLock, animated: true)
     }
     

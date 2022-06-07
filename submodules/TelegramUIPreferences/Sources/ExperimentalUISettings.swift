@@ -4,6 +4,28 @@ import TelegramCore
 import SwiftSignalKit
 
 public struct ExperimentalUISettings: Codable, Equatable {
+    public struct AccountReactionOverrides: Equatable, Codable {
+        public struct Item: Equatable, Codable {
+            public var key: String
+            public var messageId: MessageId
+            public var mediaId: MediaId
+            
+            public init(key: String, messageId: MessageId, mediaId: MediaId) {
+                self.key = key
+                self.messageId = messageId
+                self.mediaId = mediaId
+            }
+        }
+        
+        public var accountId: Int64
+        public var items: [Item]
+        
+        public init(accountId: Int64, items: [Item]) {
+            self.accountId = accountId
+            self.items = items
+        }
+    }
+    
     public var keepChatNavigationStack: Bool
     public var skipReadHistory: Bool
     public var crashOnLongQueries: Bool
@@ -22,6 +44,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var snow: Bool
     public var inlineStickers: Bool
     public var localTranscription: Bool
+    public var enableReactionOverrides: Bool
+    public var accountReactionEffectOverrides: [AccountReactionOverrides]
+    public var accountStickerEffectOverrides: [AccountReactionOverrides]
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -42,7 +67,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
             experimentalBackground: false,
             snow: false,
             inlineStickers: false,
-            localTranscription: false
+            localTranscription: false,
+            enableReactionOverrides: false,
+            accountReactionEffectOverrides: [],
+            accountStickerEffectOverrides: []
         )
     }
     
@@ -64,7 +92,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
         experimentalBackground: Bool,
         snow: Bool,
         inlineStickers: Bool,
-        localTranscription: Bool
+        localTranscription: Bool,
+        enableReactionOverrides: Bool,
+        accountReactionEffectOverrides: [AccountReactionOverrides],
+        accountStickerEffectOverrides: [AccountReactionOverrides]
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -84,6 +115,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.snow = snow
         self.inlineStickers = inlineStickers
         self.localTranscription = localTranscription
+        self.enableReactionOverrides = enableReactionOverrides
+        self.accountReactionEffectOverrides = accountReactionEffectOverrides
+        self.accountStickerEffectOverrides = accountStickerEffectOverrides
     }
     
     public init(from decoder: Decoder) throws {
@@ -107,6 +141,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.snow = (try container.decodeIfPresent(Int32.self, forKey: "snow") ?? 0) != 0
         self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
         self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 0) != 0
+        self.enableReactionOverrides = try container.decodeIfPresent(Bool.self, forKey: "enableReactionOverrides") ?? false
+        self.accountReactionEffectOverrides = (try container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountReactionEffectOverrides")) ?? []
+        self.accountStickerEffectOverrides = (try container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountStickerEffectOverrides")) ?? []
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -130,6 +167,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.snow ? 1 : 0) as Int32, forKey: "snow")
         try container.encode((self.inlineStickers ? 1 : 0) as Int32, forKey: "inlineStickers")
         try container.encode((self.localTranscription ? 1 : 0) as Int32, forKey: "localTranscription")
+        try container.encode(self.enableReactionOverrides, forKey: "enableReactionOverrides")
+        try container.encode(self.accountReactionEffectOverrides, forKey: "accountReactionEffectOverrides")
+        try container.encode(self.accountStickerEffectOverrides, forKey: "accountStickerEffectOverrides")
     }
 }
 
