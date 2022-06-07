@@ -495,6 +495,8 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
 
             let leftInset: CGFloat = 58.0 + params.leftInset
             
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
+            
             var titleIconsWidth: CGFloat = 0.0
             var currentCredibilityIconImage: UIImage?
             var credibilityIconOffset: CGFloat = 0.0
@@ -506,6 +508,9 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 credibilityIconOffset = 2.0
             } else if item.peer.isVerified {
                 currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                credibilityIconOffset = 3.0
+            } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
                 credibilityIconOffset = 3.0
             }
             

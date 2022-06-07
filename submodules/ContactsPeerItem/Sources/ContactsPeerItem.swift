@@ -563,6 +563,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
+            
             var currentCredibilityIconImage: UIImage?
             switch item.peer {
             case let .peer(peer, _):
@@ -573,7 +575,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                     } else if peer.isVerified {
                         currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                    } else if peer.isPremium {
+                    } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                         currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
                     }
                 }

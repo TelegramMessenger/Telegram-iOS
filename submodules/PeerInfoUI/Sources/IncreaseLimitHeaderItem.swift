@@ -81,6 +81,9 @@ private let boldTextFont = Font.semibold(15.0)
 
 class IncreaseLimitHeaderItemNode: ListViewItemNode {
     private var hostView: ComponentHostView<Empty>?
+    
+    private var params: (AnyComponent<Empty>, CGSize, ListViewItemNodeLayout, CGSize)?
+    
     private let titleNode: TextNode
     private let textNode: TextNode
     
@@ -109,6 +112,19 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
         let hostView = ComponentHostView<Empty>()
         self.hostView = hostView
         self.view.addSubview(hostView)
+        
+        if let (component, containerSize, layout, textSize) = self.params {
+            let size = hostView.update(
+                transition: .immediate,
+                component: component,
+                environment: {},
+                containerSize: containerSize
+            )
+            hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -30.0), size: size)
+            
+            let textSpacing: CGFloat = -6.0
+            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textSize.width) / 2.0), y: size.height + textSpacing), size: textSize)
+        }
     }
     
     func asyncLayout() -> (_ item: IncreaseLimitHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -161,31 +177,36 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                         ]
                     }
                     
+                    let component = AnyComponent(PremiumLimitDisplayComponent(
+                        inactiveColor: item.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5),
+                        activeColors: gradientColors,
+                        inactiveTitle: item.strings.Premium_Free,
+                        inactiveValue: item.count > item.limit ? "\(item.limit)" : "",
+                        inactiveTitleColor: item.theme.list.itemPrimaryTextColor,
+                        activeTitle: item.strings.Premium_Premium,
+                        activeValue: item.count >= item.premiumCount ? "" : "\(item.premiumCount)",
+                        activeTitleColor: .white,
+                        badgeIconName: badgeIconName,
+                        badgeText: "\(item.count)",
+                        badgePosition: CGFloat(item.count) / CGFloat(item.premiumCount),
+                        isPremiumDisabled: item.isPremiumDisabled
+                    ))
+                    let containerSize = CGSize(width: layout.size.width - params.leftInset - params.rightInset, height: 200.0)
+                    
+                    let _ = textApply()
+                    
                     if let hostView = strongSelf.hostView {
                         let size = hostView.update(
                             transition: .immediate,
-                            component: AnyComponent(PremiumLimitDisplayComponent(
-                                inactiveColor: item.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5),
-                                activeColors: gradientColors,
-                                inactiveTitle: item.strings.Premium_Free,
-                                inactiveValue: item.count > item.limit ? "\(item.limit)" : "",
-                                inactiveTitleColor: item.theme.list.itemPrimaryTextColor,
-                                activeTitle: item.strings.Premium_Premium,
-                                activeValue: item.count >= item.premiumCount ? "" : "\(item.premiumCount)",
-                                activeTitleColor: .white,
-                                badgeIconName: badgeIconName,
-                                badgeText: "\(item.count)",
-                                badgePosition: CGFloat(item.count) / CGFloat(item.premiumCount),
-                                isPremiumDisabled: item.isPremiumDisabled
-                            )),
+                            component: component,
                             environment: {},
-                            containerSize: CGSize(width: layout.size.width - params.leftInset - params.rightInset, height: 200.0)
+                            containerSize: containerSize
                         )
                         hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -30.0), size: size)
-                        
-                        let _ = textApply()
                         strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textLayout.size.width) / 2.0), y: size.height + textSpacing), size: textLayout.size)
                     }
+                    
+                    strongSelf.params = (component, containerSize, layout, textLayout.size)
                 }
             })
         }

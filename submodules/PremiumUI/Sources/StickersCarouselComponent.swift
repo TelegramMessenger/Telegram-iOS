@@ -45,7 +45,7 @@ final class StickersCarouselComponent: Component {
         public func update(component: StickersCarouselComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
             let isDisplaying = environment[DemoPageEnvironment.self].isDisplaying
             
-            if self.node == nil {
+            if self.node == nil && !component.stickers.isEmpty {
                 let node = StickersCarouselNode(
                     context: component.context,
                     stickers: component.stickers

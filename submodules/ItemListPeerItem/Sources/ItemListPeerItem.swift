@@ -603,6 +603,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             var updatedLabelBadgeImage: UIImage?
             var currentCredibilityIconImage: UIImage?
             
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
+            
             if case .threatSelfAsSaved = item.aliasHandling, item.peer.id == item.context.account.peerId {
                 
             } else {
@@ -612,7 +614,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                 } else if item.peer.isVerified {
                     currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                } else if item.peer.isPremium {
+                } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                     currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
                 }
             }

@@ -1484,6 +1484,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
             }
             
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
             if !isPeerGroup && item.index.messageIndex.id.peerId != item.context.account.peerId {
                 if displayAsMessage {
                     switch item.content {
@@ -1495,7 +1496,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                             } else if peer.isVerified {
                                 currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                            } else if peer.isPremium {
+                            } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                 currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
                             }
                         }
@@ -1509,7 +1510,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                     } else if peer.isVerified {
                         currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                    } else if peer.isPremium {
+                    } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                         currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
                     }
                 }

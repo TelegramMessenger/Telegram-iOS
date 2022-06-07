@@ -49,7 +49,7 @@ final class ReactionsCarouselComponent: Component {
         public func update(component: ReactionsCarouselComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
             let isDisplaying = environment[DemoPageEnvironment.self].isDisplaying
             
-            if self.node == nil {
+            if self.node == nil && !component.reactions.isEmpty {
                 let node = ReactionCarouselNode(
                     context: component.context,
                     theme: component.theme,
