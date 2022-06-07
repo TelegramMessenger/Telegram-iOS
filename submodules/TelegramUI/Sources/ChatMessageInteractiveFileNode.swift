@@ -659,12 +659,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     case let .success(text, isPending):
                         textString = NSAttributedString(string: text, font: textFont, textColor: messageTheme.primaryTextColor)
                         
-                        /*#if DEBUG
+                        #if DEBUG
                         var isPending = isPending
                         if "".isEmpty {
                             isPending = true
                         }
-                        #endif*/
+                        #endif
                         
                         if isPending {
                             let modifiedString = NSMutableAttributedString(attributedString: textString!)
@@ -1027,9 +1027,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     strongSelf.transcriptionPendingIndicator = transcriptionPendingIndicator
                                     strongSelf.textClippingNode.view.addSubview(transcriptionPendingIndicator)
                                 }
+                                
+                                let indicatorComponent: AnyComponent<Empty>
+                                indicatorComponent = AnyComponent(AudioTranscriptionPendingLottieIndicatorComponent(color: messageTheme.primaryTextColor, font: textFont))
+                                //indicatorComponent = AnyComponent(AudioTranscriptionPendingIndicatorComponent(color: messageTheme.primaryTextColor, font: textFont))
+                                
                                 let indicatorSize = transcriptionPendingIndicator.update(
                                     transition: .immediate,
-                                    component: AnyComponent(AudioTranscriptionPendingIndicatorComponent(color: messageTheme.primaryTextColor, font: textFont)),
+                                    component: indicatorComponent,
                                     environment: {},
                                     containerSize: CGSize(width: 100.0, height: 100.0)
                                 )

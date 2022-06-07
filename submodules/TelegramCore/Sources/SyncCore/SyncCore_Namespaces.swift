@@ -232,7 +232,7 @@ private enum PreferencesKeyValues: Int32 {
     case chatListFiltersFeaturedState = 22
     case secretChatSettings = 23
     case reactionSettings = 24
-    case premiumPromo = 25
+    case premiumPromo = 26
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {

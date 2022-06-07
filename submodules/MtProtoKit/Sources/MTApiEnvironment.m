@@ -463,12 +463,12 @@ NSString *suffix = @"";
 #if TARGET_OS_OSX
         NSString *value = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"SOURCE"];
         if (value != nil) {
-            suffix = [NSString stringWithFormat:@"%@ ", value];
+            suffix = [NSString stringWithFormat:@"%@", value];
         }
 #endif
         
         //SOURCE
-        NSString *versionString = [[NSString alloc] initWithFormat:@"%@ (%@)%@", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"], [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"], suffix];
+        NSString *versionString = [[NSString alloc] initWithFormat:@"%@ (%@) %@", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"], [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"], suffix];
         _appVersion = versionString;
         
         _systemLangCode = [[NSLocale preferredLanguages] objectAtIndex:0];

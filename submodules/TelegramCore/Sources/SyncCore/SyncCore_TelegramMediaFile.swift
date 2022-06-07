@@ -499,6 +499,15 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return false
     }
     
+    public var noPremium: Bool {
+        for attribute in self.attributes {
+            if case .NoPremium = attribute {
+                return true
+            }
+        }
+        return false
+    }
+    
     public var premiumEffect: TelegramMediaFile.VideoThumbnail? {
         if let effect = self.videoThumbnails.first(where: { thumbnail in
             if let resource = thumbnail.resource as? CloudDocumentSizeMediaResource, resource.sizeSpec == "f" {
