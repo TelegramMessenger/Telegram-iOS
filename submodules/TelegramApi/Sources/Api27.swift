@@ -6227,11 +6227,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.payments {
-                static func assignAppStoreTransaction(transactionId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func assignAppStoreTransaction(flags: Int32, transactionId: String, receipt: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1654235439)
+                    buffer.appendInt32(267129798)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(transactionId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "payments.assignAppStoreTransaction", parameters: [("transactionId", String(describing: transactionId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    serializeBytes(receipt, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.assignAppStoreTransaction", parameters: [("flags", String(describing: flags)), ("transactionId", String(describing: transactionId)), ("receipt", String(describing: receipt))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -6372,21 +6374,6 @@ public extension Api.functions.payments {
                     serializeString(recurringInitCharge, buffer: buffer, boxed: false)
                     invoiceMedia.serialize(buffer, true)
                     return (FunctionDescription(name: "payments.requestRecurringPayment", parameters: [("userId", String(describing: userId)), ("recurringInitCharge", String(describing: recurringInitCharge)), ("invoiceMedia", String(describing: invoiceMedia))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.payments {
-                static func restoreAppStoreReceipt(receipt: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-2132923705)
-                    serializeBytes(receipt, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "payments.restoreAppStoreReceipt", parameters: [("receipt", String(describing: receipt))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

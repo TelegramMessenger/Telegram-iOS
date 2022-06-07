@@ -93,6 +93,14 @@ public final class InAppPurchaseManager: NSObject {
         return self.productsPromise.get()
     }
     
+    public func finishAllTransactions() {
+        let paymentQueue = SKPaymentQueue.default()
+        let transactions = paymentQueue.transactions
+        for transaction in transactions {
+            paymentQueue.finishTransaction(transaction)
+        }
+    }
+    
     public func buyProduct(_ product: Product, account: Account) -> Signal<PurchaseState, PurchaseError> {
         let payment = SKPayment(product: product.skProduct)
         SKPaymentQueue.default().add(payment)
@@ -159,6 +167,18 @@ extension InAppPurchaseManager: SKProductsRequestDelegate {
     }
 }
 
+private func getReceiptData() -> Data? {
+    var receiptData: Data?
+    if let appStoreReceiptURL = Bundle.main.appStoreReceiptURL, FileManager.default.fileExists(atPath: appStoreReceiptURL.path) {
+        do {
+            receiptData = try Data(contentsOf: appStoreReceiptURL, options: .alwaysMapped)
+        } catch {
+            Logger.shared.log("InAppPurchaseManager", "Couldn't read receipt data with error: \(error.localizedDescription)")
+        }
+    }
+    return receiptData
+}
+
 extension InAppPurchaseManager: SKPaymentTransactionObserver {
     public func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
         for transaction in transactions {
@@ -167,23 +187,28 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 let transactionState: TransactionState?
                 switch transaction.transactionState {
                     case .purchased:
-                        transactionState = .purchased(transactionId: transaction.transactionIdentifier)
-                        if let transactionIdentifier = transaction.transactionIdentifier {
-                            self.disposableSet.set(
-                                self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier).start(error: { error in
-
-                                }, completed: {
-                                    queue.finishTransaction(transaction)
-                                }),
-                                forKey: transaction.transactionIdentifier ?? ""
-                            )
+                        if transaction.original == nil {
+                            transactionState = .purchased(transactionId: transaction.transactionIdentifier)
+                            if let transactionIdentifier = transaction.transactionIdentifier {
+                                self.disposableSet.set(
+                                    self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier, receipt: getReceiptData() ?? Data(), restore: false).start(error: { _ in
+                                        queue.finishTransaction(transaction)
+                                    }, completed: {
+                                        queue.finishTransaction(transaction)
+                                    }),
+                                    forKey: transaction.transactionIdentifier ?? ""
+                                )
+                            }
+                        } else {
+                            transactionState = nil
+                            queue.finishTransaction(transaction)
                         }
                     case .restored:
-                        transactionState = .restored(transactionId: transaction.transactionIdentifier)
-                        if let transactionIdentifier = transaction.transactionIdentifier {
+                        transactionState = .restored(transactionId: transaction.original?.transactionIdentifier)
+                        if let transactionIdentifier = transaction.original?.transactionIdentifier {
                             self.disposableSet.set(
-                                self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier).start(error: { error in
-
+                                self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier, receipt: getReceiptData() ?? Data(), restore: true).start(error: { _ in
+                                    queue.finishTransaction(transaction)
                                 }, completed: {
                                     queue.finishTransaction(transaction)
                                 }),

@@ -15,6 +15,7 @@ import AccountContext
 import AppBundle
 import ZipArchive
 import WebKit
+import InAppPurchaseManager
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -86,13 +87,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case experimentalBackground(Bool)
     case inlineStickers(Bool)
     case localTranscription(Bool)
-    case snow(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case voiceConference
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
     case enableVoipTcp(Bool)
+    case resetInAppPurchases(PresentationTheme)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -108,7 +109,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, .snow:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, .resetInAppPurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -187,7 +188,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 31
         case .localTranscription:
             return 32
-        case .snow:
+        case .resetInAppPurchases:
             return 33
         case .playerEmbedding:
             return 34
@@ -969,16 +970,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .snow(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Snow", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.snow = value
-                        return PreferencesEntry(settings)
-                    })
-                }).start()
-            })
         case let .playerEmbedding(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Player Embedding", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1034,6 +1025,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return PreferencesEntry(settings)
                     })
                 }).start()
+            })
+        case .resetInAppPurchases:
+            return ItemListActionItem(presentationData: presentationData, title: "Reset IAP Transactions", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.context?.inAppPurchaseManager?.finishAllTransactions()
             })
         case let .hostInfo(_, string):
             return ItemListTextItem(presentationData: presentationData, text: .plain(string), sectionId: self.section)
@@ -1096,6 +1091,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.experimentalBackground(experimentalSettings.experimentalBackground))
         entries.append(.inlineStickers(experimentalSettings.inlineStickers))
         entries.append(.localTranscription(experimentalSettings.localTranscription))
+        entries.append(.resetInAppPurchases(presentationData.theme))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }

@@ -807,7 +807,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             
             super.init()
             
-            self.disposable = (context.engine.data.get(
+            self.disposable = (context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Configuration.App(),
                 TelegramEngine.EngineData.Item.Configuration.PremiumPromo()
             )
@@ -840,6 +840,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     }
                 }
             })
+            
+            let _ = updatePremiumPromoConfigurationOnce(account: context.account).start()
             
             let stickersKey: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudPremiumStickers)
             self.stickersDisposable = (self.context.account.postbox.combinedView(keys: [stickersKey])
@@ -1362,9 +1364,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.disposable = combineLatest(
                 queue: Queue.mainQueue(),
                 availableProducts,
-                context.account.postbox.peerView(id: context.account.peerId)
-                |> map { view -> Bool in
-                    return view.peers[view.peerId]?.isPremium ?? false
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                |> map { peer -> Bool in
+                    return peer?.isPremium ?? false
                 },
                 otherPeerName
             ).start(next: { [weak self] products, isPremium, otherPeerName in
@@ -1418,6 +1420,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
 
                                 }, completed: { [weak self] in
                                     if let strongSelf = self {
+                                        let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
                                         strongSelf.isPremium = true
                                         strongSelf.updated(transition: .easeInOut(duration: 0.25))
                                         strongSelf.completion()
