@@ -155,11 +155,35 @@ public extension TelegramEngine {
         }
 
         public func earliestUnseenPersonalMentionMessage(peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+            let account = self.account
             return _internal_earliestUnseenPersonalMentionMessage(account: self.account, peerId: peerId)
+            |> mapToSignal { result -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
+                switch result {
+                case .loading:
+                    return .single(result)
+                case let .result(messageId):
+                    if messageId == nil {
+                        let _ = clearPeerUnseenPersonalMessagesInteractively(account: account, peerId: peerId).start()
+                    }
+                    return .single(result)
+                }
+            }
         }
         
         public func earliestUnseenPersonalReactionMessage(peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+            let account = self.account
             return _internal_earliestUnseenPersonalReactionMessage(account: self.account, peerId: peerId)
+            |> mapToSignal { result -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
+                switch result {
+                case .loading:
+                    return .single(result)
+                case let .result(messageId):
+                    if messageId == nil {
+                        let _ = clearPeerUnseenReactionsInteractively(account: account, peerId: peerId).start()
+                    }
+                    return .single(result)
+                }
+            }
         }
 
         public func exportMessageLink(peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
