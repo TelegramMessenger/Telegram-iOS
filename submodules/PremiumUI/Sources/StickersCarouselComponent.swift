@@ -112,7 +112,7 @@ private class StickerNode: ASDisplayNode {
             let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0))
             
             let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
-            animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
+            animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width * 1.6), height: Int(fittedDimensions.height * 1.6), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
             
             self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: context.account.postbox, file: file, small: false, size: fittedDimensions))
             
@@ -125,7 +125,7 @@ private class StickerNode: ASDisplayNode {
                 let additionalAnimationNode = AnimatedStickerNode()
                 
                 let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(effect.resource.id)
-                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.0), height: Int(fittedDimensions.height * 2.0), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
+                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 1.4), height: Int(fittedDimensions.height * 1.4), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
                 self.additionalAnimationNode = additionalAnimationNode
             }
         } else {

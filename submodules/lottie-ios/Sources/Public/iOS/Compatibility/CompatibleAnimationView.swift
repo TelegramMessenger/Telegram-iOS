@@ -48,7 +48,7 @@ public final class CompatibleAnimationView: UIView {
 
   @objc
   public init(compatibleAnimation: CompatibleAnimation) {
-    animationView = AnimationView(animation: compatibleAnimation.animation)
+    animationView = AnimationView(animation: compatibleAnimation.animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
     self.compatibleAnimation = compatibleAnimation
     super.init(frame: .zero)
     commonInit()

@@ -1082,7 +1082,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.addSubnode(additionalAnimationNode)
         
         if !isLarge, !avatarPeers.isEmpty, let url = getAppBundle().url(forResource: "effectavatar", withExtension: "json"), let composition = Animation.filepath(url.path) {
-            let view = AnimationView(animation: composition)
+            let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
             view.animationSpeed = 1.0
             view.backgroundColor = nil
             view.isOpaque = false

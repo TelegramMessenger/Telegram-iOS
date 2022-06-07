@@ -35,7 +35,7 @@ public final class AnimationNode : ASDisplayNode {
         
         self.setViewBlock({
             if let animationName = animationName, let url = getAppBundle().url(forResource: animationName, withExtension: "json"), let animation = Animation.filepath(url.path) {
-                let view = AnimationView(animation: animation)
+                let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = self.speed
                 view.backgroundColor = .clear
                 view.isOpaque = false
@@ -63,7 +63,7 @@ public final class AnimationNode : ASDisplayNode {
         
         self.setViewBlock({
             if let json = try? JSONSerialization.jsonObject(with: animationData, options: []) as? [String: Any], let animation = try? Animation(dictionary: json) {
-                let view = AnimationView(animation: animation)
+                let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = self.speed
                 view.backgroundColor = .clear
                 view.isOpaque = false
