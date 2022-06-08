@@ -370,18 +370,17 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 }
                 
                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
-                var currentCredibilityIconImage: UIImage?
-                if item.peer.id != self.context.account.peerId {
-                    if item.peer.isScam {
-                        currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
-                    } else if item.peer.isFake {
-                        currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
-                    } else if item.peer.isVerified {
-                        currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(presentationData.theme)
-                    } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
-                        currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(presentationData.theme)
-                    }
+                var currentCredibilityIconImage: UIImage?      
+                if item.peer.isScam {
+                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
+                } else if item.peer.isFake {
+                    currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
+                } else if item.peer.isVerified {
+                    currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(presentationData.theme)
+                } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                    currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(presentationData.theme)
                 }
+                
                 var additionalTitleInset: CGFloat = 0.0
                 if let currentCredibilityIconImage = currentCredibilityIconImage {
                     additionalTitleInset += 3.0 + currentCredibilityIconImage.size.width
