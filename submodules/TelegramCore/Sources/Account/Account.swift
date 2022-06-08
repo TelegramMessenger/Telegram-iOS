@@ -1369,6 +1369,8 @@ public func standaloneStateManager(
                 Logger.shared.log("StandaloneStateManager", "Received settings")
                 
                 return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                    Logger.shared.log("StandaloneStateManager", "Getting state")
+                    
                     let state = transaction.getState()
 
                     return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self))
