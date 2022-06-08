@@ -116,7 +116,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
         let isPremiumSticker = item.file.isPremiumSticker
         
         if item.file.isAnimatedSticker || item.file.isVideoSticker {
-            let animationNode = AnimatedStickerNode()
+            let animationNode = DefaultAnimatedStickerNodeImpl()
             self.animationNode = animationNode
             
             let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -130,7 +130,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: .standalone(media: item.file), resource: effect.resource).start())
                 
                 let source = AnimatedStickerResourceSource(account: account, resource: effect.resource, fitzModifier: nil)
-                let additionalAnimationNode = AnimatedStickerNode()
+                let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
                 additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.0), height: Int(fittedDimensions.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 additionalAnimationNode.visibility = true
                 self.additionalAnimationNode = additionalAnimationNode
@@ -153,8 +153,8 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 animationNode.completed = { [weak self] _ in
                     if let strongSelf = self, let animationNode = strongSelf.animationNode, let additionalAnimationNode = strongSelf.additionalAnimationNode {
                         Queue.mainQueue().async {
-                            animationNode.play()
-                            additionalAnimationNode.play()
+                            animationNode.play(firstFrame: false, fromIndex: nil)
+                            additionalAnimationNode.play(firstFrame: false, fromIndex: nil)
                         }
                     }
                 }

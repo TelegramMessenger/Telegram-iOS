@@ -37,7 +37,7 @@ final class LocationPlaceholderNode: ASDisplayNode {
                 playbackMode = .loop
         }
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: name), width: 320, height: 320, playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         

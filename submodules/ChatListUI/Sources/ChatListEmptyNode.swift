@@ -31,7 +31,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.isFilter = isFilter
         self.isLoading = isLoading
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
@@ -107,13 +107,13 @@ final class ChatListEmptyNode: ASDisplayNode {
     @objc private func animationTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if !self.animationNode.isPlaying {
-                self.animationNode.play()
+                self.animationNode.play(firstFrame: false, fromIndex: nil)
             }
         }
     }
     
     func restartAnimation() {
-        self.animationNode.play()
+        self.animationNode.play(firstFrame: false, fromIndex: nil)
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {

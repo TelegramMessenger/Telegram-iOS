@@ -155,7 +155,7 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         self.presentationData = presentationData
         self.mode = mode
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         let title: String
         let texts: [NSAttributedString]
@@ -178,7 +178,7 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
             texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Done_Text, font: textFont, textColor: textColor)]
             buttonText = doneText
             
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupDone"), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupDone"), width: 248, height: 248, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
             self.animationSize = CGSize(width: 124.0, height: 124.0)
             self.animationNode.visibility = true
         case let .recoveryDone(_, _, isPasswordSet):
@@ -209,7 +209,7 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
             texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorRemember_Done_Text, font: textFont, textColor: textColor)]
             buttonText = self.presentationData.strings.TwoFactorRemember_Done_Action
             
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupRememberSuccess"), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupRememberSuccess"), width: 248, height: 248, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
             self.animationSize = CGSize(width: 124.0, height: 124.0)
             self.animationNode.visibility = true
         }

@@ -62,7 +62,7 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
         if let dimensions = self.file.dimensions {
             if self.file.isAnimatedSticker || self.file.isVideoSticker {
                 if self.animationNode == nil {
-                    let animationNode = AnimatedStickerNode()
+                    let animationNode = DefaultAnimatedStickerNodeImpl()
                     animationNode.autoplay = false
                     self.animationNode = animationNode
                     animationNode.started = { [weak self, weak animationNode] in
@@ -115,7 +115,7 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
                 let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                 let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
                 let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource, isVideo: self.file.isVideoSticker)
-                self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
             
                 self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
                 |> deliverOn(Queue.concurrentDefaultQueue())).start())
@@ -150,7 +150,7 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
     func play(fromFrame frameIndex: Int) {
         self.isVisible = true
         self.updateVisibility()
-        self.animationNode?.play(fromIndex: frameIndex)
+        self.animationNode?.play(firstFrame: false, fromIndex: frameIndex)
     }
     
     func copyStickerView(_ view: TGPhotoPaintStickerRenderView!) {
@@ -158,7 +158,7 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
             return
         }
         self.animationNode?.cloneCurrentFrame(from: animationNode)
-        self.animationNode?.play(fromIndex: animationNode.currentFrameIndex)
+        self.animationNode?.play(firstFrame: false, fromIndex: animationNode.currentFrameIndex)
         self.updateVisibility()
     }
     

@@ -971,7 +971,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.emptyResultsTextNode.textAlignment = .center
         self.emptyResultsTextNode.isHidden = true
              
-        self.emptyResultsAnimationNode = AnimatedStickerNode()
+        self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl()
         self.emptyResultsAnimationNode.isHidden = true
         
         super.init()

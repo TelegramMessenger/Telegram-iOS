@@ -62,7 +62,7 @@ final class AttachmentFileEmptyStateItemNode: ItemListControllerEmptyStateItemNo
     init(item: AttachmentFileEmptyStateItem) {
         self.item = item
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Files"), width: 320, height: 320, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         

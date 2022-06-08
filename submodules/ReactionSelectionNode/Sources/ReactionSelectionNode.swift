@@ -72,11 +72,11 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         self.item = item
         self.hasAppearAnimation = hasAppearAnimation
         
-        self.staticAnimationNode = AnimatedStickerNode()
+        self.staticAnimationNode = DefaultAnimatedStickerNodeImpl()
     
         if hasAppearAnimation {
             self.staticAnimationNode.isHidden = true
-            self.animateInAnimationNode = AnimatedStickerNode()
+            self.animateInAnimationNode = DefaultAnimatedStickerNodeImpl()
         }
         
         super.init()
@@ -144,9 +144,9 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             self.staticAnimationNode.completed = { [weak self] _ in
                 self?.mainAnimationCompletion?()
             }
-            self.staticAnimationNode.play(fromIndex: 0)
+            self.staticAnimationNode.play(firstFrame: false, fromIndex: 0)
         } else if isExpanded, self.animationNode == nil {
-            let animationNode = AnimatedStickerNode()
+            let animationNode = DefaultAnimatedStickerNodeImpl()
             animationNode.automaticallyLoadFirstFrame = true
             self.animationNode = animationNode
             self.addSubnode(animationNode)
@@ -235,7 +235,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         if self.animationNode == nil {
             if isPreviewing {
                 if self.stillAnimationNode == nil {
-                    let stillAnimationNode = AnimatedStickerNode()
+                    let stillAnimationNode = DefaultAnimatedStickerNodeImpl()
                     self.stillAnimationNode = stillAnimationNode
                     self.addSubnode(stillAnimationNode)
                     

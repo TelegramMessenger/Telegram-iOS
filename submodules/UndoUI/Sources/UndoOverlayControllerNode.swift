@@ -319,7 +319,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = nil
-                self.animatedStickerNode = AnimatedStickerNode()
+                self.animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                 self.animatedStickerNode?.visibility = true
                 self.animatedStickerNode?.setup(source: AnimatedStickerNodeLocalFileSource(name: name), width: 100, height: 100, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 
@@ -429,7 +429,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     case .still:
                         break
                     case let .animated(resource, _, isVideo):
-                        let animatedStickerNode = AnimatedStickerNode()
+                        let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                         self.animatedStickerNode = animatedStickerNode
                         animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: isVideo), width: 80, height: 80, mode: .direct(cachePathPrefix: nil))
                     }
@@ -471,7 +471,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         slotMachineNode.setState(.value(value, true))
                     }
                 } else {
-                    let animatedStickerNode = AnimatedStickerNode()
+                    let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                     self.animatedStickerNode = animatedStickerNode
                     
                     let _ = (context.engine.stickers.loadedStickerPack(reference: .dice(dice.emoji), forceActualized: false)
@@ -723,7 +723,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     case .still:
                         break
                     case let .animated(resource):
-                        let animatedStickerNode = AnimatedStickerNode()
+                        let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                         self.animatedStickerNode = animatedStickerNode
                         animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: file.isVideoSticker), width: 80, height: 80, mode: .cached)
                     }
@@ -749,7 +749,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 
-                let animatedStickerNode = AnimatedStickerNode()
+                let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                 self.animatedStickerNode = animatedStickerNode
                 
                 animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "anim_savemedia"), width: 80, height: 80, playbackMode: .once, mode: .direct(cachePathPrefix: nil))

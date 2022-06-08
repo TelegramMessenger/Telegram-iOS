@@ -250,7 +250,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.emptyTextNode.textAlignment = .center
         self.emptyTextNode.maximumNumberOfLines = 3
         
-        self.emptyAnimationNode = AnimatedStickerNode()
+        self.emptyAnimationNode = DefaultAnimatedStickerNodeImpl()
         self.emptyAnimationNode.alpha = 0.0
         self.emptyAnimationNode.isUserInteractionEnabled = false
         

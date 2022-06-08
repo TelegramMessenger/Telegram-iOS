@@ -39,7 +39,7 @@ private final class ReportPeerHeaderActionSheetItemNode: ActionSheetItemNode {
         
         let textFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Cop"), width: 192, height: 192, playbackMode: .count(2), mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         

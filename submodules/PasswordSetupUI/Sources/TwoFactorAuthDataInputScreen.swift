@@ -1269,17 +1269,17 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         case .password, .passwordRecovery, .emailAddress, .updateEmailAddress:
             self.monkeyNode = ManagedMonkeyAnimationNode()
         case .emailConfirmation, .passwordRecoveryEmail:
-            let animatedStickerNode = AnimatedStickerNode()
+            let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
             animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupMail"), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 animatedStickerNode.visibility = true
             self.animatedStickerNode = animatedStickerNode
         case .passwordHint:
-            let animatedStickerNode = AnimatedStickerNode()
+            let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
             animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupHint"), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
             animatedStickerNode.visibility = true
             self.animatedStickerNode = animatedStickerNode
         case .rememberPassword:
-            let animatedStickerNode = AnimatedStickerNode()
+            let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
             animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupRemember"), width: 272, height: 272, playbackMode: .count(3), mode: .direct(cachePathPrefix: nil))
             animatedStickerNode.visibility = true
             self.animatedStickerNode = animatedStickerNode

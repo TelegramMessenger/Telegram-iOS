@@ -381,7 +381,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             Queue.mainQueue().after(0.1) {
                 if !wasSelected {
                     animatedStickerNode.seekTo(.frameIndex(0))
-                    animatedStickerNode.play()
+                    animatedStickerNode.play(firstFrame: false, fromIndex: nil)
                     
                     let scale: CGFloat = 1.95
                     animatedStickerNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
@@ -498,7 +498,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         if let current = strongSelf.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                             animatedStickerNode.started = { [weak self] in
                                 self?.emojiImageNode.isHidden = true
                             }
@@ -1499,7 +1499,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             self.codeStaticIconNode = codeStaticIconNode
             self.codeAnimatedIconNode = nil
         } else {
-            let codeAnimatedIconNode = AnimatedStickerNode()
+            let codeAnimatedIconNode = DefaultAnimatedStickerNodeImpl()
             codeAnimatedIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogoPlain"), width: 120, height: 120, mode: .direct(cachePathPrefix: nil))
             codeAnimatedIconNode.visibility = true
             self.codeAnimatedIconNode = codeAnimatedIconNode

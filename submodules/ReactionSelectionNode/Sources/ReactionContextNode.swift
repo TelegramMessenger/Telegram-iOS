@@ -656,7 +656,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateBounds(node: itemNode, bounds: CGRect(origin: CGPoint(), size: expandedFrame.size))
         itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, largeExpanded: self.didTriggerExpandedReaction, isPreviewing: false, transition: transition)
         
-        let additionalAnimationNode = AnimatedStickerNode()
+        let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
         
         let additionalAnimation: TelegramMediaFile
         if self.didTriggerExpandedReaction {
@@ -1064,7 +1064,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         
         itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, largeExpanded: isLarge, isPreviewing: false, transition: .immediate)
         
-        let additionalAnimationNode = AnimatedStickerNode()
+        let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
         
         let additionalAnimation: TelegramMediaFile
         if isLarge && !forceSmallEffectAnimation {

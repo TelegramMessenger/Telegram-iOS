@@ -125,7 +125,7 @@ private final class TabBarItemNode: ASDisplayNode {
         
         self.animationContainerNode = ASDisplayNode()
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.autoplay = true
         self.animationNode.automaticallyLoadLastFrame = true
         
@@ -788,7 +788,7 @@ class TabBarNode: ASDisplayNode {
                 self.itemSelected(closestNode.0, longTap, [container.imageNode.imageNode, container.imageNode.textImageNode, container.badgeContainerNode])
                 if previousSelectedIndex != closestNode.0 {
                     if let selectedIndex = self.selectedIndex, let _ = self.tabBarItems[selectedIndex].item.animationName {
-                        container.imageNode.animationNode.play()
+                        container.imageNode.animationNode.play(firstFrame: false, fromIndex: nil)
                     }
                 }
             }

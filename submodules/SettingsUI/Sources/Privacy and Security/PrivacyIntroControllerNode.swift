@@ -58,7 +58,7 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         self.proceedAction = proceedAction
         
         self.iconNode = ASImageNode()
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         self.titleNode = ASTextNode()
         self.textNode = ASTextNode()
