@@ -175,7 +175,7 @@ public class ShareRootControllerImpl {
             
             TempBox.initializeShared(basePath: rootPath, processType: "share", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
             
-            let logsPath = rootPath + "/share-logs"
+            let logsPath = rootPath + "/logs/share-logs"
             let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
             
             setupSharedLogger(rootPath: rootPath, path: logsPath)

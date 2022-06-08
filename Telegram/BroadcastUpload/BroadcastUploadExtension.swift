@@ -64,7 +64,7 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
 
         let rootPath = rootPathForBasePath(appGroupUrl.path)
 
-        let logsPath = rootPath + "/broadcast-logs"
+        let logsPath = rootPath + "/logs/broadcast-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
 
         let screencastBufferClientContext = IpcGroupCallBufferBroadcastContext(basePath: rootPath + "/broadcast-coordination")

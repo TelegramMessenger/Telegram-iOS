@@ -639,7 +639,7 @@ private final class NotificationServiceHandler {
 
         TempBox.initializeShared(basePath: rootPath, processType: "notification", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
 
-        let logsPath = rootPath + "/notification-logs"
+        let logsPath = rootPath + "/logs/notification-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
 
         setupSharedLogger(rootPath: rootPath, path: logsPath)
@@ -699,8 +699,8 @@ private final class NotificationServiceHandler {
             var isCurrentAccount: Bool = false
             
             let loggingSettings = sharedData.entries[SharedDataKeys.loggingSettings]?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings
-            Logger.shared.logToFile = loggingSettings.logging.logToFile
-            Logger.shared.logToConsole = loggingSettings.logging.logToConsole
+            Logger.shared.logToFile = loggingSettings.logToFile
+            Logger.shared.logToConsole = loggingSettings.logToConsole
 
             if let keyId = notificationPayloadKeyId(data: payloadData) {
                 outer: for listRecord in records.records {
@@ -719,8 +719,6 @@ private final class NotificationServiceHandler {
             }
 
             let inAppNotificationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
-            
-            customSoundPath = inAppNotificationSettings.customSound
             
             let voiceCallSettings: VoiceCallSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) {
