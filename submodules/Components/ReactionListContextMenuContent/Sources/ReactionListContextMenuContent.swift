@@ -290,6 +290,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             let highlightBackgroundNode: ASDisplayNode
             let avatarNode: AvatarNode
             let titleLabelNode: ImmediateTextNode
+            var credibilityIconNode: ASImageNode?
             let separatorNode: ASDisplayNode
             var reactionIconNode: ReactionImageNode?
             let action: () -> Void
@@ -368,6 +369,23 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     self.accessibilityLabel = "\(item.peer.debugDisplayTitle) \(item.reaction ?? "")"
                 }
                 
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+                var currentCredibilityIconImage: UIImage?      
+                if item.peer.isScam {
+                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
+                } else if item.peer.isFake {
+                    currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
+                } else if item.peer.isVerified {
+                    currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(presentationData.theme)
+                } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                    currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(presentationData.theme)
+                }
+                
+                var additionalTitleInset: CGFloat = 0.0
+                if let currentCredibilityIconImage = currentCredibilityIconImage {
+                    additionalTitleInset += 3.0 + currentCredibilityIconImage.size.width
+                }
+                
                 self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
                 self.separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
                 
@@ -377,12 +395,32 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.avatarNode.setPeer(context: self.context, theme: presentationData.theme, peer: item.peer, synchronousLoad: true)
                 
                 self.titleLabelNode.attributedText = NSAttributedString(string: item.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.regular(17.0), textColor: presentationData.theme.contextMenu.primaryColor)
-                var maxTextWidth: CGFloat = size.width - avatarInset - avatarSize - avatarSpacing - sideInset
+                var maxTextWidth: CGFloat = size.width - avatarInset - avatarSize - avatarSpacing - sideInset - additionalTitleInset
                 if reactionIconNode != nil {
                     maxTextWidth -= 32.0
                 }
                 let titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 100.0))
-                self.titleLabelNode.frame = CGRect(origin: CGPoint(x: avatarInset + avatarSize + avatarSpacing, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
+                let titleFrame = CGRect(origin: CGPoint(x: avatarInset + avatarSize + avatarSpacing, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
+                self.titleLabelNode.frame = titleFrame
+                
+                if let currentCredibilityIconImage = currentCredibilityIconImage {
+                    let iconNode: ASImageNode
+                    if let current = self.credibilityIconNode {
+                        iconNode = current
+                    } else {
+                        iconNode = ASImageNode()
+                        iconNode.isLayerBacked = true
+                        iconNode.displaysAsynchronously = false
+                        iconNode.displayWithoutProcessing = true
+                        self.addSubnode(iconNode)
+                        self.credibilityIconNode = iconNode
+                    }
+                    iconNode.image = currentCredibilityIconImage
+                    iconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - currentCredibilityIconImage.size.height / 2.0) + 1.0 - UIScreenPixel), size: currentCredibilityIconImage.size)
+                } else if let credibilityIconNode = self.credibilityIconNode {
+                    self.credibilityIconNode = nil
+                    credibilityIconNode.removeFromSupernode()
+                }
                 
                 if let reactionIconNode = self.reactionIconNode {
                     let reactionSize = CGSize(width: 22.0, height: 22.0)

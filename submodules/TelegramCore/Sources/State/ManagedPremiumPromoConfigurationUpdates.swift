@@ -19,6 +19,13 @@ func updatePremiumPromoConfigurationOnce(postbox: Postbox, network: Network) -> 
             return .complete()
         }
         return postbox.transaction { transaction -> Void in
+            if case let .premiumPromo(_, _, _, _, _, _, apiUsers) = result {
+                let users = apiUsers.map { TelegramUser(user: $0) }
+                updatePeers(transaction: transaction, peers: users, update: { _, updated -> Peer in
+                    return updated
+                })
+            }
+            
             updatePremiumPromoConfiguration(transaction: transaction, { configuration -> PremiumPromoConfiguration in
                 return PremiumPromoConfiguration(apiPremiumPromo: result)
             })
@@ -54,7 +61,7 @@ private func updatePremiumPromoConfiguration(transaction: Transaction, _ f: (Pre
 private extension PremiumPromoConfiguration {
     init(apiPremiumPromo: Api.help.PremiumPromo) {
         switch apiPremiumPromo {
-            case let .premiumPromo(statusText, statusEntities, videoSections, videoFiles, currency, monthlyAmount):
+            case let .premiumPromo(statusText, statusEntities, videoSections, videoFiles, currency, monthlyAmount, _):
                 self.status = statusText
                 self.statusEntities = messageTextEntitiesFromApiEntities(statusEntities)
                 self.currency = currency

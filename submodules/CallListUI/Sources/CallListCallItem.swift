@@ -197,6 +197,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
+    private var credibilityIconNode: ASImageNode?
     private let statusNode: TextNode
     private let dateNode: TextNode
     private let typeIconNode: ASImageNode
@@ -475,7 +476,26 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             let (dateLayout, dateApply) = makeDateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dateText, font: dateFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - dateRightInset - dateLayout.size.width - (item.editing ? -30.0 : 10.0)), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
+            var currentCredibilityIconImage: UIImage?
+            if let peer = item.topMessage.peers[item.topMessage.id.peerId], peer.id != item.context.account.peerId {
+                if peer.isScam {
+                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                } else if peer.isFake {
+                    currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                } else if peer.isVerified {
+                    currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                    currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                }
+            }
+            
+            var additionalTitleInset: CGFloat = 0.0
+            if let currentCredibilityIconImage = currentCredibilityIconImage {
+                additionalTitleInset += 3.0 + currentCredibilityIconImage.size.width
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - additionalTitleInset - leftInset - dateRightInset - dateLayout.size.width - (item.editing ? -30.0 : 10.0)), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - dateRightInset - dateLayout.size.width - (item.editing ? -30.0 : 10.0)), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -614,10 +634,30 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             transition.updateFrameAdditive(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: floor((contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter)))
                             
                             let _ = titleApply()
-                            transition.updateFrameAdditive(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: verticalInset), size: titleLayout.size))
+                            let titleFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: verticalInset), size: titleLayout.size)
+                            transition.updateFrameAdditive(node: strongSelf.titleNode, frame: titleFrame)
                             
                             let _ = statusApply()
                             transition.updateFrameAdditive(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
+                            
+                            if let currentCredibilityIconImage = currentCredibilityIconImage {
+                                let iconNode: ASImageNode
+                                if let current = strongSelf.credibilityIconNode {
+                                    iconNode = current
+                                } else {
+                                    iconNode = ASImageNode()
+                                    iconNode.isLayerBacked = true
+                                    iconNode.displaysAsynchronously = false
+                                    iconNode.displayWithoutProcessing = true
+                                    strongSelf.containerNode.addSubnode(iconNode)
+                                    strongSelf.credibilityIconNode = iconNode
+                                }
+                                iconNode.image = currentCredibilityIconImage
+                                transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - currentCredibilityIconImage.size.height / 2.0) - UIScreenPixel), size: currentCredibilityIconImage.size))
+                            } else if let credibilityIconNode = strongSelf.credibilityIconNode {
+                                strongSelf.credibilityIconNode = nil
+                                credibilityIconNode.removeFromSupernode()
+                            }
                             
                             let _ = dateApply()
                             transition.updateFrameAdditive(node: strongSelf.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + params.width - dateRightInset - dateLayout.size.width, y: floor((nodeLayout.contentSize.height - dateLayout.size.height) / 2.0) + 2.0), size: dateLayout.size))

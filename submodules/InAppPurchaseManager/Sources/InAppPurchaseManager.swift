@@ -32,6 +32,11 @@ public final class InAppPurchaseManager: NSObject {
         case notAllowed
     }
     
+    public enum RestoreState {
+        case succeed
+        case failed
+    }
+    
     private final class PaymentTransactionContext {
         var state: SKPaymentTransactionState?
         let subscriber: (TransactionState) -> Void
@@ -59,6 +64,8 @@ public final class InAppPurchaseManager: NSObject {
     private let stateQueue = Queue()
     private var paymentContexts: [String: PaymentTransactionContext] = [:]
     
+    private var onRestoreCompletion: ((RestoreState) -> Void)?
+    
     private let disposableSet = DisposableDict<String>()
     
     public init(engine: TelegramEngine, premiumProductId: String) {
@@ -79,6 +86,7 @@ public final class InAppPurchaseManager: NSObject {
         guard !self.premiumProductId.isEmpty else {
             return
         }
+        Logger.shared.log("InAppPurchaseManager", "Requesting products")
         let productRequest = SKProductsRequest(productIdentifiers: Set([self.premiumProductId]))
         productRequest.delegate = self
         productRequest.start()
@@ -93,7 +101,17 @@ public final class InAppPurchaseManager: NSObject {
         return self.productsPromise.get()
     }
     
+    public func restorePurchases(completion: @escaping (RestoreState) -> Void) {
+        Logger.shared.log("InAppPurchaseManager", "Restoring purchases")
+        self.onRestoreCompletion = completion
+        
+        let paymentQueue = SKPaymentQueue.default()
+        paymentQueue.restoreCompletedTransactions()
+    }
+    
     public func finishAllTransactions() {
+        Logger.shared.log("InAppPurchaseManager", "Finishing all transactions")
+        
         let paymentQueue = SKPaymentQueue.default()
         let transactions = paymentQueue.transactions
         for transaction in transactions {
@@ -102,6 +120,8 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     public func buyProduct(_ product: Product, account: Account) -> Signal<PurchaseState, PurchaseError> {
+        Logger.shared.log("InAppPurchaseManager", "Buying product: \(product.skProduct.productIdentifier), price \(product.price)")
+        
         let payment = SKPayment(product: product.skProduct)
         SKPaymentQueue.default().add(payment)
         
@@ -162,7 +182,10 @@ extension InAppPurchaseManager: SKProductsRequestDelegate {
         self.productRequest = nil
         
         Queue.mainQueue().async {
-            self.productsPromise.set(.single(response.products.map { Product(skProduct: $0) }))
+            let products = response.products.map { Product(skProduct: $0) }
+             
+            Logger.shared.log("InAppPurchaseManager", "Received products \(products.map({ $0.skProduct.productIdentifier }).joined(separator: ", "))")
+            self.productsPromise.set(.single(products))
         }
     }
 }
@@ -187,37 +210,46 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 let transactionState: TransactionState?
                 switch transaction.transactionState {
                     case .purchased:
-                        let transactionIdentifier = transaction.original?.transactionIdentifier ?? transaction.transactionIdentifier
+                        Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "none") purchased")
+                        let transactionIdentifier = transaction.transactionIdentifier
                         transactionState = .purchased(transactionId: transactionIdentifier)
                         if let transactionIdentifier = transactionIdentifier {
                             self.disposableSet.set(
                                 self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier, receipt: getReceiptData() ?? Data(), restore: false).start(error: { _ in
+                                    Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") failed to assign AppStore transaction")
                                     queue.finishTransaction(transaction)
                                 }, completed: {
+                                    Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") successfully assigned AppStore transaction")
                                     queue.finishTransaction(transaction)
                                 }),
-                                forKey: transaction.transactionIdentifier ?? ""
+                                forKey: transactionIdentifier
                             )
                         }
                     case .restored:
-                        let transactionIdentifier = transaction.original?.transactionIdentifier ?? transaction.transactionIdentifier
+                        Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "") restroring")
+                        let transactionIdentifier = transaction.transactionIdentifier
                         transactionState = .restored(transactionId: transactionIdentifier)
                         if let transactionIdentifier = transactionIdentifier {
                             self.disposableSet.set(
                                 self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier, receipt: getReceiptData() ?? Data(), restore: true).start(error: { _ in
+                                    Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") failed to assign AppStore transaction")
                                     queue.finishTransaction(transaction)
                                 }, completed: {
+                                    Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") successfully assigned AppStore transaction")
                                     queue.finishTransaction(transaction)
                                 }),
-                                forKey: transaction.transactionIdentifier ?? ""
+                                forKey: transactionIdentifier
                             )
                         }
                     case .failed:
+                        Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") failed \((transaction.error as? SKError)?.localizedDescription ?? "")")
                         transactionState = .failed(error: transaction.error as? SKError)
                         queue.finishTransaction(transaction)
                     case .purchasing:
+                        Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") purchasing")
                         transactionState = .purchasing
                     case .deferred:
+                        Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") deferred")
                         transactionState = .deferred
                     default:
                         transactionState = nil
@@ -228,6 +260,22 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                     }
                 }
             }
+        }
+    }
+    
+    public func paymentQueueRestoreCompletedTransactionsFinished(_ queue: SKPaymentQueue) {
+        if let onRestoreCompletion = self.onRestoreCompletion {
+            Logger.shared.log("InAppPurchaseManager", "Transactions restoration finished")
+            onRestoreCompletion(.succeed)
+            self.onRestoreCompletion = nil
+        }
+    }
+    
+    public func paymentQueue(_ queue: SKPaymentQueue, restoreCompletedTransactionsFailedWithError error: Error) {
+        if let onRestoreCompletion = self.onRestoreCompletion {
+            Logger.shared.log("InAppPurchaseManager", "Transactions restoration failed with error \((error as? SKError)?.localizedDescription ?? "")")
+            onRestoreCompletion(.failed)
+            self.onRestoreCompletion = nil
         }
     }
 }
