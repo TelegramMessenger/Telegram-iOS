@@ -6227,13 +6227,12 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.payments {
-                static func assignAppStoreTransaction(flags: Int32, transactionId: String, receipt: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func assignAppStoreTransaction(flags: Int32, receipt: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(267129798)
+                    buffer.appendInt32(224186320)
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(transactionId, buffer: buffer, boxed: false)
                     serializeBytes(receipt, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "payments.assignAppStoreTransaction", parameters: [("flags", String(describing: flags)), ("transactionId", String(describing: transactionId)), ("receipt", String(describing: receipt))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "payments.assignAppStoreTransaction", parameters: [("flags", String(describing: flags)), ("receipt", String(describing: receipt))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

@@ -215,7 +215,7 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                         transactionState = .purchased(transactionId: transactionIdentifier)
                         if let transactionIdentifier = transactionIdentifier {
                             self.disposableSet.set(
-                                self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier, receipt: getReceiptData() ?? Data(), restore: false).start(error: { _ in
+                                self.engine.payments.sendAppStoreReceipt(receipt: getReceiptData() ?? Data(), restore: false).start(error: { _ in
                                     Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") failed to assign AppStore transaction")
                                     queue.finishTransaction(transaction)
                                 }, completed: {
@@ -229,18 +229,6 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                         Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "") restroring")
                         let transactionIdentifier = transaction.transactionIdentifier
                         transactionState = .restored(transactionId: transactionIdentifier)
-                        if let transactionIdentifier = transactionIdentifier {
-                            self.disposableSet.set(
-                                self.engine.payments.assignAppStoreTransaction(transactionId: transactionIdentifier, receipt: getReceiptData() ?? Data(), restore: true).start(error: { _ in
-                                    Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") failed to assign AppStore transaction")
-                                    queue.finishTransaction(transaction)
-                                }, completed: {
-                                    Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") successfully assigned AppStore transaction")
-                                    queue.finishTransaction(transaction)
-                                }),
-                                forKey: transactionIdentifier
-                            )
-                        }
                     case .failed:
                         Logger.shared.log("InAppPurchaseManager", "Transaction \(transaction.transactionIdentifier ?? "") failed \((transaction.error as? SKError)?.localizedDescription ?? "")")
                         transactionState = .failed(error: transaction.error as? SKError)
@@ -268,6 +256,15 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
             Logger.shared.log("InAppPurchaseManager", "Transactions restoration finished")
             onRestoreCompletion(.succeed)
             self.onRestoreCompletion = nil
+            
+            if let receiptData = getReceiptData() {
+                self.disposableSet.set(
+                    self.engine.payments.sendAppStoreReceipt(receipt: receiptData, restore: true).start(completed: {
+                        Logger.shared.log("InAppPurchaseManager", "Sent restored receipt")
+                    }),
+                    forKey: "restore"
+                )
+            }
         }
     }
     
