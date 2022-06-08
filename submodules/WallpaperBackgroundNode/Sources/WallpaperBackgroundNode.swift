@@ -467,7 +467,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             ("ptrnSLON_0906_1033", CGPoint(x: 906 - 256, y: 1033 - 256))
         ]
         for (animation, relativePosition) in animationList {
-            let animationNode = AnimatedStickerNode()
+            let animationNode = DefaultAnimatedStickerNodeImpl()
             animationNode.automaticallyLoadFirstFrame = true
             animationNode.autoplay = true
             //self.inlineAnimationNodes.append((animationNode, relativePosition))

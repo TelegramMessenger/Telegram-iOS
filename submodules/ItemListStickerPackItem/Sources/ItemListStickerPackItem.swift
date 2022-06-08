@@ -761,14 +761,14 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                 if let current = strongSelf.animationNode {
                                     animationNode = current
                                 } else {
-                                    animationNode = AnimatedStickerNode()
+                                    animationNode = DefaultAnimatedStickerNodeImpl()
                                     animationNode.started = { [weak self] in
                                         self?.removePlaceholder(animated: false)
                                     }
                                     strongSelf.animationNode = animationNode
                                     strongSelf.addSubnode(animationNode)
                                     
-                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource, isVideo: isVideo), width: 80, height: 80, mode: .cached)
+                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource, isVideo: isVideo), width: 80, height: 80, playbackMode: .loop, mode: .cached)
                                 }
                                 animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
                                 animationNode.isHidden = !item.playAnimatedStickers

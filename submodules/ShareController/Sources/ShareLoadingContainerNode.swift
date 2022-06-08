@@ -212,11 +212,11 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
         self.theme = theme
         self.strings = strings
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ShareProgress"), width: 384, height: 384, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         
-        self.doneAnimationNode = AnimatedStickerNode()
+        self.doneAnimationNode = DefaultAnimatedStickerNodeImpl()
         self.doneAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ShareDone"), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.doneAnimationNode.visibility = false
         self.doneAnimationNode.isHidden = true

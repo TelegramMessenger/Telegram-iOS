@@ -39,7 +39,7 @@ protocol GenericAnimatedStickerNode: ASDisplayNode {
     func setFrameIndex(_ frameIndex: Int)
 }
 
-extension AnimatedStickerNode: GenericAnimatedStickerNode {
+extension DefaultAnimatedStickerNodeImpl: GenericAnimatedStickerNode {
     func setFrameIndex(_ frameIndex: Int) {
         self.stop()
         self.play(fromIndex: frameIndex)
@@ -440,7 +440,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 self.animationNode = animationNode
             }
         } else {
-            let animationNode = AnimatedStickerNode(useMetalCache: item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers)
+            let animationNode = DefaultAnimatedStickerNodeImpl(useMetalCache: item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers)
             animationNode.started = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.imageNode.alpha = 0.0
@@ -1684,7 +1684,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         } else {
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
-            let additionalAnimationNode = AnimatedStickerNode()
+            let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 1.6), height: Int(animationSize.height * 1.6), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame: CGRect
             if isStickerEffect {
@@ -1941,7 +1941,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                         
                                                         switch status.status {
                                                             case .playing:
-                                                                animationNode?.play()
+                                                                animationNode?.play(firstFrame: false, fromIndex: nil)
                                                                 strongSelf.mediaStatusDisposable.set(nil)
                                                             default:
                                                                 break
@@ -1955,7 +1955,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                             if let haptic = haptic, !haptic.active {
                                                 haptic.start(time: 0.0)
                                             }
-                                            animationNode?.play()
+                                            animationNode?.play(firstFrame: false, fromIndex: nil)
                                         }
                                     })
                                 }

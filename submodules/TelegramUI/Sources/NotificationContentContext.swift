@@ -294,7 +294,7 @@ public final class NotificationViewControllerImpl {
                         if let current = strongSelf.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                             strongSelf.animatedStickerNode = animatedStickerNode
                             animatedStickerNode.started = {
                                 guard let strongSelf = self else {
@@ -315,7 +315,7 @@ public final class NotificationViewControllerImpl {
                         } else {
                             strongSelf.imageNode.setSignal(chatMessageAnimatedSticker(postbox: accountAndImage.0.postbox, file: fileReference.media, small: false, size: fittedDimensions))
                         }
-                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: accountAndImage.0, resource: fileReference.media.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: accountAndImage.0, resource: fileReference.media.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                         animatedStickerNode.visibility = true
                         
                         accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))

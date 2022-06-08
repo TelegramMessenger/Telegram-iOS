@@ -302,7 +302,7 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
             Queue.mainQueue().after(0.1) {
                 if !wasSelected {
                     animatedStickerNode.seekTo(.frameIndex(0))
-                    animatedStickerNode.play()
+                    animatedStickerNode.play(firstFrame: false, fromIndex: nil)
                     
                     let scale: CGFloat = 2.6
                     animatedStickerNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
@@ -417,7 +417,7 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
                         if let current = strongSelf.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                             animatedStickerNode.started = { [weak self] in
                                 self?.emojiImageNode.isHidden = true
                             }

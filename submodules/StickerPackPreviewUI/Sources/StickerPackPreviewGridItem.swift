@@ -223,7 +223,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     }
                     
                     if self.animationNode == nil {
-                        let animationNode = AnimatedStickerNode()
+                        let animationNode = DefaultAnimatedStickerNodeImpl()
                         self.animationNode = animationNode
                         self.insertSubnode(animationNode, aboveSubnode: self.imageNode)
                         animationNode.started = { [weak self] in
@@ -243,7 +243,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         }
                     }
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
                     
                     self.animationNode?.visibility = visibility
                                         
