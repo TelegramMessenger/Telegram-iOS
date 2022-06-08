@@ -94,7 +94,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
     case enableVoipTcp(Bool)
-    case resetInAppPurchases(PresentationTheme)
+    case restorePurchases(PresentationTheme)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -110,7 +110,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, . enableReactionOverrides, .resetInAppPurchases:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, . enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -191,7 +191,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 32
         case .enableReactionOverrides:
             return 33
-        case .resetInAppPurchases:
+        case .restorePurchases:
             return 34
         case .playerEmbedding:
             return 35
@@ -1043,9 +1043,21 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case .resetInAppPurchases:
-            return ItemListActionItem(presentationData: presentationData, title: "Reset IAP Transactions", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                arguments.context?.inAppPurchaseManager?.finishAllTransactions()
+        case .restorePurchases:
+            return ItemListActionItem(presentationData: presentationData, title: "Restore Purchases", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.context?.inAppPurchaseManager?.restorePurchases(completion: { state in
+                    let text: String
+                    switch state {
+                        case .succeed:
+                            text = "Done"
+                        case .failed:
+                            text = "Failed"
+                    }
+                    if let context = arguments.context {
+                        let controller = textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: "OK", action: {})])
+                        arguments.presentController(controller, nil)
+                    }
+                })
             })
         case let .hostInfo(_, string):
             return ItemListTextItem(presentationData: presentationData, text: .plain(string), sectionId: self.section)
@@ -1111,7 +1123,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         if case .internal = sharedContext.applicationBindings.appBuildType {
             entries.append(.enableReactionOverrides(experimentalSettings.enableReactionOverrides))
         }
-        entries.append(.resetInAppPurchases(presentationData.theme))
+        entries.append(.restorePurchases(presentationData.theme))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }

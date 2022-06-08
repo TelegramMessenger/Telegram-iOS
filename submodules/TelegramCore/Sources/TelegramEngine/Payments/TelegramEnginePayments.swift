@@ -38,8 +38,8 @@ public extension TelegramEngine {
             return _internal_clearBotPaymentInfo(network: self.account.network, info: info)
         }
         
-        public func assignAppStoreTransaction(transactionId: String, receipt: Data, restore: Bool) -> Signal<Never, AssignAppStoreTransactionError> {
-            return _internal_assignAppStoreTransaction(account: self.account, transactionId: transactionId, receipt: receipt, restore: restore)
+        public func sendAppStoreReceipt(receipt: Data, restore: Bool) -> Signal<Never, AssignAppStoreTransactionError> {
+            return _internal_sendAppStoreReceipt(account: self.account, receipt: receipt, restore: restore)
         }
         
         public func canPurchasePremium() -> Signal<Bool, NoError> {
