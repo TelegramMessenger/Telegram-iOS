@@ -382,6 +382,8 @@ private final class SectionGroupComponent: Component {
                     buttonView = current
                 } else {
                     buttonView = HighlightTrackingButton()
+                    buttonView.isMultipleTouchEnabled = false
+                    buttonView.isExclusiveTouch = true
                     buttonView.addTarget(self, action: #selector(self.buttonPressed(_:)), for: .touchUpInside)
                     self.buttonViews[item.content.id] = buttonView
                     self.addSubview(buttonView)
