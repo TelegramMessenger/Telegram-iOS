@@ -281,9 +281,11 @@ class PremiumStarComponent: Component {
         }
         
         private func maybeAnimateIn() {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false), let animateFrom = self.animateFrom, let containerView = self.containerView else {
+            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false), let animateFrom = self.animateFrom, var containerView = self.containerView else {
                 return
             }
+                        
+            containerView = containerView.subviews[2].subviews[1]
             
             if let animationColor = self.animationColor {
                 let newNode = node.clone()
@@ -323,6 +325,9 @@ class PremiumStarComponent: Component {
             self.sceneView.layer.animatePosition(from: sourcePosition, to: targetPosition, duration: 1.0, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
                 self.addSubview(self.sceneView)
                 self.sceneView.center = initialPosition
+            })
+            
+            Queue.mainQueue().after(0.4, {
                 animateFrom.alpha = 1.0
             })
             

@@ -730,7 +730,19 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         
         if case .revokeNames = mode {
             let count = Int32(publicChannelsToRevoke?.count ?? 0)
-            entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(premiumLimits.maxPublicLinksCount)").string, count, limits.maxPublicLinksCount, premiumLimits.maxPublicLinksCount, isPremiumDisabled))
+            
+            let text: String
+            if count >= premiumLimits.maxPublicLinksCount {
+                text = presentationData.strings.Group_Username_RemoveExistingUsernamesFinalInfo
+            } else {
+                if isPremiumDisabled {
+                    text = presentationData.strings.Group_Username_RemoveExistingUsernamesNoPremiumInfo
+                } else {
+                    text = presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(premiumLimits.maxPublicLinksCount)").string
+                }
+            }
+            
+            entries.append(.linksLimitInfo(presentationData.theme, text, count, limits.maxPublicLinksCount, premiumLimits.maxPublicLinksCount, isPremiumDisabled))
             
             if let publicChannelsToRevoke = publicChannelsToRevoke {
                 var index: Int32 = 0
@@ -1419,7 +1431,8 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         
         var rightNavigationButton: ItemListNavigationButton?
         if case .revokeNames = mode {
-            if !premiumConfiguration.isPremiumDisabled {
+            let count = Int32(publicChannelsToRevoke?.count ?? 0)
+            if !premiumConfiguration.isPremiumDisabled && count < premiumLimits.maxPublicLinksCount {
                 footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: presentationData.strings.Premium_IncreaseLimit, colorful: true, action: {
                     let controller = PremiumIntroScreen(context: context, source: .publicLinks)
                     pushControllerImpl?(controller)
