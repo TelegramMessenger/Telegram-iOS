@@ -15261,7 +15261,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 let aspectRatio = min(image.size.width, image.size.height) / maxSide
-                if (imageHasTransparency(cgImage) && aspectRatio > 0.5) {
+                if (imageHasTransparency(cgImage) && aspectRatio > 0.2) {
                     strongSelf.enqueueStickerImage(image, isMemoji: false)
                     return
                 }
