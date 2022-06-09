@@ -910,7 +910,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                         visibleRootModalDismissProgress = effectiveRootModalDismissProgress
                         additionalModalFrameProgress = 1.0 - topModalDismissProgress
                     } else {
-//                        effectiveRootModalDismissProgress = ((topModalIsFlat && !topFlatModalHasProgress) || isLandscape) ? 1.0 : topModalDismissProgress
                         effectiveRootModalDismissProgress = topModalDismissProgress
                         visibleRootModalDismissProgress = effectiveRootModalDismissProgress
                         additionalModalFrameProgress = 0.0
