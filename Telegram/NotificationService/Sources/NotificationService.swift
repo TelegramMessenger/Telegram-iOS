@@ -639,7 +639,7 @@ private final class NotificationServiceHandler {
 
         TempBox.initializeShared(basePath: rootPath, processType: "notification", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
 
-        let logsPath = rootPath + "/notification-logs"
+        let logsPath = rootPath + "/logs/notification-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
 
         setupSharedLogger(rootPath: rootPath, path: logsPath)
@@ -673,7 +673,7 @@ private final class NotificationServiceHandler {
             incomingCallMessage = "is calling you"
         }
 
-        Logger.shared.log("NotificationService \(episode)", "Begin processing payload \(payload)")
+        Logger.shared.log("NotificationService \(episode)", "Begin processing payload")
 
         guard var encryptedPayload = payload["p"] as? String else {
             Logger.shared.log("NotificationService \(episode)", "Invalid payload 1")
@@ -691,13 +691,16 @@ private final class NotificationServiceHandler {
 
         let _ = (combineLatest(queue: self.queue,
             self.accountManager.accountRecords(),
-            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings])
+            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings])
         )
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
             var recordId: AccountRecordId?
             var isCurrentAccount: Bool = false
-            var customSoundPath: String?
+            
+            let loggingSettings = sharedData.entries[SharedDataKeys.loggingSettings]?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings
+            Logger.shared.logToFile = loggingSettings.logToFile
+            Logger.shared.logToConsole = loggingSettings.logToConsole
 
             if let keyId = notificationPayloadKeyId(data: payloadData) {
                 outer: for listRecord in records.records {
@@ -716,8 +719,6 @@ private final class NotificationServiceHandler {
             }
 
             let inAppNotificationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
-            
-            customSoundPath = inAppNotificationSettings.customSound
             
             let voiceCallSettings: VoiceCallSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) {

@@ -87,7 +87,7 @@ public final class NotificationViewControllerImpl {
         
         TempBox.initializeShared(basePath: rootPath, processType: "notification-content", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
-        let logsPath = rootPath + "/notificationcontent-logs"
+        let logsPath = rootPath + "/logs/notificationcontent-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         
         setupSharedLogger(rootPath: rootPath, path: logsPath)
