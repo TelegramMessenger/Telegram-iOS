@@ -830,6 +830,31 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)? = nil) {
+        if layer.contentsRect == contentsRect {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            layer.contentsRect = contentsRect
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let previousContentsRect = layer.contentsRect
+            layer.contentsRect = contentsRect
+            layer.animate(from: NSValue(cgRect: previousContentsRect), to: NSValue(cgRect: contentsRect), keyPath: "contentsRect", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
+    
     func animateTransformScale(node: ASDisplayNode, from fromScale: CGFloat, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let t = node.layer.transform
         let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
@@ -1512,6 +1537,7 @@ public protocol ControlledTransitionAnimator: AnyObject {
     func updateBounds(layer: CALayer, bounds: CGRect, completion: ((Bool) -> Void)?)
     func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)?)
     func updateCornerRadius(layer: CALayer, cornerRadius: CGFloat, completion: ((Bool) -> Void)?)
+    func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)?)
 }
 
 protocol AnyValueProviding {
@@ -1908,6 +1934,21 @@ public final class ControlledTransition {
                 completion: completion
             ))
         }
+        
+        public func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)?) {
+            if layer.contentsRect == contentsRect {
+                return
+            }
+            let fromValue = layer.presentation()?.contentsRect ?? layer.contentsRect
+            layer.contentsRect = contentsRect
+            self.add(animation: ControlledTransitionProperty(
+                layer: layer,
+                path: "contentsRect",
+                fromValue: fromValue,
+                toValue: contentsRect,
+                completion: completion
+            ))
+        }
     }
 
     public final class LegacyAnimator: ControlledTransitionAnimator {
@@ -1962,6 +2003,10 @@ public final class ControlledTransition {
         
         public func updateCornerRadius(layer: CALayer, cornerRadius: CGFloat, completion: ((Bool) -> Void)?) {
             self.transition.updateCornerRadius(layer: layer, cornerRadius: cornerRadius, completion: completion)
+        }
+        
+        public func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)?) {
+            self.transition.updateContentsRect(layer: layer, contentsRect: contentsRect, completion: completion)
         }
     }
     
