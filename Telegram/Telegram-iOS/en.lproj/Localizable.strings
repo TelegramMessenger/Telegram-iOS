@@ -7550,6 +7550,8 @@ Sorry for the inconvenience.";
 
 "Premium.AppIcons.Proceed" = "Unlock Premium Icons";
 
+"Premium.NoAds.Proceed" = "About Telegram Premium";
+
 "AccessDenied.LocationPreciseDenied" = "To share your specific location in this chat, please go to Settings > Privacy > Location Services > Telegram and set Precise Location to On.";
 
 "Chat.MultipleTypingPair" = "%@ and %@";
@@ -7623,11 +7625,13 @@ Sorry for the inconvenience.";
 "Premium.NoAds" = "No Ads";
 "Premium.NoAdsInfo" = "No more ads in public channels where Telegram sometimes shows ads.";
 
+"Premium.NoAdsStandaloneInfo" = "Remove ads such as this by subscribing to **Telegram Premium**.";
+
 "Premium.Reactions" = "Unique Reactions";
 "Premium.ReactionsInfo" = "Additional animated reactions on messages, available only to the Premium subscribers.";
 
 "Premium.ReactionsStandalone" = "Additional Reactions";
-"Premium.ReactionsStandaloneInfo" = "Unlock a wider range of reactions by subscribing to **Telegram Premium**.";
+"Premium.ReactionsStandaloneInfo" = "Unlock a wider range of reactions on messages by subscribing to **Telegram Premium**.";
 
 "Premium.Stickers" = "Premium Stickers";
 "Premium.StickersInfo" = "Exclusive enlarged stickers featuring additional effects, updated monthly.";

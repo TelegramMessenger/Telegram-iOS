@@ -780,7 +780,7 @@ private final class DemoSheetContent: CombinedComponent {
                                     videoFile: configuration.videos["no_ads"]
                                 )),
                                 title: strings.Premium_NoAds,
-                                text: strings.Premium_NoAdsInfo,
+                                text: isStandalone ? strings.Premium_NoAdsStandaloneInfo : strings.Premium_NoAdsInfo,
                                 textColor: textColor
                             )
                         )
@@ -950,6 +950,7 @@ private final class DemoSheetContent: CombinedComponent {
             )
                          
             let buttonText: String
+            var buttonAnimationName: String?
             if state.isPremium == true {
                 buttonText = strings.Common_OK
             } else {
@@ -957,16 +958,21 @@ private final class DemoSheetContent: CombinedComponent {
                     case let .intro(price):
                         buttonText = strings.Premium_SubscribeFor(price ?? "–").string
                     case .other:
-                    switch component.subject {
-                        case .uniqueReactions:
-                            buttonText = strings.Premium_Reactions_Proceed
-                        case .premiumStickers:
-                            buttonText = strings.Premium_Stickers_Proceed
-                        case .appIcons:
-                            buttonText = strings.Premium_AppIcons_Proceed
-                        default:
-                            buttonText = strings.Common_OK
-                    }
+                        switch component.subject {
+                            case .uniqueReactions:
+                                buttonText = strings.Premium_Reactions_Proceed
+                                buttonAnimationName = "premium_unlock"
+                            case .premiumStickers:
+                                buttonText = strings.Premium_Stickers_Proceed
+                                buttonAnimationName = "premium_unlock"
+                            case .appIcons:
+                                buttonText = strings.Premium_AppIcons_Proceed
+                                buttonAnimationName = "premium_unlock"
+                            case .noAds:
+                                buttonText = strings.Premium_NoAds_Proceed
+                            default:
+                                buttonText = strings.Common_OK
+                        }
                 }
             }
             
@@ -988,7 +994,7 @@ private final class DemoSheetContent: CombinedComponent {
                     height: 50.0,
                     cornerRadius: 11.0,
                     gloss: state.isPremium != true,
-                    animationName: isStandalone && component.subject == .uniqueReactions ? "premium_unlock" : nil,
+                    animationName: isStandalone ? buttonAnimationName : nil,
                     iconPosition: .right,
                     iconSpacing: 4.0,
                     action: { [weak component, weak state] in
