@@ -10,6 +10,7 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
     private static let sharedQueue = Queue(name: "DirectAnimatedStickerNode", qos: .userInteractive)
     
     private final class LoadFrameTask {
+        var isCancelled: Bool = false
     }
     
     public var automaticallyLoadFirstFrame: Bool = false
@@ -129,7 +130,7 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
     }
     
     private func startNextFrameTimerIfNeeded() {
-        if self.nextFrameTimer == nil, let lottieInstance = self.lottieInstance {
+        if self.nextFrameTimer == nil, let lottieInstance = self.lottieInstance, self.frameImages[self.frameIndex] != nil {
             let nextFrameTimer = SwiftSignalKit.Timer(timeout: 1.0 / Double(lottieInstance.frameRate), repeat: false, completion: { [weak self] in
                 guard let strongSelf = self else {
                     return
@@ -201,6 +202,12 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
             self.frameImages.removeValue(forKey: index)
         }
         
+        for (index, task) in self.loadFrameTasks {
+            if !allowedIndices.contains(index) {
+                task.isCancelled = true
+            }
+        }
+        
         if let image = self.frameImages[self.frameIndex] {
             self.layer.contents = image.cgImage
             
@@ -238,22 +245,29 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
             return
         }
         
-        self.loadFrameTasks[frameIndex] = LoadFrameTask()
+        let task = LoadFrameTask()
+        self.loadFrameTasks[frameIndex] = task
         
         DirectAnimatedStickerNode.sharedQueue.async { [weak self] in
-            let drawingContext = DrawingContext(size: playbackSize, scale: 1.0, opaque: false, clear: false)
-            lottieInstance.renderFrame(with: Int32(frameIndex), into: drawingContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(drawingContext.scaledSize.width), height: Int32(drawingContext.scaledSize.height), bytesPerRow: Int32(drawingContext.bytesPerRow))
+            var image: UIImage?
             
-            let image = drawingContext.generateImage()
+            if !task.isCancelled {
+                let drawingContext = DrawingContext(size: playbackSize, scale: 1.0, opaque: false, clear: false)
+                lottieInstance.renderFrame(with: Int32(frameIndex), into: drawingContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(drawingContext.scaledSize.width), height: Int32(drawingContext.scaledSize.height), bytesPerRow: Int32(drawingContext.bytesPerRow))
+                
+                image = drawingContext.generateImage()
+            }
             
             Queue.mainQueue().async {
                 guard let strongSelf = self else {
                     return
                 }
                 
-                strongSelf.loadFrameTasks.removeValue(forKey: frameIndex)
+                if let currentTask = strongSelf.loadFrameTasks[frameIndex], currentTask === task {
+                    strongSelf.loadFrameTasks.removeValue(forKey: frameIndex)
+                }
                 
-                if let image = image {
+                if !task.isCancelled, let image = image {
                     strongSelf.frameImages[frameIndex] = image
                     strongSelf.updateFrameImageIfNeeded()
                     strongSelf.updateLoadFrameTasks()
