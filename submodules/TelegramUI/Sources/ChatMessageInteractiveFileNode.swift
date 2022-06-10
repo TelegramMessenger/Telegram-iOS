@@ -756,7 +756,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let statusLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
                     if let _ = textString {
-                        statusLayoutInput = .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: reactionSettings)
+                        statusLayoutInput = .trailingContent(contentWidth: textLayout.hasRTL ? 1000.0 : textLayout.trailingLineWidth, reactionSettings: reactionSettings)
                     } else {
                         statusLayoutInput = .trailingContent(contentWidth: iconFrame == nil ? 1000.0 : controlAreaWidth, reactionSettings: reactionSettings)
                     }

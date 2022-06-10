@@ -963,6 +963,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
 }
 
 public final class StandaloneReactionAnimation: ASDisplayNode {
+    private let useDirectRendering: Bool
     private var itemNode: ReactionNode? = nil
     private var itemNodeIsEmbedded: Bool = false
     private let hapticFeedback = HapticFeedback()
@@ -970,9 +971,9 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
     
     private weak var targetView: UIView?
     
-    //private var colorCallbacks: [LOTColorValueCallback] = []
-    
-    override public init() {
+    public init(useDirectRendering: Bool = false) {
+        self.useDirectRendering = useDirectRendering
+        
         super.init()
         
         self.isUserInteractionEnabled = false
@@ -1064,7 +1065,12 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         
         itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, largeExpanded: isLarge, isPreviewing: false, transition: .immediate)
         
-        let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
+        let additionalAnimationNode: AnimatedStickerNode
+        if self.useDirectRendering {
+            additionalAnimationNode = DirectAnimatedStickerNode()
+        } else {
+            additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
+        }
         
         let additionalAnimation: TelegramMediaFile
         if isLarge && !forceSmallEffectAnimation {
@@ -1139,7 +1145,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         }
                 
         var didBeginDismissAnimation = false
-        let beginDismissAnimation: () -> Void = { [weak self] in
+        let beginDismissAnimation: () -> Void = { [weak self, weak additionalAnimationNode] in
             if !didBeginDismissAnimation {
                 didBeginDismissAnimation = true
             
@@ -1150,9 +1156,11 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 }
                 
                 if forceSmallEffectAnimation {
-                    additionalAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak additionalAnimationNode] _ in
-                        additionalAnimationNode?.removeFromSupernode()
-                    })
+                    if let additionalAnimationNode = additionalAnimationNode {
+                        additionalAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak additionalAnimationNode] _ in
+                            additionalAnimationNode?.removeFromSupernode()
+                        })
+                    }
                     
                     mainAnimationCompleted = true
                     intermediateCompletion()

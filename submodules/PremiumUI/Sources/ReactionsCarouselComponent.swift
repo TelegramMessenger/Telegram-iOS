@@ -349,7 +349,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
                 largeListAnimation: reaction.activateAnimation,
                 applicationAnimation: aroundAnimation,
                 largeApplicationAnimation: reaction.effectAnimation
-            ), hasAppearAnimation: false)
+            ), hasAppearAnimation: false, useDirectRendering: false)
             containerNode.isUserInteractionEnabled = false
             containerNode.addSubnode(itemNode)
             self.addSubnode(containerNode)
@@ -395,7 +395,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         
         targetContainerNode.view.superview?.bringSubviewToFront(targetContainerNode.view)
         
-        let standaloneReactionAnimation = StandaloneReactionAnimation()
+        let standaloneReactionAnimation = StandaloneReactionAnimation(useDirectRendering: true)
         self.standaloneReactionAnimation = standaloneReactionAnimation
         
         targetContainerNode.addSubnode(standaloneReactionAnimation)
