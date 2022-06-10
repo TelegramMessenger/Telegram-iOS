@@ -738,11 +738,14 @@ public final class OngoingCallContext {
     private var signalingConnectionManager: QueueLocalObject<CallSignalingConnectionManager>?
     
     public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
-        #if DEBUG
-        if "".isEmpty {
-            return [("5.0.0", true)]
+        if @available(iOS 11.0, *) {
+            #if DEBUG
+            if "".isEmpty {
+                return [("5.0.0", true)]
+            }
+            #endif
         }
-        #endif
+       
         
         if debugUseLegacyVersionForReflectors {
             return [(OngoingCallThreadLocalContext.version(), true)]
