@@ -2837,8 +2837,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
 
                     strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
                     animation.animator.updateFrame(layer: strongSelf.backgroundWallpaperNode.layer, frame: backgroundFrame, completion: nil)
-                    strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: animation.transition)
-                    strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: animation.transition)
+                    strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, animator: animation.animator)
+                    strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, animator: animation.animator)
                 }
                 
                 if let _ = strongSelf.backgroundNode.type {

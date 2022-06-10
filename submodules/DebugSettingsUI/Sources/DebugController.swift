@@ -61,6 +61,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case sendGroupCallLogs
     case sendNotificationLogs(PresentationTheme)
     case sendCriticalLogs(PresentationTheme)
+    case sendAllLogs
     case accounts(PresentationTheme)
     case logToFile(PresentationTheme, Bool)
     case logToConsole(PresentationTheme, Bool)
@@ -94,7 +95,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
     case enableVoipTcp(Bool)
-    case resetInAppPurchases(PresentationTheme)
+    case restorePurchases(PresentationTheme)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -102,7 +103,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         switch self {
         case .testStickerImport:
             return DebugControllerSection.sticker.rawValue
-        case .sendLogs, .sendOneLog, .sendShareLogs, .sendGroupCallLogs, .sendNotificationLogs, .sendCriticalLogs:
+        case .sendLogs, .sendOneLog, .sendShareLogs, .sendGroupCallLogs, .sendNotificationLogs, .sendCriticalLogs, .sendAllLogs:
             return DebugControllerSection.logs.rawValue
         case .accounts:
             return DebugControllerSection.logs.rawValue
@@ -110,7 +111,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, . enableReactionOverrides, .resetInAppPurchases:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, . enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -137,70 +138,72 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 5
         case .sendCriticalLogs:
             return 6
-        case .accounts:
+        case .sendAllLogs:
             return 7
-        case .logToFile:
+        case .accounts:
             return 8
-        case .logToConsole:
+        case .logToFile:
             return 9
-        case .redactSensitiveData:
+        case .logToConsole:
             return 10
-        case .enableRaiseToSpeak:
+        case .redactSensitiveData:
             return 11
-        case .keepChatNavigationStack:
+        case .enableRaiseToSpeak:
             return 12
-        case .skipReadHistory:
+        case .keepChatNavigationStack:
             return 13
-        case .crashOnSlowQueries:
+        case .skipReadHistory:
             return 14
-        case .clearTips:
+        case .crashOnSlowQueries:
             return 15
-        case .crash:
+        case .clearTips:
             return 16
-        case .resetData:
+        case .crash:
             return 17
-        case .resetDatabase:
+        case .resetData:
             return 18
-        case .resetDatabaseAndCache:
+        case .resetDatabase:
             return 19
-        case .resetHoles:
+        case .resetDatabaseAndCache:
             return 20
-        case .reindexUnread:
+        case .resetHoles:
             return 21
-        case .resetBiometricsData:
+        case .reindexUnread:
             return 22
-        case .resetWebViewCache:
+        case .resetBiometricsData:
             return 23
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 24
-        case .photoPreview:
+        case .optimizeDatabase:
             return 25
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 26
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 27
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 28
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 29
-        case .experimentalBackground:
+        case .acceleratedStickers:
             return 30
-        case .inlineStickers:
+        case .experimentalBackground:
             return 31
-        case .localTranscription:
+        case .inlineStickers:
             return 32
-        case .enableReactionOverrides:
+        case .localTranscription:
             return 33
-        case .resetInAppPurchases:
+        case .enableReactionOverrides:
             return 34
-        case .playerEmbedding:
+        case .restorePurchases:
             return 35
-        case .playlistPlayback:
+        case .playerEmbedding:
             return 36
-        case .voiceConference:
+        case .playlistPlayback:
             return 37
+        case .voiceConference:
+            return 38
         case let .preferredVideoCodec(index, _, _, _):
-            return 38 + index
+            return 39 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -402,7 +405,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case .sendShareLogs:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Send Share Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
-                let _ = (Logger.shared.collectLogs(prefix: "/share-logs")
+                let _ = (Logger.shared.collectLogs(prefix: "/logs/share-logs")
                 |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                     let actionSheet = ActionSheetController(presentationData: presentationData)
@@ -570,7 +573,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case .sendNotificationLogs:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Send Notification Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
-                let _ = (Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/notification-logs").collectLogs()
+                let _ = (Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/logs/notification-logs").collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                     let actionSheet = ActionSheetController(presentationData: presentationData)
@@ -704,6 +707,101 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             ])])
                         arguments.presentController(actionSheet, nil)
                     })
+            })
+        case .sendAllLogs:
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send All Logs", label: "", sectionId: self.section, style: .blocks, action: {
+                let logTypes: [String] = [
+                    "app-logs",
+                    "broadcast-logs",
+                    "siri-logs",
+                    "widget-logs",
+                    "notificationcontent-logs",
+                    "notification-logs"
+                ]
+                
+                var logByType: [Signal<(type: String, logs: [(String, String)]), NoError>] = []
+                for type in logTypes {
+                    logByType.append(Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/logs/\(type)").collectLogs()
+                    |> map { result -> (type: String, logs: [(String, String)]) in
+                        return (type, result)
+                    })
+                }
+                
+                let allLogs = combineLatest(logByType)
+                
+                let _ = (allLogs
+                |> deliverOnMainQueue).start(next: { allLogs in
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+
+                    var items: [ActionSheetButtonItem] = []
+
+                    if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
+                        items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+
+                            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+                            controller.peerSelected = { [weak controller] peer in
+                                let peerId = peer.id
+
+                                if let strongController = controller {
+                                    strongController.dismiss()
+
+                                    let lineFeed = "\n".data(using: .utf8)!
+                                    
+                                    var tempSources: [TempBoxFile] = []
+                                    for (type, logItems) in allLogs {
+                                        let tempSource = TempBox.shared.tempFile(fileName: "Log-\(type).txt")
+                                        
+                                        var rawLogData: Data = Data()
+                                        for (name, path) in logItems {
+                                            if !rawLogData.isEmpty {
+                                                rawLogData.append(lineFeed)
+                                                rawLogData.append(lineFeed)
+                                            }
+
+                                            rawLogData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+
+                                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                                rawLogData.append(data)
+                                            }
+                                        }
+                                        
+                                        let _ = try? rawLogData.write(to: URL(fileURLWithPath: tempSource.path))
+                                        tempSources.append(tempSource)
+                                    }
+
+                                    let tempZip = TempBox.shared.tempFile(fileName: "destination.zip")
+                                    SSZipArchive.createZipFile(atPath: tempZip.path, withFilesAtPaths: tempSources.map(\.path))
+
+                                    guard let gzippedData = try? Data(contentsOf: URL(fileURLWithPath: tempZip.path)) else {
+                                        return
+                                    }
+                                    
+                                    tempSources.forEach(TempBox.shared.dispose)
+                                    TempBox.shared.dispose(tempZip)
+
+                                    let id = Int64.random(in: Int64.min ... Int64.max)
+                                    let fileResource = LocalFileMediaResource(fileId: id, size: Int64(gzippedData.count), isSecretRelated: false)
+                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
+
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/zip", size: Int64(gzippedData.count), attributes: [.FileName(fileName: "Log-iOS-All.txt.zip")])
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+
+                                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+                                }
+                            }
+                            arguments.pushController(controller)
+                        }))
+                    }
+
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    arguments.presentController(actionSheet, nil)
+                })
             })
         case .accounts:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
@@ -1043,9 +1141,21 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case .resetInAppPurchases:
-            return ItemListActionItem(presentationData: presentationData, title: "Reset IAP Transactions", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                arguments.context?.inAppPurchaseManager?.finishAllTransactions()
+        case .restorePurchases:
+            return ItemListActionItem(presentationData: presentationData, title: "Restore Purchases", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.context?.inAppPurchaseManager?.restorePurchases(completion: { state in
+                    let text: String
+                    switch state {
+                        case .succeed:
+                            text = "Done"
+                        case .failed:
+                            text = "Failed"
+                    }
+                    if let context = arguments.context {
+                        let controller = textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: "OK", action: {})])
+                        arguments.presentController(controller, nil)
+                    }
+                })
             })
         case let .hostInfo(_, string):
             return ItemListTextItem(presentationData: presentationData, text: .plain(string), sectionId: self.section)
@@ -1071,6 +1181,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.sendGroupCallLogs)
     entries.append(.sendNotificationLogs(presentationData.theme))
     entries.append(.sendCriticalLogs(presentationData.theme))
+    entries.append(.sendAllLogs)
     if isMainApp {
         entries.append(.accounts(presentationData.theme))
     }
@@ -1111,7 +1222,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         if case .internal = sharedContext.applicationBindings.appBuildType {
             entries.append(.enableReactionOverrides(experimentalSettings.enableReactionOverrides))
         }
-        entries.append(.resetInAppPurchases(presentationData.theme))
+        entries.append(.restorePurchases(presentationData.theme))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }

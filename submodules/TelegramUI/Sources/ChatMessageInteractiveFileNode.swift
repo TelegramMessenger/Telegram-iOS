@@ -659,12 +659,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     case let .success(text, isPending):
                         textString = NSAttributedString(string: text, font: textFont, textColor: messageTheme.primaryTextColor)
                         
-                        #if DEBUG
+                        /*#if DEBUG
                         var isPending = isPending
                         if "".isEmpty {
                             isPending = true
                         }
-                        #endif
+                        #endif*/
                         
                         if isPending {
                             let modifiedString = NSMutableAttributedString(attributedString: textString!)
@@ -1116,7 +1116,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 let _ = waveformView.update(
                                     transition: waveformTransition.withUserData(ComponentHostViewSkipSettingFrame()),
                                     component: AnyComponent(AudioWaveformComponent(
-                                        backgroundColor: waveformColor,
+                                        backgroundColor: isTranscriptionInProgress ? messageTheme.mediaInactiveControlColor : waveformColor,
                                         foregroundColor: messageTheme.mediaActiveControlColor,
                                         shimmerColor: isTranscriptionInProgress ? messageTheme.mediaActiveControlColor : nil,
                                         samples: audioWaveform?.samples ?? Data(),

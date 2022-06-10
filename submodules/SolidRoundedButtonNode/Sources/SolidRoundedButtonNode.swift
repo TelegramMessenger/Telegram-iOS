@@ -751,6 +751,8 @@ public final class SolidRoundedButtonView: UIView {
         }
                 
         self.buttonNode = HighlightTrackingButton()
+        self.buttonNode.isMultipleTouchEnabled = false
+        self.buttonNode.isExclusiveTouch = true
         
         self.titleNode = ImmediateTextView()
         self.titleNode.isUserInteractionEnabled = false

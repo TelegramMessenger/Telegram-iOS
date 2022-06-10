@@ -264,7 +264,7 @@ class DiceAnimatedStickerNode: ASDisplayNode {
         self.account = account
         self.intrinsicSize = size
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.autoplay = true
         
         super.init()

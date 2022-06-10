@@ -113,7 +113,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         
         TempBox.initializeShared(basePath: rootPath, processType: "siri", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
-        let logsPath = rootPath + "/siri-logs"
+        let logsPath = rootPath + "/logs/siri-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         
         setupSharedLogger(rootPath: rootPath, path: logsPath)
@@ -880,7 +880,7 @@ private final class WidgetIntentHandler {
         
         TempBox.initializeShared(basePath: rootPath, processType: "siri", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
-        let logsPath = rootPath + "/siri-logs"
+        let logsPath = rootPath + "/logs/siri-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         
         setupSharedLogger(rootPath: rootPath, path: logsPath)

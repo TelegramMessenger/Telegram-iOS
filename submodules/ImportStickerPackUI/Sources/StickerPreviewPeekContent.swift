@@ -75,7 +75,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             case let .image(data):
                 self.imageNode.image = UIImage(data: data)
             case .animation, .video:
-                let animationNode = AnimatedStickerNode()
+                let animationNode = DefaultAnimatedStickerNodeImpl()
                 self.animationNode = animationNode
                 let dimensions = PixelDimensions(width: 512, height: 512)
                 let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0))
@@ -84,7 +84,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
                     if case .video = item.content {
                         isVideo = true
                     }
-                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                 }
                 self.animationNode?.visibility = true
         }

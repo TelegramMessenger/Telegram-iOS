@@ -294,7 +294,7 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                         if let current = self.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                             animatedStickerNode.started = { [weak self] in
                                 self?.imageNode.isHidden = true
                                 self?.removePlaceholder(animated: false)
@@ -305,7 +305,7 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                             } else {
                                 self.containerNode.addSubnode(animatedStickerNode)
                             }
-                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: 128, height: 128, mode: .cached)
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: 128, height: 128, playbackMode: .loop, mode: .cached)
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                 }

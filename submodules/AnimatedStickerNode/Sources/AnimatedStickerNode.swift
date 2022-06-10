@@ -147,7 +147,41 @@ public protocol AnimatedStickerNodeSource {
     func directDataPath(attemptSynchronously: Bool) -> Signal<String?, NoError>
 }
 
-public final class AnimatedStickerNode: ASDisplayNode {
+public protocol AnimatedStickerNode: ASDisplayNode {
+    var automaticallyLoadFirstFrame: Bool { get set }
+    var automaticallyLoadLastFrame: Bool { get set }
+    var playToCompletionOnStop: Bool { get set }
+    var started: () -> Void { get set }
+    
+    var completed: (Bool) -> Void { get set }
+    var frameUpdated: (Int, Int) -> Void { get set }
+    var currentFrameIndex: Int { get }
+    var currentFrameCount: Int { get }
+    var isPlaying: Bool { get }
+    var stopAtNearestLoop: Bool { get set }
+    
+    var status: Signal<AnimatedStickerStatus, NoError> { get }
+    
+    var autoplay: Bool { get set }
+    
+    var visibility: Bool { get set }
+    
+    var isPlayingChanged: (Bool) -> Void { get }
+    
+    func cloneCurrentFrame(from otherNode: AnimatedStickerNode?)
+    func setup(source: AnimatedStickerNodeSource, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode, mode: AnimatedStickerMode)
+    func reset()
+    func playOnce()
+    func play(firstFrame: Bool, fromIndex: Int?)
+    func pause()
+    func stop()
+    func seekTo(_ position: AnimatedStickerPlaybackPosition)
+    func playIfNeeded() -> Bool
+    func updateLayout(size: CGSize)
+    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool)
+}
+    
+public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedStickerNode {
     private let queue: Queue
     private let disposable = MetaDisposable()
     private let fetchDisposable = MetaDisposable()
@@ -245,14 +279,14 @@ public final class AnimatedStickerNode: ASDisplayNode {
         return SoftwareAnimationRenderer()
     })
     
-    private weak var nodeToCopyFrameFrom: AnimatedStickerNode?
+    private weak var nodeToCopyFrameFrom: DefaultAnimatedStickerNodeImpl?
     override public func didLoad() {
         super.didLoad()
         
         if #available(iOS 10.0, *), (self.useMetalCache/* || "".isEmpty*/) {
-            self.renderer = AnimatedStickerNode.hardwareRendererPool.take()
+            self.renderer = DefaultAnimatedStickerNodeImpl.hardwareRendererPool.take()
         } else {
-            self.renderer = AnimatedStickerNode.softwareRendererPool.take()
+            self.renderer = DefaultAnimatedStickerNodeImpl.softwareRendererPool.take()
             if let contents = self.nodeToCopyFrameFrom?.renderer?.renderer.contents {
                 self.renderer?.renderer.contents = contents
             }
@@ -267,7 +301,12 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     public func cloneCurrentFrame(from otherNode: AnimatedStickerNode?) {
-        if let renderer = self.renderer?.renderer as? SoftwareAnimationRenderer, let otherRenderer = otherNode?.renderer?.renderer as? SoftwareAnimationRenderer {
+        guard let otherNode = otherNode as? DefaultAnimatedStickerNodeImpl else {
+            self.nodeToCopyFrameFrom = nil
+            return
+        }
+
+        if let renderer = self.renderer?.renderer as? SoftwareAnimationRenderer, let otherRenderer = otherNode.renderer?.renderer as? SoftwareAnimationRenderer {
             if let contents = otherRenderer.contents {
                 renderer.contents = contents
             }

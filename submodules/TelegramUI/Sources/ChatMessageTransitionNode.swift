@@ -112,11 +112,11 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
 
     final class Sticker {
         let imageNode: TransformImageNode
-        let animationNode: GenericAnimatedStickerNode?
+        let animationNode: AnimatedStickerNode?
         let placeholderNode: ASDisplayNode?
         let relativeSourceRect: CGRect
 
-        init(imageNode: TransformImageNode, animationNode: GenericAnimatedStickerNode?, placeholderNode: ASDisplayNode?, relativeSourceRect: CGRect) {
+        init(imageNode: TransformImageNode, animationNode: AnimatedStickerNode?, placeholderNode: ASDisplayNode?, relativeSourceRect: CGRect) {
             self.imageNode = imageNode
             self.animationNode = animationNode
             self.placeholderNode = placeholderNode

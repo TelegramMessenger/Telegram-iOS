@@ -120,7 +120,7 @@ final class TrendingTopItemNode: ASDisplayNode {
             if let currentAnimationNode = self.animationNode {
                 animationNode = currentAnimationNode
             } else {
-                animationNode = AnimatedStickerNode()
+                animationNode = DefaultAnimatedStickerNodeImpl()
                 animationNode.transform = self.imageNode.transform
                 animationNode.visibility = self.visibility
                 self.animationNode = animationNode
@@ -141,7 +141,7 @@ final class TrendingTopItemNode: ASDisplayNode {
             animationNode.started = { [weak self] in
                 self?.imageNode.alpha = 0.0
             }
-            animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+            animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
             self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
         } else {
             self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)

@@ -104,7 +104,7 @@ private class StickerNode: ASDisplayNode {
         self.imageNode = TransformImageNode()
     
         if file.isPremiumSticker || forceIsPremium {
-            let animationNode = AnimatedStickerNode()
+            let animationNode = DefaultAnimatedStickerNodeImpl()
             animationNode.automaticallyLoadFirstFrame = true
             self.animationNode = animationNode
             
@@ -122,7 +122,7 @@ private class StickerNode: ASDisplayNode {
                 self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, fileReference: .standalone(media: file), resource: effect.resource).start())
                 
                 let source = AnimatedStickerResourceSource(account: self.context.account, resource: effect.resource, fitzModifier: nil)
-                let additionalAnimationNode = AnimatedStickerNode()
+                let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
                 
                 var pathPrefix: String?
                 pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(effect.resource.id)
@@ -232,7 +232,7 @@ private class StickerNode: ASDisplayNode {
             } else if isVisible {
                 additionalAnimationNode.visibility = isVisible
                 if !wasVisible {
-                    additionalAnimationNode.play(fromIndex: 0)
+                    additionalAnimationNode.play(firstFrame: false, fromIndex: 0)
                     Queue.mainQueue().after(0.05, {
                         additionalAnimationNode.alpha = 1.0
                     })

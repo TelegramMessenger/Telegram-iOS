@@ -123,7 +123,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         self.imageNode.isHidden = true
                         
                         if isVerified {
-                            let animationNode = AnimatedStickerNode()
+                            let animationNode = DefaultAnimatedStickerNodeImpl()
                             self.animationNode = animationNode
                             
                             if let placeholderNode = self.placeholderNode {

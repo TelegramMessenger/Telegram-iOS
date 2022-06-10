@@ -275,7 +275,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             if let dimensions = item.stickerItem.file.dimensions {
                 if item.stickerItem.file.isAnimatedSticker || item.stickerItem.file.isVideoSticker {
                     if self.animationNode == nil {
-                        let animationNode = AnimatedStickerNode()
+                        let animationNode = DefaultAnimatedStickerNodeImpl()
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
                         self.animationNode = animationNode
                         animationNode.started = { [weak self] in
@@ -445,7 +445,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                     let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fitSize = item.large ? CGSize(width: 384.0, height: 384.0) : CGSize(width: 160.0, height: 160.0)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(fitSize)
-                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: item.stickerItem.file.resource, isVideo: item.stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: item.stickerItem.file.resource, isVideo: item.stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
                 }
             }
         }

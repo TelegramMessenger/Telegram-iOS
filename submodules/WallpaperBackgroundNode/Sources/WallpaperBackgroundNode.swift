@@ -44,6 +44,7 @@ public protocol WallpaperBubbleBackgroundNode: ASDisplayNode {
 
     func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition)
     func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition)
+    func update(rect: CGRect, within containerSize: CGSize, animator: ControlledTransitionAnimator)
     func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double)
     func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat)
 }
@@ -262,6 +263,23 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 }
             }
         }
+        
+        func update(rect: CGRect, within containerSize: CGSize, animator: ControlledTransitionAnimator) {
+            self.currentLayout = (rect, containerSize)
+
+            let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
+
+            animator.updateFrame(layer: self.contentNode.layer, frame: self.bounds, completion: nil)
+            animator.updateContentsRect(layer: self.contentNode.layer, contentsRect: shiftedContentsRect, completion: nil)
+            if let cleanWallpaperNode = self.cleanWallpaperNode {
+                animator.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds, completion: nil)
+                animator.updateContentsRect(layer: cleanWallpaperNode.layer, contentsRect: shiftedContentsRect, completion: nil)
+            }
+            if let gradientWallpaperNode = self.gradientWallpaperNode {
+                animator.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds, completion: nil)
+                animator.updateContentsRect(layer: gradientWallpaperNode.layer, contentsRect: shiftedContentsRect, completion: nil)
+            }
+        }
 
         func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
             self.currentLayout = (rect, containerSize)
@@ -467,7 +485,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             ("ptrnSLON_0906_1033", CGPoint(x: 906 - 256, y: 1033 - 256))
         ]
         for (animation, relativePosition) in animationList {
-            let animationNode = AnimatedStickerNode()
+            let animationNode = DefaultAnimatedStickerNodeImpl()
             animationNode.automaticallyLoadFirstFrame = true
             animationNode.autoplay = true
             //self.inlineAnimationNodes.append((animationNode, relativePosition))
@@ -1175,6 +1193,23 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
                 transition.animateView {
                     gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
                 }
+            }
+        }
+        
+        func update(rect: CGRect, within containerSize: CGSize, animator: ControlledTransitionAnimator) {
+            self.currentLayout = (rect, containerSize)
+
+            let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
+
+            animator.updateFrame(layer: self.contentNode.layer, frame: self.bounds, completion: nil)
+            animator.updateContentsRect(layer: self.contentNode.layer, contentsRect: shiftedContentsRect, completion: nil)
+            if let cleanWallpaperNode = self.cleanWallpaperNode {
+                animator.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds, completion: nil)
+                animator.updateContentsRect(layer: cleanWallpaperNode.layer, contentsRect: shiftedContentsRect, completion: nil)
+            }
+            if let gradientWallpaperNode = self.gradientWallpaperNode {
+                animator.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds, completion: nil)
+                animator.updateContentsRect(layer: gradientWallpaperNode.layer, contentsRect: shiftedContentsRect, completion: nil)
             }
         }
 

@@ -473,7 +473,19 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         TempBox.initializeShared(basePath: rootPath, processType: "app", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
-        let logsPath = rootPath + "/logs"
+        let legacyLogs: [String] = [
+            "logs",
+            "broadcast-logs",
+            "siri-logs",
+            "widget-logs",
+            "notificationcontent-logs",
+            "notification-logs"
+        ]
+        for item in legacyLogs {
+            let _ = try? FileManager.default.removeItem(atPath: "\(rootPath)/\(item)")
+        }
+        
+        let logsPath = rootPath + "/logs/app-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         Logger.setSharedLogger(Logger(rootPath: rootPath, basePath: logsPath))
 

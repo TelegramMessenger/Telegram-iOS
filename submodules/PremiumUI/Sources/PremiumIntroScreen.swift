@@ -382,6 +382,8 @@ private final class SectionGroupComponent: Component {
                     buttonView = current
                 } else {
                     buttonView = HighlightTrackingButton()
+                    buttonView.isMultipleTouchEnabled = false
+                    buttonView.isExclusiveTouch = true
                     buttonView.addTarget(self, action: #selector(self.buttonPressed(_:)), for: .touchUpInside)
                     self.buttonViews[item.content.id] = buttonView
                     self.addSubview(buttonView)
@@ -1622,7 +1624,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 titleScale = 1.0 - fraction * 0.36
                 
                 if state.otherPeerName != nil {
-                    titleAlpha = min(1.0, fraction * 1.5)
+                    titleAlpha = min(1.0, fraction * 1.1)
                 } else {
                     titleAlpha = 1.0
                 }
@@ -1656,7 +1658,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             context.add(secondaryTitle
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
                 .scale(titleScale)
-                .opacity(1.0 - titleAlpha)
+                .opacity(max(0.0, 1.0 - titleAlpha * 1.8))
             )
                         
             if state.isPremium == true {
