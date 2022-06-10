@@ -215,7 +215,8 @@ private final class MediaBoxFileMap {
         } else {
             maxValue = Int64.max
         }
-        let clippedRange: Range<Int64> = range.lowerBound ..< min(maxValue, range.upperBound)
+        let clippedUpperBound = min(maxValue, range.upperBound)
+        let clippedRange: Range<Int64> = min(range.lowerBound, clippedUpperBound) ..< clippedUpperBound
         let clippedRangeSet = RangeSet<Int64>(clippedRange)
         
         if self.ranges.isSuperset(of: clippedRangeSet) {
