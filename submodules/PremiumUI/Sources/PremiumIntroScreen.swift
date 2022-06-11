@@ -1227,6 +1227,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             size.height += 10.0
             size.height += scrollEnvironment.insets.bottom
             
+            if context.component.source != .settings {
+                size.height += 44.0
+            }
+            
             return size
         }
     }
@@ -1391,7 +1395,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             
             guard !self.context.account.testingEnvironment else {
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                let alertController = textAlertController(context: self.context, title: nil, text: "Telegram Premium purchase is not available in the test environment.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                let alertController = textAlertController(context: self.context, title: nil, text: "Telegram Premium is not available in the test environment.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                 self.present(alertController)
                 return
             }
@@ -1425,6 +1429,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                 |> deliverOnMainQueue).start(error: { [weak self] _ in
                                     if let strongSelf = self {
                                         strongSelf.inProgress = false
+                                        strongSelf.updateInProgress(false)
+                                        
                                         strongSelf.updated(transition: .immediate)
                                         strongSelf.completion()
                                         
@@ -1439,6 +1445,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                     if let strongSelf = self {
                                         let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
                                         strongSelf.inProgress = false
+                                        strongSelf.updateInProgress(false)
+                                        
                                         strongSelf.isPremium = true
                                         strongSelf.updated(transition: .easeInOut(duration: 0.25))
                                         strongSelf.completion()

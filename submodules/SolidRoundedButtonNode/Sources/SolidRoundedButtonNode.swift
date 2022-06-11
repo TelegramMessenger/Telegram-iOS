@@ -118,6 +118,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                     
                     let animationNode = SimpleAnimationNode(animationName: animation, size: CGSize(width: 30.0, height: 30.0))
                     animationNode.customColor = self.theme.foregroundColor
+                    animationNode.isUserInteractionEnabled = false
                     self.addSubnode(animationNode)
                     self.animationNode = animationNode
                     
@@ -227,6 +228,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                     strongSelf.subtitleNode.alpha = 0.55
                     strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.iconNode.alpha = 0.55
+                    strongSelf.animationNode?.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.animationNode?.alpha = 0.55
                 } else {
                     if strongSelf.buttonBackgroundNode.alpha > 0.0 {
                         strongSelf.buttonBackgroundNode.alpha = 1.0
@@ -237,6 +240,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                         strongSelf.subtitleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                         strongSelf.iconNode.alpha = 1.0
                         strongSelf.iconNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                        strongSelf.animationNode?.alpha = 1.0
+                        strongSelf.animationNode?.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                     }
                 }
             }
@@ -662,6 +667,7 @@ public final class SolidRoundedButtonView: UIView {
                     
                     let animationNode = SimpleAnimationNode(animationName: animation, size: CGSize(width: 30.0, height: 30.0))
                     animationNode.customColor = self.theme.foregroundColor
+                    animationNode.isUserInteractionEnabled = false
                     self.addSubview(animationNode.view)
                     self.animationNode = animationNode
                     
@@ -784,6 +790,8 @@ public final class SolidRoundedButtonView: UIView {
                     strongSelf.subtitleNode.alpha = 0.55
                     strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.iconNode.alpha = 0.55
+                    strongSelf.animationNode?.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.animationNode?.alpha = 0.55
                 } else {
                     if strongSelf.buttonBackgroundNode.alpha > 0.0 {
                         strongSelf.buttonBackgroundNode.alpha = 1.0
@@ -794,6 +802,8 @@ public final class SolidRoundedButtonView: UIView {
                         strongSelf.subtitleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                         strongSelf.iconNode.alpha = 1.0
                         strongSelf.iconNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                        strongSelf.animationNode?.alpha = 1.0
+                        strongSelf.animationNode?.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                     }
                 }
             }
