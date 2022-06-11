@@ -358,8 +358,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             compositingFilter = nil
         }
         
-        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: false, duration: 3.0, horizontal: true)
-        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: false, duration: 3.0, horizontal: true)
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: false, duration: 4.0, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: false, duration: 4.0, horizontal: true)
         
         shimmerView.layer.compositingFilter = compositingFilter
         borderShimmerView.layer.compositingFilter = compositingFilter
@@ -1008,8 +1008,8 @@ public final class SolidRoundedButtonView: UIView {
         
         let globalTimeOffset = self.icon == nil && self.animation == nil
         
-        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 3.0, horizontal: true)
-        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 3.0, horizontal: true)
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 4.0, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 4.0, horizontal: true)
         
         shimmerView.layer.compositingFilter = compositingFilter
         borderShimmerView.layer.compositingFilter = compositingFilter

@@ -111,6 +111,7 @@ private final class PhoneView: UIView {
         self.shimmerMaskView = UIView()
         self.shimmerBorderView = UIImageView(image: phoneBorderMaskImage)
         self.shimmerStarView = UIImageView(image: starMaskImage)
+        self.shimmerStarView.alpha = 0.7
         
         self.backShimmerView = UIView()
         self.backShimmerView.alpha = 0.0
@@ -140,10 +141,10 @@ private final class PhoneView: UIView {
         self.frontShimmerView.mask = self.shimmerMaskView
         self.frontShimmerView.addSubview(self.shimmerEffectView)
         
-        self.backShimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.35), gradientSize: 70.0, globalTimeOffset: true, duration: 3.0, horizontal: true)
+        self.backShimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.35), gradientSize: 60.0, globalTimeOffset: true, duration: 4.0, horizontal: true)
         self.backShimmerEffectView.layer.compositingFilter = "overlayBlendMode"
         
-        self.shimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.65), gradientSize: 70.0, globalTimeOffset: true, duration: 3.0, horizontal: true)
+        self.shimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.5), gradientSize: 16.0, globalTimeOffset: true, duration: 4.0, horizontal: true)
         self.shimmerEffectView.layer.compositingFilter = "overlayBlendMode"
     }
     
@@ -180,8 +181,16 @@ private final class PhoneView: UIView {
         
         let status = videoNode.status
         |> mapToSignal { status -> Signal<MediaPlayerStatus?, NoError> in
-            if let status = status, case .buffering = status.status {
-                return .single(status) |> delay(1.0, queue: Queue.mainQueue())
+            var isLoading = false
+            if let status = status {
+                if case .buffering = status.status {
+                    isLoading = true
+                } else if status.duration.isZero {
+                    isLoading = true
+                }
+            }
+            if isLoading {
+                return .single(status) |> delay(0.6, queue: Queue.mainQueue())
             } else {
                 return .single(status)
             }
@@ -205,11 +214,13 @@ private final class PhoneView: UIView {
     private func updatePlaybackStatus() {
         var isDisplayingProgress = false
         if let playbackStatus = self.playbackStatusValue {
-            if case let .buffering(initial, _, progress, _) = playbackStatus.status, initial || !progress.isZero {
+            if case .buffering = playbackStatus.status {
                 isDisplayingProgress = true
             } else if playbackStatus.status == .playing {
-                isDisplayingProgress = false
+                isDisplayingProgress = playbackStatus.duration.isZero
             }
+        } else {
+            isDisplayingProgress = true
         }
         
         let targetAlpha = isDisplayingProgress ? 1.0 : 0.0
@@ -386,9 +397,9 @@ final class PhoneDemoComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-//        deinit {
-//            self.playbackStatusDisposable?.dispose()
-//        }
+        deinit {
+            self.playbackStatusDisposable?.dispose()
+        }
         
         public func update(component: PhoneDemoComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
             self.component = component
