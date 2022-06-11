@@ -36,7 +36,7 @@ float text(float2 uvIn,
 
     float2 uv = fmod(uvIn, 1.0 / count) * count;
     float2 block = uvIn * count - uv;
-    uv = uv * 0.8 + 0.1;
+    uv = uv * 0.8;
     uv += floor(noiseTexture.sample(textureSampler, block / noiseResolution + time * .00025).xy * 256.);
     uv *= -1.0;
     
