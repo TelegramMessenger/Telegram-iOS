@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-
 public enum TogglePeerChatPinnedLocation {
     case group(PeerGroupId)
     case filter(Int32)
@@ -16,6 +15,10 @@ public enum TogglePeerChatPinnedResult {
 func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, location: TogglePeerChatPinnedLocation, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
     return postbox.transaction { transaction -> TogglePeerChatPinnedResult in
         let isPremium = transaction.getPeer(accountPeerId)?.isPremium ?? false
+        
+        let appConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
+        let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
+        let userLimitsConfiguration = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: isPremium)
         
         switch location {
         case let .group(groupId):
@@ -39,9 +42,8 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
                 additionalCount = 1
             }
             
-            let appConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
-            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
-            let userLimitsConfiguration = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: isPremium)
+
+
             
             let limitCount: Int
             if case .root = groupId {
@@ -75,7 +77,7 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
                             updatedData.includePeers.removePinnedPeer(peerId)
                         } else {
                             if !updatedData.includePeers.addPinnedPeer(peerId) {
-                                result = .limitExceeded(count: updatedData.includePeers.pinnedPeers.count, limit: 100)
+                                result = .limitExceeded(count: updatedData.includePeers.peers.count, limit: Int(userLimitsConfiguration.maxFolderChatsCount))
                             }
                         }
                         filters[index] = .filter(id: id, title: title, emoticon: emoticon, data: updatedData)
