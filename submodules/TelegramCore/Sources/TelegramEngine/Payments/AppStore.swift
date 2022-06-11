@@ -6,6 +6,7 @@ import TelegramApi
 
 public enum AssignAppStoreTransactionError {
     case generic
+    case timeout
 }
 
 func _internal_sendAppStoreReceipt(account: Account, receipt: Data, restore: Bool) -> Signal<Never, AssignAppStoreTransactionError> {

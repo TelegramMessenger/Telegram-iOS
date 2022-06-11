@@ -1161,13 +1161,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             })
                        
             let termsString: MultilineTextComponent.TextContent
-            if context.component.isPremium == true {
-                if let promoConfiguration = context.state.promoConfiguration {
-                    let attributedString = stringWithAppliedEntities(promoConfiguration.status, entities: promoConfiguration.statusEntities, baseColor: termsTextColor, linkColor: environment.theme.list.itemAccentColor, baseFont: termsFont, linkFont: termsFont, boldFont: boldTermsFont, italicFont: italicTermsFont, boldItalicFont: boldItalicTermsFont, fixedFont: monospaceTermsFont, blockQuoteFont: termsFont)
-                    termsString = .plain(attributedString)
-                } else {
-                    termsString = .plain(NSAttributedString())
-                }
+//            if context.component.isPremium == true {
+            if let promoConfiguration = context.state.promoConfiguration {
+                let attributedString = stringWithAppliedEntities(promoConfiguration.status, entities: promoConfiguration.statusEntities, baseColor: termsTextColor, linkColor: environment.theme.list.itemAccentColor, baseFont: termsFont, linkFont: termsFont, boldFont: boldTermsFont, italicFont: italicTermsFont, boldItalicFont: boldItalicTermsFont, fixedFont: monospaceTermsFont, blockQuoteFont: termsFont)
+                termsString = .plain(attributedString)
             } else {
                 termsString = .markdown(
                     text: strings.Premium_Terms,
@@ -1403,7 +1400,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
                     if available {
-                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct, account: strongSelf.context.account)
+                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
                             if let strongSelf = self, case .purchased = status {
                                 strongSelf.activationDisposable.set((strongSelf.context.account.postbox.peerView(id: strongSelf.context.account.peerId)
@@ -1418,8 +1415,14 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                 |> mapToSignal { _ -> Signal<Never, AssignAppStoreTransactionError> in
                                     return .never()
                                 }
+                                |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.timeout))
                                 |> deliverOnMainQueue).start(error: { _ in
-
+                                    addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
+                                    
+                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                    let errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                    let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                                    strongSelf.present(alertController)
                                 }, completed: { [weak self] in
                                     if let strongSelf = self {
                                         let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
@@ -1444,6 +1447,10 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                         errorText = presentationData.strings.Premium_Purchase_ErrorNetwork
                                     case .notAllowed:
                                         errorText = presentationData.strings.Premium_Purchase_ErrorNotAllowed
+                                    case .cantMakePayments:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
+                                    case .assignFailed:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
                                     case .cancelled:
                                         break
                                 }
