@@ -16,6 +16,7 @@ import LocalizedPeerData
 import PhoneNumberFormat
 import ChatTitleActivityNode
 import AnimatedCountLabelNode
+import AccountContext
 
 private let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
 private let subtitleFont = Font.regular(13.0)
@@ -46,7 +47,7 @@ private enum ChatTitleCredibilityIcon {
 }
 
 final class ChatTitleView: UIView, NavigationBarTitleView {
-    private let account: Account
+    private let context: AccountContext
     
     private var theme: PresentationTheme
     private var hasEmbeddedTitleContent: Bool = false
@@ -122,7 +123,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             segments = [.text(0, NSAttributedString(string: typeText, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                             isEnabled = false
                         } else if isScheduledMessages {
-                            if peerView.peerId == self.account.peerId {
+                            if peerView.peerId == self.context.account.peerId {
                                 segments = [.text(0, NSAttributedString(string: self.strings.ScheduledMessages_RemindersTitle, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                             } else {
                                 segments = [.text(0, NSAttributedString(string: self.strings.ScheduledMessages_Title, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
@@ -130,7 +131,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             isEnabled = false
                         } else {
                             if let peer = peerViewMainPeer(peerView) {
-                                if peerView.peerId == self.account.peerId {
+                                if peerView.peerId == self.context.account.peerId {
                                     segments = [.text(0, NSAttributedString(string: self.strings.Conversation_SavedMessages, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                 } else {
                                     if !peerView.peerIsContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
@@ -139,14 +140,15 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                         segments = [.text(0, NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     }
                                 }
-                                if peer.id != self.account.peerId {
+                                if peer.id != self.context.account.peerId {
+                                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
                                     if peer.isFake {
                                         titleCredibilityIcon = .fake
                                     } else if peer.isScam {
                                         titleCredibilityIcon = .scam
                                     } else if peer.isVerified {
                                         titleCredibilityIcon = .verified
-                                    } else if peer.isPremium {
+                                    } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                         titleCredibilityIcon = .premium
                                     }
                                 }
@@ -303,7 +305,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             switch titleContent {
             case let .peer(peerView, _, isScheduledMessages):
                 if let peer = peerViewMainPeer(peerView) {
-                    if peer.id == self.account.peerId || isScheduledMessages || peer.id.isReplies {
+                    if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
                         inputActivitiesAllowed = false
                     }
                 }
@@ -405,7 +407,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         case let .peer(peerView, onlineMemberCount, isScheduledMessages):
                             if let peer = peerViewMainPeer(peerView) {
                                 let servicePeer = isServicePeer(peer)
-                                if peer.id == self.account.peerId || isScheduledMessages || peer.id.isReplies {
+                                if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
                                     let string = NSAttributedString(string: "", font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                     state = .info(string, .generic)
                                 } else if let user = peer as? TelegramUser {
@@ -541,13 +543,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         }
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
-        
+                
         self.contentContainer = ASDisplayNode()
         
         self.titleNode = ImmediateAnimatedCountLabelNode()

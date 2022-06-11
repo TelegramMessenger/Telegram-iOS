@@ -3602,7 +3602,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return true
         }
         
-        self.chatTitleView = ChatTitleView(account: self.context.account, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder)
+        self.chatTitleView = ChatTitleView(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder)
         self.navigationItem.titleView = self.chatTitleView
         self.chatTitleView?.pressed = { [weak self] in
             if let strongSelf = self {

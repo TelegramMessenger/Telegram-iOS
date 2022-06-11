@@ -294,7 +294,7 @@ private final class ItemNode: ASDisplayNode {
         if let deleteButtonNode = self.deleteButtonNode {
             if let theme = self.theme {
                 let deleteButtonSize = deleteButtonNode.update(theme: theme)
-                deleteButtonNode.frame = CGRect(origin: CGPoint(x: -deleteButtonSize.width, y: 5.0), size: deleteButtonSize)
+                deleteButtonNode.frame = CGRect(origin: CGPoint(x: -deleteButtonSize.width + 3.0, y: 5.0), size: deleteButtonSize)
             }
         }
         
@@ -788,7 +788,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 selectionFraction = 0.0
             }
             
-            itemNode.updateText(strings: presentationData.strings, title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: isEditing, isReordering: isReordering, canReorderAllChats: canReorderAllChats, isDisabled: isDisabled, presentationData: presentationData, transition: itemNodeTransition)
+            itemNode.updateText(strings: presentationData.strings, title: filter.title(strings: presentationData.strings), shortTitle:  i == 0 ? filter.shortTitle(strings: presentationData.strings) : filter.title(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: isEditing, isReordering: isReordering, canReorderAllChats: canReorderAllChats, isDisabled: isDisabled, presentationData: presentationData, transition: itemNodeTransition)
         }
         var removeKeys: [ChatListFilterTabEntryId] = []
         for (id, _) in self.itemNodes {

@@ -276,6 +276,23 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                         transition = .immediate
                     }
                     
+                    if let reorderControlSizeAndApply = reorderControlSizeAndApply {
+                        if strongSelf.reorderControlNode == nil {
+                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
+                            strongSelf.reorderControlNode = reorderControlNode
+                            strongSelf.controlsContainer.addSubnode(reorderControlNode)
+                            reorderControlNode.alpha = 0.0
+                            transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
+                        }
+                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0, y: 0.0), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
+                        strongSelf.reorderControlNode?.frame = reorderControlFrame
+                    } else if let reorderControlNode = strongSelf.reorderControlNode {
+                        strongSelf.reorderControlNode = nil
+                        transition.updateAlpha(node: reorderControlNode, alpha: 0.0, completion: { [weak reorderControlNode] _ in
+                            reorderControlNode?.removeFromSupernode()
+                        })
+                    }
+                    
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
                         let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: layout.contentSize.height))
                         if strongSelf.editableControlNode == nil {
@@ -306,24 +323,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                         })
                     }
                     strongSelf.editableControlNode?.isHidden = !item.canBeDeleted
-                    
-                    if let reorderControlSizeAndApply = reorderControlSizeAndApply {
-                        if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
-                            strongSelf.reorderControlNode = reorderControlNode
-                            strongSelf.addSubnode(reorderControlNode)
-                            reorderControlNode.alpha = 0.0
-                            transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
-                        }
-                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0, y: 0.0), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
-                        strongSelf.reorderControlNode?.frame = reorderControlFrame
-                    } else if let reorderControlNode = strongSelf.reorderControlNode {
-                        strongSelf.reorderControlNode = nil
-                        transition.updateAlpha(node: reorderControlNode, alpha: 0.0, completion: { [weak reorderControlNode] _ in
-                            reorderControlNode?.removeFromSupernode()
-                        })
-                    }
-                    
+                                        
                     let _ = titleApply()
                     let _ = labelApply()
                     

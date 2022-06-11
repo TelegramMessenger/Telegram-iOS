@@ -1161,7 +1161,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             })
                        
             let termsString: MultilineTextComponent.TextContent
-//            if context.component.isPremium == true {
             if let promoConfiguration = context.state.promoConfiguration {
                 let attributedString = stringWithAppliedEntities(promoConfiguration.status, entities: promoConfiguration.statusEntities, baseColor: termsTextColor, linkColor: environment.theme.list.itemAccentColor, baseFont: termsFont, linkFont: termsFont, boldFont: boldTermsFont, italicFont: italicTermsFont, boldItalicFont: boldItalicTermsFont, fixedFont: monospaceTermsFont, blockQuoteFont: termsFont)
                 termsString = .plain(attributedString)
@@ -1387,6 +1386,13 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         func buy() {
             guard let inAppPurchaseManager = self.context.inAppPurchaseManager,
                   let premiumProduct = self.premiumProduct, !self.inProgress else {
+                return
+            }
+            
+            guard !self.context.account.testingEnvironment else {
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                let alertController = textAlertController(context: self.context, title: nil, text: "Telegram Premium purchase is not available in the test environment.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                self.present(alertController)
                 return
             }
             
