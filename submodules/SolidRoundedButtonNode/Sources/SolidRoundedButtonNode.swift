@@ -808,6 +808,10 @@ public final class SolidRoundedButtonView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.animationTimer?.invalidate()
+    }
+    
     private func setupGloss() {
         if self.gloss {
             if self.shimmerView == nil {
@@ -1002,7 +1006,7 @@ public final class SolidRoundedButtonView: UIView {
             compositingFilter = nil
         }
         
-        let globalTimeOffset = self.icon == nil
+        let globalTimeOffset = self.icon == nil && self.animation == nil
         
         shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 3.0, horizontal: true)
         borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 3.0, horizontal: true)

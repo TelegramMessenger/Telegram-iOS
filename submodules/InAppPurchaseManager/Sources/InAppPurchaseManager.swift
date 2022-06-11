@@ -219,36 +219,22 @@ private func getReceiptData() -> Data? {
 
 extension InAppPurchaseManager: SKPaymentTransactionObserver {
     public func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
-        for transaction in transactions {
+        self.stateQueue.async {
             let accountPeerId = "\(self.engine.account.peerId.toInt64())"
-            if let applicationUsername = transaction.payment.applicationUsername, applicationUsername != accountPeerId {
-                continue
-            }
-            
-            let productIdentifier = transaction.payment.productIdentifier
-            self.stateQueue.async {
+            var transactionsToAssign: [SKPaymentTransaction] = []
+            for transaction in transactions {
+                if let applicationUsername = transaction.payment.applicationUsername, applicationUsername != accountPeerId {
+                    continue
+                }
+                
+                let productIdentifier = transaction.payment.productIdentifier
                 let transactionState: TransactionState?
                 switch transaction.transactionState {
                     case .purchased:
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "none") purchased")
-                        let transactionIdentifier = transaction.transactionIdentifier
-                        transactionState = .purchased(transactionId: transactionIdentifier)
-                        if let transactionIdentifier = transactionIdentifier {
-                            self.disposableSet.set(
-                                self.engine.payments.sendAppStoreReceipt(receipt: getReceiptData() ?? Data(), restore: false).start(error: { [weak self] _ in
-                                    Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? "") failed to assign AppStore transaction")
-                                    queue.finishTransaction(transaction)
-                                    
-                                    if let strongSelf = self, let context = strongSelf.paymentContexts[productIdentifier] {
-                                        context.subscriber(.assignFailed)
-                                    }
-                                }, completed: {
-                                    Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? "") successfully assigned AppStore transaction")
-                                    queue.finishTransaction(transaction)
-                                }),
-                                forKey: transactionIdentifier
-                            )
-                        }
+                    
+                        transactionState = .purchased(transactionId: transaction.transactionIdentifier)
+                        transactionsToAssign.append(transaction)
                     case .restored:
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "") restroring")
                         let transactionIdentifier = transaction.transactionIdentifier
@@ -271,6 +257,31 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                         context.subscriber(transactionState)
                     }
                 }
+            }
+            
+            if !transactionsToAssign.isEmpty {
+                let transactionIds = transactionsToAssign.compactMap({ $0.transactionIdentifier }).joined(separator: ", ")
+                Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), sending receipt for transactions [\(transactionIds)]")
+                
+                self.disposableSet.set(
+                    self.engine.payments.sendAppStoreReceipt(receipt: getReceiptData() ?? Data(), restore: false).start(error: { [weak self] _ in
+                        Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transactions [\(transactionIds)] failed to assign")
+                        for transaction in transactions {
+                            self?.stateQueue.async {
+                                if let strongSelf = self, let context = strongSelf.paymentContexts[transaction.payment.productIdentifier] {
+                                    context.subscriber(.assignFailed)
+                                }
+                            }
+                            queue.finishTransaction(transaction)
+                        }
+                    }, completed: {
+                        Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transactions [\(transactionIds)] successfully assigned")
+                        for transaction in transactions {
+                            queue.finishTransaction(transaction)
+                        }
+                    }),
+                    forKey: transactionIds
+                )
             }
         }
     }

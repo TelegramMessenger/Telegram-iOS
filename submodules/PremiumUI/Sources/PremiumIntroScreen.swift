@@ -1422,16 +1422,23 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                     return .never()
                                 }
                                 |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.timeout))
-                                |> deliverOnMainQueue).start(error: { _ in
-                                    addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
-                                    
-                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                    let errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                                    let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                                    strongSelf.present(alertController)
+                                |> deliverOnMainQueue).start(error: { [weak self] _ in
+                                    if let strongSelf = self {
+                                        strongSelf.inProgress = false
+                                        strongSelf.updated(transition: .immediate)
+                                        strongSelf.completion()
+                                        
+                                        addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
+                                        
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        let errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                        let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                                        strongSelf.present(alertController)
+                                    }
                                 }, completed: { [weak self] in
                                     if let strongSelf = self {
                                         let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
+                                        strongSelf.inProgress = false
                                         strongSelf.isPremium = true
                                         strongSelf.updated(transition: .easeInOut(duration: 0.25))
                                         strongSelf.completion()
