@@ -7564,6 +7564,15 @@ Sorry for the inconvenience.";
 "OldChannels.TooManyCommunitiesText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
 "OldChannels.TooManyCommunitiesNoPremiumText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one. We are working to let you increase this limit in the future.";
 "OldChannels.TooManyCommunitiesFinalText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one.";
+
+"OldChannels.TooManyCommunitiesCreateText" = "You are a member of **%@** groups and channels. Please leave some before creating a new one or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
+"OldChannels.TooManyCommunitiesCreateNoPremiumText" = "You are a member of **%@** groups and channels. Please leave some before creating a new one. We are working to let you increase this limit in the future.";
+"OldChannels.TooManyCommunitiesCreateFinalText" = "You are a member of **%@** groups and channels. Please leave some before creating a new one.";
+
+"OldChannels.TooManyCommunitiesUpgradeText" = "You are a member of **%@** groups and channels. For technical reasons, you need to leave some first before changing this setting in your groups or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
+"OldChannels.TooManyCommunitiesUpgradeNoPremiumText" = "You are a member of **%@** groups and channels. For technical reasons, you need to leave some first before changing this setting in your groups. We are working to let you increase this limit in the future.";
+"OldChannels.TooManyCommunitiesUpgradeFinalText" = "You are a member of **%@** groups and channels. For technical reasons, you need to leave some first before changing this setting in your groups.";
+
 "OldChannels.LeaveCommunities_1" = "Leave %@ Community";
 "OldChannels.LeaveCommunities_any" = "Leave %@ Communities";
 
@@ -7711,5 +7720,12 @@ Sorry for the inconvenience.";
 "Premium.Purchase.ErrorUnknown" = "An error occurred. Please try again.";
 "Premium.Purchase.ErrorNetwork" = "Please check your internet connection and try again.";
 "Premium.Purchase.ErrorNotAllowed" = "The device is not not allowed to make the payment.";
+"Premium.Purchase.ErrorCantMakePayments" = "In-app purchases are not allowed on this device.";
+
+"Premium.Restore.Success" = "Done";
+"Premium.Restore.ErrorUnknown" = "An error occurred. Please try again.";
+
 
 "Settings.Premium" = "Telegram Premium";
+
+"Settings.AddAnotherAccount.PremiumHelp" = "You can add up to four accounts with different phone numbers.";

@@ -323,46 +323,82 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     }
 }
 
-private func generatePremiumReactionIcon() -> UIImage? {
-    return generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        if let backgroundImage = UIImage(bundleImageName: "Premium/BackgroundIcon"), let foregroundImage = UIImage(bundleImageName: "Premium/ForegroundIcon") {
-            context.saveGState()
-            if let cgImage = backgroundImage.cgImage {
-                context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-            }
-            
-            let colorsArray: [CGColor] = [
-                UIColor(rgb: 0x6B93FF).cgColor,
-                UIColor(rgb: 0x6B93FF).cgColor,
-                UIColor(rgb: 0x976FFF).cgColor,
-                UIColor(rgb: 0xE46ACE).cgColor,
-                UIColor(rgb: 0xE46ACE).cgColor
-            ]
-            var locations: [CGFloat] = [0.0, 0.15, 0.5, 0.85, 1.0]
-            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
-
-            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
-            
-            context.restoreGState()
-            
-            if let cgImage = foregroundImage.cgImage {
-                context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-            }
-            context.setFillColor(UIColor.white.cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: size))
+private let starsCount = 7
+private final class StarsNode: ASDisplayNode {
+    private let starNodes: [ASImageNode]
+    private var timer: SwiftSignalKit.Timer?
+    
+    override init() {
+        let image = UIImage(bundleImageName: "Premium/ReactionsStar")
+        var starNodes: [ASImageNode] = []
+        for _ in 0 ..< starsCount {
+            let node = ASImageNode()
+            node.alpha = 0.0
+            node.image = image
+            node.displaysAsynchronously = false
+            starNodes.append(node)
         }
-    })
+        self.starNodes = starNodes
+        
+        super.init()
+        
+        for node in starNodes {
+            self.addSubnode(node)
+        }
+        
+        self.setup(firstTime: true)
+        
+        self.timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+            self?.setup()
+        }, queue: Queue.mainQueue())
+        self.timer?.start()
+    }
+    
+    deinit {
+        self.timer?.invalidate()
+    }
+    
+    func setup(firstTime: Bool = false) {
+        let size = CGSize(width: 32.0, height: 32.0)
+        let starSize = CGSize(width: 6.0, height: 8.0)
+        
+        for node in self.starNodes {
+            if node.layer.animation(forKey: "transform.scale") == nil && node.layer.animation(forKey: "opacity") == nil {
+                let x = CGFloat.random(in: 0 ..< size.width)
+                let y = CGFloat.random(in: 0 ..< size.width)
+                
+                let randomTargetScale = CGFloat.random(in: 0.8 ..< 1.0)
+                node.bounds = CGRect(origin: .zero, size: starSize)
+                node.position = CGPoint(x: x, y: y)
+                
+                node.alpha = 1.0
+                
+                let duration =  CGFloat.random(in: 0.4 ..< 0.65)
+                let delay = firstTime ? CGFloat.random(in: 0.0 ..< 0.25) : 0.0
+                node.layer.animateScale(from: 0.001, to: randomTargetScale, duration: duration, delay: delay, removeOnCompletion: false, completion: { [weak self, weak node] _ in
+                    let duration =  CGFloat.random(in: 0.3 ..< 0.35)
+                    node?.alpha = 0.0
+                    node?.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak self, weak node] _ in
+                        node?.layer.removeAllAnimations()
+                        self?.setup()
+                    })
+                })
+            }
+        }
+    }
 }
 
 final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
     var isExtracted: Bool = false
     
-    var backgroundView: UIVisualEffectView?
-    let backgroundMaskNode: ASImageNode
-    let backgroundOverlayNode: ASImageNode
-    let imageNode: ASImageNode
-    let maskImageNode: ASImageNode
+    private var backgroundView: UIVisualEffectView?
+    private let backgroundMaskNode: ASImageNode
+    private let backgroundOverlayNode: ASImageNode
+    private let imageNode: ASImageNode
+    private var starsNode: StarsNode?
+    
+    private let maskContainerNode: ASDisplayNode
+    private let maskImageNode: ASImageNode
     
     init(theme: PresentationTheme) {
         self.backgroundMaskNode = ASImageNode()
@@ -372,7 +408,7 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
         self.backgroundMaskNode.image = UIImage(bundleImageName: "Premium/ReactionsBackground")
         
         self.backgroundOverlayNode = ASImageNode()
-        self.backgroundOverlayNode.alpha = 0.05
+        self.backgroundOverlayNode.alpha = 0.1
         self.backgroundOverlayNode.contentMode = .center
         self.backgroundOverlayNode.displaysAsynchronously = false
         self.backgroundOverlayNode.isUserInteractionEnabled = false
@@ -384,20 +420,24 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
         self.imageNode.isUserInteractionEnabled = false
         self.imageNode.image = UIImage(bundleImageName: "Premium/ReactionsForeground")
         
+        self.maskContainerNode = ASDisplayNode()
+        
         self.maskImageNode = ASImageNode()
         if let backgroundImage = UIImage(bundleImageName: "Premium/ReactionsBackground") {
-            self.maskImageNode.image = generateImage(CGSize(width: 40.0, height: 52.0), contextGenerator: { size, context in
+            self.maskImageNode.image = generateImage(CGSize(width: 40.0 * 4.0, height: 52.0 * 4.0), contextGenerator: { size, context in
                 context.setFillColor(UIColor.black.cgColor)
                 context.fill(CGRect(origin: .zero, size: size))
                 
                 if let cgImage = backgroundImage.cgImage {
-                    let maskFrame = CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 10.0)
+                    let maskFrame = CGRect(origin: .zero, size: size).insetBy(dx: 4.0 + 40.0 * 2.0 - 16.0, dy: 10.0 + 52.0 * 2.0 - 16.0)
                     context.clip(to: maskFrame, mask: cgImage)
                 }
                 context.setBlendMode(.clear)
                 context.fill(CGRect(origin: .zero, size: size))
             })
         }
+        self.maskImageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((40.0 - 40.0 * 4.0) / 2.0), y: floorToScreenPixels((52.0 - 52.0 * 4.0) / 2.0)), size: CGSize(width: 40.0 * 4.0, height: 52.0 * 4.0))
+        self.maskContainerNode.addSubnode(self.maskImageNode)
         
         super.init()
         
@@ -418,10 +458,37 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
         backgroundView.mask = self.backgroundMaskNode.view
         self.view.insertSubview(backgroundView, at: 0)
         self.backgroundView = backgroundView
+        
+        let starsNode = StarsNode()
+        starsNode.frame = CGRect(origin: .zero, size: CGSize(width: 32.0, height: 32.0))
+        self.backgroundView?.contentView.addSubview(starsNode.view)
+        self.starsNode = starsNode
     }
     
     func appear(animated: Bool) {
-        
+        if animated {
+            let delay: Double = 0.1
+            let duration: Double = 0.85
+            let damping: CGFloat = 60.0
+            
+            let initialScale: CGFloat = 0.25
+            self.maskImageNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, delay: delay, damping: damping)
+            self.backgroundView?.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, delay: delay, damping: damping)
+            self.backgroundOverlayNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, delay: delay, damping: damping)
+            self.imageNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, delay: delay, damping: damping)
+            
+            Queue.mainQueue().after(0.25, {
+                let shimmerNode = ASImageNode()
+                shimmerNode.displaysAsynchronously = false
+                shimmerNode.image = generateGradientImage(size: CGSize(width: 32.0, height: 32.0), colors: [UIColor(rgb: 0xffffff, alpha: 0.0), UIColor(rgb: 0xffffff, alpha: 0.24), UIColor(rgb: 0xffffff, alpha: 0.0)], locations: [0.0, 0.5, 1.0], direction: .horizontal)
+                shimmerNode.frame = CGRect(origin: .zero, size: CGSize(width: 32.0, height: 32.0))
+                self.backgroundView?.contentView.addSubview(shimmerNode.view)
+                
+                shimmerNode.layer.animatePosition(from: CGPoint(x: -60.0, y: 0.0), to: CGPoint(x: 60.0, y: 0.0), duration: 0.75, removeOnCompletion: false, additive: true, completion: { [weak shimmerNode] _ in
+                    shimmerNode?.view.removeFromSuperview()
+                })
+            })
+        }
     }
     
     func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
@@ -432,8 +499,7 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
         self.imageNode.frame = bounds
     }
     
-    
     var maskNode: ASDisplayNode? {
-        return self.maskImageNode
+        return self.maskContainerNode
     }
 }

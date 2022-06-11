@@ -80,7 +80,7 @@ final class StickersCarouselComponent: Component {
     }
 }
 
-private let itemSize = CGSize(width: 200.0, height: 200.0)
+private let itemSize = CGSize(width: 220.0, height: 220.0)
 
 private class StickerNode: ASDisplayNode {
     private let context: AccountContext

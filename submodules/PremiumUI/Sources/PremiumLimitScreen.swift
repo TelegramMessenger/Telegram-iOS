@@ -819,55 +819,56 @@ private final class LimitSheetContent: CombinedComponent {
                 reachedMaximumLimit = false
             }
             
-            let title = title.update(
-                component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: titleText,
-                        font: Font.semibold(17.0),
-                        textColor: theme.actionSheet.primaryTextColor,
-                        paragraphAlignment: .center
-                    )),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 1
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude),
-                transition: .immediate
-            )
-            
-            let textFont = Font.regular(17.0)
-            let boldTextFont = Font.semibold(17.0)
-            let textColor = theme.actionSheet.primaryTextColor
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
-                return nil
-            })
-                        
-            let text = text.update(
-                component: MultilineTextComponent(
-                    text: .markdown(text: string, attributes: markdownAttributes),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.0
-                ),
-                availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
-                transition: .immediate
-            )
-            
-            let gradientColors: [UIColor]
-            if isPremiumDisabled {
-                gradientColors = [
-                    UIColor(rgb: 0x007afe),
-                    UIColor(rgb: 0x5494ff)
-                ]
-            } else {
-                gradientColors = [
-                    UIColor(rgb: 0x0077ff),
-                    UIColor(rgb: 0x6b93ff),
-                    UIColor(rgb: 0x8878ff),
-                    UIColor(rgb: 0xe46ace)
-                ]
-            }
-            
+            let contentSize: CGSize
             if state.initialized {
+                let title = title.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: titleText,
+                            font: Font.semibold(17.0),
+                            textColor: theme.actionSheet.primaryTextColor,
+                            paragraphAlignment: .center
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 1
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                
+                let textFont = Font.regular(17.0)
+                let boldTextFont = Font.semibold(17.0)
+                let textColor = theme.actionSheet.primaryTextColor
+                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
+                    return nil
+                })
+                
+                let text = text.update(
+                    component: MultilineTextComponent(
+                        text: .markdown(text: string, attributes: markdownAttributes),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.0
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                    transition: .immediate
+                )
+                
+                let gradientColors: [UIColor]
+                if isPremiumDisabled {
+                    gradientColors = [
+                        UIColor(rgb: 0x007afe),
+                        UIColor(rgb: 0x5494ff)
+                    ]
+                } else {
+                    gradientColors = [
+                        UIColor(rgb: 0x0077ff),
+                        UIColor(rgb: 0x6b93ff),
+                        UIColor(rgb: 0x8878ff),
+                        UIColor(rgb: 0xe46ace)
+                    ]
+                }
+                
                 let limit = limit.update(
                     component: PremiumLimitDisplayComponent(
                         inactiveColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5),
@@ -889,57 +890,59 @@ private final class LimitSheetContent: CombinedComponent {
                 context.add(limit
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: limit.size.height / 2.0 + 44.0))
                 )
-            }
             
-            let isIncreaseButton = !reachedMaximumLimit && !isPremiumDisabled
-            let button = button.update(
-                component: SolidRoundedButtonComponent(
-                    title: isIncreaseButton ? strings.Premium_IncreaseLimit : strings.Common_OK,
-                    
-                    theme: SolidRoundedButtonComponent.Theme(
-                        backgroundColor: .black,
-                        backgroundColors: gradientColors,
-                        foregroundColor: .white
+                let isIncreaseButton = !reachedMaximumLimit && !isPremiumDisabled
+                let button = button.update(
+                    component: SolidRoundedButtonComponent(
+                        title: isIncreaseButton ? strings.Premium_IncreaseLimit : strings.Common_OK,
+                        
+                        theme: SolidRoundedButtonComponent.Theme(
+                            backgroundColor: .black,
+                            backgroundColors: gradientColors,
+                            foregroundColor: .white
+                        ),
+                        font: .bold,
+                        fontSize: 17.0,
+                        height: 50.0,
+                        cornerRadius: 10.0,
+                        gloss: isIncreaseButton,
+                        animationName: isIncreaseButton ? buttonAnimationName : nil,
+                        iconPosition: .right,
+                        action: { [weak component] in
+                            guard let component = component else {
+                                return
+                            }
+                            component.dismiss()
+                            if isIncreaseButton {
+                                component.action()
+                            }
+                        }
                     ),
-                    font: .bold,
-                    fontSize: 17.0,
-                    height: 50.0,
-                    cornerRadius: 10.0,
-                    gloss: isIncreaseButton,
-                    animationName: isIncreaseButton ? buttonAnimationName : nil,
-                    iconPosition: .right,
-                    action: { [weak component] in
-                        guard let component = component else {
-                            return
-                        }
-                        component.dismiss()
-                        if isIncreaseButton {
-                            component.action()
-                        }
-                    }
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
-                transition: context.transition
-            )
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    transition: context.transition
+                )
+                
+                var textOffset: CGFloat = 228.0
+                if isPremiumDisabled {
+                    textOffset -= 68.0
+                }
+                
+                context.add(title
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: 28.0))
+                )
+                context.add(text
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
+                )
+                
+                let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil(text.size.height / 2.0) + 38.0), size: button.size)
+                context.add(button
+                    .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
+                )
             
-            var textOffset: CGFloat = 228.0
-            if isPremiumDisabled {
-                textOffset -= 68.0
+                contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + 5.0 + environment.safeInsets.bottom)
+            } else {
+                contentSize = CGSize(width: context.availableSize.width, height: 351.0 + environment.safeInsets.bottom)
             }
-            
-            context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: 28.0))
-            )
-            context.add(text
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
-            )
-            
-            let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil(text.size.height / 2.0) + 38.0), size: button.size)
-            context.add(button
-                .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
-            )
-          
-            let contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + 5.0 + environment.safeInsets.bottom)
             
             return contentSize
         }

@@ -111,6 +111,7 @@ private final class PhoneView: UIView {
         self.shimmerMaskView = UIView()
         self.shimmerBorderView = UIImageView(image: phoneBorderMaskImage)
         self.shimmerStarView = UIImageView(image: starMaskImage)
+        self.shimmerStarView.alpha = 0.7
         
         self.backShimmerView = UIView()
         self.backShimmerView.alpha = 0.0
@@ -140,10 +141,10 @@ private final class PhoneView: UIView {
         self.frontShimmerView.mask = self.shimmerMaskView
         self.frontShimmerView.addSubview(self.shimmerEffectView)
         
-        self.backShimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.35), gradientSize: 70.0, globalTimeOffset: true, duration: 3.0, horizontal: true)
+        self.backShimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.35), gradientSize: 60.0, globalTimeOffset: true, duration: 4.0, horizontal: true)
         self.backShimmerEffectView.layer.compositingFilter = "overlayBlendMode"
         
-        self.shimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.65), gradientSize: 70.0, globalTimeOffset: true, duration: 3.0, horizontal: true)
+        self.shimmerEffectView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.5), gradientSize: 16.0, globalTimeOffset: true, duration: 4.0, horizontal: true)
         self.shimmerEffectView.layer.compositingFilter = "overlayBlendMode"
     }
     
@@ -180,8 +181,16 @@ private final class PhoneView: UIView {
         
         let status = videoNode.status
         |> mapToSignal { status -> Signal<MediaPlayerStatus?, NoError> in
-            if let status = status, case .buffering = status.status {
-                return .single(status) |> delay(1.0, queue: Queue.mainQueue())
+            var isLoading = false
+            if let status = status {
+                if case .buffering = status.status {
+                    isLoading = true
+                } else if status.duration.isZero {
+                    isLoading = true
+                }
+            }
+            if isLoading {
+                return .single(status) |> delay(0.6, queue: Queue.mainQueue())
             } else {
                 return .single(status)
             }
@@ -205,11 +214,13 @@ private final class PhoneView: UIView {
     private func updatePlaybackStatus() {
         var isDisplayingProgress = false
         if let playbackStatus = self.playbackStatusValue {
-            if case let .buffering(initial, _, progress, _) = playbackStatus.status, initial || !progress.isZero {
+            if case .buffering = playbackStatus.status {
                 isDisplayingProgress = true
             } else if playbackStatus.status == .playing {
-                isDisplayingProgress = false
+                isDisplayingProgress = playbackStatus.duration.isZero
             }
+        } else {
+            isDisplayingProgress = true
         }
         
         let targetAlpha = isDisplayingProgress ? 1.0 : 0.0
@@ -280,125 +291,9 @@ private final class PhoneView: UIView {
     }
 }
 
-private final class FasterStarsView: UIView {
-    private let sceneView: SCNView
-    
-    override init(frame: CGRect) {
-        self.sceneView = SCNView(frame: CGRect(origin: .zero, size: frame.size))
-        self.sceneView.backgroundColor = .clear
-        if let url = getAppBundle().url(forResource: "lightspeed", withExtension: "scn") {
-            self.sceneView.scene = try? SCNScene(url: url, options: nil)
-        }
-        self.sceneView.isUserInteractionEnabled = false
-        self.sceneView.preferredFramesPerSecond = 60
-        
-        super.init(frame: frame)
-        
-        self.alpha = 0.0
-        
-        self.addSubview(self.sceneView)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    func setVisible(_ visible: Bool) {
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
-        transition.updateAlpha(layer: self.layer, alpha: visible ? 1.0 : 0.0)
-    }
-    
-    private var playing = false
-    func startAnimation() {
-        guard !self.playing, let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "particles", recursively: false), let particles = node.particleSystems?.first else {
-            return
-        }
-        self.playing = true
-        
-        let speedAnimation = CABasicAnimation(keyPath: "speedFactor")
-        speedAnimation.fromValue = 1.0
-        speedAnimation.toValue = 1.8
-        speedAnimation.duration = 0.8
-        speedAnimation.fillMode = .forwards
-        particles.addAnimation(speedAnimation, forKey: "speedFactor")
-        
-        particles.speedFactor = 3.0
-        
-        let stretchAnimation = CABasicAnimation(keyPath: "stretchFactor")
-        stretchAnimation.fromValue = 0.05
-        stretchAnimation.toValue = 0.3
-        stretchAnimation.duration = 0.8
-        stretchAnimation.fillMode = .forwards
-        particles.addAnimation(stretchAnimation, forKey: "stretchFactor")
-        
-        particles.stretchFactor = 0.3
-    }
-    
-    func stopAnimation() {
-        guard self.playing, let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "particles", recursively: false), let particles = node.particleSystems?.first else {
-            return
-        }
-        self.playing = false
-        
-        let speedAnimation = CABasicAnimation(keyPath: "speedFactor")
-        speedAnimation.fromValue = 3.0
-        speedAnimation.toValue = 1.0
-        speedAnimation.duration = 0.35
-        speedAnimation.fillMode = .forwards
-        particles.addAnimation(speedAnimation, forKey: "speedFactor")
-        
-        particles.speedFactor = 1.0
-        
-        let stretchAnimation = CABasicAnimation(keyPath: "stretchFactor")
-        stretchAnimation.fromValue = 0.3
-        stretchAnimation.toValue = 0.05
-        stretchAnimation.duration = 0.35
-        stretchAnimation.fillMode = .forwards
-        particles.addAnimation(stretchAnimation, forKey: "stretchFactor")
-        
-        particles.stretchFactor = 0.05
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        
-        self.sceneView.frame = CGRect(origin: .zero, size: frame.size)
-    }
-}
-
-private final class BadgeStarsView: UIView {
-    private let sceneView: SCNView
-    
-    override init(frame: CGRect) {
-        self.sceneView = SCNView(frame: CGRect(origin: .zero, size: frame.size))
-        self.sceneView.backgroundColor = .clear
-        if let url = getAppBundle().url(forResource: "badge", withExtension: "scn") {
-            self.sceneView.scene = try? SCNScene(url: url, options: nil)
-        }
-        self.sceneView.isUserInteractionEnabled = false
-        self.sceneView.preferredFramesPerSecond = 60
-        
-        super.init(frame: frame)
-        
-        self.alpha = 0.0
-        
-        self.addSubview(self.sceneView)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    func setVisible(_ visible: Bool) {
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
-        transition.updateAlpha(layer: self.layer, alpha: visible ? 0.75 : 0.0)
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        
-        self.sceneView.frame = CGRect(origin: .zero, size: frame.size)
-    }
+protocol PhoneDemoDecorationView: UIView {
+    func setVisible(_ visible: Bool)
+    func resetAnimation()
 }
 
 final class PhoneDemoComponent: Component {
@@ -411,6 +306,8 @@ final class PhoneDemoComponent: Component {
     
     enum BackgroundDecoration {
         case none
+        case dataRain
+        case swirlStars
         case fasterStars
         case badgeStars
     }
@@ -462,14 +359,12 @@ final class PhoneDemoComponent: Component {
         private var isCentral = false
         private var component: PhoneDemoComponent?
         
-        private let starsContainerView: UIView
+        private let decorationContainerView: UIView
+        private var decorationView: PhoneDemoDecorationView?
         private let containerView: UIView
         private let phoneView: PhoneView
-        
-        private var fasterStarsView: FasterStarsView?
-        private var badgeStarsView: BadgeStarsView?
-        
-        private var starsDisposable: Disposable?
+            
+        private var playbackStatusDisposable: Disposable?
         
         public var ready: Signal<Bool, NoError> {
             if let videoNode = self.phoneView.videoNode {
@@ -483,8 +378,8 @@ final class PhoneDemoComponent: Component {
         }
         
         public override init(frame: CGRect) {
-            self.starsContainerView = UIView(frame: frame)
-            self.starsContainerView.clipsToBounds = true
+            self.decorationContainerView = UIView(frame: frame)
+            self.decorationContainerView.clipsToBounds = true
             
             self.containerView = UIView(frame: frame)
             self.containerView.clipsToBounds = true
@@ -493,7 +388,7 @@ final class PhoneDemoComponent: Component {
             
             super.init(frame: frame)
             
-            self.addSubview(self.starsContainerView)
+            self.addSubview(self.decorationContainerView)
             self.addSubview(self.containerView)
             self.containerView.addSubview(self.phoneView)
         }
@@ -503,41 +398,59 @@ final class PhoneDemoComponent: Component {
         }
         
         deinit {
-            self.starsDisposable?.dispose()
+            self.playbackStatusDisposable?.dispose()
         }
         
         public func update(component: PhoneDemoComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
             self.component = component
             
             self.containerView.frame = CGRect(origin: .zero, size: availableSize)
-            self.starsContainerView.frame = CGRect(origin: CGPoint(x: -availableSize.width * 0.5, y: 0.0), size: CGSize(width: availableSize.width * 2.0, height: availableSize.height))
+            self.decorationContainerView.frame = CGRect(origin: CGPoint(x: -availableSize.width * 0.5, y: 0.0), size: CGSize(width: availableSize.width * 2.0, height: availableSize.height))
             self.phoneView.bounds = CGRect(origin: .zero, size: phoneSize)
             
             switch component.decoration {
                 case .none:
                     break
+                case .dataRain:
+                    if #available(iOS 10.0, *) {
+                        if let _ = self.decorationView as? MatrixView {
+                        } else if let rainView = MatrixView(test: true) {
+                            rainView.frame = self.decorationContainerView.bounds.insetBy(dx: availableSize.width * 0.5, dy: 0.0)
+                            self.decorationView = rainView
+                            self.decorationContainerView.addSubview(rainView)
+                        }
+                    }
+                case .swirlStars:
+                    if let _ = self.decorationView as? SwirlStarsView {
+                    } else {
+                        let starsView = SwirlStarsView(frame: self.decorationContainerView.bounds)
+                        self.decorationView = starsView
+                        self.decorationContainerView.addSubview(starsView)
+                    }
                 case .fasterStars:
-                    if self.fasterStarsView == nil {
-                        let starsView = FasterStarsView(frame: self.starsContainerView.bounds)
-                        self.fasterStarsView = starsView
-                        self.starsContainerView.addSubview(starsView)
+                    if let _ = self.decorationView as? FasterStarsView {
+                    } else {
+                        let starsView = FasterStarsView(frame: self.decorationContainerView.bounds)
+                        self.decorationView = starsView
+                        self.decorationContainerView.addSubview(starsView)
                         
-                        self.starsDisposable = (self.phoneView.playbackStatus
-                        |> deliverOnMainQueue).start(next: { [weak self] status in
-                            if let strongSelf = self, let status = status {
+                        self.playbackStatusDisposable = (self.phoneView.playbackStatus
+                        |> deliverOnMainQueue).start(next: { [weak starsView] status in
+                            if let starsView = starsView, let status = status {
                                 if status.timestamp > 8.0 {
-                                    strongSelf.fasterStarsView?.stopAnimation()
+                                    starsView.resetAnimation()
                                 } else if status.timestamp > 0.85 {
-                                    strongSelf.fasterStarsView?.startAnimation()
+                                    starsView.startAnimation()
                                 }
                             }
                         })
                     }
                 case .badgeStars:
-                    if self.badgeStarsView == nil {
-                        let starsView = BadgeStarsView(frame: self.starsContainerView.bounds)
-                        self.badgeStarsView = starsView
-                        self.starsContainerView.addSubview(starsView)
+                    if let _ = self.decorationView as? BadgeStarsView {
+                    } else {
+                        let starsView = BadgeStarsView(frame: self.decorationContainerView.bounds)
+                        self.decorationView = starsView
+                        self.decorationContainerView.addSubview(starsView)
                     }
             }
         
@@ -561,8 +474,9 @@ final class PhoneDemoComponent: Component {
             let isCentral = environment[DemoPageEnvironment.self].isCentral
             self.isCentral = isCentral
             
-            self.fasterStarsView?.setVisible(isVisible && abs(mappedPosition) < 0.4)
-            self.badgeStarsView?.setVisible(isVisible && abs(mappedPosition) < 0.4)
+            if let decorationView = self.decorationView {
+                decorationView.setVisible(isVisible && abs(mappedPosition) < 0.4)
+            }
             
             self.phoneView.center = CGPoint(x: availableSize.width / 2.0 + phoneX, y: phoneY)
             self.phoneView.screenRotation = mappedPosition * -0.7
@@ -575,7 +489,7 @@ final class PhoneDemoComponent: Component {
                 self.phoneView.play()
             } else if !isVisible {
                 self.phoneView.reset()
-                self.fasterStarsView?.stopAnimation()
+                self.decorationView?.resetAnimation()
             }
             
             if let _ = transition.userData(DemoAnimateInTransition.self), abs(mappedPosition) < .ulpOfOne {

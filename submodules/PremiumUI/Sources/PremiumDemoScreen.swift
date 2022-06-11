@@ -725,7 +725,8 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .bottom,
-                                    videoFile: configuration.videos["more_upload"]
+                                    videoFile: configuration.videos["more_upload"],
+                                    decoration: .dataRain
                                 )),
                                 title: strings.Premium_UploadSize,
                                 text: strings.Premium_UploadSizeInfo,
@@ -760,7 +761,8 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoFile: configuration.videos["voice_to_text"]
+                                    videoFile: configuration.videos["voice_to_text"],
+                                    decoration: .badgeStars
                                 )),
                                 title: strings.Premium_VoiceToText,
                                 text: strings.Premium_VoiceToTextInfo,
@@ -777,7 +779,8 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .bottom,
-                                    videoFile: configuration.videos["no_ads"]
+                                    videoFile: configuration.videos["no_ads"],
+                                    decoration: .swirlStars
                                 )),
                                 title: strings.Premium_NoAds,
                                 text: isStandalone ? strings.Premium_NoAdsStandaloneInfo : strings.Premium_NoAdsInfo,
@@ -831,7 +834,8 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoFile: configuration.videos["advanced_chat_management"]
+                                    videoFile: configuration.videos["advanced_chat_management"],
+                                    decoration: .swirlStars
                                 )),
                                 title: strings.Premium_ChatManagement,
                                 text: strings.Premium_ChatManagementInfo,
@@ -866,7 +870,8 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoFile: configuration.videos["animated_userpics"]
+                                    videoFile: configuration.videos["animated_userpics"],
+                                    decoration: .swirlStars
                                 )),
                                 title: strings.Premium_Avatar,
                                 text: strings.Premium_AvatarInfo,

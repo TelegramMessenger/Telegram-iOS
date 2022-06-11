@@ -118,6 +118,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                     
                     let animationNode = SimpleAnimationNode(animationName: animation, size: CGSize(width: 30.0, height: 30.0))
                     animationNode.customColor = self.theme.foregroundColor
+                    animationNode.isUserInteractionEnabled = false
                     self.addSubnode(animationNode)
                     self.animationNode = animationNode
                     
@@ -128,10 +129,10 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                     if self.gloss {
                         self.animationTimer?.invalidate()
                         
-                        Queue.mainQueue().after(0.75) {
+                        Queue.mainQueue().after(1.25) {
                             self.animationNode?.play()
                             
-                            let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: true, completion: { [weak self] in
+                            let timer = SwiftSignalKit.Timer(timeout: 4.0, repeat: true, completion: { [weak self] in
                                 self?.animationNode?.play()
                             }, queue: Queue.mainQueue())
                             self.animationTimer = timer
@@ -227,6 +228,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                     strongSelf.subtitleNode.alpha = 0.55
                     strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.iconNode.alpha = 0.55
+                    strongSelf.animationNode?.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.animationNode?.alpha = 0.55
                 } else {
                     if strongSelf.buttonBackgroundNode.alpha > 0.0 {
                         strongSelf.buttonBackgroundNode.alpha = 1.0
@@ -237,6 +240,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                         strongSelf.subtitleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                         strongSelf.iconNode.alpha = 1.0
                         strongSelf.iconNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                        strongSelf.animationNode?.alpha = 1.0
+                        strongSelf.animationNode?.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                     }
                 }
             }
@@ -358,8 +363,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             compositingFilter = nil
         }
         
-        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: false, duration: 3.0, horizontal: true)
-        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: false, duration: 3.0, horizontal: true)
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: false, duration: 4.0, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: false, duration: 4.0, horizontal: true)
         
         shimmerView.layer.compositingFilter = compositingFilter
         borderShimmerView.layer.compositingFilter = compositingFilter
@@ -662,6 +667,7 @@ public final class SolidRoundedButtonView: UIView {
                     
                     let animationNode = SimpleAnimationNode(animationName: animation, size: CGSize(width: 30.0, height: 30.0))
                     animationNode.customColor = self.theme.foregroundColor
+                    animationNode.isUserInteractionEnabled = false
                     self.addSubview(animationNode.view)
                     self.animationNode = animationNode
                     
@@ -672,10 +678,10 @@ public final class SolidRoundedButtonView: UIView {
                     if self.gloss {
                         self.animationTimer?.invalidate()
                         
-                        Queue.mainQueue().after(0.75) {
+                        Queue.mainQueue().after(1.25) {
                             self.animationNode?.play()
                             
-                            let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: true, completion: { [weak self] in
+                            let timer = SwiftSignalKit.Timer(timeout: 4.0, repeat: true, completion: { [weak self] in
                                 self?.animationNode?.play()
                             }, queue: Queue.mainQueue())
                             self.animationTimer = timer
@@ -784,6 +790,8 @@ public final class SolidRoundedButtonView: UIView {
                     strongSelf.subtitleNode.alpha = 0.55
                     strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.iconNode.alpha = 0.55
+                    strongSelf.animationNode?.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.animationNode?.alpha = 0.55
                 } else {
                     if strongSelf.buttonBackgroundNode.alpha > 0.0 {
                         strongSelf.buttonBackgroundNode.alpha = 1.0
@@ -794,6 +802,8 @@ public final class SolidRoundedButtonView: UIView {
                         strongSelf.subtitleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                         strongSelf.iconNode.alpha = 1.0
                         strongSelf.iconNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                        strongSelf.animationNode?.alpha = 1.0
+                        strongSelf.animationNode?.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                     }
                 }
             }
@@ -806,6 +816,10 @@ public final class SolidRoundedButtonView: UIView {
         
     required public init(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.animationTimer?.invalidate()
     }
     
     private func setupGloss() {
@@ -1002,10 +1016,10 @@ public final class SolidRoundedButtonView: UIView {
             compositingFilter = nil
         }
         
-        let globalTimeOffset = self.icon == nil
+        let globalTimeOffset = self.icon == nil && self.animation == nil
         
-        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 3.0, horizontal: true)
-        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 3.0, horizontal: true)
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 4.0, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: globalTimeOffset, duration: 4.0, horizontal: true)
         
         shimmerView.layer.compositingFilter = compositingFilter
         borderShimmerView.layer.compositingFilter = compositingFilter

@@ -2241,7 +2241,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + titleOffset, y: titleFrame.origin.y), size: titleFrame.size))
             
             let authorFrame = self.authorNode.frame
-            transition.updateFrame(node: self.authorNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: authorFrame.origin.y), size: authorFrame.size))
+            transition.updateFrame(node: self.authorNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: authorFrame.origin.y), size: authorFrame.size))
             
             transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
             
@@ -2253,7 +2253,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 transition.updateFrameAdditive(node: dustNode, frame: textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0))
             }
             
-            var mediaPreviewOffsetX = textFrame.origin.x + 1.0
+            var mediaPreviewOffsetX = textFrame.origin.x
             let contentImageSpacing: CGFloat = 2.0
             for (_, media, mediaSize) in self.currentMediaPreviewSpecs {
                 guard let mediaId = media.id else {
@@ -2279,7 +2279,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             let mutedIconFrame = self.mutedIconNode.frame
-            transition.updateFrame(node: self.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin - 4.0, y: contentRect.origin.y - 2.0), size: mutedIconFrame.size))
+            transition.updateFrame(node: self.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin - 5.0, y: mutedIconFrame.minY), size: mutedIconFrame.size))
             nextTitleIconOrigin += mutedIconFrame.size.width + 3.0
             
             let badgeFrame = self.badgeNode.frame

@@ -2310,7 +2310,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 credibilityIcon = .scam
             } else if peer.isVerified {
                 credibilityIcon = .verified
-            } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+            } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled && (peer.id != self.context.account.peerId || self.isSettings) {
                 credibilityIcon = .premium
             } else {
                 credibilityIcon = .none

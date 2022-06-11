@@ -386,13 +386,13 @@ class PremiumStarComponent: Component {
             animation.fromValue = NSValue(scnMatrix4: initial)
             animation.toValue = NSValue(scnMatrix4: SCNMatrix4Translate(initial, -1.6, 0.0, 0.0))
             animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            animation.beginTime = 0.6
+            animation.beginTime = 1.1
             animation.duration = 0.9
             
             let group = CAAnimationGroup()
             group.animations = [animation]
             group.beginTime = 1.0
-            group.duration = 3.0
+            group.duration = 4.0
             group.repeatCount = .infinity
             
             node.geometry?.materials.first?.emission.addAnimation(group, forKey: "shimmer")

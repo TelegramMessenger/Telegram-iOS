@@ -932,7 +932,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     iconNode.isLayerBacked = true
                                     iconNode.displaysAsynchronously = false
                                     iconNode.displayWithoutProcessing = true
-                                    strongSelf.containerNode.addSubnode(iconNode)
+                                    strongSelf.offsetContainerNode.addSubnode(iconNode)
                                     strongSelf.credibilityIconNode = iconNode
                                 }
                                 iconNode.image = currentCredibilityIconImage

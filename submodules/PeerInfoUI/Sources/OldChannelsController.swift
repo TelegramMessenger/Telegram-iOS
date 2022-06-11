@@ -191,12 +191,33 @@ private func oldChannelsEntries(presentationData: PresentationData, state: OldCh
     let count = max(limit, Int32(peers?.count ?? 0))
     var text: String?
     if count >= premiumLimit {
-        text = presentationData.strings.OldChannels_TooManyCommunitiesFinalText("\(premiumLimit)").string
+        switch intent {
+            case .create:
+                text = presentationData.strings.OldChannels_TooManyCommunitiesCreateFinalText("\(premiumLimit)").string
+            case .upgrade:
+                text = presentationData.strings.OldChannels_TooManyCommunitiesUpgradeFinalText("\(premiumLimit)").string
+            case .join:
+                text = presentationData.strings.OldChannels_TooManyCommunitiesFinalText("\(premiumLimit)").string
+        }
     } else if count >= limit {
         if isPremiumDisabled {
-            text = presentationData.strings.OldChannels_TooManyCommunitiesNoPremiumText("\(count)").string
+            switch intent {
+                case .create:
+                    text = presentationData.strings.OldChannels_TooManyCommunitiesCreateNoPremiumText("\(premiumLimit)").string
+                case .upgrade:
+                    text = presentationData.strings.OldChannels_TooManyCommunitiesUpgradeNoPremiumText("\(premiumLimit)").string
+                case .join:
+                    text = presentationData.strings.OldChannels_TooManyCommunitiesNoPremiumText("\(count)").string
+            }
         } else {
-            text = presentationData.strings.OldChannels_TooManyCommunitiesText("\(count)", "\(premiumLimit)").string
+            switch intent {
+                case .create:
+                    text = presentationData.strings.OldChannels_TooManyCommunitiesCreateText("\(count)", "\(premiumLimit)").string
+                case .upgrade:
+                    text = presentationData.strings.OldChannels_TooManyCommunitiesUpgradeText("\(count)", "\(premiumLimit)").string
+                case .join:
+                    text = presentationData.strings.OldChannels_TooManyCommunitiesText("\(count)", "\(premiumLimit)").string
+            }
         }
     }
     

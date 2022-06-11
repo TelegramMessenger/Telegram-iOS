@@ -842,7 +842,23 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
         interaction.openSettings(.addAccount)
     }))
-    items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: presentationData.strings.Settings_AddAnotherAccount_Help))
+    
+    var hasPremiumAccounts = false
+    if data.peer?.isPremium == true && !context.account.testingEnvironment {
+        hasPremiumAccounts = true
+    }
+    if let settings = data.globalSettings {
+        for (accountContext, peer, _) in settings.accountsAndPeers {
+            if !accountContext.account.testingEnvironment {
+                if peer.isPremium {
+                    hasPremiumAccounts = true
+                    break
+                }
+            }
+        }
+    }
+    
+    items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: hasPremiumAccounts ? presentationData.strings.Settings_AddAnotherAccount_PremiumHelp : presentationData.strings.Settings_AddAnotherAccount_Help))
     
     items[.logout]!.append(PeerInfoScreenActionItem(id: ItemLogout, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
         interaction.openSettings(.logout)
@@ -6275,13 +6291,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             case .username:
                 push(usernameSetupController(context: self.context))
             case .addAccount:
-                var maximumAvailableAccounts: Int = 3
-                if self.data?.peer?.isPremium == true && !self.context.account.testingEnvironment {
-                    maximumAvailableAccounts = 4
-                }
-                var count: Int = 1
-                if let settings = self.data?.globalSettings {
-                    for (accountContext, peer, _) in settings.accountsAndPeers {
+                let _ = (activeAccountsAndPeers(context: context)
+                |> take(1)
+                |> deliverOnMainQueue
+                ).start(next: { [weak self] accountAndPeer, accountsAndPeers in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    var maximumAvailableAccounts: Int = 3
+                    if accountAndPeer?.1.isPremium == true && !strongSelf.context.account.testingEnvironment {
+                        maximumAvailableAccounts = 4
+                    }
+                    var count: Int = 1
+                    for (accountContext, peer, _) in accountsAndPeers {
                         if !accountContext.account.testingEnvironment {
                             if peer.isPremium {
                                 maximumAvailableAccounts = 4
@@ -6289,23 +6311,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             count += 1
                         }
                     }
-                }
-                if count >= maximumAvailableAccounts {
-                    let context = self.context
-                    var replaceImpl: ((ViewController) -> Void)?
-                    let controller = PremiumLimitScreen(context: context, subject: .accounts, count: Int32(count), action: {
-                        let controller = PremiumIntroScreen(context: context, source: .accounts)
-                        replaceImpl?(controller)
-                    })
-                    replaceImpl = { [weak controller] c in
-                        controller?.replace(with: c)
+                    
+                    if count >= maximumAvailableAccounts {
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let controller = PremiumLimitScreen(context: strongSelf.context, subject: .accounts, count: Int32(count), action: {
+                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .accounts)
+                            replaceImpl?(controller)
+                        })
+                        replaceImpl = { [weak controller] c in
+                            controller?.replace(with: c)
+                        }
+                        if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                            navigationController.pushViewController(controller)
+                        }
+                    } else {
+                        strongSelf.context.sharedContext.beginNewAuth(testingEnvironment: strongSelf.context.account.testingEnvironment)
                     }
-                    if let navigationController = context.sharedContext.mainWindow?.viewController as? NavigationController {
-                        navigationController.pushViewController(controller)
-                    }
-                } else {
-                    self.context.sharedContext.beginNewAuth(testingEnvironment: self.context.account.testingEnvironment)
-                }
+                })
             case .logout:
                 if let user = self.data?.peer as? TelegramUser, let phoneNumber = user.phone {
                     if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
