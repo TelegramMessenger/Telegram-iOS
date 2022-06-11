@@ -819,41 +819,41 @@ private final class LimitSheetContent: CombinedComponent {
                 reachedMaximumLimit = false
             }
             
-            let title = title.update(
-                component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: titleText,
-                        font: Font.semibold(17.0),
-                        textColor: theme.actionSheet.primaryTextColor,
-                        paragraphAlignment: .center
-                    )),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 1
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude),
-                transition: .immediate
-            )
-            
-            let textFont = Font.regular(17.0)
-            let boldTextFont = Font.semibold(17.0)
-            let textColor = theme.actionSheet.primaryTextColor
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
-                return nil
-            })
-                        
-            let text = text.update(
-                component: MultilineTextComponent(
-                    text: .markdown(text: string, attributes: markdownAttributes),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.0
-                ),
-                availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
-                transition: .immediate
-            )
-                        
             let contentSize: CGSize
             if state.initialized {
+                let title = title.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: titleText,
+                            font: Font.semibold(17.0),
+                            textColor: theme.actionSheet.primaryTextColor,
+                            paragraphAlignment: .center
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 1
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                
+                let textFont = Font.regular(17.0)
+                let boldTextFont = Font.semibold(17.0)
+                let textColor = theme.actionSheet.primaryTextColor
+                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
+                    return nil
+                })
+                
+                let text = text.update(
+                    component: MultilineTextComponent(
+                        text: .markdown(text: string, attributes: markdownAttributes),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.0
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                    transition: .immediate
+                )
+                
                 let gradientColors: [UIColor]
                 if isPremiumDisabled {
                     gradientColors = [

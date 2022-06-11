@@ -128,10 +128,10 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                     if self.gloss {
                         self.animationTimer?.invalidate()
                         
-                        Queue.mainQueue().after(0.75) {
+                        Queue.mainQueue().after(1.25) {
                             self.animationNode?.play()
                             
-                            let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: true, completion: { [weak self] in
+                            let timer = SwiftSignalKit.Timer(timeout: 4.0, repeat: true, completion: { [weak self] in
                                 self?.animationNode?.play()
                             }, queue: Queue.mainQueue())
                             self.animationTimer = timer
@@ -672,10 +672,10 @@ public final class SolidRoundedButtonView: UIView {
                     if self.gloss {
                         self.animationTimer?.invalidate()
                         
-                        Queue.mainQueue().after(0.75) {
+                        Queue.mainQueue().after(1.25) {
                             self.animationNode?.play()
                             
-                            let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: true, completion: { [weak self] in
+                            let timer = SwiftSignalKit.Timer(timeout: 4.0, repeat: true, completion: { [weak self] in
                                 self?.animationNode?.play()
                             }, queue: Queue.mainQueue())
                             self.animationTimer = timer
