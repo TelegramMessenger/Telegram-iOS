@@ -763,6 +763,21 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                 } else if parsedUrl.host == "premium_offer" {
                     handleResolvedUrl(.premiumOffer(reference: nil))
+                } else if parsedUrl.host == "restore_purchases" {
+                    context.inAppPurchaseManager?.restorePurchases(completion: { result in
+                        let text: String
+                        switch result {
+                            case .succeed:
+                                text = presentationData.strings.Premium_Restore_Success
+                            case .failed:
+                                text = presentationData.strings.Premium_Restore_ErrorUnknown
+                        }
+                        context.sharedContext.presentGlobalController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [
+                            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            }),
+                        ], parseMarkdown: true), nil)
+                        
+                    })
                 }
             }
             

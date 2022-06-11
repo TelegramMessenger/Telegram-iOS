@@ -7722,6 +7722,10 @@ Sorry for the inconvenience.";
 "Premium.Purchase.ErrorNotAllowed" = "The device is not not allowed to make the payment.";
 "Premium.Purchase.ErrorCantMakePayments" = "In-app purchases are not allowed on this device.";
 
+"Premium.Restore.Success" = "Done";
+"Premium.Restore.ErrorUnknown" = "An error occurred. Please try again.";
+
+
 "Settings.Premium" = "Telegram Premium";
 
 "Settings.AddAnotherAccount.PremiumHelp" = "You can add up to four accounts with different phone numbers.";

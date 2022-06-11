@@ -276,27 +276,31 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
     }
     
     public func paymentQueueRestoreCompletedTransactionsFinished(_ queue: SKPaymentQueue) {
-        if let onRestoreCompletion = self.onRestoreCompletion {
-            Logger.shared.log("InAppPurchaseManager", "Transactions restoration finished")
-            onRestoreCompletion(.succeed)
-            self.onRestoreCompletion = nil
-            
-            if let receiptData = getReceiptData() {
-                self.disposableSet.set(
-                    self.engine.payments.sendAppStoreReceipt(receipt: receiptData, restore: true).start(completed: {
-                        Logger.shared.log("InAppPurchaseManager", "Sent restored receipt")
-                    }),
-                    forKey: "restore"
-                )
+        Queue.mainQueue().async {
+            if let onRestoreCompletion = self.onRestoreCompletion {
+                Logger.shared.log("InAppPurchaseManager", "Transactions restoration finished")
+                onRestoreCompletion(.succeed)
+                self.onRestoreCompletion = nil
+                
+                if let receiptData = getReceiptData() {
+                    self.disposableSet.set(
+                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, restore: true).start(completed: {
+                            Logger.shared.log("InAppPurchaseManager", "Sent restored receipt")
+                        }),
+                        forKey: "restore"
+                    )
+                }
             }
         }
     }
     
     public func paymentQueue(_ queue: SKPaymentQueue, restoreCompletedTransactionsFailedWithError error: Error) {
-        if let onRestoreCompletion = self.onRestoreCompletion {
-            Logger.shared.log("InAppPurchaseManager", "Transactions restoration failed with error \((error as? SKError)?.localizedDescription ?? "")")
-            onRestoreCompletion(.failed)
-            self.onRestoreCompletion = nil
+        Queue.mainQueue().async {
+            if let onRestoreCompletion = self.onRestoreCompletion {
+                Logger.shared.log("InAppPurchaseManager", "Transactions restoration failed with error \((error as? SKError)?.localizedDescription ?? "")")
+                onRestoreCompletion(.failed)
+                self.onRestoreCompletion = nil
+            }
         }
     }
 }
