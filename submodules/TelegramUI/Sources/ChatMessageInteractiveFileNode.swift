@@ -659,12 +659,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     case let .success(text, isPending):
                         textString = NSAttributedString(string: text, font: textFont, textColor: messageTheme.primaryTextColor)
                         
-                        #if DEBUG
+                        /*#if DEBUG
                         var isPending = isPending
                         if "".isEmpty {
                             isPending = true
                         }
-                        #endif
+                        #endif*/
                         
                         if isPending {
                             let modifiedString = NSMutableAttributedString(attributedString: textString!)
@@ -756,7 +756,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let statusLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
                     if let _ = textString {
-                        statusLayoutInput = .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: reactionSettings)
+                        statusLayoutInput = .trailingContent(contentWidth: textLayout.hasRTL ? 1000.0 : textLayout.trailingLineWidth, reactionSettings: reactionSettings)
                     } else {
                         statusLayoutInput = .trailingContent(contentWidth: iconFrame == nil ? 1000.0 : controlAreaWidth, reactionSettings: reactionSettings)
                     }
@@ -1116,7 +1116,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 let _ = waveformView.update(
                                     transition: waveformTransition.withUserData(ComponentHostViewSkipSettingFrame()),
                                     component: AnyComponent(AudioWaveformComponent(
-                                        backgroundColor: waveformColor,
+                                        backgroundColor: isTranscriptionInProgress ? messageTheme.mediaInactiveControlColor : waveformColor,
                                         foregroundColor: messageTheme.mediaActiveControlColor,
                                         shimmerColor: isTranscriptionInProgress ? messageTheme.mediaActiveControlColor : nil,
                                         samples: audioWaveform?.samples ?? Data(),

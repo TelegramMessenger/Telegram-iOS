@@ -811,7 +811,9 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                 if case .longTap = gesture {
                                     item.interaction.longTap(ChatControllerInteractionLongTapAction.url(url), message)
                                 } else if url == self.currentPrimaryUrl {
-                                    if !item.interaction.openMessage(message, .default) {
+                                    if let webpage = self.currentMedia as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.instantPage != nil {
+                                        item.interaction.openInstantPage(message, nil)
+                                    } else {
                                         item.interaction.openUrl(url, false, false, nil)
                                     }
                                 } else {

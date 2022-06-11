@@ -222,7 +222,7 @@
 		"decimalSeparator": ",",
 		"symbolOnLeft": false,
 		"spaceBetweenAmountAndSymbol": true,
-		"decimalDigits": 2
+		"decimalDigits": 0
 	},
 	"BZD": {
 		"code": "BZD",
@@ -321,7 +321,7 @@
 		"decimalSeparator": ".",
 		"symbolOnLeft": true,
 		"spaceBetweenAmountAndSymbol": false,
-		"decimalDigits": 2
+		"decimalDigits": 0
 	},
 	"CZK": {
 		"code": "CZK",
@@ -546,7 +546,7 @@
 		"decimalSeparator": ",",
 		"symbolOnLeft": true,
 		"spaceBetweenAmountAndSymbol": false,
-		"decimalDigits": 0
+		"decimalDigits": 2
 	},
 	"ILS": {
 		"code": "ILS",
@@ -573,7 +573,7 @@
 		"decimalSeparator": ".",
 		"symbolOnLeft": true,
 		"spaceBetweenAmountAndSymbol": true,
-		"decimalDigits": 2
+		"decimalDigits": 3
 	},
 	"IRR": {
 		"code": "IRR",
@@ -654,7 +654,7 @@
 		"decimalSeparator": ".",
 		"symbolOnLeft": false,
 		"spaceBetweenAmountAndSymbol": false,
-		"decimalDigits": 2
+		"decimalDigits": 0
 	},
 	"KPW": {
 		"code": "KPW",
@@ -825,7 +825,7 @@
 		"decimalSeparator": ".",
 		"symbolOnLeft": false,
 		"spaceBetweenAmountAndSymbol": false,
-		"decimalDigits": 2
+		"decimalDigits": 1
 	},
 	"MTL": {
 		"code": "MTL",
@@ -1014,7 +1014,7 @@
 		"decimalSeparator": ",",
 		"symbolOnLeft": true,
 		"spaceBetweenAmountAndSymbol": true,
-		"decimalDigits": 2
+		"decimalDigits": 0
 	},
 	"QAR": {
 		"code": "QAR",
@@ -1059,7 +1059,7 @@
 		"decimalSeparator": ",",
 		"symbolOnLeft": true,
 		"spaceBetweenAmountAndSymbol": true,
-		"decimalDigits": 2
+		"decimalDigits": 0
 	},
 	"SAR": {
 		"code": "SAR",
@@ -1302,7 +1302,7 @@
 		"decimalSeparator": ".",
 		"symbolOnLeft": true,
 		"spaceBetweenAmountAndSymbol": false,
-		"decimalDigits": 2
+		"decimalDigits": 0
 	},
 	"USD": {
 		"code": "USD",
@@ -1401,7 +1401,7 @@
 		"decimalSeparator": ",",
 		"symbolOnLeft": false,
 		"spaceBetweenAmountAndSymbol": false,
-		"decimalDigits": 2
+		"decimalDigits": 0
 	},
 	"XPF": {
 		"code": "XPF",
@@ -1410,7 +1410,7 @@
 		"decimalSeparator": ".",
 		"symbolOnLeft": false,
 		"spaceBetweenAmountAndSymbol": false,
-		"decimalDigits": 2
+		"decimalDigits": 0
 	},
 	"YER": {
 		"code": "YER",

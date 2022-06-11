@@ -105,6 +105,7 @@ private class StickerNode: ASDisplayNode {
     
         if file.isPremiumSticker || forceIsPremium {
             let animationNode = DefaultAnimatedStickerNodeImpl()
+            //let animationNode = DirectAnimatedStickerNode()
             animationNode.automaticallyLoadFirstFrame = true
             self.animationNode = animationNode
             
@@ -122,13 +123,16 @@ private class StickerNode: ASDisplayNode {
                 self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, fileReference: .standalone(media: file), resource: effect.resource).start())
                 
                 let source = AnimatedStickerResourceSource(account: self.context.account, resource: effect.resource, fitzModifier: nil)
-                let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
+                
+                let additionalAnimationNode: AnimatedStickerNode
+                
+                additionalAnimationNode = DirectAnimatedStickerNode()
                 
                 var pathPrefix: String?
                 pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(effect.resource.id)
                 pathPrefix = nil
                 
-                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 1.33), height: Int(fittedDimensions.height * 1.33), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
+                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 1.5), height: Int(fittedDimensions.height * 1.5), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
                 self.additionalAnimationNode = additionalAnimationNode
             }
         } else {
@@ -188,7 +192,6 @@ private class StickerNode: ASDisplayNode {
         self.effectDisposable.dispose()
     }
     
-    
     private func removePlaceholder(animated: Bool) {
         if !animated {
             self.placeholderNode.removeFromSupernode()
@@ -216,7 +219,9 @@ private class StickerNode: ASDisplayNode {
     }
     
     func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
-        self.placeholderNode.updateAbsoluteRect(rect, within: containerSize)
+        if self.placeholderNode.supernode != nil {
+            self.placeholderNode.updateAbsoluteRect(rect, within: containerSize)
+        }
     }
     
     private func updatePlayback() {
@@ -260,10 +265,12 @@ private class StickerNode: ASDisplayNode {
                 }
             }
             
-            let placeholderFrame = CGRect(origin: CGPoint(x: -10.0, y: 0.0), size: imageSize)
-            let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
-            self.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: self.file.immediateThumbnailData, size: placeholderFrame.size, imageSize: thumbnailDimensions.cgSize)
-            self.placeholderNode.frame = placeholderFrame
+            if self.placeholderNode.supernode != nil {
+                let placeholderFrame = CGRect(origin: CGPoint(x: -10.0, y: 0.0), size: imageSize)
+                let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
+                self.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: self.file.immediateThumbnailData, size: placeholderFrame.size, imageSize: thumbnailDimensions.cgSize)
+                self.placeholderNode.frame = placeholderFrame
+            }
         }
     }
 }

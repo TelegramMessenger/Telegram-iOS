@@ -826,6 +826,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     if let statusSizeAndApply = statusSizeAndApply {
                         adjustedBoundingSize.height += statusSizeAndApply.0.height
                         adjustedLineHeight += statusSizeAndApply.0.height
+                        
+                        if let imageFrame = imageFrame, statusSizeAndApply.0.height == 0.0 {
+                            if statusInText {
+                                adjustedBoundingSize.height = max(adjustedBoundingSize.height, imageFrame.maxY + 8.0 + 15.0)
+                            }
+                        }
                     }
                     
                     adjustedBoundingSize.width = max(boundingWidth, adjustedBoundingSize.width)
@@ -975,6 +981,9 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 var statusFrame = CGRect(origin: CGPoint(x: strongSelf.textNode.frame.minX, y: strongSelf.textNode.frame.maxY), size: statusSizeAndApply.0)
                                 if let imageFrame = imageFrame {
                                     statusFrame.origin.y = max(statusFrame.minY, imageFrame.maxY + 2.0)
+                                    if statusFrame.height == 0.0 {
+                                        statusFrame.origin.y += 14.0
+                                    }
                                 }
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)

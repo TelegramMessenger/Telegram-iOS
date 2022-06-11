@@ -49,7 +49,7 @@ private final class MediaBoxFileMap {
                 return nil
             }
             
-            var truncationSizeValue: Int32 = 0
+            var truncationSizeValue: Int64 = 0
             
             var data = Data(count: Int(8 + count * 2 * 8))
             let dataCount = data.count
@@ -89,8 +89,10 @@ private final class MediaBoxFileMap {
             self.ranges = ranges
             if truncationSizeValue == -1 {
                 self.truncationSize = nil
+            } else if truncationSizeValue < 0 {
+                self.truncationSize = nil
             } else {
-                self.truncationSize = Int64(truncationSizeValue)
+                self.truncationSize = truncationSizeValue
             }
         } else {
             let crc: UInt32 = firstUInt32
@@ -215,7 +217,8 @@ private final class MediaBoxFileMap {
         } else {
             maxValue = Int64.max
         }
-        let clippedRange: Range<Int64> = range.lowerBound ..< min(maxValue, range.upperBound)
+        let clippedUpperBound = min(maxValue, range.upperBound)
+        let clippedRange: Range<Int64> = min(range.lowerBound, clippedUpperBound) ..< clippedUpperBound
         let clippedRangeSet = RangeSet<Int64>(clippedRange)
         
         if self.ranges.isSuperset(of: clippedRangeSet) {

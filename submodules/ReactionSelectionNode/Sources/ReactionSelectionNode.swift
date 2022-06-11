@@ -48,6 +48,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     let context: AccountContext
     let item: ReactionItem
     private let hasAppearAnimation: Bool
+    private let useDirectRendering: Bool
     
     private var animateInAnimationNode: AnimatedStickerNode?
     private let staticAnimationNode: AnimatedStickerNode
@@ -67,16 +68,17 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         
     var expandedAnimationDidBegin: (() -> Void)?
     
-    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, hasAppearAnimation: Bool = true) {
+    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, hasAppearAnimation: Bool = true, useDirectRendering: Bool = false) {
         self.context = context
         self.item = item
         self.hasAppearAnimation = hasAppearAnimation
+        self.useDirectRendering = useDirectRendering
         
-        self.staticAnimationNode = DefaultAnimatedStickerNodeImpl()
+        self.staticAnimationNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
     
         if hasAppearAnimation {
             self.staticAnimationNode.isHidden = true
-            self.animateInAnimationNode = DefaultAnimatedStickerNodeImpl()
+            self.animateInAnimationNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
         }
         
         super.init()
@@ -146,7 +148,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             }
             self.staticAnimationNode.play(firstFrame: false, fromIndex: 0)
         } else if isExpanded, self.animationNode == nil {
-            let animationNode = DefaultAnimatedStickerNodeImpl()
+            let animationNode: AnimatedStickerNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
             animationNode.automaticallyLoadFirstFrame = true
             self.animationNode = animationNode
             self.addSubnode(animationNode)
@@ -235,7 +237,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         if self.animationNode == nil {
             if isPreviewing {
                 if self.stillAnimationNode == nil {
-                    let stillAnimationNode = DefaultAnimatedStickerNodeImpl()
+                    let stillAnimationNode: AnimatedStickerNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
                     self.stillAnimationNode = stillAnimationNode
                     self.addSubnode(stillAnimationNode)
                     

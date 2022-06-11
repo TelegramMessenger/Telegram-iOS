@@ -335,8 +335,12 @@ public final class ChatMessageShadowNode: ASDisplayNode {
         self.contentNode.image = shadowImage
     }
     
+    public func updateLayout(backgroundFrame: CGRect, animator: ControlledTransitionAnimator) {
+        animator.updateFrame(layer: self.contentNode.layer, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX - 10.0, y: backgroundFrame.minY - 10.0), size: CGSize(width: backgroundFrame.width + 20.0, height: backgroundFrame.height + 20.0)), completion: nil)
+    }
+    
     public func updateLayout(backgroundFrame: CGRect, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX - 10.0, y: backgroundFrame.minY - 10.0), size: CGSize(width: backgroundFrame.width + 20.0, height: backgroundFrame.height + 20.0)))
+        transition.updateFrame(layer: self.contentNode.layer, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX - 10.0, y: backgroundFrame.minY - 10.0), size: CGSize(width: backgroundFrame.width + 20.0, height: backgroundFrame.height + 20.0)), completion: nil)
     }
 }
 
@@ -552,7 +556,7 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
                 var backgroundFrame = backgroundContent.frame
                 backgroundFrame.origin.x += rect.minX
                 backgroundFrame.origin.y += rect.minY
-                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .animated(duration: animator.duration, curve: .spring))
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, animator: animator)
             }
         }
         animator.updateFrame(layer: self.layer, frame: value, completion: { _ in
