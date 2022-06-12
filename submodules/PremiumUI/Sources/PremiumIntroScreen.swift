@@ -1190,8 +1190,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             let controller = environment.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
                             if url.hasPrefix("https://apps.apple.com/account/subscriptions") {
                                 controller.context.sharedContext.applicationBindings.openSubscriptions()
-                            } else if url.hasPrefix("https://") {
-                                controller.context.sharedContext.openExternalUrl(context: controller.context, urlContext: .generic, url: url, forceExternal: true, presentationData: controller.context.sharedContext.currentPresentationData.with({$0}), navigationController: nil, dismissInput: {})
+                            } else if url.hasPrefix("https://") || url.hasPrefix("tg://") {
+                                controller.context.sharedContext.openExternalUrl(context: controller.context, urlContext: .generic, url: url, forceExternal: !url.hasPrefix("tg://"), presentationData: controller.context.sharedContext.currentPresentationData.with({$0}), navigationController: nil, dismissInput: {})
                             } else {
                                 let context = controller.context
                                 let signal: Signal<ResolvedUrl, NoError>?

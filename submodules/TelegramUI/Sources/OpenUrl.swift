@@ -13,6 +13,8 @@ import PassportUI
 import UrlHandling
 import OpenInExternalAppUI
 import BrowserUI
+import OverlayStatusController
+import PresentationDataUtils
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId
@@ -764,7 +766,12 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 } else if parsedUrl.host == "premium_offer" {
                     handleResolvedUrl(.premiumOffer(reference: nil))
                 } else if parsedUrl.host == "restore_purchases" {
-                    context.inAppPurchaseManager?.restorePurchases(completion: { result in
+                    let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                    context.sharedContext.presentGlobalController(statusController, nil)
+                    
+                    context.inAppPurchaseManager?.restorePurchases(completion: { [weak statusController] result in
+                        statusController?.dismiss()
+                        
                         let text: String
                         switch result {
                             case .succeed:
@@ -772,11 +779,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             case .failed:
                                 text = presentationData.strings.Premium_Restore_ErrorUnknown
                         }
-                        context.sharedContext.presentGlobalController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [
-                            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                            }),
-                        ], parseMarkdown: true), nil)
-                        
+                        let alertController = textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                        context.sharedContext.presentGlobalController(alertController, nil)
                     })
                 }
             }
