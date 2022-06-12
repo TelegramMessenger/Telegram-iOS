@@ -97,7 +97,7 @@ enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
 
 enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
     case search(theme: PresentationTheme, strings: PresentationStrings)
-    case trendingList(theme: PresentationTheme, strings: PresentationStrings, packs: [FeaturedStickerPackItem])
+    case trendingList(theme: PresentationTheme, strings: PresentationStrings, packs: [FeaturedStickerPackItem], isPremium: Bool)
     case peerSpecificSetup(theme: PresentationTheme, strings: PresentationStrings, dismissed: Bool)
     case sticker(index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, stickerPackInfo: StickerPackCollectionInfo?, canManagePeerSpecificPack: Bool?, maybeManageable: Bool, theme: PresentationTheme, isLocked: Bool)
     case trending(TrendingPanePackEntry)
@@ -135,8 +135,8 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
             } else {
                 return false
             }
-        case let .trendingList(lhsTheme, lhsStrings, lhsPacks):
-            if case let .trendingList(rhsTheme, rhsStrings, rhsPacks) = rhs {
+        case let .trendingList(lhsTheme, lhsStrings, lhsPacks, lhsIsPremium):
+            if case let .trendingList(rhsTheme, rhsStrings, rhsPacks, rhsIsPremium) = rhs {
                 if lhsTheme !== rhsTheme {
                     return false
                 }
@@ -153,6 +153,9 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
                     if lhsPacks[i].info != rhsPacks[i].info {
                         return false
                     }
+                }
+                if lhsIsPremium != rhsIsPremium {
+                    return false
                 }
                 return true
             } else {
@@ -210,8 +213,8 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
             return PaneSearchBarPlaceholderItem(theme: theme, strings: strings, type: .stickers, activate: {
                 inputNodeInteraction.toggleSearch(true, .sticker, "")
             })
-        case let .trendingList(theme, strings, packs):
-            return StickerPaneTrendingListGridItem(account: account, theme: theme, strings: strings, trendingPacks: packs, inputNodeInteraction: inputNodeInteraction, dismiss: {
+        case let .trendingList(theme, strings, packs, isPremium):
+            return StickerPaneTrendingListGridItem(account: account, theme: theme, strings: strings, trendingPacks: packs, isPremium: isPremium, inputNodeInteraction: inputNodeInteraction, dismiss: {
                 inputNodeInteraction.dismissTrendingPacks(packs.map { $0.info.id })
             })
         case let .peerSpecificSetup(theme, strings, dismissed):

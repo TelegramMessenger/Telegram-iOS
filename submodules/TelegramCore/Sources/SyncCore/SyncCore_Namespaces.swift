@@ -87,6 +87,7 @@ public struct Namespaces {
         public static let resolvedByPhonePeers: Int8 = 20
         public static let notificationSoundList: Int8 = 22
         public static let attachMenuBots: Int8 = 23
+        public static let featuredStickersConfiguration: Int8 = 24
     }
     
     public struct UnorderedItemList {

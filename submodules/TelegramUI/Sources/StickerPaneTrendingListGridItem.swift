@@ -376,17 +376,19 @@ final class StickerPaneTrendingListGridItem: GridItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let trendingPacks: [FeaturedStickerPackItem]
+    let isPremium: Bool
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     let dismiss: (() -> Void)?
 
     let section: GridSection? = nil
     let fillsRowWithDynamicHeight: ((CGFloat) -> CGFloat)?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, trendingPacks: [FeaturedStickerPackItem], inputNodeInteraction: ChatMediaInputNodeInteraction, dismiss: (() -> Void)?) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, trendingPacks: [FeaturedStickerPackItem], isPremium: Bool, inputNodeInteraction: ChatMediaInputNodeInteraction, dismiss: (() -> Void)?) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.trendingPacks = trendingPacks
+        self.isPremium = isPremium
         self.inputNodeInteraction = inputNodeInteraction
         self.dismiss = dismiss
         self.fillsRowWithDynamicHeight = { _ in
@@ -530,7 +532,7 @@ class StickerPaneTrendingListGridItemNode: GridItemNode {
         let rightInset: CGFloat = 18.0 + UIScreenPixel
         let topOffset: CGFloat = 9.0
         
-        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.StickerPacksSettings_FeaturedPacks.uppercased(), font: titleFont, textColor: item.theme.chat.inputMediaPanel.stickersSectionTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: (item.isPremium ? item.strings.Stickers_TrendingPremiumStickers : item.strings.StickerPacksSettings_FeaturedPacks).uppercased(), font: titleFont, textColor: item.theme.chat.inputMediaPanel.stickersSectionTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
         self.item = item
         

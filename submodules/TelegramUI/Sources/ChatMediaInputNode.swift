@@ -261,7 +261,7 @@ func chatMediaInputPanelGifModeEntries(theme: PresentationTheme, strings: Presen
     return entries
 }
 
-func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, trendingPacks: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, premiumStickers: OrderedItemListView? = nil, trendingIsDismissed: Bool = false, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme, hasPremium: Bool, isPremiumDisabled: Bool) -> [ChatMediaInputGridEntry] {
+func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, trendingPacks: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, premiumStickers: OrderedItemListView? = nil, trendingIsDismissed: Bool = false, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme, hasPremium: Bool, isPremiumDisabled: Bool, trendingIsPremium: Bool) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     if hasSearch && view.lower == nil {
@@ -295,7 +295,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         
         let filteredTrending = trendingPacks.filter { !installedPacks.contains($0.info.id) }
         if !trendingIsDismissed && !filteredTrending.isEmpty {
-            entries.append(.trendingList(theme: theme, strings: strings, packs: filteredTrending))
+            entries.append(.trendingList(theme: theme, strings: strings, packs: filteredTrending, isPremium: false))
         }
         
         if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
@@ -957,7 +957,7 @@ final class ChatMediaInputNode: ChatInputNode {
         let itemCollectionsView = self.itemCollectionsViewPosition.get()
         |> distinctUntilChanged
         |> mapToSignal { position -> Signal<(ItemCollectionsView, StickerPacksCollectionUpdate), NoError> in
-            let orderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.PremiumStickers]
+            let orderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.PremiumStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
             let namespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
             switch position {
                 case .initial:
@@ -1120,11 +1120,24 @@ final class ChatMediaInputNode: ChatInputNode {
         }
                 
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-        
+                
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
         let transitionQueue = Queue()
-        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get(), reactions, self.panelIsFocusedPromise.get(), ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager), temporaryPackOrder.get(), animatedEmojiStickers, context.account.postbox.peerView(id: context.account.peerId))
-        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions, panelExpanded, dismissedTrendingStickerPacks, temporaryPackOrder, animatedEmojiStickers, peerView -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+        let transitions = combineLatest(
+            queue: transitionQueue,
+            itemCollectionsView,
+            peerSpecificPack,
+            context.account.viewTracker.featuredStickerPacks(),
+            self.themeAndStringsPromise.get(),
+            reactions,
+            self.panelIsFocusedPromise.get(),
+            ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager),
+            temporaryPackOrder.get(),
+            animatedEmojiStickers,
+            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+            context.engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.featuredStickersConfiguration, id: ValueBoxKey(length: 0)))
+        )
+        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions, panelExpanded, dismissedTrendingStickerPacks, temporaryPackOrder, animatedEmojiStickers, accountPeer, featuredStickersConfiguration -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
             let (view, viewUpdate) = viewAndUpdate
             let previous = previousView.swap(view)
             var update = viewUpdate
@@ -1136,6 +1149,7 @@ final class ChatMediaInputNode: ChatInputNode {
             var savedStickers: OrderedItemListView?
             var recentStickers: OrderedItemListView?
             var premiumStickers: OrderedItemListView?
+//            var cloudPremiumStickers: OrderedItemListView?
             for orderedView in view.orderedItemListsViews {
                 if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
                     recentStickers = orderedView
@@ -1144,6 +1158,9 @@ final class ChatMediaInputNode: ChatInputNode {
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.PremiumStickers {
                     premiumStickers = orderedView
                 }
+//                else if orderedView.collectionId == Namespaces.OrderedItemList.CloudPremiumStickers {
+//                    cloudPremiumStickers = orderedView
+//                }
             }
             
             var installedPacks = Set<ItemCollectionId>()
@@ -1156,12 +1173,12 @@ final class ChatMediaInputNode: ChatInputNode {
                 trendingIsDismissed = true
             }
                         
-            let accountPeer = peerView.peers[peerView.peerId]
             let hasPremium = accountPeer?.isPremium ?? false
+            let featuredStickersConfiguration = featuredStickersConfiguration?.get(FeaturedStickersConfiguration.self)
             
             let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, premiumStickers: hasPremium ? premiumStickers : nil, expanded: panelExpanded, reorderable: true)
             let gifPaneEntries = chatMediaInputPanelGifModeEntries(theme: theme, strings: strings, reactions: reactions, animatedEmojiStickers: animatedEmojiStickers, expanded: panelExpanded)
-            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, installedPacks: installedPacks, premiumStickers: premiumStickers, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme, hasPremium: hasPremium, isPremiumDisabled: premiumConfiguration.isPremiumDisabled)
+            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, installedPacks: installedPacks, premiumStickers: premiumStickers, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme, hasPremium: hasPremium, isPremiumDisabled: premiumConfiguration.isPremiumDisabled, trendingIsPremium: featuredStickersConfiguration?.isPremium ?? false)
             
             if view.higher == nil {
                 var hasTopSeparator = true
