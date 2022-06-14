@@ -240,8 +240,8 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.changeTouchId(value)
                 })
-            case let .openFakePasscodeOptions(_, title, _, uuid, passcode):
-                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: passcode, sectionId: self.section, style: .blocks, action: {
+            case let .openFakePasscodeOptions(_, title, _, uuid, _):
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openFakePasscodeOptions(uuid)
                 })
             case let .addFakePasscode(_, title):
@@ -568,7 +568,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             updateFakePasscodeSettingsInternal(transaction: transaction) { fakePasscodeHolder in
                 let newPasscodeData = PostboxAccessChallengeData(passcode: newPasscode, numerical: numerical)
                 
-                let newItem = FakePasscodeSettings(name: presentationData.strings.PasscodeSettings_FakePasscode(fakePasscodeHolder.settings.count + 1).string, passcode: newPasscodeData.normalizedString())
+                let newItem = FakePasscodeSettings(name: presentationData.strings.PasscodeSettings_FakePasscode(Int(fakePasscodeHolder.fakePasscodeIndex) + 1).string, passcode: newPasscodeData.normalizedString())
                 
                 let updatedFakePasscodeHolder = fakePasscodeHolder.withAddedSettingsItem(newItem)
                 

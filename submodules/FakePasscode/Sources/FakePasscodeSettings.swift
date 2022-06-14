@@ -70,15 +70,17 @@ public struct FakePasscodeSmsActionSettings: Codable, Equatable {
 
 public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably replace with some PartisanSettings structure, and put [FakePasscodeSettings] under it because PostboxDecoder cannot decode Arrays directly and we need some structure to hold it
     public let settings: [FakePasscodeSettings]
+    public let fakePasscodeIndex: Int32
     public let activeFakePasscodeUuid: UUID?
     public let savedAccessChallenge: PostboxAccessChallengeData?
 
     public static var defaultSettings: FakePasscodeSettingsHolder {
-        return FakePasscodeSettingsHolder(settings: [], activeFakePasscodeUuid: nil, savedAccessChallenge: nil)
+        return FakePasscodeSettingsHolder(settings: [], fakePasscodeIndex: 0, activeFakePasscodeUuid: nil, savedAccessChallenge: nil)
     }
 
-    public init(settings: [FakePasscodeSettings], activeFakePasscodeUuid: UUID?, savedAccessChallenge: PostboxAccessChallengeData?) {
+    public init(settings: [FakePasscodeSettings], fakePasscodeIndex: Int32, activeFakePasscodeUuid: UUID?, savedAccessChallenge: PostboxAccessChallengeData?) {
         self.settings = settings
+        self.fakePasscodeIndex = fakePasscodeIndex
         self.activeFakePasscodeUuid = activeFakePasscodeUuid
         self.savedAccessChallenge = savedAccessChallenge
     }
@@ -87,6 +89,7 @@ public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.settings = try container.decode([FakePasscodeSettings].self, forKey: "afps")
+        self.fakePasscodeIndex = try container.decodeIfPresent(Int32.self, forKey: "fpi") ?? 0
         self.activeFakePasscodeUuid = try UUID(uuidString: container.decodeIfPresent(String.self, forKey: "afpid") ?? "")
         self.savedAccessChallenge = try container.decodeIfPresent(PostboxAccessChallengeData.self, forKey: "sac")
     }
@@ -95,6 +98,7 @@ public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         try container.encode(self.settings, forKey: "afps")
+        try container.encode(self.fakePasscodeIndex, forKey: "fpi")
         try container.encodeIfPresent(self.activeFakePasscodeUuid?.uuidString, forKey: "afpid")
         try container.encodeIfPresent(self.savedAccessChallenge, forKey: "sac")
     }
@@ -111,21 +115,21 @@ public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably
     public func withAddedSettingsItem(_ item: FakePasscodeSettings) -> FakePasscodeSettingsHolder {
         assert(!self.settings.contains(where: { $0.uuid == item.uuid}))
         let newList = self.settings + [item]
-        return FakePasscodeSettingsHolder(settings: newList, activeFakePasscodeUuid: self.activeFakePasscodeUuid, savedAccessChallenge: self.savedAccessChallenge)
+        return FakePasscodeSettingsHolder(settings: newList, fakePasscodeIndex: self.fakePasscodeIndex + 1, activeFakePasscodeUuid: self.activeFakePasscodeUuid, savedAccessChallenge: self.savedAccessChallenge)
     }
 
     public func withDeletedSettingsItem(_ uuid: UUID) -> FakePasscodeSettingsHolder {
         assert(uuid != self.activeFakePasscodeUuid)
         assert(self.settings.contains(where: { $0.uuid == uuid}))
         let newList = self.settings.filter({ $0.uuid != uuid })
-        return FakePasscodeSettingsHolder(settings: newList, activeFakePasscodeUuid: self.activeFakePasscodeUuid, savedAccessChallenge: self.savedAccessChallenge)
+        return FakePasscodeSettingsHolder(settings: newList, fakePasscodeIndex: self.fakePasscodeIndex, activeFakePasscodeUuid: self.activeFakePasscodeUuid, savedAccessChallenge: self.savedAccessChallenge)
     }
 
     public func withUpdatedSettingsItem(_ item: FakePasscodeSettings) -> FakePasscodeSettingsHolder {
         if let ind = self.settings.firstIndex(where: { $0.uuid == item.uuid }) {
             var settings = self.settings
             settings[ind] = item
-            return FakePasscodeSettingsHolder(settings: settings, activeFakePasscodeUuid: self.activeFakePasscodeUuid, savedAccessChallenge: self.savedAccessChallenge)
+            return FakePasscodeSettingsHolder(settings: settings, fakePasscodeIndex: self.fakePasscodeIndex, activeFakePasscodeUuid: self.activeFakePasscodeUuid, savedAccessChallenge: self.savedAccessChallenge)
         } else {
             assertionFailure()
             return self
@@ -341,7 +345,7 @@ public func ptgCheckPasscode(passcode: String,
 
         if let savedAccessChallenge = fakePasscodeHolder.savedAccessChallenge {
             if !secondaryUnlock && passcode == savedAccessChallenge.normalizedString() {
-                let updatedFakePasscodeSettingsHolder = FakePasscodeSettingsHolder(settings: fakePasscodeHolder.settings, activeFakePasscodeUuid: nil, savedAccessChallenge: nil)
+                let updatedFakePasscodeSettingsHolder = FakePasscodeSettingsHolder(settings: fakePasscodeHolder.settings, fakePasscodeIndex: fakePasscodeHolder.fakePasscodeIndex, activeFakePasscodeUuid: nil, savedAccessChallenge: nil)
                 return (true, savedAccessChallenge, updatedFakePasscodeSettingsHolder)
             }
         } else {
@@ -355,7 +359,7 @@ public func ptgCheckPasscode(passcode: String,
 
     if !secondaryUnlock,
        let fakePasscodeItem = fakePasscodeHolder.settings.first(where: { passcode == $0.passcode }) {
-        let updatedFakePasscodeSettingsHolder = FakePasscodeSettingsHolder(settings: fakePasscodeHolder.settings, activeFakePasscodeUuid: fakePasscodeItem.uuid, savedAccessChallenge: fakePasscodeHolder.unlockedWithFakePasscode() ? fakePasscodeHolder.savedAccessChallenge : accessChallenge)
+        let updatedFakePasscodeSettingsHolder = FakePasscodeSettingsHolder(settings: fakePasscodeHolder.settings, fakePasscodeIndex: fakePasscodeHolder.fakePasscodeIndex, activeFakePasscodeUuid: fakePasscodeItem.uuid, savedAccessChallenge: fakePasscodeHolder.unlockedWithFakePasscode() ? fakePasscodeHolder.savedAccessChallenge : accessChallenge)
         return (true, nil, updatedFakePasscodeSettingsHolder)
     }
 

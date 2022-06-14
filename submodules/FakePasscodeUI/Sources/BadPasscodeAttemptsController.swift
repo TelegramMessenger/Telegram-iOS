@@ -131,7 +131,7 @@ public final class BadPasscodeAttemptsController: ViewController, ReactiveToPass
     @objc private func clearPressed() {
         let actionSheet = ActionSheetController(presentationData: presentationData)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_BadAttempts_ClearConfirmation, color: .destructive, action: { [weak actionSheet, weak self] in
+            ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_BadAttempts_Clear, color: .destructive, action: { [weak actionSheet, weak self] in
                 actionSheet?.dismissAnimated()
                 
                 if let strongSelf = self {
