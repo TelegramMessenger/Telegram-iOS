@@ -7301,7 +7301,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 strongSelf.updateNavigation(transition: transition, additive: additive)
             })
         }
-//        self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
+        if !self.isSettings {
+            self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
+        }
         if self.isSettings {
             self.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
         }
@@ -7316,7 +7318,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
                 
         self.ignoreScrolling = false
-//        self.updateNavigation(transition: transition, additive: additive)
+        if !self.isSettings {
+            self.updateNavigation(transition: transition, additive: additive)
+        }
         
         if !self.didSetReady && self.data != nil {
             self.didSetReady = true

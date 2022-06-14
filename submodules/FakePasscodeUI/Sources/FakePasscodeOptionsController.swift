@@ -211,8 +211,8 @@ private enum FakePasscodeOptionsEntry: ItemListNodeEntry, Equatable {
                 }, action: {
                     arguments.dismissInput()
                 })
-            case let .changePasscode(_, text, passcode):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, titleColor: .accent, label: passcode, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
+            case let .changePasscode(_, text, _):
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, titleColor: .accent, label: "", sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
                         arguments.changePasscode()
                 })
             case let .changeInfo(_, text), let .allowLoginInfo(_, text), let .clearAfterActivationInfo(_, text), let .deleteOtherPasscodesInfo(_, text), let .activationMessageInfo(_, text), let .badPasscodeActivationInfo(_, text), let .actionsInfo(_, text), let .accountsInfo(_, text), let .deletePasscodeInfo(_, text):

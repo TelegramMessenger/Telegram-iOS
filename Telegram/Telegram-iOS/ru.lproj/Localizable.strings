@@ -36,13 +36,12 @@
 
 "Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версия %3$@";
 
-"PasscodeSettings.BadAttempts" = "Неудачные попытки ввода кода-пароля";
+"PasscodeSettings.BadAttempts" = "Неудачные попытки ввода кода";
 "PasscodeSettings.BadAttempts.Help" = "Посмотрите все неудачные попытки ввода кода-пароля.";
 "PasscodeSettings.BadAttempts.AppLogin" = "Разблокировка приложения";
 "PasscodeSettings.BadAttempts.SettingsLogin" = "Вход в настройки кода-пароля";
 "PasscodeSettings.BadAttempts.FakePasscode" = "Ложный код-пароль";
 "PasscodeSettings.BadAttempts.Clear" = "Очистить";
-"PasscodeSettings.BadAttempts.ClearConfirmation" = "Очистить неудачные попытки разблокировки";
 
 "FakePasscodes.AccountActions.LogOut" = "Выходить из аккаунта";
 "FakePasscodes.AccountActions.MiscActionsInfo" = "При вводе ложного код-пароля выполняются выбранные действия.";
