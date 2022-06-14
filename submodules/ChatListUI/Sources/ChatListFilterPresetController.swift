@@ -1126,7 +1126,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 for i in 0 ..< filters.count {
                     if filters[i].id == updatedFilter.id, case let .filter(_, _, _, data) = filters[i] {
                         var updatedData = updatedFilter.data ?? data
-                        var includePeers = updatedData.includePeers
+                        var includePeers = data.includePeers
                         includePeers.setPeers(state.additionallyIncludePeers)
                         updatedData.includePeers = includePeers
                         updatedFilter = .filter(id: filterId, title: state.name, emoticon: currentPreset?.emoticon, data: updatedData)
