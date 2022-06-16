@@ -1102,6 +1102,7 @@ private final class DemoSheetComponent: CombinedComponent {
                     environment
                     SheetComponentEnvironment(
                         isDisplaying: environment.value.isVisible,
+                        isCentered: environment.metrics.widthClass == .regular,
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in

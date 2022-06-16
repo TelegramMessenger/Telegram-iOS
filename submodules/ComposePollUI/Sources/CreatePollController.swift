@@ -798,8 +798,8 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     )
     |> map { presentationData, state, limitsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var presentationData = presentationData
-        if presentationData.theme.list.blocksBackgroundColor.rgb == 0x000000 {
-            let updatedTheme = presentationData.theme.withInvertedBlocksBackground()
+        if presentationData.theme.list.blocksBackgroundColor.rgb == presentationData.theme.list.plainBackgroundColor.rgb {
+            let updatedTheme = presentationData.theme.withModalBlocksBackground()
             presentationData = presentationData.withUpdated(theme: updatedTheme)
         }
         

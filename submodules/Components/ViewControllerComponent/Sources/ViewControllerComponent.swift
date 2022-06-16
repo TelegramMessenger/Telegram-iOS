@@ -69,6 +69,7 @@ open class ViewControllerComponentContainer: ViewController {
         public let statusBarHeight: CGFloat
         public let navigationHeight: CGFloat
         public let safeInsets: UIEdgeInsets
+        public let metrics: LayoutMetrics
         public let isVisible: Bool
         public let theme: PresentationTheme
         public let strings: PresentationStrings
@@ -79,6 +80,7 @@ open class ViewControllerComponentContainer: ViewController {
             statusBarHeight: CGFloat,
             navigationHeight: CGFloat,
             safeInsets: UIEdgeInsets,
+            metrics: LayoutMetrics,
             isVisible: Bool,
             theme: PresentationTheme,
             strings: PresentationStrings,
@@ -88,6 +90,7 @@ open class ViewControllerComponentContainer: ViewController {
             self.statusBarHeight = statusBarHeight
             self.navigationHeight = navigationHeight
             self.safeInsets = safeInsets
+            self.metrics = metrics
             self.isVisible = isVisible
             self.theme = theme
             self.strings = strings
@@ -107,6 +110,9 @@ open class ViewControllerComponentContainer: ViewController {
                 return false
             }
             if lhs.safeInsets != rhs.safeInsets {
+                return false
+            }
+            if lhs.metrics != rhs.metrics {
                 return false
             }
             if lhs.isVisible != rhs.isVisible {
@@ -164,6 +170,7 @@ open class ViewControllerComponentContainer: ViewController {
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: navigationHeight,
                 safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right),
+                metrics: layout.metrics,
                 isVisible: self.currentIsVisible,
                 theme: self.theme ?? self.presentationData.theme,
                 strings: self.presentationData.strings,

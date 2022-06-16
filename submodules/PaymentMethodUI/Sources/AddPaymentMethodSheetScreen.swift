@@ -207,6 +207,7 @@ private final class AddPaymentMethodSheetComponent: CombinedComponent {
                     environment
                     SheetComponentEnvironment(
                         isDisplaying: environment.value.isVisible,
+                        isCentered: false,
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in

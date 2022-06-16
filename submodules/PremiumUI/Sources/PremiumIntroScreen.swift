@@ -654,7 +654,7 @@ private final class PerkComponent: CombinedComponent {
     static var body: Body {
         let iconBackground = Child(RoundedRectangle.self)
         let icon = Child(BundleIconComponent.self)
-        let title = Child(Text.self)
+        let title = Child(MultilineTextComponent.self)
         let subtitle = Child(MultilineTextComponent.self)
         let arrow = Child(BundleIconComponent.self)
 
@@ -665,7 +665,7 @@ private final class PerkComponent: CombinedComponent {
             let iconTopInset: CGFloat = 15.0
             let textTopInset: CGFloat = 9.0
             let textBottomInset: CGFloat = 9.0
-            let spacing: CGFloat = 3.0
+            let spacing: CGFloat = 2.0
             let iconSize = CGSize(width: 30.0, height: 30.0)
             
             let iconBackground = iconBackground.update(
@@ -695,10 +695,16 @@ private final class PerkComponent: CombinedComponent {
             )
             
             let title = title.update(
-                component: Text(
-                    text: component.title,
-                    font: Font.regular(17.0),
-                    color: component.titleColor
+                component: MultilineTextComponent(
+                    text: .plain(
+                        NSAttributedString(
+                            string: component.title,
+                            font: Font.regular(17),
+                            textColor: component.titleColor
+                        )
+                    ),
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.1
                 ),
                 availableSize: CGSize(width: context.availableSize.width - iconBackground.size.width - sideInset * 2.83, height: context.availableSize.height),
                 transition: context.transition
