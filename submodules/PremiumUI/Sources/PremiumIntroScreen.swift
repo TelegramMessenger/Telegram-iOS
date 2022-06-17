@@ -1398,14 +1398,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                   let premiumProduct = self.premiumProduct, !self.inProgress else {
                 return
             }
-            
-            guard !self.context.account.testingEnvironment else {
-                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                let alertController = textAlertController(context: self.context, title: nil, text: "Telegram Premium is not available in the test environment.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                self.present(alertController)
-                return
-            }
-            
+                        
             addAppLogEvent(postbox: self.context.account.postbox, type: "premium.promo_screen_accept")
 
             self.inProgress = true
