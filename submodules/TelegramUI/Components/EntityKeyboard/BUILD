@@ -1,0 +1,35 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "EntityKeyboard",
+    module_name = "EntityKeyboard",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/Display:Display",
+        "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/Components/PagerComponent:PagerComponent",
+        "//submodules/Components/BlurredBackgroundComponent:BlurredBackgroundComponent",
+        "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
+        "//submodules/Components/BundleIconComponent:BundleIconComponent",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/Postbox:Postbox",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/YuvConversion:YuvConversion",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/LottieAnimationCache:LottieAnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/ShimmerEffect:ShimmerEffect",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

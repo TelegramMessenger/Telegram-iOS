@@ -359,6 +359,8 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
             displayCopyProtectionTip(node, save)
         }, openWebView: { _, _, _, _ in
         }, updateShowWebView: { _ in
+        }, insertText: { _ in
+        }, backwardsDeleteText: {
         }, chatController: {
             return nil
         }, statuses: nil)
@@ -3357,8 +3359,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         transitionCompletion()
                     }, presentStickers: { [weak self] completion in
                         if let strongSelf = self {
-                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
+                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
+                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
                                 return true
                             })
                             strongSelf.controller?.present(controller, in: .window(.root))
@@ -6051,10 +6053,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             
             let paintStickersContext = LegacyPaintStickersContext(context: strongSelf.context)
             paintStickersContext.presentStickersController = { completion in
-                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
                     let coder = PostboxEncoder()
                     coder.encodeRootObject(fileReference.media)
-                    completion?(coder.makeData(), fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
+                    completion?(coder.makeData(), fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
                     return true
                 })
                 strongSelf.controller?.present(controller, in: .window(.root))

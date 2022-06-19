@@ -177,7 +177,7 @@ private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPres
     return result
 }
 
-private func calculateTextFieldRealInsets(_ presentationInterfaceState: ChatPresentationInterfaceState) -> UIEdgeInsets {
+private func calculateTextFieldRealInsets(presentationInterfaceState: ChatPresentationInterfaceState, accessoryButtonsWidth: CGFloat) -> UIEdgeInsets {
     let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
     let top: CGFloat
     let bottom: CGFloat
@@ -194,7 +194,11 @@ private func calculateTextFieldRealInsets(_ presentationInterfaceState: ChatPres
         top = 0.0
         bottom = 0.0
     }
-    return UIEdgeInsets(top: 4.5 + top, left: 0.0, bottom: 5.5 + bottom, right: 0.0)
+    
+    var right: CGFloat = 0.0
+    right += accessoryButtonsWidth
+    
+    return UIEdgeInsets(top: 4.5 + top, left: 0.0, bottom: 5.5 + bottom, right: right)
 }
 
 private var currentTextInputBackgroundImage: (UIColor, UIColor, CGFloat, UIImage)?
@@ -667,7 +671,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textInputBackgroundNode.isUserInteractionEnabled = true
         self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
         
-        /*if let presentationContext = presentationContext {
+        if let presentationContext = presentationContext {
             self.emojiViewProvider = { [weak self, weak presentationContext] emoji in
                 guard let strongSelf = self, let presentationContext = presentationContext, let presentationInterfaceState = strongSelf.presentationInterfaceState, let context = strongSelf.context, let file = strongSelf.context?.animatedEmojiStickers[emoji]?.first?.file else {
                     return UIView()
@@ -675,7 +679,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 
                 return EmojiTextAttachmentView(context: context, file: file, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12))
             }
-        }*/
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -725,25 +729,25 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         textInputNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.textInputNode = textInputNode
         
+        var accessoryButtonsWidth: CGFloat = 0.0
+        var firstButton = true
+        for (_, button) in self.accessoryItemButtons {
+            if firstButton {
+                firstButton = false
+                accessoryButtonsWidth += accessoryButtonInset
+            } else {
+                accessoryButtonsWidth += accessoryButtonSpacing
+            }
+            accessoryButtonsWidth += button.buttonWidth
+        }
+        
         if let presentationInterfaceState = self.presentationInterfaceState {
             refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
-            textInputNode.textContainerInset = calculateTextFieldRealInsets(presentationInterfaceState)
+            textInputNode.textContainerInset = calculateTextFieldRealInsets(presentationInterfaceState: presentationInterfaceState, accessoryButtonsWidth: accessoryButtonsWidth)
         }
         
         if !self.textInputContainer.bounds.size.width.isZero {
             let textInputFrame = self.textInputContainer.frame
-            
-            var accessoryButtonsWidth: CGFloat = 0.0
-            var firstButton = true
-            for (_, button) in self.accessoryItemButtons {
-                if firstButton {
-                    firstButton = false
-                    accessoryButtonsWidth += accessoryButtonInset
-                } else {
-                    accessoryButtonsWidth += accessoryButtonSpacing
-                }
-                accessoryButtonsWidth += button.buttonWidth
-            }
             
             textInputNode.frame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
             textInputNode.view.layoutIfNeeded()
@@ -1647,7 +1651,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
 
         var textInputViewRealInsets = UIEdgeInsets()
         if let presentationInterfaceState = self.presentationInterfaceState {
-            textInputViewRealInsets = calculateTextFieldRealInsets(presentationInterfaceState)
+            textInputViewRealInsets = calculateTextFieldRealInsets(presentationInterfaceState: presentationInterfaceState, accessoryButtonsWidth: accessoryButtonsWidth)
         }
         
         let textInputFrame = CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom)
@@ -1717,7 +1721,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.slowmodePlaceholderNode?.isHidden = true
         }
         
-        var nextButtonTopRight = CGPoint(x: width - rightInset - textFieldInsets.right - accessoryButtonInset, y: minimalHeight - textFieldInsets.bottom - minimalInputHeight)
+        var nextButtonTopRight = CGPoint(x: width - rightInset - textFieldInsets.right - accessoryButtonInset, y: panelHeight - textFieldInsets.bottom - minimalInputHeight)
         for (_, button) in self.accessoryItemButtons.reversed() {
             let buttonSize = CGSize(width: button.buttonWidth, height: minimalInputHeight)
             button.updateLayout(size: buttonSize)
@@ -2320,9 +2324,23 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
-        self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-            return (.text, state.keyboardButtonsMessage?.id)
-        })
+        guard let interfaceInteraction = self.interfaceInteraction, let presentationInterfaceState = self.presentationInterfaceState else {
+            return
+        }
+        
+        switch presentationInterfaceState.inputMode {
+        case .text:
+            break
+        case .media:
+            break
+        case .inputButtons, .none:
+            if self.textInputNode?.textView.inputView == nil {
+                interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                    return (.text, state.keyboardButtonsMessage?.id)
+                })
+            }
+        }
+        
         self.inputMenu.activate()
     }
     
@@ -2330,9 +2348,20 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.storedInputLanguage = editableTextNode.textInputMode.primaryLanguage
         self.inputMenu.deactivate()
         
-        if let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil {
-            self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { _ in
-                return (.inputButtons, nil)
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            if let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil, presentationInterfaceState.keyboardButtonsMessage != nil {
+                self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { _ in
+                    return (.inputButtons, nil)
+                }
+            } else {
+                switch presentationInterfaceState.inputMode {
+                case .text, .media:
+                    self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { _ in
+                        return (.none, nil)
+                    }
+                default:
+                    break
+                }
             }
         }
     }
@@ -2696,6 +2725,20 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         self.textInputNode?.becomeFirstResponder()
+    }
+    
+    func insertText(string: String) {
+        guard let textInputNode = self.textInputNode else {
+            return
+        }
+        textInputNode.textView.insertText(string)
+    }
+    
+    func backwardsDeleteText() {
+        guard let textInputNode = self.textInputNode else {
+            return
+        }
+        textInputNode.textView.deleteBackward()
     }
     
     @objc func expandButtonPressed() {

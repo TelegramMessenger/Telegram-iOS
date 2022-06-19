@@ -16,6 +16,10 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     case iPhone12Mini
     case iPhone12
     case iPhone12ProMax
+    case iPhone13Mini
+    case iPhone13
+    case iPhone13Pro
+    case iPhone13ProMax
     case iPad
     case iPadMini
     case iPad102Inch
@@ -38,6 +42,10 @@ public enum DeviceMetrics: CaseIterable, Equatable {
             .iPhone12Mini,
             .iPhone12,
             .iPhone12ProMax,
+            .iPhone13Mini,
+            .iPhone13,
+            .iPhone13Pro,
+            .iPhone13ProMax,
             .iPad,
             .iPadMini,
             .iPad102Inch,
@@ -113,6 +121,14 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return CGSize(width: 390.0, height: 844.0)
             case .iPhone12ProMax:
                 return CGSize(width: 428.0, height: 926.0)
+            case .iPhone13Mini:
+                return CGSize(width: 375.0, height: 812.0)
+            case .iPhone13:
+                return CGSize(width: 390.0, height: 844.0)
+            case .iPhone13Pro:
+                return CGSize(width: 390.0, height: 844.0)
+            case .iPhone13ProMax:
+                return CGSize(width: 428.0, height: 926.0)
             case .iPad:
                 return CGSize(width: 768.0, height: 1024.0)
             case .iPadMini:
@@ -140,9 +156,9 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return 41.0 + UIScreenPixel
             case .iPhone12Mini:
                 return 44.0
-            case .iPhone12:
+            case .iPhone12, .iPhone13, .iPhone13Pro:
                 return 47.0 + UIScreenPixel
-            case .iPhone12ProMax:
+            case .iPhone12ProMax, .iPhone13ProMax:
                 return 53.0 + UIScreenPixel
             case let .unknown(_, _, onScreenNavigationHeight):
                 if let _ = onScreenNavigationHeight {
@@ -157,7 +173,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     
     func safeInsets(inLandscape: Bool) -> UIEdgeInsets {
         switch self {
-            case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax:
+            case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone13ProMax:
                 return inLandscape ? UIEdgeInsets(top: 0.0, left: 44.0, bottom: 0.0, right: 44.0) : UIEdgeInsets(top: 44.0, left: 0.0, bottom: 0.0, right: 0.0)
             default:
                 return UIEdgeInsets.zero
@@ -166,7 +182,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     
     func onScreenNavigationHeight(inLandscape: Bool, systemOnScreenNavigationHeight: CGFloat?) -> CGFloat? {
         switch self {
-        case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax:
+        case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone13ProMax:
             return inLandscape ? 21.0 : 34.0
         case .iPadPro3rdGen, .iPadPro11Inch:
             return 21.0
@@ -198,7 +214,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     
     var statusBarHeight: CGFloat {
         switch self {
-            case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax:
+            case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone13ProMax:
                 return 44.0
             case .iPadPro11Inch, .iPadPro3rdGen, .iPadMini, .iPadMini6thGen:
                 return 24.0
@@ -216,7 +232,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                     return 162.0
                 case .iPhone6, .iPhone6Plus:
                     return 163.0
-                case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax:
+                case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone13ProMax:
                     return 172.0
                 case .iPad, .iPad102Inch, .iPadPro10Inch:
                     return 348.0
@@ -235,9 +251,9 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                     return 216.0
                 case .iPhone6Plus:
                     return 226.0
-                case .iPhoneX, .iPhone12Mini, .iPhone12:
-                    return 291.0
-                case .iPhoneXSMax, .iPhoneXr, .iPhone12ProMax:
+                case .iPhoneX, .iPhone12Mini, .iPhone12, .iPhone13Mini, .iPhone13, .iPhone13Pro:
+                    return 292.0
+                case .iPhoneXSMax, .iPhoneXr, .iPhone12ProMax, .iPhone13ProMax:
                     return 302.0
                 case .iPad, .iPad102Inch, .iPadPro10Inch:
                     return 263.0
@@ -256,7 +272,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     func predictiveInputHeight(inLandscape: Bool) -> CGFloat {
         if inLandscape {
             switch self {
-                case .iPhone4, .iPhone5, .iPhone6, .iPhone6Plus, .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax:
+                case .iPhone4, .iPhone5, .iPhone6, .iPhone6Plus, .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone13ProMax:
                     return 37.0
                 case .iPad, .iPad102Inch, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen, .iPadMini, .iPadMini6thGen:
                     return 50.0
@@ -267,7 +283,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
             switch self {
                 case .iPhone4, .iPhone5:
                     return 37.0
-                case .iPhone6, .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax:
+                case .iPhone6, .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone13ProMax:
                     return 44.0
                 case .iPhone6Plus:
                     return 45.0

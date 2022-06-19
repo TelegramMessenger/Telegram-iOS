@@ -7543,7 +7543,7 @@ Sorry for the inconvenience.";
 "Channel.AddUserKickedError" = "Sorry, you can't add this user because they are on the list of Removed Users and you can't unban them.";
 "Channel.AddAdminKickedError" = "Sorry, you can't add this user as an admin because they are in the Removed Users list and you can't unban them.";
 
-"Premium.Stickers.Description" = "Unlock this sticker and more by subscribing to Telegram Premium.";
+"Premium.Stickers.Description" = "Unlock this sticker and many more by subscribing to Telegram Premium.";
 "Premium.Stickers.Proceed" = "Unlock Premium Stickers";
 
 "Premium.Reactions.Proceed" = "Unlock Premium Reactions";
@@ -7592,9 +7592,9 @@ Sorry for the inconvenience.";
 "Premium.MaxFileSizeNoPremiumText" = "The document can't be sent, because it is larger than **%@**. We are working to let you increase this limit in the future.";
 "Premium.MaxFileSizeFinalText" = "The document can't be sent, because it is larger than **%@**.";
 
-"Premium.MaxPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
-"Premium.MaxPinsNoPremiumText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some of the currently pinned ones.";
-"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some of the currently pinned ones.";
+"Premium.MaxPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some that are currently pinned or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
+"Premium.MaxPinsNoPremiumText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some that are currently pinned.";
+"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some that are currently pinned.";
 
 "Premium.MaxFavedStickersTitle" = "The Limit of %@ Stickers Reached";
 "Premium.MaxFavedStickersText" = "An older sticker was replaced with this one. You can [increase the limit]() to %@ stickers.";
@@ -7604,7 +7604,7 @@ Sorry for the inconvenience.";
 "Premium.MaxSavedGifsText" = "An older GIF was replaced with this one. You can [increase the limit]() to %@ GIFS.";
 "Premium.MaxSavedGifsFinalText" = "An older GIF was replaced with this one.";
 
-"Premium.MaxAccountsText" = "You have reached the limit of **%@** connected accounts. You can free one place by subscribing to **Telegram Premium**.";
+"Premium.MaxAccountsText" = "You have reached the limit of **%@** connected accounts. You can add more by subscribing to **Telegram Premium**.";
 "Premium.MaxAccountsNoPremiumText" = "You have reached the limit of **%@** connected accounts.";
 "Premium.MaxAccountsFinalText" = "You have reached the limit of **%@** connected accounts.";
 
@@ -7635,10 +7635,10 @@ Sorry for the inconvenience.";
 "Premium.NoAds" = "No Ads";
 "Premium.NoAdsInfo" = "No more ads in public channels where Telegram sometimes shows ads.";
 
-"Premium.NoAdsStandaloneInfo" = "Remove ads such as this by subscribing to **Telegram Premium**.";
+"Premium.NoAdsStandaloneInfo" = "Remove ads such as this one by subscribing to **Telegram Premium**.";
 
 "Premium.Reactions" = "Unique Reactions";
-"Premium.ReactionsInfo" = "Additional animated reactions on messages, available only to the Premium subscribers.";
+"Premium.ReactionsInfo" = "Additional animated reactions on messages, available only to Premium subscribers.";
 
 "Premium.ReactionsStandalone" = "Additional Reactions";
 "Premium.ReactionsStandaloneInfo" = "Unlock a wider range of reactions on messages by subscribing to **Telegram Premium**.";
@@ -7647,7 +7647,7 @@ Sorry for the inconvenience.";
 "Premium.StickersInfo" = "Exclusive enlarged stickers featuring additional effects, updated monthly.";
 
 "Premium.ChatManagement" = "Advanced Chat Management";
-"Premium.ChatManagementInfo" = "Tools to set default folder, auto-archive and hide new chats.";
+"Premium.ChatManagementInfo" = "Tools to set the default folder, auto-archive and hide new chats from non-contacts.";
 
 "Premium.Badge" = "Profile Badge";
 "Premium.BadgeInfo" = "A badge next to your name showing that you are helping support Telegram.";
@@ -7666,10 +7666,10 @@ Sorry for the inconvenience.";
 "Premium.AboutTitle" = "ABOUT TELEGRAM PREMIUM";
 "Premium.AboutText" = "While the free version of Telegram already gives its users more than any other messaging application, **Telegram Premium** pushes its capabilities even further.\n\n**Telegram Premium** is a paid option, because most Premium Features require additional expenses from Telegram to third parties such as data center providers and server manufacturers. Contributions from **Telegram Premium** users allow us to cover such costs and also help Telegram stay free for everyone.";
 
-"Premium.Terms" = "By purchasing a Premium subscription, you agree to our [Terms of Service](terms) and [Privacy Policy](privacy).";
+"Premium.Terms" = "By purchasing a Premium subscription, you agree to the Telegram [Terms of Service](terms) and [Privacy Policy](privacy).";
 
 "Conversation.CopyProtectionSavingDisabledSecret" = "Saving is restricted";
-"Conversation.CopyProtectionForwardingDisabledSecret" = "Forwards are restricted";
+"Conversation.CopyProtectionForwardingDisabledSecret" = "Forwarding is restricted";
 
 "Settings.Terms_URL" = "https://telegram.org/tos";
 "Settings.PrivacyPolicy_URL" = "https://telegram.org/privacy";
@@ -7677,7 +7677,7 @@ Sorry for the inconvenience.";
 "Stickers.PremiumPackInfoText" = "This pack contains premium stickers like this one.";
 "Stickers.PremiumPackView" = "View";
 
-"Conversation.PremiumUploadFileTooLarge" = "File could not be sent, because it is larger than 4 GB.\n\nYou can send as many files as you like, but each must be smaller than 4 GB.";
+"Conversation.PremiumUploadFileTooLarge" = "File could not be sent because it is larger than 4 GB.\n\nYou can send as many files as you like, but each must be smaller than 4 GB.";
 
 "SponsoredMessageMenu.Hide" = "Hide";
 
@@ -7708,7 +7708,7 @@ Sorry for the inconvenience.";
 
 "WebApp.Settings" = "Settings";
 
-"Bot.AccepRecurrentInfo" = "I accept [Terms of Service]() of **%1$@**";
+"Bot.AccepRecurrentInfo" = "I accept the [Terms of Service]() of **%1$@**";
 
 "Chat.AudioTranscriptionRateAction" = "Rate Transcription";
 "Chat.AudioTranscriptionFeedbackTip" = "Thank you for your feedback.";

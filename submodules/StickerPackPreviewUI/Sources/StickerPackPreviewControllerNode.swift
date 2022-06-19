@@ -73,7 +73,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     var presentInGlobalOverlay: ((ViewController, Any?) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
-    var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    var sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     private let actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)?
     
     let ready = Promise<Bool>()
@@ -220,9 +220,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                                     menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode.view, animationNode.bounds)
                                             } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), imageNode, imageNode.bounds)
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), imageNode.view, imageNode.bounds)
                                             }
                                         }
                                         f(.default)

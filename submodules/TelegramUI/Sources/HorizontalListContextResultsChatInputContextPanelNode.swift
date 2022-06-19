@@ -162,9 +162,9 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     f(.default)
                                     
                                     if let strongSelf = self {
-                                        let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                        let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController(), sendSticker: { file, sourceView, sourceRect in
                                             if let strongSelf = self {
-                                                return strongSelf.interfaceInteraction?.sendSticker(file, false, sourceNode, sourceRect) ?? false
+                                                return strongSelf.interfaceInteraction?.sendSticker(file, false, sourceView, sourceRect) ?? false
                                             } else {
                                                 return false
                                             }

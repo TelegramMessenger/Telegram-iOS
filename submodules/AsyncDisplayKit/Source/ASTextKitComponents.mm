@@ -19,14 +19,14 @@
 - (CGRect)lineFragmentRectForProposedRect:(CGRect)proposedRect atIndex:(NSUInteger)characterIndex writingDirection:(NSWritingDirection)baseWritingDirection remainingRect:(nullable CGRect *)remainingRect {
     CGRect result = [super lineFragmentRectForProposedRect:proposedRect atIndex:characterIndex writingDirection:baseWritingDirection remainingRect:remainingRect];
     
-#if DEBUG
+/*#if DEBUG
     if (result.origin.y < 10.0f) {
         result.size.width -= 21.0f;
         if (result.size.width < 0.0f) {
             result.size.width = 0.0f;
         }
     }
-#endif
+#endif*/
     
     return result;
 }

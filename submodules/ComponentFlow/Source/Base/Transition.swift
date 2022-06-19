@@ -1,9 +1,17 @@
 import Foundation
 import UIKit
 
+#if targetEnvironment(simulator)
+@_silgen_name("UIAnimationDragCoefficient") func UIAnimationDragCoefficient() -> Float
+#endif
+
 private extension UIView {
     static var animationDurationFactor: Double {
+        #if targetEnvironment(simulator)
+        return Double(UIAnimationDragCoefficient())
+        #else
         return 1.0
+        #endif
     }
 }
 
@@ -182,10 +190,12 @@ public struct Transition {
         switch self.animation {
         case .none:
             view.frame = frame
+            view.layer.removeAnimation(forKey: "position")
+            view.layer.removeAnimation(forKey: "bounds")
             completion?(true)
         case .curve:
-            let previousPosition = view.center
-            let previousBounds = view.bounds
+            let previousPosition = view.layer.presentation()?.position ?? view.center
+            let previousBounds = view.layer.presentation()?.bounds ?? view.bounds
             view.frame = frame
 
             self.animatePosition(view: view, from: previousPosition, to: view.center, completion: completion)
@@ -201,9 +211,10 @@ public struct Transition {
         switch self.animation {
         case .none:
             view.bounds = bounds
+            view.layer.removeAnimation(forKey: "bounds")
             completion?(true)
         case .curve:
-            let previousBounds = view.bounds
+            let previousBounds = view.layer.presentation()?.bounds ?? view.bounds
             view.bounds = bounds
 
             self.animateBounds(view: view, from: previousBounds, to: view.bounds, completion: completion)
@@ -218,9 +229,10 @@ public struct Transition {
         switch self.animation {
         case .none:
             view.center = position
+            view.layer.removeAnimation(forKey: "position")
             completion?(true)
         case .curve:
-            let previousPosition = view.center
+            let previousPosition = view.layer.presentation()?.position ?? view.center
             view.center = position
 
             self.animatePosition(view: view, from: previousPosition, to: view.center, completion: completion)
@@ -235,9 +247,10 @@ public struct Transition {
         switch self.animation {
         case .none:
             view.alpha = alpha
+            view.layer.removeAnimation(forKey: "opacity")
             completion?(true)
         case .curve:
-            let previousAlpha = view.alpha
+            let previousAlpha = (view.layer.presentation()?.opacity).flatMap(CGFloat.init) ?? view.alpha
             view.alpha = alpha
             self.animateAlpha(view: view, from: previousAlpha, to: alpha, completion: completion)
         }

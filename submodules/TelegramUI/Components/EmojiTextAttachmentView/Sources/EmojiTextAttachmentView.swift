@@ -46,16 +46,19 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         
         super.init()
         
+        let scale = min(2.0, UIScreenScale)
+        let pixelSize = CGSize(width: 24 * scale, height: 24 * scale)
+        
         if attemptSynchronousLoad {
-            if !renderer.loadFirstFrameSynchronously(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation) {
-                let size = CGSize(width: 24.0, height: 24.0)
+            if !renderer.loadFirstFrameSynchronously(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize) {
+                let size = CGSize(width: pixelSize.width / scale, height: pixelSize.height / scale)
                 if let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor) {
                     self.contents = image.cgImage
                 }
             }
         }
         
-        self.disposable = renderer.add(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, fetch: { writer in
+        self.disposable = renderer.add(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: { size, writer in
             let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
             
             let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
@@ -67,8 +70,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                     writer.finish()
                     return
                 }
-                let scale = min(2.0, UIScreenScale)
-                cacheLottieAnimation(data: data, width: Int(24 * scale), height: Int(24 * scale), writer: writer)
+                cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
             })
             
             let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()

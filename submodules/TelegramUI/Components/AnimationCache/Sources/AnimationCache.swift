@@ -41,9 +41,19 @@ public protocol AnimationCacheItemWriter: AnyObject {
     func finish()
 }
 
+public final class AnimationCacheItemResult {
+    public let item: AnimationCacheItem?
+    public let isFinal: Bool
+    
+    public init(item: AnimationCacheItem?, isFinal: Bool) {
+        self.item = item
+        self.isFinal = isFinal
+    }
+}
+
 public protocol AnimationCache: AnyObject {
-    func get(sourceId: String, fetch: @escaping (AnimationCacheItemWriter) -> Disposable) -> Signal<AnimationCacheItem?, NoError>
-    func getSynchronously(sourceId: String) -> AnimationCacheItem?
+    func get(sourceId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Signal<AnimationCacheItemResult, NoError>
+    func getSynchronously(sourceId: String, size: CGSize) -> AnimationCacheItem?
 }
 
 private func md5Hash(_ string: String) -> String {
@@ -278,7 +288,7 @@ private func loadItem(path: String) -> AnimationCacheItem? {
 public final class AnimationCacheImpl: AnimationCache {
     private final class Impl {
         private final class ItemContext {
-            let subscribers = Bag<(AnimationCacheItem?) -> Void>()
+            let subscribers = Bag<(AnimationCacheItemResult) -> Void>()
             let disposable = MetaDisposable()
             
             deinit {
@@ -301,13 +311,13 @@ public final class AnimationCacheImpl: AnimationCache {
         deinit {
         }
         
-        func get(sourceId: String, fetch: @escaping (AnimationCacheItemWriter) -> Disposable, completion: @escaping (AnimationCacheItem?) -> Void) -> Disposable {
-            let sourceIdPath = itemSubpath(hashString: md5Hash(sourceId))
+        func get(sourceId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable, updateResult: @escaping (AnimationCacheItemResult) -> Void) -> Disposable {
+            let sourceIdPath = itemSubpath(hashString: md5Hash(sourceId + "-\(Int(size.width))x\(Int(size.height))"))
             let itemDirectoryPath = "\(self.basePath)/\(sourceIdPath.directory)"
             let itemPath = "\(itemDirectoryPath)/\(sourceIdPath.fileName)"
             
             if FileManager.default.fileExists(atPath: itemPath) {
-                completion(loadItem(path: itemPath))
+                updateResult(AnimationCacheItemResult(item: loadItem(path: itemPath), isFinal: true))
                 
                 return EmptyDisposable
             }
@@ -323,7 +333,9 @@ public final class AnimationCacheImpl: AnimationCache {
             }
             
             let queue = self.queue
-            let index = itemContext.subscribers.add(completion)
+            let index = itemContext.subscribers.add(updateResult)
+            
+            updateResult(AnimationCacheItemResult(item: nil, isFinal: false))
             
             if beginFetch {
                 let tempPath = self.allocateTempFile()
@@ -349,14 +361,14 @@ public final class AnimationCacheImpl: AnimationCache {
                         }
                         
                         for f in itemContext.subscribers.copyItems() {
-                            f(item)
+                            f(AnimationCacheItemResult(item: item, isFinal: true))
                         }
                     }
                 }) else {
                     return EmptyDisposable
                 }
                 
-                let fetchDisposable = fetch(writer)
+                let fetchDisposable = fetch(size, writer)
                 
                 itemContext.disposable.set(ActionDisposable {
                     fetchDisposable.dispose()
@@ -377,8 +389,8 @@ public final class AnimationCacheImpl: AnimationCache {
             }
         }
         
-        func getSynchronously(sourceId: String) -> AnimationCacheItem? {
-            let sourceIdPath = itemSubpath(hashString: md5Hash(sourceId))
+        func getSynchronously(sourceId: String, size: CGSize) -> AnimationCacheItem? {
+            let sourceIdPath = itemSubpath(hashString: md5Hash(sourceId + "-\(Int(size.width))x\(Int(size.height))"))
             let itemDirectoryPath = "\(self.basePath)/\(sourceIdPath.directory)"
             let itemPath = "\(itemDirectoryPath)/\(sourceIdPath.fileName)"
             
@@ -401,14 +413,16 @@ public final class AnimationCacheImpl: AnimationCache {
         })
     }
     
-    public func get(sourceId: String, fetch: @escaping (AnimationCacheItemWriter) -> Disposable) -> Signal<AnimationCacheItem?, NoError> {
+    public func get(sourceId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Signal<AnimationCacheItemResult, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.impl.with { impl in
-                disposable.set(impl.get(sourceId: sourceId, fetch: fetch, completion: { result in
+                disposable.set(impl.get(sourceId: sourceId, size: size, fetch: fetch, updateResult: { result in
                     subscriber.putNext(result)
-                    subscriber.putCompletion()
+                    if result.isFinal {
+                        subscriber.putCompletion()
+                    }
                 }))
             }
             
@@ -417,9 +431,9 @@ public final class AnimationCacheImpl: AnimationCache {
         |> runOn(self.queue)
     }
     
-    public func getSynchronously(sourceId: String) -> AnimationCacheItem? {
+    public func getSynchronously(sourceId: String, size: CGSize) -> AnimationCacheItem? {
         return self.impl.syncWith { impl -> AnimationCacheItem? in
-            return impl.getSynchronously(sourceId: sourceId)
+            return impl.getSynchronously(sourceId: sourceId, size: size)
         }
     }
 }

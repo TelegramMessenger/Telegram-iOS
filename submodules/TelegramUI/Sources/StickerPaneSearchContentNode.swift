@@ -19,10 +19,10 @@ import UndoUI
 final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void
     let install: (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void
-    let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Void
+    let sendSticker: (FileMediaReference, UIView, CGRect) -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, UIView, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.open = open
         self.install = install
         self.sendSticker = sendSticker
@@ -100,7 +100,7 @@ private enum StickerSearchEntry: Identifiable, Comparable {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
             return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
-                interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
+                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
             let itemContext = StickerPaneSearchGlobalItemContext()
@@ -319,9 +319,9 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 |> deliverOnMainQueue).start(next: { _ in
                 })
             }
-        }, sendSticker: { [weak self] file, sourceNode, sourceRect in
+        }, sendSticker: { [weak self] file, sourceView, sourceRect in
             if let strongSelf = self {
-                let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect)
+                let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceView, sourceRect)
             }
         }, getItemIsPreviewed: { item in
             return inputNodeInteraction.previewedStickerPackItem == .pack(item)

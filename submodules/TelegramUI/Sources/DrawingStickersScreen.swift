@@ -40,7 +40,7 @@ private struct DrawingPaneArrangement {
 private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     private let context: AccountContext
     private var presentationData: PresentationData
-    fileprivate var selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    fileprivate var selectSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     private var searchItemContext = StickerPaneSearchGlobalItemContext()
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
@@ -98,7 +98,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     
     fileprivate var dismiss: (() -> Void)?
     
-    init(context: AccountContext, selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
+    init(context: AccountContext, selectSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) {
         self.context = context
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
@@ -106,7 +106,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
-        var selectStickerImpl: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+        var selectStickerImpl: ((FileMediaReference, UIView, CGRect) -> Bool)?
         
         self.controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
             return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
@@ -1306,7 +1306,7 @@ final class DrawingStickersScreen: ViewController, TGPhotoPaintStickersScreen {
     public var screenWillDisappear: (() -> Void)?
     
     private let context: AccountContext
-    var selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    var selectSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     
     private var controllerNode: DrawingStickersScreenNode {
         return self.displayNode as! DrawingStickersScreenNode
@@ -1322,7 +1322,7 @@ final class DrawingStickersScreen: ViewController, TGPhotoPaintStickersScreen {
         return self._ready
     }
         
-    public init(context: AccountContext, selectSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, selectSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil) {
         self.context = context
         self.selectSticker = selectSticker
         
@@ -1362,10 +1362,10 @@ final class DrawingStickersScreen: ViewController, TGPhotoPaintStickersScreen {
     override public func loadDisplayNode() {
         self.displayNode = DrawingStickersScreenNode(
             context: self.context,
-            selectSticker: { [weak self] file, sourceNode, sourceRect in
+            selectSticker: { [weak self] file, sourceView, sourceRect in
                 if let strongSelf = self, let selectSticker = strongSelf.selectSticker {
                     (strongSelf.displayNode as! DrawingStickersScreenNode).animateOut()
-                    return selectSticker(file, sourceNode, sourceRect)
+                    return selectSticker(file, sourceView, sourceRect)
                 } else {
                     return false
                 }

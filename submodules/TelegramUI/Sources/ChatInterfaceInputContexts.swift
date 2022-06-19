@@ -317,13 +317,9 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands {
                         accessoryItems.append(.commands)
                     }
-                    #if DEBUG
+                    
                     accessoryItems.append(.stickers(stickersEnabled))
-                    #else
-                    if isTextEmpty {
-                        accessoryItems.append(.stickers(stickersEnabled))
-                    }
-                    #endif
+                    
                     if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
                         accessoryItems.append(.inputButtons)
                     }

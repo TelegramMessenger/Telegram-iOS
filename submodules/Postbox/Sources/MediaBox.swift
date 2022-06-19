@@ -188,7 +188,8 @@ public final class MediaBox {
         
         self.timeBasedCleanup = TimeBasedCleanup(generalPaths: [
             self.basePath,
-            self.basePath + "/cache"
+            self.basePath + "/cache",
+            self.basePath + "/animation-cache"
         ], shortLivedPaths: [
             self.basePath + "/short-cache"
         ])

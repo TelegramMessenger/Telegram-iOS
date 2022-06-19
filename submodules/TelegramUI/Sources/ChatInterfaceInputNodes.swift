@@ -6,12 +6,24 @@ import Postbox
 import AccountContext
 import ChatPresentationInterfaceState
 
-func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, inputMediaNode: ChatMediaInputNode?, controllerInteraction: ChatControllerInteraction, inputPanelNode: ChatInputPanelNode?) -> ChatInputNode? {
+func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, inputMediaNode: ChatMediaInputNode?, controllerInteraction: ChatControllerInteraction, inputPanelNode: ChatInputPanelNode?, makeMediaInputNode: () -> ChatInputNode?) -> ChatInputNode? {
     if !(inputPanelNode is ChatTextInputPanelNode) {
         return nil
     }
     switch chatPresentationInterfaceState.inputMode {
-        case .media:
+    case .media:
+        if "".isEmpty {
+            if let currentNode = currentNode as? ChatEntityKeyboardInputNode {
+                return currentNode
+            } else if let inputMediaNode = inputMediaNode {
+                return inputMediaNode
+            } else if let inputMediaNode = makeMediaInputNode() {
+                inputMediaNode.interfaceInteraction = interfaceInteraction
+                return inputMediaNode
+            } else {
+                return nil
+            }
+        } else {
             if let currentNode = currentNode as? ChatMediaInputNode {
                 return currentNode
             } else if let inputMediaNode = inputMediaNode {
@@ -39,19 +51,20 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
                 inputNode.interfaceInteraction = interfaceInteraction
                 return inputNode
             }
-        case .inputButtons:
-            if chatPresentationInterfaceState.forceInputCommandsHidden {
-                return nil
-            } else {
-                if let currentNode = currentNode as? ChatButtonKeyboardInputNode {
-                    return currentNode
-                } else {
-                    let inputNode = ChatButtonKeyboardInputNode(context: context, controllerInteraction: controllerInteraction)
-                    inputNode.interfaceInteraction = interfaceInteraction
-                    return inputNode
-                }
-            }
-        case .none, .text:
+        }
+    case .inputButtons:
+        if chatPresentationInterfaceState.forceInputCommandsHidden {
             return nil
+        } else {
+            if let currentNode = currentNode as? ChatButtonKeyboardInputNode {
+                return currentNode
+            } else {
+                let inputNode = ChatButtonKeyboardInputNode(context: context, controllerInteraction: controllerInteraction)
+                inputNode.interfaceInteraction = interfaceInteraction
+                return inputNode
+            }
+        }
+    case .none, .text:
+        return nil
     }
 }

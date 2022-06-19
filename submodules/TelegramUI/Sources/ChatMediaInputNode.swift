@@ -1579,9 +1579,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     }, action: { _, f in
                                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, animationNode, animationNode.bounds)
+                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, animationNode.view, animationNode.bounds)
                                                             } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, imageNode, imageNode.bounds)
+                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, imageNode.view, imageNode.bounds)
                                                             }
                                                         }
                                                         f(.default)
@@ -1593,9 +1593,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }, action: { _, f in
                                                     if let strongSelf = self, let peekController = strongSelf.peekController {
                                                         if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                            let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode, animationNode.bounds)
+                                                            let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode.view, animationNode.bounds)
                                                         } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                            let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode, imageNode.bounds)
+                                                            let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode.view, imageNode.bounds)
                                                         }
                                                     }
                                                     f(.default)
@@ -1731,9 +1731,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         }, action: { _, f in
                                                             if let strongSelf = self, let peekController = strongSelf.peekController {
                                                                 if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                                    let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, animationNode, animationNode.bounds)
+                                                                    let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, animationNode.view, animationNode.bounds)
                                                                 } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                                    let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, imageNode, imageNode.bounds)
+                                                                    let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, imageNode.view, imageNode.bounds)
                                                                 }
                                                             }
                                                             f(.default)
@@ -1745,9 +1745,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     }, action: { _, f in
                                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode, animationNode.bounds)
+                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode.view, animationNode.bounds)
                                                             } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode, imageNode.bounds)
+                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode.view, imageNode.bounds)
                                                             }
                                                         }
                                                         f(.default)
