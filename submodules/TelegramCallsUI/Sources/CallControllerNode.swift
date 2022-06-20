@@ -16,6 +16,7 @@ import TooltipUI
 import AlertUI
 import PresentationDataUtils
 import DeviceAccess
+import ContextUI
 
 private func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {
     return CGRect(x: floorToScreenPixels(toValue.origin.x * t + fromValue.origin.x * (1.0 - t)), y: floorToScreenPixels(toValue.origin.y * t + fromValue.origin.y * (1.0 - t)), width: floorToScreenPixels(toValue.size.width * t + fromValue.size.width * (1.0 - t)), height: floorToScreenPixels(toValue.size.height * t + fromValue.size.height * (1.0 - t)))
@@ -200,17 +201,9 @@ private final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
             case .rotation90:
                 rotationAngle = CGFloat.pi / 2.0
             case .rotation180:
-//                if isCompactLayout {
-                    rotationAngle = CGFloat.pi
-//                } else {
-//                    rotationAngle = 0.0
-//                }
+                rotationAngle = CGFloat.pi
             case .rotation270:
-//                if isCompactLayout {
-                    rotationAngle = -CGFloat.pi / 2.0
-//                } else {
-//                    rotationAngle = CGFloat.pi / 2.0
-//                }
+                rotationAngle = -CGFloat.pi / 2.0
             }
             
             var additionalAngle: CGFloat = 0.0
@@ -375,6 +368,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     
     private let containerTransformationNode: ASDisplayNode
     private let containerNode: ASDisplayNode
+    private let videoContainerNode: PinchSourceContainerNode
     
     private let imageNode: TransformImageNode
     private let dimNode: ASImageNode
@@ -397,7 +391,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     
     private var displayedCameraConfirmation: Bool = false
     private var displayedCameraTooltip: Bool = false
-    
+        
     private var expandedVideoNode: CallVideoNode?
     private var minimizedVideoNode: CallVideoNode?
     private var disableAnimationForExpandedVideoOnce: Bool = false
@@ -455,6 +449,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     
     private var isUIHidden: Bool = false
     private var isVideoPaused: Bool = false
+    private var isVideoPinched: Bool = false
     
     private enum PictureInPictureGestureState {
         case none
@@ -485,6 +480,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         self.containerTransformationNode.clipsToBounds = true
         
         self.containerNode = ASDisplayNode()
+        
+        self.videoContainerNode = PinchSourceContainerNode()
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -531,6 +528,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         }
         
         self.containerNode.addSubnode(self.imageNode)
+        self.containerNode.addSubnode(self.videoContainerNode)
         self.containerNode.addSubnode(self.dimNode)
         self.containerNode.addSubnode(self.statusNode)
         self.containerNode.addSubnode(self.buttonsNode)
@@ -711,6 +709,40 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 }
             }
         })
+        
+        self.videoContainerNode.activate = { [weak self] sourceNode in
+            guard let strongSelf = self else {
+                return
+            }
+            let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
+                return UIScreen.main.bounds
+            })
+            strongSelf.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
+            strongSelf.isVideoPinched = true
+            
+            strongSelf.videoContainerNode.contentNode.clipsToBounds = true
+            strongSelf.videoContainerNode.backgroundColor = .black
+            
+            if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                strongSelf.videoContainerNode.contentNode.cornerRadius = layout.deviceMetrics.screenCornerRadius
+                
+                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            }
+        }
+        
+        self.videoContainerNode.animatedOut = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isVideoPinched = false
+            
+            strongSelf.videoContainerNode.backgroundColor = .clear
+            strongSelf.videoContainerNode.contentNode.cornerRadius = 0.0
+            
+            if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+            }
+        }
     }
     
     deinit {
@@ -830,9 +862,9 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                             strongSelf.incomingVideoNodeValue = incomingVideoNode
                             if let expandedVideoNode = strongSelf.expandedVideoNode {
                                 strongSelf.minimizedVideoNode = expandedVideoNode
-                                strongSelf.containerNode.insertSubnode(incomingVideoNode, belowSubnode: expandedVideoNode)
+                                strongSelf.videoContainerNode.contentNode.insertSubnode(incomingVideoNode, belowSubnode: expandedVideoNode)
                             } else {
-                                strongSelf.containerNode.insertSubnode(incomingVideoNode, belowSubnode: strongSelf.dimNode)
+                                strongSelf.videoContainerNode.contentNode.addSubnode(incomingVideoNode)
                             }
                             strongSelf.expandedVideoNode = incomingVideoNode
                             strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
@@ -914,10 +946,10 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                             strongSelf.outgoingVideoNodeValue = outgoingVideoNode
                             if let expandedVideoNode = strongSelf.expandedVideoNode {
                                 strongSelf.minimizedVideoNode = outgoingVideoNode
-                                strongSelf.containerNode.insertSubnode(outgoingVideoNode, aboveSubnode: expandedVideoNode)
+                                strongSelf.videoContainerNode.contentNode.insertSubnode(outgoingVideoNode, aboveSubnode: expandedVideoNode)
                             } else {
                                 strongSelf.expandedVideoNode = outgoingVideoNode
-                                strongSelf.containerNode.insertSubnode(outgoingVideoNode, belowSubnode: strongSelf.dimNode)
+                                strongSelf.videoContainerNode.contentNode.addSubnode(outgoingVideoNode)
                             }
                             strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
                             
@@ -1140,6 +1172,9 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             }
             self.callEnded?(presentRating)
         }
+        
+        let hasIncomingVideoNode = self.incomingVideoNodeValue != nil && self.expandedVideoNode === self.incomingVideoNodeValue
+        self.videoContainerNode.isPinchGestureEnabled = hasIncomingVideoNode
     }
     
     private func updateToastContent() {
@@ -1481,6 +1516,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         let pipTransitionAlpha: CGFloat = 1.0 - self.pictureInPictureTransitionFraction
         uiDisplayTransition *= pipTransitionAlpha
         
+        let pinchTransitionAlpha: CGFloat = self.isVideoPinched ? 0.0 : 1.0
+        
         let previousVideoButtonFrame = self.buttonsNode.videoButtonFrame().flatMap { frame -> CGRect in
             return self.buttonsNode.view.convert(frame, to: self.view)
         }
@@ -1501,8 +1538,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         let toastCollapsedOriginY = self.pictureInPictureTransitionFraction > 0.0 ? layout.size.height : layout.size.height - max(layout.intrinsicInsets.bottom, 20.0) - toastHeight
         let toastOriginY = interpolate(from: toastCollapsedOriginY, to: defaultButtonsOriginY - toastSpacing - toastHeight, value: uiDisplayTransition)
         
-        var overlayAlpha: CGFloat = uiDisplayTransition
-        var toastAlpha: CGFloat = pipTransitionAlpha
+        var overlayAlpha: CGFloat = min(pinchTransitionAlpha, uiDisplayTransition)
+        var toastAlpha: CGFloat = min(pinchTransitionAlpha, pipTransitionAlpha)
         
         switch self.callState?.state {
         case .terminated, .terminating:
@@ -1522,14 +1559,18 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         transition.updateCornerRadius(layer: self.containerTransformationNode.layer, cornerRadius: self.pictureInPictureTransitionFraction * 10.0)
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: (containerFrame.width - layout.size.width) / 2.0, y: floor(containerFrame.height - layout.size.height) / 2.0), size: layout.size))
-        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.videoContainerNode, frame: containerFullScreenFrame)
+        self.videoContainerNode.update(size: containerFullScreenFrame.size, transition: transition)
+        
+        transition.updateAlpha(node: self.dimNode, alpha: pinchTransitionAlpha)
+        transition.updateFrame(node: self.dimNode, frame: containerFullScreenFrame)
         
         if let keyPreviewNode = self.keyPreviewNode {
-            transition.updateFrame(node: keyPreviewNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+            transition.updateFrame(node: keyPreviewNode, frame: containerFullScreenFrame)
             keyPreviewNode.updateLayout(size: layout.size, transition: .immediate)
         }
         
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.imageNode, frame: containerFullScreenFrame)
         let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: 640.0, height: 640.0).aspectFilled(layout.size), boundingSize: layout.size, intrinsicInsets: UIEdgeInsets())
         let apply = self.imageNode.asyncLayout()(arguments)
         apply()
@@ -1574,8 +1615,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: buttonsOriginY), size: CGSize(width: layout.size.width, height: buttonsHeight)))
         transition.updateAlpha(node: self.buttonsNode, alpha: overlayAlpha)
         
-        let fullscreenVideoFrame = CGRect(origin: CGPoint(), size: layout.size)
-        
+        let fullscreenVideoFrame = containerFullScreenFrame
         let previewVideoFrame = self.calculatePreviewVideoRect(layout: layout, navigationHeight: navigationBarHeight)
         
         if let removedMinimizedVideoNodeValue = self.removedMinimizedVideoNodeValue {
@@ -1640,7 +1680,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         
         
         if let minimizedVideoNode = self.minimizedVideoNode {
-            transition.updateAlpha(node: minimizedVideoNode, alpha: pipTransitionAlpha)
+            transition.updateAlpha(node: minimizedVideoNode, alpha: min(pipTransitionAlpha, pinchTransitionAlpha))
             var minimizedVideoTransition = transition
             var didAppear = false
             if minimizedVideoNode.frame.isEmpty {

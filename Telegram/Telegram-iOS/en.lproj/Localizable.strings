@@ -7731,3 +7731,7 @@ Sorry for the inconvenience.";
 "Settings.AddAnotherAccount.PremiumHelp" = "You can add up to four accounts with different phone numbers.";
 
 "Stickers.TrendingPremiumStickers" = "Trending Premium Stickers";
+
+"Appearance.AppIconPremium" = "Premium";
+"Appearance.AppIconBlack" = "Black";
+"Appearance.AppIconTurbo" = "Turbo";

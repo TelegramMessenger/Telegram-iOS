@@ -345,11 +345,11 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                 case "New2":
                                     name = item.strings.Appearance_AppIconNew2
                                 case "Premium":
-                                    name = "Premium"
+                                    name = item.strings.Appearance_AppIconPremium
                                 case "PremiumBlack":
-                                    name = "Black"
+                                    name = item.strings.Appearance_AppIconBlack
                                 case "PremiumTurbo":
-                                    name = "Turbo"
+                                    name = item.strings.Appearance_AppIconTurbo
                                 default:
                                     name = icon.name
                             }

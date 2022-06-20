@@ -847,7 +847,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             }
                         
             var isDiscussion = false
-            if let cachedData = view.cachedData as? CachedChannelData, case .known = cachedData.linkedDiscussionPeerId {
+            if let cachedData = view.cachedData as? CachedChannelData, case let .known(peerId) = cachedData.linkedDiscussionPeerId, peerId != nil {
                 isDiscussion = true
             }
             
@@ -934,67 +934,40 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     
                     switch selectedType {
                         case .publicChannel:
-                            let displayAvailability = publicChannelsToRevoke == nil || !(publicChannelsToRevoke!.isEmpty)
-                            
-                            if displayAvailability {
-                                if let publicChannelsToRevoke = publicChannelsToRevoke {
-    //                                entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(20)").string, limits.maxPublicLinksCount, premiumLimits.maxPublicLinksCount))
-                                    
-                                    entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesInfo, false))
-                                    var index: Int32 = 0
-                                    for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
-                                        var lhsDate: Int32 = 0
-                                        var rhsDate: Int32 = 0
-                                        if let lhs = lhs as? TelegramChannel {
-                                            lhsDate = lhs.creationDate
-                                        }
-                                        if let rhs = rhs as? TelegramChannel {
-                                            rhsDate = rhs.creationDate
-                                        }
-                                        return lhsDate > rhsDate
-                                    }) {
-                                        entries.append(.existingLinkPeerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, ItemListPeerItemEditing(editable: true, editing: true, revealed: state.revealedRevokePeerId == peer.id), state.revokingPeerId == nil))
-                                        index += 1
-                                    }
-                                } else {
-                                    entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp, true))
-                                }
-                            } else {
-                                entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, "", currentAddressName))
-                                if let status = state.addressNameValidationStatus {
-                                    let text: String
-                                    switch status {
-                                    case let .invalidFormat(error):
-                                        switch error {
-                                            case .startsWithDigit:
-                                                text = presentationData.strings.Group_Username_InvalidStartsWithNumber
-                                            case .startsWithUnderscore:
-                                                text = presentationData.strings.Channel_Username_InvalidStartsWithUnderscore
-                                            case .endsWithUnderscore:
-                                                text = presentationData.strings.Channel_Username_InvalidEndsWithUnderscore
-                                            case .tooShort:
-                                                text = presentationData.strings.Group_Username_InvalidTooShort
-                                            case .invalidCharacters:
-                                                text = presentationData.strings.Channel_Username_InvalidCharacters
-                                            }
-                                    case let .availability(availability):
-                                        switch availability {
-                                        case .available:
-                                            text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).string
-                                        case .invalid:
+                            entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, "", currentAddressName))
+                            if let status = state.addressNameValidationStatus {
+                                let text: String
+                                switch status {
+                                case let .invalidFormat(error):
+                                    switch error {
+                                        case .startsWithDigit:
+                                            text = presentationData.strings.Group_Username_InvalidStartsWithNumber
+                                        case .startsWithUnderscore:
+                                            text = presentationData.strings.Channel_Username_InvalidStartsWithUnderscore
+                                        case .endsWithUnderscore:
+                                            text = presentationData.strings.Channel_Username_InvalidEndsWithUnderscore
+                                        case .tooShort:
+                                            text = presentationData.strings.Group_Username_InvalidTooShort
+                                        case .invalidCharacters:
                                             text = presentationData.strings.Channel_Username_InvalidCharacters
-                                        case .taken:
-                                            text = presentationData.strings.Channel_Username_InvalidTaken
                                         }
-                                    case .checking:
-                                        text = presentationData.strings.Channel_Username_CheckingUsername
+                                case let .availability(availability):
+                                    switch availability {
+                                    case .available:
+                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).string
+                                    case .invalid:
+                                        text = presentationData.strings.Channel_Username_InvalidCharacters
+                                    case .taken:
+                                        text = presentationData.strings.Channel_Username_InvalidTaken
                                     }
-                                    
-                                    entries.append(.publicLinkStatus(presentationData.theme, text, status))
+                                case .checking:
+                                    text = presentationData.strings.Channel_Username_CheckingUsername
                                 }
                                 
-                                entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp))
+                                entries.append(.publicLinkStatus(presentationData.theme, text, status))
                             }
+                            
+                            entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp))
                         case .privateChannel:
                             let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
                             entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
