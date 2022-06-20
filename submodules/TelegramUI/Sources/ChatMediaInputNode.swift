@@ -165,7 +165,7 @@ func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemColle
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, strings: PresentationStrings, premiumStickers: OrderedItemListView? = nil, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false, reorderable: Bool = false) -> [ChatMediaInputPanelEntry] {
+func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, strings: PresentationStrings, hasPremiumStickers: Bool = false, cloudPremiumStickers: OrderedItemListView? = nil, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false, reorderable: Bool = false) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     if hasGifs {
         entries.append(.recentGifs(theme, strings, expanded))
@@ -204,7 +204,7 @@ func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: Ordere
         entries.append(.peerSpecific(theme: theme, peer: peer, expanded: expanded))
     }
     
-    if let premiumStickers = premiumStickers, !premiumStickers.items.isEmpty {
+    if hasPremiumStickers {
         entries.append(.premium(theme, strings, expanded))
     }
     
@@ -261,7 +261,7 @@ func chatMediaInputPanelGifModeEntries(theme: PresentationTheme, strings: Presen
     return entries
 }
 
-func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, trendingPacks: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, premiumStickers: OrderedItemListView? = nil, trendingIsDismissed: Bool = false, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme, hasPremium: Bool, isPremiumDisabled: Bool, trendingIsPremium: Bool) -> [ChatMediaInputGridEntry] {
+func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, trendingPacks: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, premiumStickers: OrderedItemListView? = nil, cloudPremiumStickers: OrderedItemListView? = nil, trendingIsDismissed: Bool = false, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme, hasPremium: Bool, isPremiumDisabled: Bool, trendingIsPremium: Bool) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     if hasSearch && view.lower == nil {
@@ -348,15 +348,35 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
             }
         }
         
-        if let premiumStickers = premiumStickers, !premiumStickers.items.isEmpty && hasPremium && !isPremiumDisabled {
+        if hasPremium && !isPremiumDisabled {
+            var existingStickerIds = Set<Int64>()
             let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_PremiumStickers.uppercased(), shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
-            for i in 0 ..< premiumStickers.items.count {
-                if let item = premiumStickers.items[i].contents.get(RecentMediaItem.self) {
-                    let file = item.media
-                    
-                    let index = ItemCollectionItemIndex(index: Int32(i), id: file.fileId.id)
-                    let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
-                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme, isLocked: stickerItem.file.isPremiumSticker && !hasPremium))
+            
+            if let premiumStickers = premiumStickers {
+                for i in 0 ..< premiumStickers.items.count {
+                    if let item = premiumStickers.items[i].contents.get(RecentMediaItem.self) {
+                        let file = item.media
+                        let index = ItemCollectionItemIndex(index: Int32(i), id: file.fileId.id)
+                        let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
+                        entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme, isLocked: stickerItem.file.isPremiumSticker && !hasPremium))
+                        
+                        existingStickerIds.insert(file.fileId.id)
+                    }
+                }
+            }
+            
+            if let cloudPremiumStickers = cloudPremiumStickers {
+                for i in 0 ..< cloudPremiumStickers.items.count {
+                    if let item = cloudPremiumStickers.items[i].contents.get(RecentMediaItem.self) {
+                        let file = item.media
+                        if !existingStickerIds.contains(file.fileId.id) {
+                            let index = ItemCollectionItemIndex(index: Int32(i), id: file.fileId.id)
+                            let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
+                            entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme, isLocked: stickerItem.file.isPremiumSticker && !hasPremium))
+                            
+                            existingStickerIds.insert(file.fileId.id)
+                        }
+                    }
                 }
             }
         }
@@ -1157,10 +1177,9 @@ final class ChatMediaInputNode: ChatInputNode {
                     savedStickers = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.PremiumStickers {
                     premiumStickers = orderedView
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudPremiumStickers {
+                    cloudPremiumStickers = orderedView
                 }
-//                else if orderedView.collectionId == Namespaces.OrderedItemList.CloudPremiumStickers {
-//                    cloudPremiumStickers = orderedView
-//                }
             }
             
             var installedPacks = Set<ItemCollectionId>()
@@ -1176,9 +1195,19 @@ final class ChatMediaInputNode: ChatInputNode {
             let hasPremium = accountPeer?.isPremium ?? false
             let featuredStickersConfiguration = featuredStickersConfiguration?.get(FeaturedStickersConfiguration.self)
             
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, premiumStickers: hasPremium ? premiumStickers : nil, expanded: panelExpanded, reorderable: true)
+            
+            var hasPremiumStickers = false
+            if hasPremium {
+                if let premiumStickers = premiumStickers, !premiumStickers.items.isEmpty {
+                    hasPremiumStickers = true
+                } else if let cloudPremiumStickers = cloudPremiumStickers, !cloudPremiumStickers.items.isEmpty {
+                    hasPremiumStickers = true
+                }
+            }
+            
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, hasPremiumStickers: hasPremiumStickers, cloudPremiumStickers: hasPremium ? cloudPremiumStickers : nil, expanded: panelExpanded, reorderable: true)
             let gifPaneEntries = chatMediaInputPanelGifModeEntries(theme: theme, strings: strings, reactions: reactions, animatedEmojiStickers: animatedEmojiStickers, expanded: panelExpanded)
-            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, installedPacks: installedPacks, premiumStickers: premiumStickers, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme, hasPremium: hasPremium, isPremiumDisabled: premiumConfiguration.isPremiumDisabled, trendingIsPremium: featuredStickersConfiguration?.isPremium ?? false)
+            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, installedPacks: installedPacks, premiumStickers: premiumStickers, cloudPremiumStickers: cloudPremiumStickers, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme, hasPremium: hasPremium, isPremiumDisabled: premiumConfiguration.isPremiumDisabled, trendingIsPremium: featuredStickersConfiguration?.isPremium ?? false)
             
             if view.higher == nil {
                 var hasTopSeparator = true
