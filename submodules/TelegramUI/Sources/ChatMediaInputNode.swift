@@ -1169,7 +1169,7 @@ final class ChatMediaInputNode: ChatInputNode {
             var savedStickers: OrderedItemListView?
             var recentStickers: OrderedItemListView?
             var premiumStickers: OrderedItemListView?
-//            var cloudPremiumStickers: OrderedItemListView?
+            var cloudPremiumStickers: OrderedItemListView?
             for orderedView in view.orderedItemListsViews {
                 if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
                     recentStickers = orderedView
