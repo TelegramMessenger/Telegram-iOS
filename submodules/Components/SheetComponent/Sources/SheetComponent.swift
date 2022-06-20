@@ -170,14 +170,14 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                 let transition = ContainedViewLayoutTransition.animated(duration: 0.35, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
                 
                 let contentOffset = (self.scrollView.contentOffset.y + self.scrollView.contentInset.top - self.scrollView.contentSize.height) * -1.0
-                let dismissalOffset = self.scrollView.contentSize.height
+                let dismissalOffset = self.scrollView.contentSize.height + abs(self.contentView.frame.minY)
                 let delta = dismissalOffset - contentOffset
                 
                 transition.updatePosition(layer: self.scrollView.layer, position: CGPoint(x: self.scrollView.center.x, y: self.scrollView.center.y + delta), completion: { _ in
                     completion()
                 })
             } else {
-                self.scrollView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.scrollView.contentSize.height), duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
+                self.scrollView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.scrollView.contentSize.height + abs(self.contentView.frame.minY)), duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
                     completion()
                 })
             }
@@ -223,8 +223,9 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             self.ignoreScrolling = true
 
             if sheetEnvironment.isCentered {
-                transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - contentSize.width) / 2.0), y: 0.0), size: contentSize), completion: nil)
-                transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - contentSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - contentSize.height) / 2.0)), size: contentSize), completion: nil)
+                let y: CGFloat = floorToScreenPixels((availableSize.height - contentSize.height) / 2.0)
+                transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - contentSize.width) / 2.0), y: -y), size: contentSize), completion: nil)
+                transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - contentSize.width) / 2.0), y: -y), size: contentSize), completion: nil)
             } else {
                 transition.setFrame(view: self.contentView, frame: CGRect(origin: .zero, size: contentSize), completion: nil)
                 transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: contentSize.width, height: contentSize.height + 1000.0)), completion: nil)
