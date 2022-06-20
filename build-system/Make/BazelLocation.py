@@ -5,6 +5,9 @@ import sys
 from BuildEnvironment import is_apple_silicon, resolve_executable, call_executable, BuildEnvironmentVersions
 
 def locate_bazel(base_path):
+    if not os.path.isdir('{}/base_path'.format(base_path)):
+        os.mkdir('{}/base_path'.format(base_path))
+
     versions = BuildEnvironmentVersions(base_path=os.getcwd())
     if is_apple_silicon():
         arch = 'darwin-arm64'
