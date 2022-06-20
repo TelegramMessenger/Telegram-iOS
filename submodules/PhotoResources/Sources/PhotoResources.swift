@@ -593,11 +593,7 @@ public func chatMessagePhotoInternal(photoData: Signal<Tuple4<Data?, Data?, Chat
         let fullSizeComplete = value._3
         return ({
             return nil
-        }, quality, { arguments in
-            if !synchronousLoad {
-                assert(!Thread.isMainThread)
-            }
-            
+        }, quality, { arguments in            
             let drawingRect = arguments.drawingRect
             var fittedSize = arguments.imageSize
             if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
