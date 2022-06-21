@@ -10,25 +10,30 @@ import MultiAnimationRenderer
 import AnimationCache
 import AccountContext
 import LottieAnimationCache
+import VideoAnimationCache
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import SwiftSignalKit
 import ShimmerEffect
 import PagerComponent
+import StickerResources
 
 public final class EmojiPagerContentComponent: Component {
     public typealias EnvironmentType = (EntityKeyboardChildEnvironment, PagerComponentChildEnvironment)
     
     public final class InputInteraction {
-        public let performItemAction: (Item, UIView, CGRect) -> Void
+        public let performItemAction: (Item, UIView, CGRect, CALayer) -> Void
         public let deleteBackwards: () -> Void
+        public let openStickerSettings: () -> Void
         
         public init(
-            performItemAction: @escaping (Item, UIView, CGRect) -> Void,
-            deleteBackwards: @escaping () -> Void
+            performItemAction: @escaping (Item, UIView, CGRect, CALayer) -> Void,
+            deleteBackwards: @escaping () -> Void,
+            openStickerSettings: @escaping () -> Void
         ) {
             self.performItemAction = performItemAction
             self.deleteBackwards = deleteBackwards
+            self.openStickerSettings = openStickerSettings
         }
     }
     
@@ -251,6 +256,11 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         final class ItemLayer: MultiAnimationRenderTarget {
+            struct Key: Hashable {
+                var groupId: AnyHashable
+                var fileId: MediaId
+            }
+            
             let item: Item
             
             private let file: TelegramMediaFile
@@ -290,38 +300,60 @@ public final class EmojiPagerContentComponent: Component {
                 
                 super.init()
                 
-                if attemptSynchronousLoad {
-                    if !renderer.loadFirstFrameSynchronously(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize) {
-                        self.displayPlaceholder = true
+                if file.isAnimatedSticker || file.isVideoSticker {
+                    if attemptSynchronousLoad {
+                        if !renderer.loadFirstFrameSynchronously(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize) {
+                            self.displayPlaceholder = true
+                            
+                            if let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: self.size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor) {
+                                self.contents = image.cgImage
+                            }
+                        }
+                    }
+                    
+                    self.disposable = renderer.add(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: { size, writer in
+                        let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
                         
-                        if let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: self.size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor) {
-                            self.contents = image.cgImage
+                        let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
+                            guard let result = result else {
+                                return
+                            }
+                            
+                            if file.isVideoSticker {
+                                cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
+                            } else {
+                                guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
+                                    writer.finish()
+                                    return
+                                }
+                                cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
+                            }
+                        })
+                        
+                        let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: stickerPackFileReference(file), resource: file.resource).start()
+                        
+                        return ActionDisposable {
+                            dataDisposable.dispose()
+                            fetchDisposable.dispose()
                         }
-                    }
-                }
-                
-                self.disposable = renderer.add(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: { size, writer in
-                    let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
-                    
-                    let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
-                        guard let result = result else {
-                            return
-                        }
-                                
-                        guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
-                            writer.finish()
-                            return
-                        }
-                        cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
                     })
-                    
-                    let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
-                    
-                    return ActionDisposable {
-                        dataDisposable.dispose()
-                        fetchDisposable.dispose()
-                    }
-                })
+                } else if let dimensions = file.dimensions {
+                    let isSmall: Bool = false
+                    self.disposable = (chatMessageSticker(account: context.account, file: file, small: isSmall, synchronousLoad: attemptSynchronousLoad)).start(next: { [weak self] resultTransform in
+                        let boundingSize = CGSize(width: 93.0, height: 93.0)
+                        let imageSize = dimensions.cgSize.aspectFilled(boundingSize)
+                        
+                        if let image = resultTransform(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .fill(.clear)))?.generateImage() {
+                            Queue.mainQueue().async {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                strongSelf.contents = image.cgImage
+                            }
+                        }
+                    })
+                }
             }
             
             override public init(layer: Any) {
@@ -381,7 +413,7 @@ public final class EmojiPagerContentComponent: Component {
         
         private let scrollView: UIScrollView
         
-        private var visibleItemLayers: [MediaId: ItemLayer] = [:]
+        private var visibleItemLayers: [ItemLayer.Key: ItemLayer] = [:]
         private var visibleGroupHeaders: [AnyHashable: ComponentHostView<Empty>] = [:]
         private var ignoreScrolling: Bool = false
         
@@ -402,7 +434,7 @@ public final class EmojiPagerContentComponent: Component {
             if #available(iOS 13.0, *) {
                 self.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
             }
-            self.scrollView.showsVerticalScrollIndicator = false
+            self.scrollView.showsVerticalScrollIndicator = true
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
@@ -416,18 +448,18 @@ public final class EmojiPagerContentComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                if let component = self.component, let item = self.item(atPoint: recognizer.location(in: self)), let itemView = self.visibleItemLayers[item.file.fileId] {
-                    component.inputInteraction.performItemAction(item, self, self.scrollView.convert(itemView.frame, to: self))
+                if let component = self.component, let (item, itemKey) = self.item(atPoint: recognizer.location(in: self)), let itemLayer = self.visibleItemLayers[itemKey] {
+                    component.inputInteraction.performItemAction(item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer)
                 }
             }
         }
         
-        private func item(atPoint point: CGPoint) -> Item? {
+        private func item(atPoint point: CGPoint) -> (Item, ItemLayer.Key)? {
             let localPoint = self.convert(point, to: self.scrollView)
             
-            for (_, itemLayer) in self.visibleItemLayers {
+            for (key, itemLayer) in self.visibleItemLayers {
                 if itemLayer.frame.contains(localPoint) {
-                    return itemLayer.item
+                    return (itemLayer.item, key)
                 }
             }
             
@@ -519,7 +551,7 @@ public final class EmojiPagerContentComponent: Component {
                 return
             }
             
-            var validIds = Set<MediaId>()
+            var validIds = Set<ItemLayer.Key>()
             var validGroupHeaderIds = Set<AnyHashable>()
             
             for groupItems in itemLayout.visibleItems(for: self.scrollView.bounds) {
@@ -549,7 +581,7 @@ public final class EmojiPagerContentComponent: Component {
                 
                 for index in groupItems.groupItems.lowerBound ..< groupItems.groupItems.upperBound {
                     let item = itemGroup.items[index]
-                    let itemId = item.file.fileId
+                    let itemId = ItemLayer.Key(groupId: itemGroup.id, fileId: item.file.fileId)
                     validIds.insert(itemId)
                     
                     let itemLayer: ItemLayer
@@ -566,7 +598,7 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
 
-            var removedIds: [MediaId] = []
+            var removedIds: [ItemLayer.Key] = []
             for (id, itemLayer) in self.visibleItemLayers {
                 if !validIds.contains(id) {
                     removedIds.append(id)
@@ -611,6 +643,9 @@ public final class EmojiPagerContentComponent: Component {
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize))
             if self.scrollView.contentSize != itemLayout.contentSize {
                 self.scrollView.contentSize = itemLayout.contentSize
+            }
+            if self.scrollView.scrollIndicatorInsets != pagerEnvironment.containerInsets {
+                self.scrollView.scrollIndicatorInsets = pagerEnvironment.containerInsets
             }
             self.previousScrollingOffset = self.scrollView.contentOffset.y
             self.ignoreScrolling = false

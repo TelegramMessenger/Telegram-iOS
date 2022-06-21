@@ -816,7 +816,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, enqueueMessage: { message in
                 self?.sendMessages([message])
             }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference, sourceNode, sourceRect in
-                return self?.controllerInteraction?.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect) ?? false
+                return self?.controllerInteraction?.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil) ?? false
             } : nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
                 if let strongSelf = self {
                     strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { entry in
@@ -1494,7 +1494,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
             }
             strongSelf.sendMessages([.message(text: text, attributes: attributes, mediaReference: nil, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil)])
-        }, sendSticker: { [weak self] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect in
+        }, sendSticker: { [weak self] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
             guard let strongSelf = self else {
                 return false
             }
@@ -1568,8 +1568,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanelSearch(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
                 } else if let sourceNode = sourceView.asyncdisplaykit_node as? ChatEmptyNodeStickerContentNode {
                     strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .emptyPanel(itemNode: sourceNode), replyPanel: nil), initiated: {})
-                } else {
-                    
+                } else if let sourceLayer = sourceLayer {
+                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .universal(sourceContainerView: sourceView, sourceRect: sourceRect, sourceLayer: sourceLayer), replyPanel: replyPanel), initiated: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
+                            var current = current
+                            current = current.updatedInputMode { current in
+                                if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil {
+                                    return .media(mode: mode, expanded: nil, focused: focused)
+                                }
+                                return current
+                            }
+
+                            return current
+                        })
+                    })
                 }
             }
             
@@ -1589,10 +1604,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.sendMessages(transformedMessages)
             }
             return true
-        }, sendGif: { [weak self] fileReference, sourceNode, sourceRect, silentPosting, schedule in
+        }, sendGif: { [weak self] fileReference, sourceView, sourceRect, silentPosting, schedule in
             if let strongSelf = self {
                 if let _ = strongSelf.presentationInterfaceState.slowmodeState, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
-                    strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceNode.view, sourceRect)
+                    strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceView, sourceRect)
                     return false
                 }
                 
@@ -7583,9 +7598,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-        }, sendSticker: { [weak self] file, clearInput, sourceView, sourceRect in
+        }, sendSticker: { [weak self] file, clearInput, sourceView, sourceRect, sourceLayer in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
-                return strongSelf.controllerInteraction?.sendSticker(file, false, false, nil, clearInput, sourceView, sourceRect) ?? false
+                return strongSelf.controllerInteraction?.sendSticker(file, false, false, nil, clearInput, sourceView, sourceRect, sourceLayer) ?? false
             } else {
                 return false
             }
@@ -14846,7 +14861,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     break
                 }
         }, sendFile: nil, sendSticker: { [weak self] f, sourceView, sourceRect in
-            return self?.interfaceInteraction?.sendSticker(f, true, sourceView, sourceRect) ?? false
+            return self?.interfaceInteraction?.sendSticker(f, true, sourceView, sourceRect, nil) ?? false
         }, requestMessageActionUrlAuth: { [weak self] subject in
             if case let .url(url) = subject {
                 self?.controllerInteraction?.requestMessageActionUrlAuth(url, subject)

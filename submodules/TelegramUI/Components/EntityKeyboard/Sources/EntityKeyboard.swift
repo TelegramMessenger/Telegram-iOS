@@ -30,6 +30,7 @@ public final class EntityKeyboardComponent: Component {
     public let bottomInset: CGFloat
     public let emojiContent: EmojiPagerContentComponent
     public let stickerContent: EmojiPagerContentComponent
+    public let gifContent: GifPagerContentComponent
     public let externalTopPanelContainer: UIView?
     public let topPanelExtensionUpdated: (CGFloat, Transition) -> Void
     
@@ -38,6 +39,7 @@ public final class EntityKeyboardComponent: Component {
         bottomInset: CGFloat,
         emojiContent: EmojiPagerContentComponent,
         stickerContent: EmojiPagerContentComponent,
+        gifContent: GifPagerContentComponent,
         externalTopPanelContainer: UIView?,
         topPanelExtensionUpdated: @escaping (CGFloat, Transition) -> Void
     ) {
@@ -45,6 +47,7 @@ public final class EntityKeyboardComponent: Component {
         self.bottomInset = bottomInset
         self.emojiContent = emojiContent
         self.stickerContent = stickerContent
+        self.gifContent = gifContent
         self.externalTopPanelContainer = externalTopPanelContainer
         self.topPanelExtensionUpdated = topPanelExtensionUpdated
     }
@@ -60,6 +63,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.stickerContent != rhs.stickerContent {
+            return false
+        }
+        if lhs.gifContent != rhs.gifContent {
             return false
         }
         if lhs.externalTopPanelContainer != rhs.externalTopPanelContainer {
@@ -94,24 +100,78 @@ public final class EntityKeyboardComponent: Component {
             var contentIcons: [AnyComponentWithIdentity<Empty>] = []
             var contentAccessoryRightButtons: [AnyComponentWithIdentity<Empty>] = []
             
-            var topStickertems: [EntityKeyboardTopPanelComponent.Item] = []
+            contents.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(component.gifContent)))
+            var topGifItems: [EntityKeyboardTopPanelComponent.Item] = []
+            topGifItems.append(EntityKeyboardTopPanelComponent.Item(
+                id: "recent",
+                content: AnyComponent(BundleIconComponent(
+                    name: "Chat/Input/Media/RecentTabIcon",
+                    tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+                    maxSize: CGSize(width: 30.0, height: 30.0))
+                )
+            ))
+            topGifItems.append(EntityKeyboardTopPanelComponent.Item(
+                id: "trending",
+                content: AnyComponent(BundleIconComponent(
+                    name: "Chat/Input/Media/TrendingGifs",
+                    tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+                    maxSize: CGSize(width: 30.0, height: 30.0))
+                )
+            ))
+            contentTopPanels.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(EntityKeyboardTopPanelComponent(
+                theme: component.theme,
+                items: topGifItems
+            ))))
+            contentIcons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(BundleIconComponent(
+                name: "Chat/Input/Media/EntityInputGifsIcon",
+                tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+                maxSize: nil
+            ))))
+            /*contentAccessoryRightButtons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(Button(
+                content: AnyComponent(BundleIconComponent(
+                    name: "Chat/Input/Media/EntityInputSettingsIcon",
+                    tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+                    maxSize: nil
+                )),
+                action: {
+                }
+            ).minSize(CGSize(width: 38.0, height: 38.0)))))*/
+            
+            var topStickerItems: [EntityKeyboardTopPanelComponent.Item] = []
             for itemGroup in component.stickerContent.itemGroups {
-                if !itemGroup.items.isEmpty {
-                    topStickertems.append(EntityKeyboardTopPanelComponent.Item(
-                        id: AnyHashable(itemGroup.items[0].file.fileId),
-                        content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
-                            context: component.stickerContent.context,
-                            file: itemGroup.items[0].file,
-                            animationCache: component.stickerContent.animationCache,
-                            animationRenderer: component.stickerContent.animationRenderer
+                if let id = itemGroup.id.base as? String {
+                    let iconMapping: [String: String] = [
+                        "recent": "Chat/Input/Media/RecentTabIcon",
+                        "premium": "Chat/Input/Media/PremiumIcon"
+                    ]
+                    if let iconName = iconMapping[id] {
+                        topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
+                            id: id,
+                            content: AnyComponent(BundleIconComponent(
+                                name: iconName,
+                                tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+                                maxSize: CGSize(width: 30.0, height: 30.0))
+                            )
                         ))
-                    ))
+                    }
+                } else {
+                    if !itemGroup.items.isEmpty {
+                        topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
+                            id: AnyHashable(itemGroup.items[0].file.fileId),
+                            content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
+                                context: component.stickerContent.context,
+                                file: itemGroup.items[0].file,
+                                animationCache: component.stickerContent.animationCache,
+                                animationRenderer: component.stickerContent.animationRenderer
+                            ))
+                        ))
+                    }
                 }
             }
             contents.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(component.stickerContent)))
             contentTopPanels.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(EntityKeyboardTopPanelComponent(
                 theme: component.theme,
-                items: topStickertems
+                items: topStickerItems
             ))))
             contentIcons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(BundleIconComponent(
                 name: "Chat/Input/Media/EntityInputStickersIcon",
@@ -125,6 +185,7 @@ public final class EntityKeyboardComponent: Component {
                     maxSize: nil
                 )),
                 action: {
+                    component.stickerContent.inputInteraction.openStickerSettings()
                 }
             ).minSize(CGSize(width: 38.0, height: 38.0)))))
             
@@ -143,7 +204,6 @@ public final class EntityKeyboardComponent: Component {
                     ))
                 }
             }
-            
             contentTopPanels.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(EntityKeyboardTopPanelComponent(
                 theme: component.theme,
                 items: topEmojiItems

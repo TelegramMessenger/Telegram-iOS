@@ -46,19 +46,22 @@ public final class PagerComponentPanelEnvironment: Equatable {
     public let contentIcons: [AnyComponentWithIdentity<Empty>]
     public let contentAccessoryRightButtons: [AnyComponentWithIdentity<Empty>]
     public let activeContentId: AnyHashable?
+    public let navigateToContentId: (AnyHashable) -> Void
     
     init(
         contentOffset: CGFloat,
         contentTopPanels: [AnyComponentWithIdentity<Empty>],
         contentIcons: [AnyComponentWithIdentity<Empty>],
         contentAccessoryRightButtons: [AnyComponentWithIdentity<Empty>],
-        activeContentId: AnyHashable?
+        activeContentId: AnyHashable?,
+        navigateToContentId: @escaping (AnyHashable) -> Void
     ) {
         self.contentOffset = contentOffset
         self.contentTopPanels = contentTopPanels
         self.contentIcons = contentIcons
         self.contentAccessoryRightButtons = contentAccessoryRightButtons
         self.activeContentId = activeContentId
+        self.navigateToContentId = navigateToContentId
     }
     
     public static func ==(lhs: PagerComponentPanelEnvironment, rhs: PagerComponentPanelEnvironment) -> Bool {
@@ -253,6 +256,16 @@ public final class PagerComponent<ChildEnvironmentType: Equatable>: Component {
             self.component = component
             self.state = state
             
+            let navigateToContentId: (AnyHashable) -> Void = { [weak self] id in
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.centralId != id {
+                    strongSelf.centralId = id
+                    strongSelf.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                }
+            }
+            
             var centralId: AnyHashable?
             if let current = self.centralId {
                 if component.contents.contains(where: { $0.id == current }) {
@@ -309,7 +322,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable>: Component {
                             contentTopPanels: component.contentTopPanels,
                             contentIcons: [],
                             contentAccessoryRightButtons: [],
-                            activeContentId: centralId
+                            activeContentId: centralId,
+                            navigateToContentId: navigateToContentId
                         )
                     },
                     containerSize: availableSize
@@ -356,7 +370,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable>: Component {
                             contentTopPanels: [],
                             contentIcons: component.contentIcons,
                             contentAccessoryRightButtons: component.contentAccessoryRightButtons,
-                            activeContentId: centralId
+                            activeContentId: centralId,
+                            navigateToContentId: navigateToContentId
                         )
                     },
                     containerSize: availableSize
@@ -404,15 +419,27 @@ public final class PagerComponent<ChildEnvironmentType: Equatable>: Component {
             if let centralId = self.centralId, let centralIndex = component.contents.firstIndex(where: { $0.id == centralId }) {
                 let contentSize = CGSize(width: availableSize.width, height: availableSize.height)
                 
+                var referenceFrames: [AnyHashable: CGRect] = [:]
+                if case .none = transition.animation {
+                } else {
+                    for (id, contentView) in self.contentViews {
+                        referenceFrames[id] = contentView.view.frame
+                    }
+                }
+                
                 for index in 0 ..< component.contents.count {
                     let indexOffset = index - centralIndex
-                    var contentFrame = CGRect(origin: CGPoint(x: contentSize.width * CGFloat(indexOffset), y: 0.0), size: contentSize)
+                    let clippedIndexOffset = max(-1, min(1, indexOffset))
+                    var checkingContentFrame = CGRect(origin: CGPoint(x: contentSize.width * CGFloat(indexOffset), y: 0.0), size: contentSize)
+                    var contentFrame = CGRect(origin: CGPoint(x: contentSize.width * CGFloat(clippedIndexOffset), y: 0.0), size: contentSize)
+                    
                     if let paneTransitionGestureState = self.paneTransitionGestureState {
+                        checkingContentFrame.origin.x += paneTransitionGestureState.fraction * availableSize.width
                         contentFrame.origin.x += paneTransitionGestureState.fraction * availableSize.width
                     }
                     let content = component.contents[index]
                     
-                    let isInBounds = CGRect(origin: CGPoint(), size: availableSize).intersects(contentFrame)
+                    let isInBounds = CGRect(origin: CGPoint(), size: availableSize).intersects(checkingContentFrame)
                     
                     var isPartOfTransition = false
                     if case .none = transition.animation {
@@ -462,7 +489,35 @@ public final class PagerComponent<ChildEnvironmentType: Equatable>: Component {
                         )
                         
                         if wasAdded {
-                            contentView.view.frame = contentFrame
+                            if case .none = transition.animation {
+                                contentView.view.frame = contentFrame
+                            } else {
+                                var referenceDirectionIsRight: Bool?
+                                for (previousId, previousFrame) in referenceFrames {
+                                    if let previousIndex = component.contents.firstIndex(where: { $0.id == previousId }) {
+                                        if previousFrame.minX == 0.0 {
+                                            if previousIndex < index {
+                                                referenceDirectionIsRight = true
+                                            } else {
+                                                referenceDirectionIsRight = false
+                                            }
+                                            break
+                                        }
+                                    }
+                                }
+                                if let referenceDirectionIsRight = referenceDirectionIsRight {
+                                    contentView.view.frame = contentFrame.offsetBy(dx: referenceDirectionIsRight ? contentFrame.width : (-contentFrame.width), dy: 0.0)
+                                    transition.setFrame(view: contentView.view, frame: contentFrame, completion: { [weak self] completed in
+                                        if completed && !isInBounds && isPartOfTransition {
+                                            DispatchQueue.main.async {
+                                                self?.state?.updated(transition: .immediate)
+                                            }
+                                        }
+                                    })
+                                } else {
+                                    contentView.view.frame = contentFrame
+                                }
+                            }
                         } else {
                             transition.setFrame(view: contentView.view, frame: contentFrame, completion: { [weak self] completed in
                                 if completed && !isInBounds && isPartOfTransition {

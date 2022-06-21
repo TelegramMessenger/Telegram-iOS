@@ -11,9 +11,14 @@ import BundleIconComponent
 
 private final class BottomPanelIconComponent: Component {
     let content: AnyComponent<Empty>
+    let action: () -> Void
     
-    init(content: AnyComponent<Empty>) {
+    init(
+        content: AnyComponent<Empty>,
+        action: @escaping () -> Void
+    ) {
         self.content = content
+        self.action = action
     }
     
     static func ==(lhs: BottomPanelIconComponent, rhs: BottomPanelIconComponent) -> Bool {
@@ -27,19 +32,31 @@ private final class BottomPanelIconComponent: Component {
     final class View: UIView {
         let contentView: ComponentHostView<Empty>
         
+        var component: BottomPanelIconComponent?
+        
         override init(frame: CGRect) {
             self.contentView = ComponentHostView<Empty>()
+            self.contentView.isUserInteractionEnabled = false
             
             super.init(frame: frame)
             
             self.addSubview(self.contentView)
+            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
+        @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+            if case .ended = recognizer.state {
+                self.component?.action()
+            }
+        }
+        
         func update(component: BottomPanelIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.component = component
+            
             let size = CGSize(width: 32.0, height: 32.0)
             
             let contentSize = self.contentView.update(
@@ -169,12 +186,7 @@ final class EntityKeyboardBottomPanelComponent: Component {
                 
                 let rightAccessoryButtonSize = rightAccessoryButton.view.update(
                     transition: rightAccessoryButtonTransition,
-                    component: AnyComponent(Button(
-                        content: rightAccessoryButtonComponent.component,
-                        action: { [weak self] in
-                            self?.component?.deleteBackwards()
-                        }
-                    ).minSize(CGSize(width: intrinsicHeight, height: intrinsicHeight))),
+                    component: rightAccessoryButtonComponent.component,
                     environment: {},
                     containerSize: CGSize(width: .greatestFiniteMagnitude, height: intrinsicHeight)
                 )
@@ -208,6 +220,8 @@ final class EntityKeyboardBottomPanelComponent: Component {
             var iconTotalSize = CGSize()
             let iconSpacing: CGFloat = 22.0
             
+            let navigateToContentId = panelEnvironment.navigateToContentId
+            
             for icon in panelEnvironment.contentIcons {
                 validIconIds.append(icon.id)
                 
@@ -225,7 +239,10 @@ final class EntityKeyboardBottomPanelComponent: Component {
                 let iconSize = iconView.update(
                     transition: iconTransition,
                     component: AnyComponent(BottomPanelIconComponent(
-                        content: icon.component
+                        content: icon.component,
+                        action: {
+                            navigateToContentId(icon.id)
+                        }
                     )),
                     environment: {},
                     containerSize: CGSize(width: 32.0, height: 32.0)

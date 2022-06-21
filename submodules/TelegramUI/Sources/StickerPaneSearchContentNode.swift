@@ -226,7 +226,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
                 let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
-                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
+                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
                     } else {
                         return false
                     }
@@ -321,7 +321,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             }
         }, sendSticker: { [weak self] file, sourceView, sourceRect in
             if let strongSelf = self {
-                let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceView, sourceRect)
+                let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
             }
         }, getItemIsPreviewed: { item in
             return inputNodeInteraction.previewedStickerPackItem == .pack(item)

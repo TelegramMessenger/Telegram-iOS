@@ -252,14 +252,14 @@ final class EntityKeyboardTopPanelComponent: Component {
                         self.itemViews[item.id] = itemView
                     }
                     
-                    let itemFrame = itemLayout.contentFrame(at: index)
-                    itemView.frame = itemFrame
-                    let _ = itemView.update(
+                    let itemOuterFrame = itemLayout.contentFrame(at: index)
+                    let itemSize = itemView.update(
                         transition: .immediate,
                         component: item.content,
                         environment: {},
-                        containerSize: itemFrame.size
+                        containerSize: itemOuterFrame.size
                     )
+                    itemView.frame = CGRect(origin: CGPoint(x: itemOuterFrame.minX + floor((itemOuterFrame.width - itemSize.width) / 2.0), y: itemOuterFrame.minY + floor((itemOuterFrame.height - itemSize.height) / 2.0)), size: itemSize)
                 }
             }
             var removedIds: [AnyHashable] = []

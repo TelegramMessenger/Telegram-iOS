@@ -1487,17 +1487,17 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
 
         let localSourceContentFrame = CGRect(
             origin: CGPoint(
-                x: self.imageNode.frame.minX + self.imageNode.frame.size.width / 2.0 - stickerSource.imageNode.frame.size.width / 2.0,
-                y: self.imageNode.frame.minY + self.imageNode.frame.size.height / 2.0 - stickerSource.imageNode.frame.size.height / 2.0
+                x: self.imageNode.frame.minX + self.imageNode.frame.size.width / 2.0 - stickerSource.sourceFrame.size.width / 2.0,
+                y: self.imageNode.frame.minY + self.imageNode.frame.size.height / 2.0 - stickerSource.sourceFrame.size.height / 2.0
             ),
-            size: stickerSource.imageNode.frame.size
+            size: stickerSource.sourceFrame.size
         )
 
         var snapshotView: UIView?
         if let animationNode = stickerSource.animationNode {
             snapshotView = animationNode.view.snapshotContentTree()
         } else {
-            snapshotView = stickerSource.imageNode.view.snapshotContentTree()
+            snapshotView = stickerSource.snapshotContentTree()
         }
         snapshotView?.frame = localSourceContentFrame
 
@@ -1518,7 +1518,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             y: localSourceCenter.y - localSourceContentFrame.height / 2.0
         )
 
-        let sourceScale: CGFloat = stickerSource.imageNode.frame.height / self.imageNode.frame.height
+        let sourceScale: CGFloat = stickerSource.sourceFrame.height / self.imageNode.frame.height
 
         let offset = CGPoint(
             x: sourceCenter.x - self.imageNode.frame.midX,
@@ -1554,8 +1554,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             animationNode.layer.animateAlpha(from: 0.0, to: animationNode.alpha, duration: 0.4)
         }
 
-        stickerSource.imageNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-        stickerSource.imageNode.layer.animateAlpha(from: 0.0, to: stickerSource.imageNode.alpha, duration: 0.4)
+        if let sourceLayer = stickerSource.sourceLayer {
+            sourceLayer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            sourceLayer.animateAlpha(from: 0.0, to: CGFloat(sourceLayer.opacity), duration: 0.4)
+        }
 
         if let placeholderNode = stickerSource.placeholderNode {
             placeholderNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)

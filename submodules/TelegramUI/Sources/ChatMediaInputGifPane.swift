@@ -238,7 +238,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                 if let (collection, result) = file.contextResult {
                     let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect, false)
                 } else {
-                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode, sourceRect, false, false)
+                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode.view, sourceRect, false, false)
                 }
             }
             
