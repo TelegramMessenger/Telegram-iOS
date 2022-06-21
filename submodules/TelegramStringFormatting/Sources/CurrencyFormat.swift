@@ -19,6 +19,21 @@ private final class CurrencyFormatterEntry {
     }
 }
 
+private func getCurrencyExp(currency: String) -> Int {
+    switch currency {
+    case "CLF":
+        return 4
+    case "BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND":
+        return 3
+    case "BIF", "BYR", "CLP", "CVE", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "UYI", "VND", "VUV", "XAF", "XOF", "XPF":
+        return 0
+    case "MRO":
+        return 1
+    default:
+        return 2
+    }
+}
+
 private func loadCurrencyFormatterEntries() -> [String: CurrencyFormatterEntry] {
     guard let filePath = getAppBundle().path(forResource: "currencies", ofType: "json") else {
         return [:]
@@ -35,7 +50,14 @@ private func loadCurrencyFormatterEntries() -> [String: CurrencyFormatterEntry] 
     
     for (code, contents) in dict {
         if let contentsDict = contents as? [String: AnyObject] {
-            let entry = CurrencyFormatterEntry(symbol: contentsDict["symbol"] as! String, thousandsSeparator: contentsDict["thousandsSeparator"] as! String, decimalSeparator: contentsDict["decimalSeparator"] as! String, symbolOnLeft: (contentsDict["symbolOnLeft"] as! NSNumber).boolValue, spaceBetweenAmountAndSymbol: (contentsDict["spaceBetweenAmountAndSymbol"] as! NSNumber).boolValue, decimalDigits: (contentsDict["decimalDigits"] as! NSNumber).intValue)
+            let entry = CurrencyFormatterEntry(
+                symbol: contentsDict["symbol"] as! String,
+                thousandsSeparator: contentsDict["thousandsSeparator"] as! String,
+                decimalSeparator: contentsDict["decimalSeparator"] as! String,
+                symbolOnLeft: (contentsDict["symbolOnLeft"] as! NSNumber).boolValue,
+                spaceBetweenAmountAndSymbol: (contentsDict["spaceBetweenAmountAndSymbol"] as! NSNumber).boolValue,
+                decimalDigits: getCurrencyExp(currency: code.uppercased())
+            )
             result[code] = entry
             result[code.lowercased()] = entry
         }
