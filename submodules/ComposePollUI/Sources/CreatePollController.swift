@@ -932,15 +932,9 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     weak var currentTooltipController: TooltipController?
     let controller = CreatePollControllerImpl(context: context, state: signal)
     controller.navigationPresentation = .modal
-//    controller.visibleBottomContentOffsetChanged = { [weak controller] offset in
-//        switch offset {
-//            case let .known(value):
-//                let backgroundAlpha: CGFloat = min(30.0, value) / 30.0
-//                controller?.updateTabBarAlpha(backgroundAlpha, .immediate)
-//            case .unknown, .none:
-//                controller?.updateTabBarAlpha(1.0, .immediate)
-//        }
-//    }
+    controller.visibleBottomContentOffsetChanged = { [weak controller] _ in
+        controller?.updateTabBarAlpha(1.0, .immediate)
+    }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

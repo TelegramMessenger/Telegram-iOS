@@ -606,6 +606,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         blocksBackgroundColor: additionalBackgroundColor,
         modalBlocksBackgroundColor: additionalBackgroundColor,
         plainBackgroundColor: additionalBackgroundColor,
+        modalPlainBackgroundColor: mainBackgroundColor,
         itemPrimaryTextColor: UIColor(rgb: 0xffffff),
         itemSecondaryTextColor: mainSecondaryTextColor.withAlphaComponent(0.5),
         itemDisabledTextColor: mainSecondaryTextColor.withAlphaComponent(0.5),

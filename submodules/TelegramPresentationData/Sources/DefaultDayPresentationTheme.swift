@@ -449,6 +449,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         blocksBackgroundColor: UIColor(rgb: 0xefeff4),
         modalBlocksBackgroundColor: UIColor(rgb: 0xefeff4),
         plainBackgroundColor: UIColor(rgb: 0xffffff),
+        modalPlainBackgroundColor: UIColor(rgb: 0xffffff),
         itemPrimaryTextColor: UIColor(rgb: 0x000000),
         itemSecondaryTextColor: UIColor(rgb: 0x8e8e93),
         itemDisabledTextColor: UIColor(rgb: 0x8e8e93),

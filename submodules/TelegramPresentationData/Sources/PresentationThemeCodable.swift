@@ -815,6 +815,7 @@ extension PresentationThemeList: Codable {
         case blocksBg
         case modalBlocksBg
         case plainBg
+        case modalPlainBg
         case primaryText
         case secondaryText
         case disabledText
@@ -864,6 +865,7 @@ extension PresentationThemeList: Codable {
             blocksBackgroundColor: try decodeColor(values, .blocksBg),
             modalBlocksBackgroundColor: try decodeColor(values, .modalBlocksBg, decoder: decoder, fallbackKey: "list.blocksBg"),
             plainBackgroundColor: try decodeColor(values, .plainBg),
+            modalPlainBackgroundColor: try decodeColor(values, .modalPlainBg, decoder: decoder, fallbackKey: "list.plainBg"),
             itemPrimaryTextColor: try decodeColor(values, .primaryText),
             itemSecondaryTextColor: try decodeColor(values, .secondaryText),
             itemDisabledTextColor: try decodeColor(values, .disabledText),
