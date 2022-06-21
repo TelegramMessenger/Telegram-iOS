@@ -875,6 +875,7 @@ public class Account {
     
     private let serviceQueue = Queue()
     
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     public private(set) var stateManager: AccountStateManager!
     private(set) var contactSyncManager: ContactSyncManager!
     public private(set) var callSessionManager: CallSessionManager!
@@ -935,6 +936,7 @@ public class Account {
     private let smallLogPostDisposable = MetaDisposable()
     
     public init(accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool) {
+        self.accountManager = accountManager
         self.id = id
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
@@ -1147,7 +1149,6 @@ public class Account {
                 }
             }
         }))
-        self.managedOperationsDisposable.add(managedConfigurationUpdates(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedVoipConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedAppConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPremiumPromoConfigurationUpdates(postbox: self.postbox, network: self.network).start())
@@ -1189,6 +1190,17 @@ public class Account {
                 let _ = try? data.write(to: URL(fileURLWithPath: "\(basePath)/notificationsKey"))
             }
         })
+        
+        self.stateManager.updateConfigRequested = { [weak self] in
+            self?.restartConfigurationUpdates()
+        }
+        self.restartConfigurationUpdates()
+        
+        /*#if DEBUG
+        self.managedOperationsDisposable.add(debugFetchAllStickers(account: self).start(completed: {
+            print("debugFetchAllStickers done")
+        }))
+        #endif*/
     }
     
     deinit {
@@ -1199,6 +1211,10 @@ public class Account {
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
         self.networkTypeDisposable?.dispose()
+    }
+    
+    private func restartConfigurationUpdates() {
+        self.managedOperationsDisposable.add(managedConfigurationUpdates(accountManager: self.accountManager, postbox: self.postbox, network: self.network).start())
     }
     
     private func postSmallLogIfNeeded() {

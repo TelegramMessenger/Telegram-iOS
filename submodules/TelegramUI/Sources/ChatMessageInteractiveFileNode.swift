@@ -545,7 +545,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var isVoice = false
                 var audioDuration: Int32 = 0
                 
-                let canTranscribe = arguments.associatedData.isPremium
+                let canTranscribe = arguments.associatedData.isPremium && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat
                 
                 let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
                 

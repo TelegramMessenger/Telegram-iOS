@@ -1352,7 +1352,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(deliveryFailedNode)
                         }
                         let deliveryFailedSize = deliveryFailedNode.updateLayout(theme: item.presentationData.theme.theme)
-                        let deliveryFailedFrame = CGRect(origin: CGPoint(x: imageFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: imageFrame.maxY - deliveryFailedSize.height - imageInset), size: deliveryFailedSize)
+                        let deliveryFailedFrame = CGRect(origin: CGPoint(x: imageFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: imageFrame.maxY - deliveryFailedSize.height - imageInset + imageVerticalInset), size: deliveryFailedSize)
                         if isAppearing {
                             deliveryFailedNode.frame = deliveryFailedFrame
                             transition.animatePositionAdditive(node: deliveryFailedNode, offset: CGPoint(x: deliveryFailedInset, y: 0.0))
@@ -1370,7 +1370,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
                         let actionButtonsNode = actionButtonsSizeAndApply.1(animation)
                         let previousFrame = actionButtonsNode.frame
-                        let actionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY), size: actionButtonsSizeAndApply.0)
+                        let actionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY + imageVerticalInset), size: actionButtonsSizeAndApply.0)
                         actionButtonsNode.frame = actionButtonsFrame
                         if actionButtonsNode !== strongSelf.actionButtonsNode {
                             strongSelf.actionButtonsNode = actionButtonsNode
@@ -1397,7 +1397,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
                         let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
-                        var reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY), size: reactionButtonsSizeAndApply.0)
+                        var reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY + imageVerticalInset), size: reactionButtonsSizeAndApply.0)
                         if !incoming {
                             reactionButtonsFrame.origin.x = imageFrame.maxX - reactionButtonsSizeAndApply.0.width
                         }
@@ -1689,7 +1689,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var animationFrame: CGRect
             if isStickerEffect {
                 let scale: CGFloat = 0.245
-                animationFrame = animationNode.frame.offsetBy(dx: incomingMessage ? animationNode.frame.width * scale : -animationNode.frame.width * scale + 21.0, dy: -1.0).insetBy(dx: -animationNode.frame.width * scale, dy: -animationNode.frame.height * scale)
+                animationFrame = animationNode.frame.offsetBy(dx: incomingMessage ? animationNode.frame.width * scale - 21.0 : -animationNode.frame.width * scale + 21.0, dy: -1.0).insetBy(dx: -animationNode.frame.width * scale, dy: -animationNode.frame.height * scale)
             } else {
                 animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
                     .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)

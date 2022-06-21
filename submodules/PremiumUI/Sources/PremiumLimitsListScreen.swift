@@ -617,16 +617,20 @@ public class PremimLimitsListScreen: ViewController {
             transition.setFrame(view: self.containerView, frame: clipFrame)
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: clipFrame.size), completion: nil)
             
-            let clipLayout = layout.withUpdatedSize(clipFrame.size)
+            var clipLayout = layout.withUpdatedSize(clipFrame.size)
+            if case .regular = layout.metrics.widthClass {
+                clipLayout = clipLayout.withUpdatedIntrinsicInsets(.zero)
+            }
             let footerHeight = self.footerNode.updateLayout(layout: clipLayout, transition: .immediate)
             
-            let convertedFooterFrame = self.view.convert(CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - footerHeight), size: CGSize(width: clipFrame.width, height: footerHeight)), to: self.containerView)
+            let convertedFooterFrame = self.view.convert(CGRect(origin: CGPoint(x: clipFrame.minX, y: clipFrame.maxY - footerHeight), size: CGSize(width: clipFrame.width, height: footerHeight)), to: self.containerView)
             transition.setFrame(view: self.footerNode.view, frame: convertedFooterFrame)
             
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: 0.0,
                 navigationHeight: navigationHeight,
                 safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: footerHeight, right: layout.safeInsets.right),
+                metrics: layout.metrics,
                 isVisible: self.currentIsVisible,
                 theme: self.theme ?? self.presentationData.theme,
                 strings: self.presentationData.strings,

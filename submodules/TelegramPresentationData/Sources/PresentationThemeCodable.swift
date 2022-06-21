@@ -813,6 +813,7 @@ extension PresentationThemeList.PaymentOption: Codable {
 extension PresentationThemeList: Codable {
     enum CodingKeys: String, CodingKey {
         case blocksBg
+        case modalBlocksBg
         case plainBg
         case primaryText
         case secondaryText
@@ -822,6 +823,7 @@ extension PresentationThemeList: Codable {
         case destructive
         case placeholderText
         case itemBlocksBg
+        case itemModalBlocksBg
         case itemHighlightedBg
         case blocksSeparator
         case plainSeparator
@@ -848,6 +850,7 @@ extension PresentationThemeList: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
         
         let freePlainInputField: PresentationInputFieldTheme
         if let value = try? values.decode(PresentationInputFieldTheme.self, forKey: .freePlainInputField) {
@@ -860,6 +863,7 @@ extension PresentationThemeList: Codable {
         
         self.init(
             blocksBackgroundColor: try decodeColor(values, .blocksBg),
+            modalBlocksBackgroundColor: try decodeColor(values, .modalBlocksBg, fallbackKey: "\(codingPath).blocksBg"),
             plainBackgroundColor: try decodeColor(values, .plainBg),
             itemPrimaryTextColor: try decodeColor(values, .primaryText),
             itemSecondaryTextColor: try decodeColor(values, .secondaryText),
@@ -869,6 +873,7 @@ extension PresentationThemeList: Codable {
             itemDestructiveColor: try decodeColor(values, .destructive),
             itemPlaceholderTextColor: try decodeColor(values, .placeholderText),
             itemBlocksBackgroundColor: try decodeColor(values, .itemBlocksBg),
+            itemModalBlocksBackgroundColor: try decodeColor(values, .itemModalBlocksBg, fallbackKey: "\(codingPath).itemBlocksBg"),
             itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
             itemBlocksSeparatorColor: try decodeColor(values, .blocksSeparator),
             itemPlainSeparatorColor: try decodeColor(values, .plainSeparator),

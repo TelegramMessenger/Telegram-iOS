@@ -447,6 +447,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     
     let list = PresentationThemeList(
         blocksBackgroundColor: UIColor(rgb: 0xefeff4),
+        modalBlocksBackgroundColor: UIColor(rgb: 0xefeff4),
         plainBackgroundColor: UIColor(rgb: 0xffffff),
         itemPrimaryTextColor: UIColor(rgb: 0x000000),
         itemSecondaryTextColor: UIColor(rgb: 0x8e8e93),
@@ -456,6 +457,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         itemDestructiveColor: UIColor(rgb: 0xff3b30),
         itemPlaceholderTextColor: UIColor(rgb: 0xc8c8ce),
         itemBlocksBackgroundColor: UIColor(rgb: 0xffffff),
+        itemModalBlocksBackgroundColor: UIColor(rgb: 0xffffff),
         itemHighlightedBackgroundColor: UIColor(rgb: 0xe5e5ea),
         itemBlocksSeparatorColor: UIColor(rgb: 0xc8c7cc),
         itemPlainSeparatorColor: UIColor(rgb: 0xc8c7cc),

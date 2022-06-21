@@ -16,8 +16,9 @@ extension BotMenuButton {
 extension BotInfo {
     convenience init(apiBotInfo: Api.BotInfo) {
         switch apiBotInfo {
-            case let .botInfo(_, _, description, descriptionPhoto, _, apiCommands, apiMenuButton):
+            case let .botInfo(_, _, description, descriptionPhoto, descriptionDocument, apiCommands, apiMenuButton):
                 let photo: TelegramMediaImage? = descriptionPhoto.flatMap(telegramMediaImageFromApiPhoto)
+                let video: TelegramMediaFile? = descriptionDocument.flatMap { telegramMediaFileFromApiDocument($0, noPremium: false) }
                 var commands: [BotCommand] = []
                 if let apiCommands = apiCommands {
                     commands = apiCommands.map { command in
@@ -31,7 +32,7 @@ extension BotInfo {
                 if let apiMenuButton = apiMenuButton {
                     menuButton = BotMenuButton(apiBotMenuButton: apiMenuButton)
                 }
-                self.init(description: description ?? "", photo: photo, commands: commands, menuButton: menuButton)
+                self.init(description: description ?? "", photo: photo, video: video, commands: commands, menuButton: menuButton)
         }
     }
 }

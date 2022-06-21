@@ -92,6 +92,7 @@ swift_library(
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/LegacyComponents:LegacyComponents",
     ],
     visibility = [
         "//visibility:public",

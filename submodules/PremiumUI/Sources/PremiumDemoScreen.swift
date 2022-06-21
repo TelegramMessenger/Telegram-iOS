@@ -1027,10 +1027,13 @@ private final class DemoSheetContent: CombinedComponent {
             )
         
             let bottomPanelPadding: CGFloat = 12.0
-            let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
-            let contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + bottomInset)
-            
-            return contentSize
+            let bottomInset: CGFloat
+            if case .regular = environment.metrics.widthClass {
+                bottomInset = bottomPanelPadding
+            } else {
+                bottomInset = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
+            }
+            return CGSize(width: context.availableSize.width, height: buttonFrame.maxY + bottomInset)
         }
     }
 }
@@ -1071,7 +1074,7 @@ private final class DemoSheetComponent: CombinedComponent {
     }
     
     static var body: Body {
-        let sheet = Child(SheetComponent<EnvironmentType>.self)
+        let sheet = Child(SheetComponent<(EnvironmentType)>.self)
         let animateOut = StoredActionSlot(Action<Void>.self)
         
         return { context in
@@ -1102,6 +1105,7 @@ private final class DemoSheetComponent: CombinedComponent {
                     environment
                     SheetComponentEnvironment(
                         isDisplaying: environment.value.isVisible,
+                        isCentered: environment.metrics.widthClass == .regular,
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in

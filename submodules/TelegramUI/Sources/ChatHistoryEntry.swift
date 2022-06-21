@@ -43,7 +43,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
     case ReplyCountEntry(MessageIndex, Bool, Int, ChatPresentationData)
-    case ChatInfoEntry(String, String, TelegramMediaImage?, ChatPresentationData)
+    case ChatInfoEntry(String, String, TelegramMediaImage?, TelegramMediaFile?, ChatPresentationData)
     case SearchEntry(PresentationTheme, PresentationStrings)
     
     var stableId: UInt64 {
@@ -201,8 +201,8 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 } else {
                     return false
                 }
-            case let .ChatInfoEntry(lhsTitle, lhsText, lhsPhoto, lhsPresentationData):
-                if case let .ChatInfoEntry(rhsTitle, rhsText, rhsPhoto, rhsPresentationData) = rhs, lhsTitle == rhsTitle, lhsText == rhsText, lhsPhoto == rhsPhoto, lhsPresentationData === rhsPresentationData {
+            case let .ChatInfoEntry(lhsTitle, lhsText, lhsPhoto, lhsVideo, lhsPresentationData):
+                if case let .ChatInfoEntry(rhsTitle, rhsText, rhsPhoto, rhsVideo, rhsPresentationData) = rhs, lhsTitle == rhsTitle, lhsText == rhsText, lhsPhoto == rhsPhoto, lhsVideo == rhsVideo, lhsPresentationData === rhsPresentationData {
                     return true
                 } else {
                     return false

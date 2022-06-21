@@ -21,6 +21,7 @@ swift_library(
         "//submodules/Reachability:Reachability",
         "//submodules/ManagedFile:ManagedFile",
         "//submodules/Utils/RangeSet:RangeSet",
+        "//submodules/GZip:GZip",
     ],
     visibility = [
         "//visibility:public",

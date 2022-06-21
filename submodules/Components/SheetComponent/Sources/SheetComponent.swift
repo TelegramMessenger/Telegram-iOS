@@ -6,15 +6,20 @@ import ViewControllerComponent
 
 public final class SheetComponentEnvironment: Equatable {
     public let isDisplaying: Bool
+    public let isCentered: Bool
     public let dismiss: (Bool) -> Void
     
-    public init(isDisplaying: Bool, dismiss: @escaping (Bool) -> Void) {
+    public init(isDisplaying: Bool, isCentered: Bool, dismiss: @escaping (Bool) -> Void) {
         self.isDisplaying = isDisplaying
+        self.isCentered = isCentered
         self.dismiss = dismiss
     }
     
     public static func ==(lhs: SheetComponentEnvironment, rhs: SheetComponentEnvironment) -> Bool {
         if lhs.isDisplaying != rhs.isDisplaying {
+            return false
+        }
+        if lhs.isCentered != rhs.isCentered {
             return false
         }
         return true
@@ -165,14 +170,14 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                 let transition = ContainedViewLayoutTransition.animated(duration: 0.35, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
                 
                 let contentOffset = (self.scrollView.contentOffset.y + self.scrollView.contentInset.top - self.scrollView.contentSize.height) * -1.0
-                let dismissalOffset = self.scrollView.contentSize.height
+                let dismissalOffset = self.scrollView.contentSize.height + abs(self.contentView.frame.minY)
                 let delta = dismissalOffset - contentOffset
                 
                 transition.updatePosition(layer: self.scrollView.layer, position: CGPoint(x: self.scrollView.center.x, y: self.scrollView.center.y + delta), completion: { _ in
                     completion()
                 })
             } else {
-                self.scrollView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.scrollView.contentSize.height), duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
+                self.scrollView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.scrollView.contentSize.height + abs(self.contentView.frame.minY)), duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
                     completion()
                 })
             }
@@ -180,6 +185,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         
         private var currentAvailableSize: CGSize?
         func update(component: SheetComponent<ChildEnvironmentType>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            let sheetEnvironment = environment[SheetComponentEnvironment.self].value
             component.animateOut.connect { [weak self] completion in
                 guard let strongSelf = self else {
                     return
@@ -195,19 +201,37 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)
             
+            let containerSize: CGSize
+            if sheetEnvironment.isCentered {
+                let verticalInset: CGFloat = 44.0
+                let maxSide = max(availableSize.width, availableSize.height)
+                let minSide = min(availableSize.width, availableSize.height)
+                containerSize = CGSize(width: min(availableSize.width - 20.0, floor(maxSide / 2.0)), height: min(availableSize.height, minSide) - verticalInset * 2.0)
+            } else {
+                containerSize = CGSize(width: availableSize.width, height: .greatestFiniteMagnitude)
+            }
+            
             let contentSize = self.contentView.update(
                 transition: transition,
                 component: component.content,
                 environment: {
                     environment[ChildEnvironmentType.self]
                 },
-                containerSize: CGSize(width: availableSize.width, height: .greatestFiniteMagnitude)
+                containerSize: containerSize
             )
             
             self.ignoreScrolling = true
-            transition.setFrame(view: self.contentView, frame: CGRect(origin: .zero, size: contentSize), completion: nil)
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: contentSize.width, height: contentSize.height + 1000.0)), completion: nil)
+
+            if sheetEnvironment.isCentered {
+                let y: CGFloat = floorToScreenPixels((availableSize.height - contentSize.height) / 2.0)
+                transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - contentSize.width) / 2.0), y: -y), size: contentSize), completion: nil)
+                transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - contentSize.width) / 2.0), y: -y), size: contentSize), completion: nil)
+            } else {
+                transition.setFrame(view: self.contentView, frame: CGRect(origin: .zero, size: contentSize), completion: nil)
+                transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: contentSize.width, height: contentSize.height + 1000.0)), completion: nil)
+            }
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)
+            
             self.scrollView.contentSize = contentSize
             self.scrollView.contentInset = UIEdgeInsets(top: max(0.0, availableSize.height - contentSize.height) + contentSize.height, left: 0.0, bottom: 0.0, right: 0.0)
             self.ignoreScrolling = false
@@ -222,9 +246,8 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             } else if !environment[SheetComponentEnvironment.self].value.isDisplaying, self.previousIsDisplaying, let _ = transition.userData(ViewControllerComponentContainer.AnimateOutTransition.self) {
                 self.animateOut(completion: {})
             }
-            self.previousIsDisplaying = environment[SheetComponentEnvironment.self].value.isDisplaying
-            
-            self.dismiss = environment[SheetComponentEnvironment.self].value.dismiss
+            self.previousIsDisplaying = sheetEnvironment.isDisplaying
+            self.dismiss = sheetEnvironment.dismiss
             
             return availableSize
         }

@@ -604,6 +604,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
 
     let list = PresentationThemeList(
         blocksBackgroundColor: additionalBackgroundColor,
+        modalBlocksBackgroundColor: additionalBackgroundColor,
         plainBackgroundColor: additionalBackgroundColor,
         itemPrimaryTextColor: UIColor(rgb: 0xffffff),
         itemSecondaryTextColor: mainSecondaryTextColor.withAlphaComponent(0.5),
@@ -613,6 +614,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         itemDestructiveColor: UIColor(rgb: 0xff6767),
         itemPlaceholderTextColor: mainSecondaryTextColor.withAlphaComponent(0.5),
         itemBlocksBackgroundColor: mainBackgroundColor,
+        itemModalBlocksBackgroundColor: mainBackgroundColor,
         itemHighlightedBackgroundColor: mainSelectionColor,
         itemBlocksSeparatorColor: mainSeparatorColor,
         itemPlainSeparatorColor: mainSeparatorColor,

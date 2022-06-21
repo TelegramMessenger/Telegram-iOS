@@ -39,7 +39,7 @@ public struct Namespaces {
     }
     
     public struct ItemCollection {
-        public static let CloudStickerPacks: Int32 = 0
+        public static let CloudStickerPacks: Int32 = 7
         public static let CloudMaskPacks: Int32 = 1
         public static let EmojiKeywords: Int32 = 2
         public static let CloudAnimatedEmoji: Int32 = 3
