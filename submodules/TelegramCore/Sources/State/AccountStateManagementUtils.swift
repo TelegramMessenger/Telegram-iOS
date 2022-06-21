@@ -1048,12 +1048,16 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         let messageText = text
                         var medias: [Media] = []
                         
-                        let (mediaValue, expirationTimer) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+                        let (mediaValue, expirationTimer, nonPremium) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                         if let mediaValue = mediaValue {
                             medias.append(mediaValue)
                         }
                         if let expirationTimer = expirationTimer {
                             attributes.append(AutoclearTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
+                        }
+                        
+                        if let nonPremium = nonPremium, nonPremium {
+                            attributes.append(NonPremiumMessageAttribute())
                         }
                         
                         if type.hasPrefix("auth") {

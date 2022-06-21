@@ -1614,12 +1614,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     private var playedPremiumStickerAnimation = false
     func playPremiumStickerAnimation() {
-        guard !self.playedPremiumStickerAnimation, let file = self.telegramFile, file.isPremiumSticker, let effect = file.videoThumbnails.first else {
+        guard !self.playedPremiumStickerAnimation, let item = self.item, let file = self.telegramFile, file.isPremiumSticker, let effect = file.videoThumbnails.first else {
             return
         }
         self.playedPremiumStickerAnimation = true
-        if file.attributes.contains(where: { attribute in
-            if case .NoPremium = attribute {
+        if item.message.attributes.contains(where: { attribute in
+            if attribute is NonPremiumMessageAttribute {
                 return true
             } else {
                 return false
@@ -1768,7 +1768,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             if let item = self.item, self.imageNode.frame.contains(location) {
                 if let file = self.telegramFile {
-                    if file.isPremiumSticker {
+                    let noPremium = item.message.attributes.contains(where: { attribute in
+                        if attribute is NonPremiumMessageAttribute {
+                            return true
+                        } else {
+                            return false
+                        }
+                    })
+                    
+                    if file.isPremiumSticker && !noPremium {
                         return .optionalAction({
                             if self.additionalAnimationNodes.isEmpty {
                                 self.playedPremiumStickerAnimation = false
