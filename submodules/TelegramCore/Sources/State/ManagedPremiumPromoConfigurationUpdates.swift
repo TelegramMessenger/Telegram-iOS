@@ -21,8 +21,12 @@ func updatePremiumPromoConfigurationOnce(postbox: Postbox, network: Network) -> 
         return postbox.transaction { transaction -> Void in
             if case let .premiumPromo(_, _, _, _, _, _, apiUsers) = result {
                 let users = apiUsers.map { TelegramUser(user: $0) }
-                updatePeers(transaction: transaction, peers: users, update: { _, updated -> Peer in
-                    return updated
+                updatePeers(transaction: transaction, peers: users, update: { current, updated -> Peer in
+                    if let updated = updated as? TelegramUser {
+                        return TelegramUser.merge(lhs: current as? TelegramUser, rhs: updated)
+                    } else {
+                        return updated
+                    }
                 })
             }
             

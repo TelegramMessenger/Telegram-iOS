@@ -48,12 +48,14 @@ public enum BotMenuButton: PostboxCoding, Hashable {
 public final class BotInfo: PostboxCoding, Equatable {
     public let description: String
     public let photo: TelegramMediaImage?
+    public let video: TelegramMediaFile?
     public let commands: [BotCommand]
     public let menuButton: BotMenuButton
     
-    public init(description: String, photo: TelegramMediaImage?, commands: [BotCommand], menuButton: BotMenuButton) {
+    public init(description: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, commands: [BotCommand], menuButton: BotMenuButton) {
         self.description = description
         self.photo = photo
+        self.video = video
         self.commands = commands
         self.menuButton = menuButton
     }
@@ -64,6 +66,11 @@ public final class BotInfo: PostboxCoding, Equatable {
             self.photo = photo
         } else {
             self.photo = nil
+        }
+        if let video = decoder.decodeObjectForKey("vid", decoder: { TelegramMediaFile(decoder: $0) }) as? TelegramMediaFile {
+            self.video = video
+        } else {
+            self.video = nil
         }
         self.commands = decoder.decodeObjectArrayWithDecoderForKey("c")
         self.menuButton = (decoder.decodeObjectForKey("b", decoder: { BotMenuButton(decoder: $0) }) as? BotMenuButton) ?? .commands
@@ -76,11 +83,16 @@ public final class BotInfo: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "ph")
         }
+        if let video = self.video {
+            encoder.encodeObject(video, forKey: "vid")
+        } else {
+            encoder.encodeNil(forKey: "vid")
+        }
         encoder.encodeObjectArray(self.commands, forKey: "c")
         encoder.encodeObject(self.menuButton, forKey: "b")
     }
     
     public static func ==(lhs: BotInfo, rhs: BotInfo) -> Bool {
-        return lhs.description == rhs.description && lhs.commands == rhs.commands && lhs.menuButton == rhs.menuButton
+        return lhs.description == rhs.description && lhs.commands == rhs.commands && lhs.menuButton == rhs.menuButton && lhs.photo != rhs.photo
     }
 }

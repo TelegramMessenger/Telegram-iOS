@@ -6,6 +6,7 @@ import SwiftSignalKit
 import SceneKit
 import GZip
 import AppBundle
+import LegacyComponents
 
 private let sceneVersion: Int = 3
 
@@ -421,14 +422,22 @@ class PremiumStarComponent: Component {
                         particles.particleSystems?.first?.birthRate = 1.2
                         particleSystem.particleVelocity = 1.0
                         particleSystem.particleLifeSpan = 4.0
-                        particleSystem.speedFactor = 1.0
                         
-                        let animation = CABasicAnimation(keyPath: "speedFactor")
-                        animation.fromValue = 2.0
-                        animation.toValue = 1.0
+                        let animation = POPBasicAnimation()
+                        animation.property = (POPAnimatableProperty.property(withName: "speedFactor", initializer: { property in
+                            property?.readBlock = { particleSystem, values in
+                                values?.pointee = (particleSystem as! SCNParticleSystem).speedFactor
+                            }
+                            property?.writeBlock = { particleSystem, values in
+                                (particleSystem as! SCNParticleSystem).speedFactor = values!.pointee
+                            }
+                            property?.threshold = 0.01
+                        }) as! POPAnimatableProperty)
+                        animation.fromValue = 2.0 as NSNumber
+                        animation.toValue = 1.0 as NSNumber
+                        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
                         animation.duration = 0.5
-                        animation.timingFunction = CAMediaTimingFunction(name: .easeIn)
-                        particleSystem.addAnimation(animation, forKey: "speedFactor")
+                        particleSystem.pop_add(animation, forKey: "speedFactor")
                     }
                 }
             }
