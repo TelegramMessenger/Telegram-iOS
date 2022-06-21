@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramAudio
 import UniversalMediaPlayer
 import LegacyComponents
@@ -172,6 +171,7 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     }
     
     func setBaseRate(_ baseRate: Double) {
+        self.playerNode.setBaseRate(baseRate)
     }
     
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {
@@ -187,5 +187,8 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     
     func notifyPlaybackControlsHidden(_ hidden: Bool) {
         self.playerNode.notifyPlaybackControlsHidden(hidden)
+    }
+
+    func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
-import Postbox
+import TelegramCore
 import Display
 import SwiftSignalKit
 import MonotonicTime
@@ -11,6 +11,7 @@ import TelegramUIPreferences
 import ImageBlur
 import FastBlur
 import AppLockState
+import PassKit
 
 private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState, isApplicationActive: Bool) -> Bool {
     if state.isManuallyLocked {
@@ -65,7 +66,7 @@ public final class AppLockContextImpl: AppLockContext {
     private let syncQueue = Queue()
     
     private let applicationBindings: TelegramApplicationBindings
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let presentationDataSignal: Signal<PresentationData, NoError>
     private let window: Window1?
     private let rootController: UIViewController?
@@ -90,7 +91,7 @@ public final class AppLockContextImpl: AppLockContext {
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
-    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
+    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.applicationBindings = applicationBindings
@@ -119,7 +120,7 @@ public final class AppLockContextImpl: AppLockContext {
                 return
             }
             
-            let passcodeSettings: PresentationPasscodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings ?? .defaultSettings
+            let passcodeSettings: PresentationPasscodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? .defaultSettings
             
             let timestamp = CFAbsoluteTimeGetCurrent()
             var becameActiveRecently = false
@@ -150,7 +151,7 @@ public final class AppLockContextImpl: AppLockContext {
                 strongSelf.autolockTimeout.set(nil)
                 strongSelf.autolockReportTimeout.set(nil)
             } else {
-                if let autolockTimeout = passcodeSettings.autolockTimeout, !appInForeground {
+                if let _ = passcodeSettings.autolockTimeout, !appInForeground {
                     shouldDisplayCoveringView = true
                 }
                 
@@ -184,7 +185,7 @@ public final class AppLockContextImpl: AppLockContext {
                         }
                         passcodeController.ensureInputFocused()
                     } else {
-                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: { [weak self] in
+                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: {
                             if let lockViewFrame = lockIconInitialFrame() {
                                 return lockViewFrame
                             } else {
@@ -203,7 +204,8 @@ public final class AppLockContextImpl: AppLockContext {
                         passcodeController.isOpaqueWhenInOverlay = true
                         strongSelf.passcodeController = passcodeController
                         if let rootViewController = strongSelf.rootController {
-                            if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
+                            if let _ = rootViewController.presentedViewController as? UIActivityViewController {
+                            } else if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
                             } else {
                                 rootViewController.dismiss(animated: false, completion: nil)
                             }
@@ -227,14 +229,15 @@ public final class AppLockContextImpl: AppLockContext {
                     window.coveringView = coveringView
                     
                     if let rootViewController = strongSelf.rootController {
-                        if let presentedViewController = rootViewController.presentedViewController as? UIActivityViewController {
+                        if let _ = rootViewController.presentedViewController as? UIActivityViewController {
+                        } else if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
                         } else {
                             rootViewController.dismiss(animated: false, completion: nil)
                         }
                     }
                 }
             } else {
-                if let coveringView = strongSelf.coveringView {
+                if let _ = strongSelf.coveringView {
                     strongSelf.coveringView = nil
                     strongSelf.window?.coveringView = nil
                 }

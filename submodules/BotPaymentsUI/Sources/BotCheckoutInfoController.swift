@@ -3,8 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
-import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
@@ -32,7 +30,7 @@ final class BotCheckoutInfoController: ViewController {
     
     private let context: AccountContext
     private let invoice: BotPaymentInvoice
-    private let messageId: MessageId
+    private let messageId: EngineMessage.Id
     private let initialFormInfo: BotPaymentRequestedInfo
     private let focus: BotCheckoutInfoControllerFocus
     
@@ -45,7 +43,14 @@ final class BotCheckoutInfoController: ViewController {
     private var doneItem: UIBarButtonItem?
     private var activityItem: UIBarButtonItem?
     
-    public init(context: AccountContext, invoice: BotPaymentInvoice, messageId: MessageId, initialFormInfo: BotPaymentRequestedInfo, focus: BotCheckoutInfoControllerFocus, formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void) {
+    public init(
+        context: AccountContext,
+        invoice: BotPaymentInvoice,
+        messageId: EngineMessage.Id,
+        initialFormInfo: BotPaymentRequestedInfo,
+        focus: BotCheckoutInfoControllerFocus,
+        formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void
+    ) {
         self.context = context
         self.invoice = invoice
         self.messageId = messageId
@@ -75,7 +80,7 @@ final class BotCheckoutInfoController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = BotCheckoutInfoControllerNode(context: self.context, invoice: self.invoice, messageId: self.messageId, formInfo: self.initialFormInfo, focus: self.focus, theme: self.presentationData.theme, strings: self.presentationData.strings, dismiss: { [weak self] in
+        self.displayNode = BotCheckoutInfoControllerNode(context: self.context, navigationBar: self.navigationBar, invoice: self.invoice, messageId: self.messageId, formInfo: self.initialFormInfo, focus: self.focus, theme: self.presentationData.theme, strings: self.presentationData.strings, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }, openCountrySelection: { [weak self] in
             if let strongSelf = self {

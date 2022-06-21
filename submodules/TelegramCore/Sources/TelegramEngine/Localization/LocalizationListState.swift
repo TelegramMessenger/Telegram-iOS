@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 public func removeSavedLocalization(transaction: Transaction, languageCode: String) {
     updateLocalizationListStateInteractively(transaction: transaction, { state in
@@ -21,7 +20,7 @@ func updateLocalizationListStateInteractively(postbox: Postbox, _ f: @escaping (
 
 func updateLocalizationListStateInteractively(transaction: Transaction, _ f: @escaping (LocalizationListState) -> LocalizationListState) {
     transaction.updatePreferencesEntry(key: PreferencesKeys.localizationListState, { current in
-        let previous = (current as? LocalizationListState) ?? LocalizationListState.defaultSettings
+        let previous = current?.get(LocalizationListState.self) ?? LocalizationListState.defaultSettings
         var updated = f(previous)
         var removeOfficialIndices: [Int] = []
         var officialSet = Set<String>()
@@ -47,7 +46,7 @@ func updateLocalizationListStateInteractively(transaction: Transaction, _ f: @es
         for i in removeSavedIndices.reversed() {
             updated.availableSavedLocalizations.remove(at: i)
         }
-        return updated
+        return PreferencesEntry(updated)
     })
 }
 

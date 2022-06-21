@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -39,10 +38,18 @@ private var fadeImage: UIImage? = {
     return generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        let colorsArray = [fadeColor.withAlphaComponent(0.0).cgColor, fadeColor.cgColor] as CFArray
-        var locations: [CGFloat] = [1.0, 0.0]
-        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+
+        let stepCount = 10
+        var colors: [CGColor] = []
+        var locations: [CGFloat] = []
+
+        for i in 0 ... stepCount {
+            let t = CGFloat(i) / CGFloat(stepCount)
+            colors.append(fadeColor.withAlphaComponent((1.0 - t * t) * 0.7).cgColor)
+            locations.append(t)
+        }
+
+        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colors as CFArray, locations: &locations)!
         context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
     })
 }()
@@ -195,6 +202,16 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     var item: VoiceChatFullscreenParticipantItem? {
         return self.layoutParams?.0
     }
+
+    private var isCurrentlyInHierarchy = false {
+        didSet {
+            if self.isCurrentlyInHierarchy != oldValue {
+                self.highlightNode.isCurrentlyInHierarchy = self.isCurrentlyInHierarchy
+                self.audioLevelView?.isManuallyInHierarchy = self.isCurrentlyInHierarchy
+            }
+        }
+    }
+    private var isCurrentlyInHierarchyDisposable: Disposable?
     
     init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
@@ -240,7 +257,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     
         self.actionContainerNode = ASDisplayNode()
         self.actionButtonNode = HighlightableButtonNode()
-        
+
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
@@ -286,6 +303,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.audioLevelDisposable.dispose()
         self.raiseHandTimer?.invalidate()
         self.silenceTimer?.invalidate()
+        self.isCurrentlyInHierarchyDisposable?.dispose()
     }
     
     override func selected() {
@@ -371,7 +389,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 profileNode.frame = CGRect(origin: CGPoint(), size: extractedRect.size)
                 self.profileNode = profileNode
                 self.contextSourceNode.contentNode.addSubnode(profileNode)
-
+                
                 profileNode.animateIn(from: self, targetRect: extractedRect, transition: transition)
                 var appearenceTransition = transition
                 if transition.isAnimated {
@@ -607,7 +625,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                         
                     strongSelf.accessibilityLabel = titleAttributedString?.string
-                    var combinedValueString = ""
+                    let combinedValueString = ""
 //                    if let statusString = statusAttributedString?.string, !statusString.isEmpty {
 //                        combinedValueString.append(statusString)
 //                    }
@@ -688,19 +706,27 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                     audioLevelView.layer.mask = playbackMaskLayer
                                     
                                     audioLevelView.setColor(wavesColor)
-                                    audioLevelView.alpha = strongSelf.isExtracted ? 0.0 : 1.0
                                     
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
-                                    
-                                    if let item = strongSelf.item, strongSelf.videoNode != nil && !active {
-                                        audioLevelView.alpha = 0.0
-                                    }
                                 }
                                 
                                 let level = min(1.0, max(0.0, CGFloat(value)))
                                 if let audioLevelView = strongSelf.audioLevelView {
                                     audioLevelView.updateLevel(CGFloat(value))
+                                    
+                                    var hasVideo = false
+                                    if let videoNode = strongSelf.videoNode, videoNode.supernode == strongSelf.videoContainerNode, !videoNode.alpha.isZero {
+                                        hasVideo = true
+                                    }
+                                    
+                                    var audioLevelAlpha: CGFloat = 1.0
+                                    if strongSelf.isExtracted {
+                                        audioLevelAlpha = 0.0
+                                    } else {
+                                        audioLevelAlpha = hasVideo ? 0.0 : 1.0
+                                    }
+                                    audioLevelView.alpha = audioLevelAlpha
                                     
                                     let avatarScale: CGFloat
                                     if value > 0.02 {
@@ -745,7 +771,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     if item.peer.isDeleted {
                         overrideImage = .deletedIcon
                     }
-                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.peer), overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
                 
                     var hadMicrophoneNode = false
                     var hadRaiseHandNode = false
@@ -964,6 +990,16 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.actionButtonNode, frame: animationFrame)
                                         
                     strongSelf.updateIsHighlighted(transition: transition)
+
+                    if strongSelf.isCurrentlyInHierarchyDisposable == nil {
+                        strongSelf.isCurrentlyInHierarchyDisposable = (item.context.sharedContext.applicationBindings.applicationInForeground
+                        |> deliverOnMainQueue).start(next: { value in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.isCurrentlyInHierarchy = value
+                        })
+                    }
                 }
             })
         }
@@ -990,7 +1026,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    override func header() -> ListViewItemHeader? {
+    override func headers() -> [ListViewItemHeader]? {
         return nil
     }
     

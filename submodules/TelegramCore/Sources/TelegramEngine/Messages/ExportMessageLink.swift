@@ -5,7 +5,7 @@ import SwiftSignalKit
 
 func _internal_exportMessageLink(account: Account, peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
     return account.postbox.transaction { transaction -> (Peer, MessageId)? in
-        var peer: Peer? = transaction.getPeer(messageId.peerId)
+        let peer: Peer? = transaction.getPeer(messageId.peerId)
         if let peer = peer {
             return (peer, messageId)
         } else {

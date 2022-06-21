@@ -37,7 +37,7 @@ final class OverlayInstantVideoDecoration: UniversalVideoDecoration {
         self.contentContainerNode.clipsToBounds = true
         
         self.foregroundContainerNode = ASDisplayNode()
-        self.progressNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.8))
+        self.progressNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.6), hasSeek: false)
         self.foregroundContainerNode.addSubnode(self.progressNode)
         self.foregroundNode = self.foregroundContainerNode
     }

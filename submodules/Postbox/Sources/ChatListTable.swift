@@ -110,13 +110,13 @@ private func addOperation(_ operation: ChatListOperation, groupId: PeerGroupId, 
 }
 
 public enum ChatListNamespaceEntry {
-    case peer(index: ChatListIndex, readState: PeerReadState?, topMessageAttributes: [MessageAttribute], tagSummary: MessageHistoryTagNamespaceSummary?, interfaceState: PeerChatInterfaceState?)
+    case peer(index: ChatListIndex, readState: PeerReadState?, topMessageAttributes: [MessageAttribute], tagSummary: MessageHistoryTagNamespaceSummary?, interfaceState: StoredPeerChatInterfaceState?)
     case hole(MessageIndex)
     
     public var index: ChatListIndex {
         switch self {
-            case let .peer(peer):
-                return peer.index
+            case let .peer(index, _, _, _, _):
+                return index
             case let .hole(index):
                 return ChatListIndex(pinningIndex: nil, messageIndex: index)
         }
@@ -133,12 +133,12 @@ final class ChatListTable: Table {
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
-    init(valueBox: ValueBox, table: ValueBoxTable, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.indexTable = indexTable
         self.metadataTable = metadataTable
         self.seedConfiguration = seedConfiguration
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(groupId: PeerGroupId, index: ChatListIndex, type: ChatListEntryType) -> ValueBoxKey {
@@ -245,8 +245,8 @@ final class ChatListTable: Table {
         }
     }
     
-    func getUnreadChatListPeerIds(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
-        let globalNotificationSettings = postbox.getGlobalNotificationSettings()
+    func getUnreadChatListPeerIds(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
+        let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
         
         var result: [PeerId] = []
         self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
@@ -294,12 +294,12 @@ final class ChatListTable: Table {
         return result
     }
     
-    func replay(historyOperationsByPeerId: [PeerId: [MessageHistoryOperation]], updatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?], updatedChatListInclusions: [PeerId: PeerChatListInclusion], messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, operations: inout [PeerGroupId: [ChatListOperation]]) {
+    func replay(historyOperationsByPeerId: [PeerId: [MessageHistoryOperation]], updatedPeerChatListEmbeddedStates: Set<PeerId>, updatedChatListInclusions: [PeerId: PeerChatListInclusion], messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, operations: inout [PeerGroupId: [ChatListOperation]]) {
         var changedPeerIds = Set<PeerId>()
         for peerId in historyOperationsByPeerId.keys {
             changedPeerIds.insert(peerId)
         }
-        for peerId in updatedPeerChatListEmbeddedStates.keys {
+        for peerId in updatedPeerChatListEmbeddedStates {
             changedPeerIds.insert(peerId)
         }
         for peerId in updatedChatListInclusions.keys {
@@ -315,19 +315,19 @@ final class ChatListTable: Table {
             }
             
             let topMessage = messageHistoryTable.topIndex(peerId: peerId)
-            let embeddedChatState = peerChatInterfaceStateTable.get(peerId)?.chatListEmbeddedState
+            let embeddedChatStateOverrideTimestamp = peerChatInterfaceStateTable.get(peerId)?.overrideChatTimestamp
             
             let rawTopMessageIndex: MessageIndex?
             let topMessageIndex: MessageIndex?
             if let topMessage = topMessage {
                 var updatedTimestamp = topMessage.timestamp
                 rawTopMessageIndex = MessageIndex(id: topMessage.id, timestamp: topMessage.timestamp)
-                if let embeddedChatState = embeddedChatState {
-                    updatedTimestamp = max(updatedTimestamp, embeddedChatState.timestamp)
+                if let embeddedChatStateOverrideTimestamp = embeddedChatStateOverrideTimestamp {
+                    updatedTimestamp = max(updatedTimestamp, embeddedChatStateOverrideTimestamp)
                 }
                 topMessageIndex = MessageIndex(id: topMessage.id, timestamp: updatedTimestamp)
-            } else if let embeddedChatState = embeddedChatState, embeddedChatState.timestamp != 0 {
-                topMessageIndex = MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 1), timestamp: embeddedChatState.timestamp)
+            } else if let embeddedChatStateOverrideTimestamp = embeddedChatStateOverrideTimestamp, embeddedChatStateOverrideTimestamp != 0 {
+                topMessageIndex = MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 1), timestamp: embeddedChatStateOverrideTimestamp)
                 rawTopMessageIndex = nil
             } else {
                 topMessageIndex = nil
@@ -797,13 +797,13 @@ final class ChatListTable: Table {
         return entries
     }
     
-    func getRelativeUnreadChatListIndex(postbox: Postbox, filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
+    func getRelativeUnreadChatListIndex(postbox: PostboxImpl, currentTransaction: Transaction, filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
         var result: ChatListIndex?
         
         let lower: ValueBoxKey
         let upper: ValueBoxKey
         
-        let globalNotificationSettings = postbox.getGlobalNotificationSettings()
+        let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
         
         switch position {
             case let .earlier(index):

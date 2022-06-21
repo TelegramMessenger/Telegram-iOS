@@ -3,8 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
-import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -96,8 +94,9 @@ enum BotCheckoutInfoControllerStatus {
 
 final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
+    private weak var navigationBar: NavigationBar?
     private let invoice: BotPaymentInvoice
-    private let messageId: MessageId
+    private let messageId: EngineMessage.Id
     private var focus: BotCheckoutInfoControllerFocus?
     
     private let dismiss: () -> Void
@@ -113,6 +112,8 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let scrollNode: BotCheckoutInfoControllerScrollerNode
     private let itemNodes: [[BotPaymentItemNode]]
+    private let leftOverlayNode: ASDisplayNode
+    private let rightOverlayNode: ASDisplayNode
     
     private let addressItems: BotCheckoutInfoAddressItems?
     private let nameItem: BotPaymentFieldItemNode?
@@ -125,8 +126,23 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     private let verifyDisposable = MetaDisposable()
     private var isVerifying = false
     
-    init(context: AccountContext, invoice: BotPaymentInvoice, messageId: MessageId, formInfo: BotPaymentRequestedInfo, focus: BotCheckoutInfoControllerFocus, theme: PresentationTheme, strings: PresentationStrings, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutInfoControllerStatus) -> Void, formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(
+        context: AccountContext,
+        navigationBar: NavigationBar?,
+        invoice: BotPaymentInvoice,
+        messageId: EngineMessage.Id,
+        formInfo: BotPaymentRequestedInfo,
+        focus: BotCheckoutInfoControllerFocus,
+        theme: PresentationTheme,
+        strings: PresentationStrings,
+        dismiss: @escaping () -> Void,
+        openCountrySelection: @escaping () -> Void,
+        updateStatus: @escaping (BotCheckoutInfoControllerStatus) -> Void,
+        formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void,
+        present: @escaping (ViewController, Any?) -> Void
+    ) {
         self.context = context
+        self.navigationBar = navigationBar
         self.invoice = invoice
         self.messageId = messageId
         self.formInfo = formInfo
@@ -141,6 +157,10 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
         self.strings = strings
         
         self.scrollNode = BotCheckoutInfoControllerScrollerNode()
+        self.leftOverlayNode = ASDisplayNode()
+        self.leftOverlayNode.isUserInteractionEnabled = false
+        self.rightOverlayNode = ASDisplayNode()
+        self.rightOverlayNode.isUserInteractionEnabled = false
         
         var itemNodes: [[BotPaymentItemNode]] = []
         
@@ -216,6 +236,9 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
         super.init()
         
         self.backgroundColor = self.theme.list.blocksBackgroundColor
+        self.leftOverlayNode.backgroundColor = self.theme.list.blocksBackgroundColor
+        self.rightOverlayNode.backgroundColor = self.theme.list.blocksBackgroundColor
+        
         self.scrollNode.backgroundColor = nil
         self.scrollNode.isOpaque = false
         self.scrollNode.view.alwaysBounceVertical = true
@@ -306,6 +329,12 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     
     deinit {
         self.verifyDisposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
     func updateCountry(_ iso2: String) {
@@ -424,6 +453,12 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         }
         
+        let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+        var sideInset: CGFloat = 0.0
+        if layout.size.width >= 375.0 {
+            sideInset = inset
+        }
+        
         for items in self.itemNodes {
             if !items.isEmpty && items[0] is BotPaymentHeaderItemNode {
                 contentHeight += 24.0
@@ -433,7 +468,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
             
             for i in 0 ..< items.count {
                 let item = items[i]
-                let itemHeight = item.updateLayout(theme: self.theme, width: layout.size.width, measuredInset: commonInset, previousItemNode: i == 0 ? nil : items[i - 1], nextItemNode: i == (items.count - 1) ? nil : items[i + 1], transition: transition)
+                let itemHeight = item.updateLayout(theme: self.theme, width: layout.size.width, sideInset: sideInset, measuredInset: commonInset, previousItemNode: i == 0 ? nil : items[i - 1], nextItemNode: i == (items.count - 1) ? nil : items[i + 1], transition: transition)
                 transition.updateFrame(node: item, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: itemHeight)))
                 contentHeight += itemHeight
             }
@@ -450,6 +485,16 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
         self.scrollNode.view.contentInset = insets
         self.scrollNode.view.scrollIndicatorInsets = insets
         self.scrollNode.view.ignoreUpdateBounds = false
+        
+        if self.rightOverlayNode.supernode == nil {
+            self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.scrollNode)
+        }
+        if self.leftOverlayNode.supernode == nil {
+            self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.scrollNode)
+        }
+        
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: 0.0, width: sideInset, height: layout.size.height)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - sideInset, y: 0.0, width: sideInset, height: layout.size.height)
         
         if let focus = self.focus {
             var focusItem: ASDisplayNode?
@@ -484,6 +529,8 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
                 if let focusItem = focusItem as? BotPaymentFieldItemNode {
                     focusItem.activateInput()
                 }
+                
+                self.scrollViewDidScroll(self.scrollNode.view)
             }
         } else if let previousLayout = previousLayout {
             var previousInsets = previousLayout.0.insets(options: [.input])
@@ -512,6 +559,14 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
             }
             completion?()
         })
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard !self.scrollNode.view.ignoreUpdateBounds else {
+            return
+        }
+        let value = scrollView.contentOffset.y + scrollView.contentInset.top
+        self.navigationBar?.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: .immediate)
     }
     
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {

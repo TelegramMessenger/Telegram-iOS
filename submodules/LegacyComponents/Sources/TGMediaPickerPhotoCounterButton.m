@@ -83,8 +83,12 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
         CGFloat maskWidth = 50.0f;
         if (iosMajorVersion() >= 7)
             maskWidth += CGCeil([TGLocalized(@"MediaPicker.Processing") sizeWithAttributes:@{ NSFontAttributeName:TGSystemFontOfSize(16) }].width);
-        else
+        else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             maskWidth += CGCeil([TGLocalized(@"MediaPicker.Processing") sizeWithFont:TGSystemFontOfSize(16)].width);
+#pragma clang diagnostic pop
+        }
         
         _processingMaskView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, maskWidth, 38)];
         [_wrapperView addSubview:_processingMaskView];

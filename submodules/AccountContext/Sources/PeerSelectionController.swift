@@ -1,7 +1,9 @@
 import Foundation
 import Display
-import Postbox
 import SwiftSignalKit
+import Postbox
+import TelegramCore
+import TelegramPresentationData
 
 public struct ChatListNodePeersFilter: OptionSet {
     public var rawValue: Int32
@@ -27,10 +29,13 @@ public struct ChatListNodePeersFilter: OptionSet {
     public static let includeSavedMessages = ChatListNodePeersFilter(rawValue: 1 << 11)
     
     public static let excludeChannels = ChatListNodePeersFilter(rawValue: 1 << 12)
+    public static let onlyGroupsAndChannels = ChatListNodePeersFilter(rawValue: 1 << 13)
 }
+
 
 public final class PeerSelectionControllerParams {
     public let context: AccountContext
+    public let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let filter: ChatListNodePeersFilter
     public let hasChatListSelector: Bool
     public let hasContactSelector: Bool
@@ -40,9 +45,12 @@ public final class PeerSelectionControllerParams {
     public let createNewGroup: (() -> Void)?
     public let pretendPresentedInModal: Bool
     public let multipleSelection: Bool
+    public let forwardedMessageIds: [EngineMessage.Id]
+    public let hasTypeHeaders: Bool
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessageIds: [EngineMessage.Id] = [], hasTypeHeaders: Bool = false) {
         self.context = context
+        self.updatedPresentationData = updatedPresentationData
         self.filter = filter
         self.hasChatListSelector = hasChatListSelector
         self.hasContactSelector = hasContactSelector
@@ -52,12 +60,20 @@ public final class PeerSelectionControllerParams {
         self.createNewGroup = createNewGroup
         self.pretendPresentedInModal = pretendPresentedInModal
         self.multipleSelection = multipleSelection
+        self.forwardedMessageIds = forwardedMessageIds
+        self.hasTypeHeaders = hasTypeHeaders
     }
+}
+
+public enum AttachmentTextInputPanelSendMode {
+    case generic
+    case silent
+    case schedule
 }
 
 public protocol PeerSelectionController: ViewController {
     var peerSelected: ((Peer) -> Void)? { get set }
-    var multiplePeersSelected: (([Peer], NSAttributedString) -> Void)? { get set }
+    var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)? { get set }
     var inProgress: Bool { get set }
     var customDismiss: (() -> Void)? { get set }
 }

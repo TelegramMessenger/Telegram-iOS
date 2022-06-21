@@ -1,7 +1,10 @@
 import Foundation
 import AsyncDisplayKit
 
-public final class ContextReferenceContentNode: ASDisplayNode {
+open class ContextReferenceContentNode: ASDisplayNode {
+    override public init() {
+        super.init()
+    }
 }
 
 public final class ContextExtractedContentContainingNode: ASDisplayNode {
@@ -13,7 +16,7 @@ public final class ContextExtractedContentContainingNode: ASDisplayNode {
     public var updateAbsoluteRect: ((CGRect, CGSize) -> Void)?
     public var applyAbsoluteOffset: ((CGPoint, ContainedViewLayoutTransitionCurve, Double) -> Void)?
     public var applyAbsoluteOffsetSpring: ((CGFloat, Double, CGFloat) -> Void)?
-    public var layoutUpdated: ((CGSize) -> Void)?
+    public var layoutUpdated: ((CGSize, ListViewItemUpdateAnimation) -> Void)?
     public var updateDistractionFreeMode: ((Bool) -> Void)?
     public var requestDismiss: (() -> Void)?
     
@@ -80,7 +83,7 @@ public final class ContextControllerContentNode: ASDisplayNode {
 }
 
 public enum ContextContentNode {
-    case reference(node: ContextReferenceContentNode)
+    case reference(view: UIView)
     case extracted(node: ContextExtractedContentContainingNode, keepInPlace: Bool)
     case controller(ContextControllerContentNode)
 }

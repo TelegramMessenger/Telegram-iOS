@@ -18,6 +18,13 @@ typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
 
 @end
 
+@interface UIApplication (Additions)
+
+- (void)internalSetStatusBarStyle:(UIStatusBarStyle)style animated:(BOOL)animated;
+- (void)internalSetStatusBarHidden:(BOOL)hidden animation:(UIStatusBarAnimation)animation;
+
+@end
+
 @interface UIView (Navigation)
 
 @property (nonatomic) bool disablesInteractiveTransitionGestureRecognizer;
@@ -41,17 +48,3 @@ void applyKeyboardAutocorrection(UITextView * _Nonnull textView);
 @property (nonatomic, copy) UIInterfaceOrientationMask (^ _Nullable supportedOrientations)(void);
 
 @end
-
-/*@interface _UIPortalView : UIView
-
-- (void)setSourceView:(UIView * _Nullable)sourceView;
-- (bool)hidesSourceView;
-- (void)setHidesSourceView:(bool)arg1;
-- (void)setMatchesAlpha:(bool)arg1;
-- (void)setMatchesPosition:(bool)arg1;
-- (void)setMatchesTransform:(bool)arg1;
-- (bool)matchesTransform;
-- (bool)matchesPosition;
-- (bool)matchesAlpha;
-
-@end*/

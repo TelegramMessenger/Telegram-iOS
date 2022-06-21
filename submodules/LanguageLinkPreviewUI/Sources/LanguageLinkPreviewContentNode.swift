@@ -2,9 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TextFormat
 import AccountContext
@@ -36,13 +34,13 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
         let text: String
         if localizationInfo.totalStringCount == 0 {
             self.titleNode.attributedText = NSAttributedString(string: strings.ApplyLanguage_UnsufficientDataTitle, font: Font.medium(18.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
-            text = strings.ApplyLanguage_UnsufficientDataText(localizationInfo.title).0
+            text = strings.ApplyLanguage_UnsufficientDataText(localizationInfo.title).string
         } else {
             self.titleNode.attributedText = NSAttributedString(string: strings.ApplyLanguage_ChangeLanguageTitle, font: Font.medium(18.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
             if !localizationInfo.isOfficial {
-                text = strings.ApplyLanguage_ChangeLanguageUnofficialText(localizationInfo.title, "\(completionScore)").0
+                text = strings.ApplyLanguage_ChangeLanguageUnofficialText(localizationInfo.title, "\(completionScore)").string
             } else {
-                text = strings.ApplyLanguage_ChangeLanguageOfficialText(localizationInfo.title).0
+                text = strings.ApplyLanguage_ChangeLanguageOfficialText(localizationInfo.title).string
             }
         }
         let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: theme.actionSheet.primaryTextColor)
@@ -77,14 +75,14 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
     func deactivate() {
     }
     
-    func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
+    func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
     }
     
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
         self.contentOffsetUpdated = f
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let insets = UIEdgeInsets(top: 12.0, left: 10.0, bottom: 12.0 + bottomInset, right: 10.0)
         let titleSpacing: CGFloat = 12.0
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - insets.left - insets.right, height: .greatestFiniteMagnitude))

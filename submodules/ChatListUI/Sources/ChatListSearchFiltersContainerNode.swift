@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import SyncCore
 import Postbox
 import TelegramCore
 import TelegramPresentationData
@@ -85,6 +84,9 @@ private final class ItemNode: ASDisplayNode {
             case .media:
                 title = presentationData.strings.ChatList_Search_FilterMedia
                 icon = nil
+            case .downloads:
+                title = presentationData.strings.ChatList_Search_FilterDownloads
+                icon = nil
             case .links:
                 title = presentationData.strings.ChatList_Search_FilterLinks
                 icon = nil
@@ -151,7 +153,7 @@ private final class ItemNode: ASDisplayNode {
 }
 
 enum ChatListSearchFilterEntryId: Hashable {
-    case filter(Int32)
+    case filter(Int64)
 }
 
 enum ChatListSearchFilterEntry: Equatable {

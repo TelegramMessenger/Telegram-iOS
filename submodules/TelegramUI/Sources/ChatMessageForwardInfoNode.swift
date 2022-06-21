@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import LocalizedPeerData
 
@@ -103,9 +102,9 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             let peerString: String
             if let peer = peer {
                 if let authorName = authorName {
-                    peerString = "\(peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)) (\(authorName))"
+                    peerString = "\(EnginePeer(peer).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)) (\(authorName))"
                 } else {
-                    peerString = peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
+                    peerString = EnginePeer(peer).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
                 }
             } else if let authorName = authorName {
                 peerString = authorName
@@ -119,7 +118,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             }
             
             let titleColor: UIColor
-            let completeSourceString: (String, [(Int, NSRange)])
+            let completeSourceString: PresentationStrings.FormattedString
             
             switch type {
                 case let .bubble(incoming):
@@ -140,16 +139,16 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                                 let rightPart = String(customFormat[range.upperBound...])
                                 
                                 let formattedText = leftPart + peerString + rightPart
-                                completeSourceString = (formattedText, [(0, NSRange(location: leftPart.count, length: peerString.count))])
+                                completeSourceString = PresentationStrings.FormattedString(string: formattedText, ranges: [PresentationStrings.FormattedString.Range(index: 0, range: NSRange(location: leftPart.count, length: peerString.count))])
                             } else {
-                                completeSourceString = (customFormat, [])
+                                completeSourceString = PresentationStrings.FormattedString(string: customFormat, ranges: [])
                             }
                         } else {
                             completeSourceString = strings.Message_GenericForwardedPsa(peerString)
                         }
                     } else {
                         titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                        completeSourceString = strings.Message_ForwardedMessage(peerString)
+                        completeSourceString = strings.Message_ForwardedMessageShort(peerString)
                     }
                 case .standalone:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
@@ -170,9 +169,9 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                                 let rightPart = String(customFormat[range.upperBound...])
                                 
                                 let formattedText = leftPart + peerString + rightPart
-                                completeSourceString = (formattedText, [(0, NSRange(location: leftPart.count, length: peerString.count))])
+                                completeSourceString = PresentationStrings.FormattedString(string: formattedText, ranges: [PresentationStrings.FormattedString.Range(index: 0, range: NSRange(location: leftPart.count, length: peerString.count))])
                             } else {
-                                completeSourceString = (customFormat, [])
+                                completeSourceString = PresentationStrings.FormattedString(string: customFormat, ranges: [])
                             }
                         } else {
                             completeSourceString = strings.Message_GenericForwardedPsa(peerString)
@@ -214,9 +213,9 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                 highlight = false
             }
             
-            let completeString: NSString = completeSourceString.0 as NSString
+            let completeString: NSString = completeSourceString.string as NSString
             let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedString.Key.foregroundColor: titleColor, NSAttributedString.Key.font: prefixFont])
-            if highlight, let range = completeSourceString.1.first?.1 {
+            if highlight, let range = completeSourceString.ranges.first?.range {
                 string.addAttributes([NSAttributedString.Key.font: peerFont], range: range)
             }
             

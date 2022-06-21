@@ -118,7 +118,7 @@ private class StatusBarItemNode: ASDisplayNode {
                 }
             }
         } else {
-            if self.targetView.checkIsKind(of: timeViewClass) {
+            if let timeViewClass = timeViewClass, self.targetView.checkIsKind(of: timeViewClass) {
                 context.withContext { c in
                     c.translateBy(x: containingBounds.minX, y: -containingBounds.minY)
                     UIGraphicsPushContext(c)

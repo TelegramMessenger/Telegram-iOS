@@ -1,8 +1,9 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
-public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
+public struct PresentationPasscodeSettings: Codable, Equatable {
     public var enableBiometrics: Bool
     public var autolockTimeout: Int32?
     public var biometricsDomainState: Data?
@@ -19,38 +20,22 @@ public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
         self.shareBiometricsDomainState = shareBiometricsDomainState
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.enableBiometrics = decoder.decodeInt32ForKey("s", orElse: 0) != 0
-        self.autolockTimeout = decoder.decodeOptionalInt32ForKey("al")
-        self.biometricsDomainState = decoder.decodeDataForKey("ds")
-        self.shareBiometricsDomainState = decoder.decodeDataForKey("sds")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.enableBiometrics = (try container.decode(Int32.self, forKey: "s")) != 0
+        self.autolockTimeout = try container.decodeIfPresent(Int32.self, forKey: "al")
+        self.biometricsDomainState = try container.decodeIfPresent(Data.self, forKey: "ds")
+        self.shareBiometricsDomainState = try container.decodeIfPresent(Data.self, forKey: "sds")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.enableBiometrics ? 1 : 0, forKey: "s")
-        if let autolockTimeout = self.autolockTimeout {
-            encoder.encodeInt32(autolockTimeout, forKey: "al")
-        } else {
-            encoder.encodeNil(forKey: "al")
-        }
-        if let biometricsDomainState = self.biometricsDomainState {
-            encoder.encodeData(biometricsDomainState, forKey: "ds")
-        } else {
-            encoder.encodeNil(forKey: "ds")
-        }
-        if let shareBiometricsDomainState = self.shareBiometricsDomainState {
-            encoder.encodeData(shareBiometricsDomainState, forKey: "sds")
-        } else {
-            encoder.encodeNil(forKey: "sds")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? PresentationPasscodeSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.enableBiometrics ? 1 : 0) as Int32, forKey: "s")
+        try container.encodeIfPresent(self.autolockTimeout, forKey: "al")
+        try container.encodeIfPresent(self.biometricsDomainState, forKey: "ds")
+        try container.encodeIfPresent(self.shareBiometricsDomainState, forKey: "sds")
     }
     
     public static func ==(lhs: PresentationPasscodeSettings, rhs: PresentationPasscodeSettings) -> Bool {
@@ -74,20 +59,20 @@ public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updatePresentationPasscodeSettingsInteractively(accountManager: AccountManager, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) -> Signal<Void, NoError> {
+public func updatePresentationPasscodeSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         updatePresentationPasscodeSettingsInternal(transaction: transaction, f)
     }
 }
 
-public func updatePresentationPasscodeSettingsInternal(transaction: AccountManagerModifier, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) {
+public func updatePresentationPasscodeSettingsInternal(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) {
     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings, { entry in
         let currentSettings: PresentationPasscodeSettings
-        if let entry = entry as? PresentationPasscodeSettings {
+        if let entry = entry?.get(PresentationPasscodeSettings.self) {
             currentSettings = entry
         } else {
             currentSettings = PresentationPasscodeSettings.defaultSettings
         }
-        return f(currentSettings)
+        return PreferencesEntry(f(currentSettings))
     })
 }

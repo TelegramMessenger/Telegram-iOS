@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
@@ -53,6 +52,8 @@ public final class PasscodeSetupController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = PasscodeSetupControllerNode(presentationData: self.presentationData, mode: self.mode)
         self.displayNodeDidLoad()
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         
         self.controllerNode.selectPasscodeMode = { [weak self] in
             guard let strongSelf = self, case let .setup(change, type) = strongSelf.mode else {

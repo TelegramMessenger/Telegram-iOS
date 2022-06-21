@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
@@ -31,15 +30,6 @@ private enum ShareSearchRecentEntryStableId: Hashable {
                 } else {
                     return false
                 }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case .topPeers:
-                return 0
-            case let .peerId(peerId):
-                return peerId.hashValue
         }
     }
 }
@@ -111,13 +101,17 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
 
 private struct ShareSearchPeerEntry: Comparable, Identifiable {
     let index: Int32
-    let peer: RenderedPeer
+    let peer: RenderedPeer?
     let presence: PeerPresence?
     let theme: PresentationTheme
     let strings: PresentationStrings
     
     var stableId: Int64 {
-        return self.peer.peerId.toInt64()
+        if let peer = self.peer {
+            return peer.peerId.toInt64()
+        } else {
+            return Int64(index)
+        }
     }
     
     static func ==(lhs: ShareSearchPeerEntry, rhs: ShareSearchPeerEntry) -> Bool {
@@ -135,7 +129,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(context: context, theme: self.theme, strings: self.strings, peer: peer, presence: self.presence, controllerInteraction: interfaceInteraction, search: true)
+        return ShareControllerPeerGridItem(context: context, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, controllerInteraction: interfaceInteraction, search: true)
     }
 }
 
@@ -144,16 +138,17 @@ private struct ShareSearchGridTransaction {
     let insertions: [GridNodeInsertItem]
     let updates: [GridNodeUpdateItem]
     let animated: Bool
+    let crossFade: Bool
 }
 
-private func preparedGridEntryTransition(context: AccountContext, from fromEntries: [ShareSearchPeerEntry], to toEntries: [ShareSearchPeerEntry], interfaceInteraction: ShareControllerInteraction) -> ShareSearchGridTransaction {
+private func preparedGridEntryTransition(context: AccountContext, from fromEntries: [ShareSearchPeerEntry], to toEntries: [ShareSearchPeerEntry], interfaceInteraction: ShareControllerInteraction, crossFade: Bool) -> ShareSearchGridTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
     let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
     let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interfaceInteraction: interfaceInteraction)) }
     
-    return ShareSearchGridTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: false)
+    return ShareSearchGridTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: false, crossFade: crossFade)
 }
 
 private func preparedRecentEntryTransition(context: AccountContext, from fromEntries: [ShareSearchRecentEntry], to toEntries: [ShareSearchRecentEntry], interfaceInteraction: ShareControllerInteraction) -> ShareSearchGridTransaction {
@@ -163,7 +158,7 @@ private func preparedRecentEntryTransition(context: AccountContext, from fromEnt
     let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
     let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interfaceInteraction: interfaceInteraction)) }
     
-    return ShareSearchGridTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: false)
+    return ShareSearchGridTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: false, crossFade: false)
 }
 
 final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
@@ -242,19 +237,22 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         
-        let foundItems = searchQuery.get()
-        |> mapToSignal { query -> Signal<[ShareSearchPeerEntry]?, NoError> in
+        let foundItems = self.searchQuery.get()
+        |> mapToSignal { query -> Signal<([ShareSearchPeerEntry]?, Bool), NoError> in
             if !query.isEmpty {
                 let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
                 let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased())
-                let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
+                let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError> = .single(([], [], true))
                 |> then(
-                    context.engine.peers.searchPeers(query: query)
+                    context.engine.contacts.searchRemotePeers(query: query)
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                    |> map { a, b -> ([FoundPeer], [FoundPeer], Bool) in
+                        return (a, b, false)
+                    }
                 )
                 
                 return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers)
-                |> map { accountPeer, foundLocalPeers, foundRemotePeers -> [ShareSearchPeerEntry]? in
+                |> map { accountPeer, foundLocalPeers, foundRemotePeers -> ([ShareSearchPeerEntry]?, Bool) in
                     var entries: [ShareSearchPeerEntry] = []
                     var index: Int32 = 0
                     
@@ -279,44 +277,56 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                         }
                     }
                     
-                    for foundPeer in foundRemotePeers.0 {
-                        let peer = foundPeer.peer
-                        if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
-                            existingPeerIds.insert(peer.id)
-                            entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: foundPeer.peer), presence: nil, theme: theme, strings: strings))
+                    var isPlaceholder = false
+                    if foundRemotePeers.2 {
+                        isPlaceholder = true
+                        for _ in 0 ..< 4 {
+                            entries.append(ShareSearchPeerEntry(index: index, peer: nil, presence: nil, theme: theme, strings: strings))
                             index += 1
+                        }
+                    } else {
+                        for foundPeer in foundRemotePeers.0 {
+                            let peer = foundPeer.peer
+                            if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
+                                existingPeerIds.insert(peer.id)
+                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: foundPeer.peer), presence: nil, theme: theme, strings: strings))
+                                index += 1
+                            }
+                        }
+                        
+                        for foundPeer in foundRemotePeers.1 {
+                            let peer = foundPeer.peer
+                            if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
+                                existingPeerIds.insert(peer.id)
+                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: peer), presence: nil, theme: theme, strings: strings))
+                                index += 1
+                            }
                         }
                     }
                     
-                    for foundPeer in foundRemotePeers.1 {
-                        let peer = foundPeer.peer
-                        if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
-                            existingPeerIds.insert(peer.id)
-                            entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: peer), presence: nil, theme: theme, strings: strings))
-                            index += 1
-                        }
-                    }
-                    
-                    return entries
+                    return (entries, isPlaceholder)
                 }
             } else {
-                return .single(nil)
+                return .single((nil, false))
             }
         }
         
-        let previousSearchItems = Atomic<[ShareSearchPeerEntry]?>(value: nil)
+        let previousSearchItemsAndIsPlaceholder = Atomic<([ShareSearchPeerEntry]?, Bool)>(value: (nil, false))
         self.searchDisposable.set((foundItems
-        |> deliverOnMainQueue).start(next: { [weak self] entries in
+        |> deliverOnMainQueue).start(next: { [weak self] entriesAndIsPlaceholder in
             if let strongSelf = self {
-                let previousEntries = previousSearchItems.swap(entries)
+                let (entries, isPlaceholder) = entriesAndIsPlaceholder
+                let previousEntries = previousSearchItemsAndIsPlaceholder.swap(entriesAndIsPlaceholder)
                 strongSelf.entries = entries ?? []
+                                
+                let firstTime = previousEntries.0 == nil
+                let crossFade = !firstTime && previousEntries.1 && !isPlaceholder
                 
-                let firstTime = previousEntries == nil
-                let transition = preparedGridEntryTransition(context: context, from: previousEntries ?? [], to: entries ?? [], interfaceInteraction: controllerInteraction)
+                let transition = preparedGridEntryTransition(context: context, from: previousEntries.0 ?? [], to: entries ?? [], interfaceInteraction: controllerInteraction, crossFade: crossFade)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 
-                if (previousEntries == nil) != (entries == nil) {
-                    if previousEntries == nil {
+                if (previousEntries.0 == nil) != (entries == nil) {
+                    if previousEntries.0 == nil {
                         strongSelf.recentGridNode.isHidden = true
                         strongSelf.contentGridNode.isHidden = false
                         strongSelf.transitionToContentGridLayout()
@@ -419,7 +429,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         return (gridTopInset, itemWidth)
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let firstLayout = self.validLayout == nil
         self.validLayout = (size, bottomInset)
         
@@ -437,7 +447,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         var scrollToItem: GridNodeScrollToItem?
         if !self.contentGridNode.isHidden, let ensurePeerVisibleOnLayout = self.ensurePeerVisibleOnLayout {
             self.ensurePeerVisibleOnLayout = nil
-            if let index = self.entries.firstIndex(where: { $0.peer.peerId == ensurePeerVisibleOnLayout }) {
+            if let index = self.entries.firstIndex(where: { $0.peer?.peerId == ensurePeerVisibleOnLayout }) {
                 scrollToItem = GridNodeScrollToItem(index: index, position: .visible, transition: transition, directionHint: .up, adjustForSection: false)
             }
         }
@@ -580,11 +590,23 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private func dequeueTransition() {
         if let (transition, _) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
-            
+                        
             var itemTransition: ContainedViewLayoutTransition = .immediate
             if transition.animated {
                 itemTransition = .animated(duration: 0.3, curve: .spring)
             }
+            
+            if transition.crossFade {
+                if let snapshotView = self.contentGridNode.view.snapshotView(afterScreenUpdates: false) {
+                    self.contentGridNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.contentGridNode.view)
+                    snapshotView.frame = self.contentGridNode.frame
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+            }
+            
             self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: true), completion: { _ in })
         }
     }

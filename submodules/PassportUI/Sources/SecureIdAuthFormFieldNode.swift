@@ -4,7 +4,6 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import CountrySelectionUI
@@ -491,7 +490,7 @@ private func placeholderForDocumentTypes(_ types: [SecureIdRequestedIdentityDocu
         }
     }
     
-    return strings.Passport_Identity_UploadOneOfScan(string).0
+    return strings.Passport_Identity_UploadOneOfScan(string).string
 }
 
 private func placeholderForDocumentTypes(_ types: [SecureIdRequestedAddressDocumentWithAttributes], strings: PresentationStrings) -> String {
@@ -521,7 +520,7 @@ private func placeholderForDocumentTypes(_ types: [SecureIdRequestedAddressDocum
         }
     }
     
-    return strings.Passport_Address_UploadOneOfScan(string).0
+    return strings.Passport_Address_UploadOneOfScan(string).string
 }
 
 private func stringForDocumentValue(_ value: SecureIdValue, strings: PresentationStrings) -> String? {
@@ -587,7 +586,7 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                         isOneOf = true
                         let typesArray = Array(types)
                         if typesArray.count == 2 {
-                            title = strings.Passport_FieldOneOf_Or(stringForDocumentType(typesArray[0].document, strings: strings), stringForDocumentType(typesArray[1].document, strings: strings)).0
+                            title = strings.Passport_FieldOneOf_Or(stringForDocumentType(typesArray[0].document, strings: strings), stringForDocumentType(typesArray[1].document, strings: strings)).string
                         }
                         placeholder = placeholderForDocumentTypes(typesArray, strings: strings)
                         for type in types.sorted(by: { $0.document.valueKey.rawValue < $1.document.valueKey.rawValue }) {
@@ -638,7 +637,7 @@ private func fieldTitleAndText(field: SecureIdParsedRequestedFormField, strings:
                         isOneOf = true
                         let typesArray = Array(types)
                         if typesArray.count == 2 {
-                            title = strings.Passport_FieldOneOf_Or(stringForDocumentType(typesArray[0].document, strings: strings), stringForDocumentType(typesArray[1].document, strings: strings)).0
+                            title = strings.Passport_FieldOneOf_Or(stringForDocumentType(typesArray[0].document, strings: strings), stringForDocumentType(typesArray[1].document, strings: strings)).string
                         }
                         placeholder = placeholderForDocumentTypes(typesArray, strings: strings)
                         for type in types.sorted(by: { $0.document.valueKey.rawValue < $1.document.valueKey.rawValue }) {

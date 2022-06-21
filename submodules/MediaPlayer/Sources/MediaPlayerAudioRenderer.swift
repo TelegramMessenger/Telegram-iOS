@@ -3,7 +3,6 @@ import SwiftSignalKit
 import CoreMedia
 import AVFoundation
 import TelegramCore
-import SyncCore
 import TelegramAudio
 
 private enum AudioPlayerRendererState {
@@ -96,13 +95,8 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
                         
                         if !didSetRate {
                             context.state = .playing(rate: rate, didSetRate: true)
-                            let masterClock: CMClockOrTimebase
-                            if #available(iOS 9.0, *) {
-                                masterClock = CMTimebaseCopyMaster(context.timebase)
-                            } else {
-                                masterClock = CMTimebaseGetMaster(context.timebase)!
-                            }
-                            CMTimebaseSetRateAndAnchorTime(context.timebase, rate: rate, anchorTime: CMTimeMake(value: sampleIndex, timescale: 44100), immediateMasterTime: CMSyncGetTime(masterClock))
+                            let masterClock = CMTimebaseCopySource(context.timebase)
+                            CMTimebaseSetRateAndAnchorTime(context.timebase, rate: rate, anchorTime: CMTimeMake(value: sampleIndex, timescale: 44100), immediateSourceTime: CMSyncGetTime(masterClock))
                             updatedRate = context.updatedRate
                         } else {
                             context.renderTimestampTick += 1
@@ -516,7 +510,7 @@ private final class AudioPlayerRendererContext {
         
         switch self.audioSession {
             case let .manager(manager):
-                self.audioSessionDisposable.set(manager.push(audioSessionType: self.ambient ? .ambient : (self.playAndRecord ? .playWithPossiblePortOverride : .play), outputMode: self.forceAudioToSpeaker ? .speakerIfNoHeadphones : .system, once: true, manualActivate: { [weak self] control in
+                self.audioSessionDisposable.set(manager.push(audioSessionType: self.ambient ? .ambient : (self.playAndRecord ? .playWithPossiblePortOverride : .play), outputMode: self.forceAudioToSpeaker ? .speakerIfNoHeadphones : .system, once: self.ambient, manualActivate: { [weak self] control in
                     audioPlayerRendererQueue.async {
                         if let strongSelf = self {
                             strongSelf.audioSessionControl = control
@@ -533,13 +527,15 @@ private final class AudioPlayerRendererContext {
                             }
                         }
                     }
-                }, deactivate: { [weak self] in
+                }, deactivate: { [weak self] temporary in
                     return Signal { subscriber in
                         audioPlayerRendererQueue.async {
                             if let strongSelf = self {
                                 strongSelf.audioSessionControl = nil
-                                strongSelf.audioPaused()
-                                strongSelf.stop()
+                                if !temporary {
+                                    strongSelf.audioPaused()
+                                    strongSelf.stop()
+                                }
                                 subscriber.putCompletion()
                             }
                         }
@@ -689,7 +685,10 @@ private final class AudioPlayerRendererContext {
                                         strongSelf.bufferContext.with { context in
                                             let copyOffset = context.overflowData.count
                                             context.overflowData.count += dataLength - takeLength
-                                            context.overflowData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                            context.overflowData.withUnsafeMutableBytes { buffer -> Void in
+                                                guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                                                    return
+                                                }
                                                 CMBlockBufferCopyDataBytes(dataBuffer, atOffset: takeLength, dataLength: dataLength - takeLength, destination: bytes.advanced(by: copyOffset))
                                             }
                                         }
@@ -726,7 +725,10 @@ private final class AudioPlayerRendererContext {
         
         self.bufferContext.with { context in
             let bytesToCopy = min(context.buffer.size - context.buffer.availableBytes, data.count)
-            data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            data.withUnsafeBytes { buffer -> Void in
+                guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                    return
+                }
                 let _ = context.buffer.enqueue(UnsafeRawPointer(bytes), count: bytesToCopy)
                 context.bufferMaxChannelSampleIndex = sampleIndex + Int64(data.count / (2 * 2))
             }
@@ -795,7 +797,7 @@ public final class MediaPlayerAudioRenderer {
         self.audioClock = audioClock!
         
         var audioTimebase: CMTimebase?
-        CMTimebaseCreateWithMasterClock(allocator: nil, masterClock: audioClock!, timebaseOut: &audioTimebase)
+        CMTimebaseCreateWithSourceClock(allocator: nil, sourceClock: audioClock!, timebaseOut: &audioTimebase)
         self.audioTimebase = audioTimebase!
         
         audioPlayerRendererQueue.async {

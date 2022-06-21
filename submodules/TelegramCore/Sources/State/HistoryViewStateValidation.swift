@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 private final class HistoryStateValidationBatch {
     private let disposable: Disposable
@@ -140,7 +139,7 @@ final class HistoryViewStateValidationContexts {
     
     func updateView(id: Int32, view: MessageHistoryView?, location: ChatLocationInput? = nil) {
         assert(self.queue.isCurrent())
-        guard let view = view, view.tagMask == nil || view.tagMask == MessageTags.unseenPersonalMessage || view.tagMask == MessageTags.music || view.tagMask == MessageTags.pinned else {
+        guard let view = view, view.tagMask == nil || view.tagMask == MessageTags.unseenPersonalMessage || view.tagMask == MessageTags.unseenReaction || view.tagMask == MessageTags.music || view.tagMask == MessageTags.pinned else {
             if self.contexts[id] != nil {
                 self.contexts.removeValue(forKey: id)
             }
@@ -157,7 +156,7 @@ final class HistoryViewStateValidationContexts {
             }
         }
         
-        if let location = location, case let .external(peerId, threadId, _) = location {
+        if let location = location, case let .thread(peerId, threadId, _) = location {
             var rangesToInvalidate: [[MessageId]] = []
             let addToRange: (MessageId, inout [[MessageId]]) -> Void = { id, ranges in
                 if ranges.isEmpty {
@@ -229,9 +228,9 @@ final class HistoryViewStateValidationContexts {
                                         completedMessageIds.append(messageId)
                                     }
                                 }
-                                for messageId in completedMessageIds {
-                                    //context.batchReferences.removeValue(forKey: messageId)
-                                }
+                                /*for messageId in completedMessageIds {
+                                    context.batchReferences.removeValue(forKey: messageId)
+                                }*/
                             }
                         }))
                     }
@@ -383,13 +382,14 @@ final class HistoryViewStateValidationContexts {
     }
 }
 
-private func hashForScheduledMessages(_ messages: [Message]) -> Int32 {
-    var acc: UInt32 = 0
+private func hashForScheduledMessages(_ messages: [Message]) -> Int64 {
+    var acc: UInt64 = 0
     
     let sorted = messages.sorted(by: { $0.timestamp > $1.timestamp })
     
     for message in sorted {
-        acc = (acc &* 20261) &+ UInt32(message.id.id)
+        combineInt64Hash(&acc, with: UInt64(message.id.id))
+
         var editTimestamp: Int32 = 0
         inner: for attribute in message.attributes {
             if let attribute = attribute as? EditedMessageAttribute {
@@ -397,23 +397,40 @@ private func hashForScheduledMessages(_ messages: [Message]) -> Int32 {
                 break inner
             }
         }
-        acc = (acc &* 20261) &+ UInt32(editTimestamp)
-        acc = (acc &* 20261) &+ UInt32(message.timestamp)
+        combineInt64Hash(&acc, with: UInt64(editTimestamp))
+        combineInt64Hash(&acc, with: UInt64(message.timestamp))
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+    return finalizeInt64Hash(acc)
 }
 
-private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int32 {
-    var acc: UInt32 = 0
+public func combineInt64Hash(_ acc: inout UInt64, with value: UInt64) {
+    acc ^= (acc >> 21)
+    acc ^= (acc << 35)
+    acc ^= (acc >> 4)
+    acc = acc &+ value
+}
+
+public func combineInt64Hash(_ acc: inout UInt64, with peerId: PeerId) {
+    let value = UInt64(bitPattern: peerId.id._internalGetInt64Value())
+    combineInt64Hash(&acc, with: value)
+}
+
+public func finalizeInt64Hash(_ acc: UInt64) -> Int64 {
+    return Int64(bitPattern: acc)
+}
+
+private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int64 {
+    var acc: UInt64 = 0
     
     let sorted = messages.sorted(by: { $0.index > $1.index })
     
     for message in sorted {
         if withChannelIds {
-            acc = (acc &* 20261) &+ UInt32(message.id.peerId.id._internalGetInt32Value())
+            combineInt64Hash(&acc, with: message.id.peerId)
         }
-        
-        acc = (acc &* 20261) &+ UInt32(message.id.id)
+
+        combineInt64Hash(&acc, with: UInt64(message.id.id))
+
         var timestamp = message.timestamp
         inner: for attribute in message.attributes {
             if let attribute = attribute as? EditedMessageAttribute {
@@ -422,22 +439,22 @@ private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int
             }
         }
         if message.tags.contains(.pinned) {
-            acc = (acc &* 20261) &+ UInt32(1)
+            combineInt64Hash(&acc, with: UInt64(1))
         }
-        acc = (acc &* 20261) &+ UInt32(timestamp)
+        combineInt64Hash(&acc, with: UInt64(timestamp))
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+    return finalizeInt64Hash(acc)
 }
 
-private func hashForMessages(_ messages: [StoreMessage], withChannelIds: Bool) -> Int32 {
-    var acc: UInt32 = 0
+private func hashForMessages(_ messages: [StoreMessage], withChannelIds: Bool) -> Int64 {
+    var acc: UInt64 = 0
     
     for message in messages {
         if case let .Id(id) = message.id {
             if withChannelIds {
-                acc = (acc &* 20261) &+ UInt32(id.peerId.id._internalGetInt32Value())
+                combineInt64Hash(&acc, with: id.peerId)
             }
-            acc = (acc &* 20261) &+ UInt32(id.id)
+            combineInt64Hash(&acc, with: UInt64(id.id))
             var timestamp = message.timestamp
             inner: for attribute in message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
@@ -445,10 +462,10 @@ private func hashForMessages(_ messages: [StoreMessage], withChannelIds: Bool) -
                     break inner
                 }
             }
-            acc = (acc &* 20261) &+ UInt32(timestamp)
+            combineInt64Hash(&acc, with: UInt64(timestamp))
         }
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+    return finalizeInt64Hash(acc)
 }
 
 private enum ValidatedMessages {
@@ -477,6 +494,8 @@ private func validateChannelMessagesBatch(postbox: Postbox, network: Network, ac
                     if let tag = tag {
                         if tag == MessageTags.unseenPersonalMessage {
                             requestSignal = network.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1))
+                        } else if tag == MessageTags.unseenReaction {
+                            requestSignal = network.request(Api.functions.messages.getUnreadReactions(peer: inputPeer, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1))
                         } else if let filter = messageFilterForTagMask(tag) {
                             requestSignal = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, topMsgId: nil, filter: filter, minDate: 0, maxDate: 0, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1, hash: hash))
                         } else {

@@ -5,21 +5,31 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import AppBundle
+import PhoneNumberFormat
 
-enum PrivacyIntroControllerMode {
+public enum PrivacyIntroControllerMode {
     case passcode
     case twoStepVerification
+    case changePhoneNumber(String)
+    
+    var animationName: String? {
+        switch self {
+        case .passcode:
+            return "Passcode"
+        case .changePhoneNumber:
+            return "ChangePhoneNumber"
+        case .twoStepVerification:
+            return nil
+        }
+    }
     
     func icon(theme: PresentationTheme) -> UIImage? {
         switch self {
-            case .passcode:
+            case .passcode, .changePhoneNumber, .twoStepVerification:
                 return generateTintedImage(image: UIImage(bundleImageName: "Settings/PasscodeIntroIcon"), color: theme.list.freeTextColor)
-            case .twoStepVerification:
-                return generateTintedImage(image: UIImage(bundleImageName: "Settings/PasswordIntroIcon"), color: theme.list.freeTextColor)
         }
     }
     
@@ -29,6 +39,8 @@ enum PrivacyIntroControllerMode {
                 return strings.PasscodeSettings_Title
             case .twoStepVerification:
                 return strings.PrivacySettings_TwoStepAuth
+            case .changePhoneNumber:
+                return strings.ChangePhoneNumberNumber_Title
         }
     }
     
@@ -38,6 +50,8 @@ enum PrivacyIntroControllerMode {
                 return strings.PasscodeSettings_Title
             case .twoStepVerification:
                 return strings.TwoStepAuth_AdditionalPassword
+            case let .changePhoneNumber(phoneNumber):
+                return formatPhoneNumber(phoneNumber)
         }
     }
     
@@ -47,15 +61,19 @@ enum PrivacyIntroControllerMode {
                 return strings.PasscodeSettings_HelpTop
             case .twoStepVerification:
                 return strings.TwoStepAuth_SetPasswordHelp
+            case .changePhoneNumber:
+                return strings.PhoneNumberHelp_Help
         }
     }
     
     func buttonTitle(strings: PresentationStrings) -> String {
         switch self {
-        case .passcode:
-            return strings.PasscodeSettings_TurnPasscodeOn
-        case .twoStepVerification:
-            return strings.TwoStepAuth_SetPassword
+            case .passcode:
+                return strings.PasscodeSettings_TurnPasscodeOn
+            case .twoStepVerification:
+                return strings.TwoStepAuth_SetPassword
+            case .changePhoneNumber:
+                return strings.PhoneNumberHelp_ChangeNumber
         }
     }
     
@@ -63,7 +81,7 @@ enum PrivacyIntroControllerMode {
         switch self {
             case .passcode:
                 return strings.PasscodeSettings_HelpBottom
-            case .twoStepVerification:
+            case .twoStepVerification, .changePhoneNumber:
                 return ""
         }
     }
@@ -79,7 +97,7 @@ public final class PrivacyIntroControllerPresentationArguments {
     }
 }
 
-final class PrivacyIntroController: ViewController {
+public final class PrivacyIntroController: ViewController {
     private let context: AccountContext
     private let mode: PrivacyIntroControllerMode
     private let arguments: PrivacyIntroControllerPresentationArguments
@@ -94,7 +112,7 @@ final class PrivacyIntroController: ViewController {
     
     private var isDismissed: Bool = false
     
-    init(context: AccountContext, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), proceedAction: @escaping () -> Void) {
+    public init(context: AccountContext, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), proceedAction: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.arguments = arguments
@@ -107,6 +125,8 @@ final class PrivacyIntroController: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.title = self.mode.controllerTitle(strings: self.presentationData.strings)
+        
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         if arguments.animateIn {
             self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
@@ -149,9 +169,11 @@ final class PrivacyIntroController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = PrivacyIntroControllerNode(context: self.context, mode: self.mode, proceedAction: self.proceedAction)
         self.displayNodeDidLoad()
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         if self.arguments.animateIn {
             self.controllerNode.animateIn(slide: true)
@@ -160,7 +182,7 @@ final class PrivacyIntroController: ViewController {
         }
     }
     
-    override func dismiss(completion: (() -> Void)? = nil) {
+    override public func dismiss(completion: (() -> Void)? = nil) {
         if !self.isDismissed {
             self.isDismissed = true
             if self.arguments.animateIn {

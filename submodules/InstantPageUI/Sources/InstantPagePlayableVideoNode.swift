@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -47,7 +46,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
         
         var imageReference: ImageMediaReference?
         if let file = media.media as? TelegramMediaFile, let presentation = smallestImageRepresentation(file.previewRepresentations) {
-            let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [presentation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
+            let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [presentation], immediateThumbnailData: file.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
             imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
         }
         
@@ -168,7 +167,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
             switch fetchStatus {
                 case .Local:
                     self.openMedia(self.media)
-                case .Remote:
+                case .Remote, .Paused:
                     self.fetchControls?.fetch(true)
                 case .Fetching:
                     self.fetchControls?.cancel()

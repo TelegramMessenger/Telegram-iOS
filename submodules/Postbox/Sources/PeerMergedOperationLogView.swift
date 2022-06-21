@@ -6,14 +6,14 @@ final class MutablePeerMergedOperationLogView {
     var tailIndex: Int32?
     let limit: Int
     
-    init(postbox: Postbox, tag: PeerOperationLogTag, limit: Int) {
+    init(postbox: PostboxImpl, tag: PeerOperationLogTag, limit: Int) {
         self.tag = tag
         self.entries = postbox.peerOperationLogTable.getMergedEntries(tag: tag, fromIndex: 0, limit: limit)
         self.tailIndex = postbox.peerMergedOperationLogIndexTable.tailIndex(tag: tag)
         self.limit = limit
     }
     
-    func replay(postbox: Postbox, operations: [PeerMergedOperationLogOperation]) -> Bool {
+    func replay(postbox: PostboxImpl, operations: [PeerMergedOperationLogOperation]) -> Bool {
         var updated = false
         var invalidatedTail = false
         

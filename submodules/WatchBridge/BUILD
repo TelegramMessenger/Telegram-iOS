@@ -6,12 +6,14 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/WatchCommon/Host:WatchCommon",
         "//submodules/WatchBridgeAudio:WatchBridgeAudio",
         "//submodules/TelegramPresentationData:TelegramPresentationData",

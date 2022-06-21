@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import Display
@@ -12,6 +11,9 @@ import AccountContext
 import LocalizedPeerData
 import PhotoResources
 import TelegramStringFormatting
+import InvisibleInkDustNode
+import TextFormat
+import ChatPresentationInterfaceState
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
@@ -19,22 +21,28 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     private var previousMediaReference: AnyMediaReference?
     
-    let closeButton: ASButtonNode
+    let closeButton: HighlightableButtonNode
     let lineNode: ASImageNode
+    let iconNode: ASImageNode
     let titleNode: ImmediateTextNode
     let textNode: ImmediateTextNode
+    var dustNode: InvisibleInkDustNode?
     let imageNode: TransformImageNode
     
     private let actionArea: AccessibilityAreaNode
     
     var theme: PresentationTheme
+    var strings: PresentationStrings
+    
+    private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
     init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat) {
         self.messageId = messageId
         
         self.theme = theme
+        self.strings = strings
         
-        self.closeButton = ASButtonNode()
+        self.closeButton = HighlightableButtonNode()
         self.closeButton.accessibilityLabel = strings.VoiceOver_DiscardPreparedContent
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
@@ -44,6 +52,11 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.displayWithoutProcessing = true
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.displayWithoutProcessing = false
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.image = PresentationResourcesChat.chatInputPanelReplyIconImage(theme)
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
@@ -67,6 +80,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.closeButton)
         
         self.addSubnode(self.lineNode)
+        self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.imageNode)
@@ -86,17 +100,48 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
 
                 var authorName = ""
                 var text = ""
+                var isText = true
                 if let forwardInfo = message?.forwardInfo, forwardInfo.flags.contains(.isImported) {
                     if let author = forwardInfo.author {
-                        authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                        authorName = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                     } else if let authorSignature = forwardInfo.authorSignature {
                         authorName = authorSignature
                     }
                 } else if let author = message?.effectiveAuthor {
-                    authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                    authorName = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
+                
+                let isMedia: Bool
                 if let message = message {
-                    (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
+                    switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId) {
+                        case .text:
+                            isMedia = false
+                        default:
+                            isMedia = true
+                    }
+                    (text, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
+                } else {
+                    isMedia = false
+                }
+
+                let textFont = Font.regular(14.0)
+                let messageText: NSAttributedString
+                if isText, let message = message {
+                    let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
+                        if case .Spoiler = entity.type {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    let textColor = strongSelf.theme.chat.inputPanel.primaryTextColor
+                    if entities.count > 0 {
+                        messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false)
+                    } else {
+                        messageText = NSAttributedString(string: text, font: textFont, textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
+                    }
+                } else {
+                    messageText = NSAttributedString(string: text, font: textFont, textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
                 }
                 
                 var updatedMediaReference: AnyMediaReference?
@@ -152,32 +197,20 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                             if fileReference.media.isVideo {
                                 updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                             } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                                updateImageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
+                                updateImageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                             }
                         }
                     } else {
                         updateImageSignal = .single({ _ in return nil })
                     }
                 }
-                
-                let isMedia: Bool
-                if let message = message {
-                    switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId) {
-                        case .text:
-                            isMedia = false
-                        default:
-                            isMedia = true
-                    }
-                } else {
-                    isMedia = false
-                }
-                
-                strongSelf.titleNode.attributedText = NSAttributedString(string: authorName, font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
-                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
-                
+                                
+                strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string, font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                strongSelf.textNode.attributedText = messageText
+                                
                 let headerString: String
                 if let message = message, message.flags.contains(.Incoming), let author = message.author {
-                    headerString = "Reply to message. From: \(author.displayTitle(strings: strings, displayOrder: nameDisplayOrder))"
+                    headerString = "Reply to message. From: \(EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder))"
                 } else if let message = message, !message.flags.contains(.Incoming) {
                     headerString = "Reply to your message"
                 } else {
@@ -196,7 +229,9 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     strongSelf.imageNode.setSignal(updateImageSignal)
                 }
                 
-                strongSelf.setNeedsLayout()
+                if let (size, inset, interfaceState) = strongSelf.validLayout {
+                    strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
+                }
             }
         }))
     }
@@ -211,6 +246,14 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
+    override func animateIn() {
+        self.iconNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+    }
+    
+    override func animateOut() {
+        self.iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
+    }
+    
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         if self.theme !== theme {
             self.theme = theme
@@ -218,6 +261,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
             
             self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+            self.iconNode.image = PresentationResourcesChat.chatInputPanelReplyIconImage(theme)
             
             if let text = self.titleNode.attributedText?.string {
                 self.titleNode.attributedText = NSAttributedString(string: text, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
@@ -227,7 +271,9 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
             
-            self.setNeedsLayout()
+            if let (size, inset, interfaceState) = self.validLayout {
+                self.updateState(size: size, inset: inset, interfaceState: interfaceState)
+            }
         }
     }
     
@@ -235,23 +281,27 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
     
-    override func layout() {
-        super.layout()
+    override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
+        self.validLayout = (size, inset, interfaceState)
         
-        let bounds = self.bounds
+        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
         let leftInset: CGFloat = 55.0
         let textLineInset: CGFloat = 10.0
         let rightInset: CGFloat = 55.0
         let textRightInset: CGFloat = 20.0
         
         let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
-        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - rightInset - closeButtonSize.width + 16.0, y: 2.0), size: closeButtonSize)
+        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - closeButtonSize.width - inset, y: 2.0), size: closeButtonSize)
         self.closeButton.frame = closeButtonFrame
         
         self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
 
         if self.lineNode.supernode == self {
             self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
+        }
+        
+        if let icon = self.iconNode.image {
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
         }
         
         var imageTextInset: CGFloat = 0.0
@@ -268,8 +318,25 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         }
         
         let textSize = self.textNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
+        let textFrame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset - self.textNode.insets.left, y: 25.0 - self.textNode.insets.top), size: textSize)
         if self.textNode.supernode == self {
-            self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset - self.textNode.insets.left, y: 25.0 - self.textNode.insets.top), size: textSize)
+            self.textNode.frame = textFrame
+        }
+        
+        if let textLayout = self.textNode.cachedLayout, !textLayout.spoilers.isEmpty {
+            if self.dustNode == nil {
+                let dustNode = InvisibleInkDustNode(textNode: nil)
+                self.dustNode = dustNode
+                self.textNode.supernode?.insertSubnode(dustNode, aboveSubnode: self.textNode)
+                
+            }
+            if let dustNode = self.dustNode {
+                dustNode.update(size: textFrame.size, color: self.theme.chat.inputPanel.secondaryTextColor, textColor: self.theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+            }
+        } else if let dustNode = self.dustNode {
+            self.dustNode = nil
+            dustNode.removeFromSupernode()
         }
     }
     

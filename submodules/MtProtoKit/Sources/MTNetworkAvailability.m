@@ -32,7 +32,7 @@ static const void *MTNetworkAvailabilityContextRetain(const void *info)
 static void MTNetworkAvailabilityContextRelease(const void *info)
 {
     void *retainedThing = (__bridge void *)((__bridge id)info);
-    id unretainedThing = (__bridge_transfer id)retainedThing;
+    __unused id unretainedThing = (__bridge_transfer id)retainedThing;
     unretainedThing = nil;
 }
 
@@ -137,7 +137,6 @@ static void MTNetworkAvailabilityContextRelease(const void *info)
     [[MTNetworkAvailability networkAvailabilityQueue] dispatchOnQueue:^
      {
          BOOL isReachable = ((flags & kSCNetworkReachabilityFlagsReachable) != 0);
-         BOOL needsConnection = ((flags & kSCNetworkReachabilityFlagsConnectionRequired) != 0);
          BOOL canConnectionAutomatically = (((flags & kSCNetworkReachabilityFlagsConnectionOnDemand ) != 0) ||
                                             ((flags & kSCNetworkReachabilityFlagsConnectionOnTraffic) != 0));
          BOOL canConnectWithoutUserInteraction = (canConnectionAutomatically &&

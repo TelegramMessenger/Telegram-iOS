@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import AvatarNode
@@ -121,7 +120,7 @@ public class VoiceChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.subtitleNode.attributedText = NSAttributedString(string: item.subtitle, font: subtitleFont, textColor: self.theme.secondaryTextColor)
         
         let theme = item.context.sharedContext.currentPresentationData.with { $0 }.theme
-        self.avatarNode.setPeer(context: item.context, theme: theme, peer: item.peer)
+        self.avatarNode.setPeer(context: item.context, theme: theme, peer: EnginePeer(item.peer))
                 
         self.accessibilityArea.accessibilityTraits = [.button]
         self.accessibilityArea.accessibilityLabel = item.title

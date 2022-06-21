@@ -4,19 +4,19 @@
 
 @interface SSignal (Meta)
 
-- (SSignal *)switchToLatest;
-- (SSignal *)mapToSignal:(SSignal *(^)(id))f;
-- (SSignal *)mapToQueue:(SSignal *(^)(id))f;
-- (SSignal *)mapToThrottled:(SSignal *(^)(id))f;
-- (SSignal *)then:(SSignal *)signal;
-- (SSignal *)queue;
-- (SSignal *)throttled;
-+ (SSignal *)defer:(SSignal *(^)())generator;
+- (SSignal * _Nonnull)switchToLatest;
+- (SSignal * _Nonnull)mapToSignal:(SSignal * _Nonnull (^ _Nonnull)(id _Nullable))f;
+- (SSignal * _Nonnull)mapToQueue:(SSignal * _Nonnull (^ _Nonnull)(id _Nullable))f;
+- (SSignal * _Nonnull)mapToThrottled:(SSignal * _Nonnull (^ _Nonnull)(id _Nullable))f;
+- (SSignal * _Nonnull)then:(SSignal * _Nonnull)signal;
+- (SSignal * _Nonnull)queue;
+- (SSignal * _Nonnull)throttled;
++ (SSignal * _Nonnull)defer:(SSignal * _Nonnull(^ _Nonnull)())generator;
 
 @end
 
 @interface SSignalQueue : NSObject
 
-- (SSignal *)enqueue:(SSignal *)signal;
+- (SSignal * _Nonnull)enqueue:(SSignal * _Nonnull)signal;
 
 @end

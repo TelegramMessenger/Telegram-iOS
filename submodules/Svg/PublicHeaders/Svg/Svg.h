@@ -4,6 +4,9 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
-UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *backgroundColor, UIColor *foregroundColor);
+NSData * _Nullable prepareSvgImage(NSData * _Nonnull data);
+UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size, UIColor * _Nonnull backgroundColor, CGFloat scale);
+
+UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor * _Nullable backgroundColor, UIColor * _Nullable foregroundColor, bool opaque);
 
 #endif /* Lottie_h */

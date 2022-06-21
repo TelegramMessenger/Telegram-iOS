@@ -3,7 +3,6 @@ import TelegramApi
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
-import SyncCore
 
 public struct BlockedPeersContextState: Equatable {
     public var isLoadingMore: Bool

@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -226,7 +225,7 @@ class UpdateInfoItemNode: ListViewItemNode {
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
                     contentSize = CGSize(width: params.width, height: 88.0 + textLayout.size.height + inset)
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -302,6 +301,7 @@ class UpdateInfoItemNode: ListViewItemNode {
                                 case .sameSection(false):
                                     bottomStripeInset = 16.0
                                     bottomStripeOffset = -separatorHeight
+                                    strongSelf.bottomStripeNode.isHidden = false
                                 default:
                                     bottomStripeInset = 0.0
                                     bottomStripeOffset = 0.0

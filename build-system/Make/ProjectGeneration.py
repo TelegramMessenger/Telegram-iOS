@@ -10,13 +10,21 @@ def remove_directory(path):
         shutil.rmtree(path)
 
 
-def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments):
+def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name):
     project_path = os.path.join(build_environment.base_path, 'build-input/gen/project')
-    app_target = 'Telegram'
+
+    if '/' in target_name:
+        app_target_spec = target_name.split('/')[0] + '/' + target_name.split('/')[1] + ':' + target_name.split('/')[1]
+        app_target = target_name
+        app_target_clean = app_target.replace('/', '_')
+    else:
+        app_target_spec = '{target}:{target}'.format(target=target_name)
+        app_target = target_name
+        app_target_clean = app_target.replace('/', '_')
 
     os.makedirs(project_path, exist_ok=True)
     remove_directory('{}/Tulsi.app'.format(project_path))
-    remove_directory('{project}/{target}.tulsiproj'.format(project=project_path, target=app_target))
+    remove_directory('{project}/{target}.tulsiproj'.format(project=project_path, target=app_target_clean))
 
     tulsi_path = os.path.join(project_path, 'Tulsi.app/Contents/MacOS/Tulsi')
 
@@ -33,6 +41,7 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
     tulsi_build_command += ['--xcode_version={}'.format(build_environment.xcode_version)]
     tulsi_build_command += ['--use_top_level_targets_for_symlinks']
     tulsi_build_command += ['--verbose_failures']
+    tulsi_build_command += ['--swiftcopt=-whole-module-optimization']
 
     call_executable(tulsi_build_command)
 
@@ -78,21 +87,23 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
     bazel_build_arguments = []
     bazel_build_arguments += ['--override_repository=build_configuration={}'.format(configuration_path)]
     if disable_extensions:
-        bazel_build_arguments += ['--//Telegram:disableExtensions']
+        bazel_build_arguments += ['--//{}:disableExtensions'.format(app_target)]
     if disable_provisioning_profiles:
-        bazel_build_arguments += ['--//Telegram:disableProvisioningProfiles']
+        bazel_build_arguments += ['--//{}:disableProvisioningProfiles'.format(app_target)]
     if generate_dsym:
         bazel_build_arguments += ['--apple_generate_dsym']
+    bazel_build_arguments += ['--//{}:disableStripping'.format('Telegram')]
+    bazel_build_arguments += ['--strip=never']
 
     call_executable([
         tulsi_path,
         '--',
         '--verbose',
-        '--create-tulsiproj', app_target,
+        '--create-tulsiproj', app_target_clean,
         '--workspaceroot', './',
         '--bazel', bazel_wrapper_path,
         '--outputfolder', project_path,
-        '--target', '{target}:{target}'.format(target=app_target),
+        '--target', '{target_spec}'.format(target_spec=app_target_spec),
         '--build-options', ' '.join(bazel_build_arguments)
     ])
 
@@ -100,17 +111,17 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
     additional_arguments += ['--override_repository=build_configuration={}'.format(configuration_path)]
     additional_arguments += bazel_app_arguments
     if disable_extensions:
-        additional_arguments += ['--//Telegram:disableExtensions']
+        additional_arguments += ['--//{}:disableExtensions'.format(app_target)]
 
     additional_arguments_string = ' '.join(additional_arguments)
 
-    tulsi_config_path = 'build-input/gen/project/{target}.tulsiproj/Configs/{target}.tulsigen'.format(target=app_target)
+    tulsi_config_path = 'build-input/gen/project/{target}.tulsiproj/Configs/{target}.tulsigen'.format(target=app_target_clean)
     with open(tulsi_config_path, 'rb') as tulsi_config:
         tulsi_config_json = json.load(tulsi_config)
     for category in ['BazelBuildOptionsDebug', 'BazelBuildOptionsRelease']:
         tulsi_config_json['optionSet'][category]['p'] += ' {}'.format(additional_arguments_string)
     tulsi_config_json['sourceFilters'] = [
-        'Telegram/...',
+        '{}/...'.format(app_target),
         'submodules/...',
         'third-party/...'
     ]
@@ -121,28 +132,12 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
         tulsi_path,
         '--',
         '--verbose',
-        '--genconfig', '{project}/{target}.tulsiproj:{target}'.format(project=project_path, target=app_target),
+        '--genconfig', '{project}/{target}.tulsiproj:{target}'.format(project=project_path, target=app_target_clean),
         '--bazel', bazel_wrapper_path,
         '--outputfolder', project_path,
         '--no-open-xcode'
     ])
 
-    xcodeproj_path = '{project}/{target}.xcodeproj'.format(project=project_path, target=app_target)
-
-    bazel_build_settings_path = '{}/.tulsi/Scripts/bazel_build_settings.py'.format(xcodeproj_path)
-
-    with open(bazel_build_settings_path, 'rb') as bazel_build_settings:
-        bazel_build_settings_contents = bazel_build_settings.read().decode('utf-8')
-    bazel_build_settings_contents = bazel_build_settings_contents.replace(
-        'BUILD_SETTINGS = BazelBuildSettings(',
-        'import os\nBUILD_SETTINGS = BazelBuildSettings('
-    )
-    bazel_build_settings_contents = bazel_build_settings_contents.replace(
-        '\'--cpu=ios_arm64\'',
-        '\'--cpu=ios_arm64\'.replace(\'ios_arm64\', \'ios_sim_arm64\' if os.environ.get(\'EFFECTIVE_PLATFORM_NAME\') '
-        '== \'-iphonesimulator\' else \'ios_arm64\')'
-    )
-    with open(bazel_build_settings_path, 'wb') as bazel_build_settings:
-        bazel_build_settings.write(bazel_build_settings_contents.encode('utf-8'))
+    xcodeproj_path = '{project}/{target}.xcodeproj'.format(project=project_path, target=app_target_clean)
 
     call_executable(['open', xcodeproj_path])

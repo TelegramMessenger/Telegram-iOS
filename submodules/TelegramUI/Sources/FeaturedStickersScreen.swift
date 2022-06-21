@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AccountContext
 import TelegramPresentationData
@@ -96,7 +95,7 @@ private final class FeaturedPackEntry: Identifiable, Comparable {
     
     func item(account: Account, interaction: FeaturedInteraction, isOther: Bool) -> GridItem {
         let info = self.info
-        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: true, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: self.regularInsets, installed: self.installed, unread: self.unread, open: {
+        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: true, fillsRow: false, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: self.regularInsets, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
         }, install: {
             interaction.installPack(info, !self.installed)
@@ -154,16 +153,17 @@ private struct FeaturedTransition {
     let insertions: [GridNodeInsertItem]
     let updates: [GridNodeUpdateItem]
     let initial: Bool
+    let scrollToItem: GridNodeScrollToItem?
 }
 
-private func preparedTransition(from fromEntries: [FeaturedEntry], to toEntries: [FeaturedEntry], account: Account, interaction: FeaturedInteraction, initial: Bool) -> FeaturedTransition {
+private func preparedTransition(from fromEntries: [FeaturedEntry], to toEntries: [FeaturedEntry], account: Account, interaction: FeaturedInteraction, initial: Bool, scrollToItem: GridNodeScrollToItem?) -> FeaturedTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
     let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
     let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
     
-    return FeaturedTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial)
+    return FeaturedTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial, scrollToItem: scrollToItem)
 }
 
 private func featuredScreenEntries(featuredEntries: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, theme: PresentationTheme, strings: PresentationStrings, fixedUnread: Set<ItemCollectionId>, additionalPacks: [FeaturedStickerPackItem]) -> [FeaturedEntry] {
@@ -281,6 +281,10 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             },
             openSettings: {
             },
+            openTrending: { _ in
+            },
+            dismissTrendingPacks: { _ in
+            },
             toggleSearch: { _, _, _ in
             },
             openPeerSpecificSettings: {
@@ -296,7 +300,6 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 guard let strongSelf = self, let info = info as? StickerPackCollectionInfo else {
                     return
                 }
-                let account = strongSelf.context.account
                 if install {
                     let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: []).start()
                 } else {
@@ -362,6 +365,8 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             return (items, fixedUnread)
         }
         
+        let highlightedPackId = controller.highlightedPackId
+        
         self.disposable = (combineLatest(queue: .mainQueue(),
             mappedFeatured,
             self.additionalPacks.get(),
@@ -380,7 +385,20 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             let entries = featuredScreenEntries(featuredEntries: featuredEntries.0, installedPacks: installedPacks, theme: presentationData.theme, strings: presentationData.strings, fixedUnread: featuredEntries.1, additionalPacks: additionalPacks)
             let previous = previousEntries.swap(entries)
             
-            return preparedTransition(from: previous ?? [], to: entries, account: context.account, interaction: interaction, initial: previous == nil)
+            var scrollToItem: GridNodeScrollToItem?
+            let initial = previous == nil
+            if initial, let highlightedPackId = highlightedPackId {
+                var index = 0
+                for entry in entries {
+                    if case let .pack(packEntry, _) = entry, packEntry.info.id == highlightedPackId {
+                        scrollToItem = GridNodeScrollToItem(index: index, position: .center(0.0), transition: .immediate, directionHint: .down, adjustForSection: false)
+                        break
+                    }
+                    index += 1
+                }
+            }
+            
+            return preparedTransition(from: previous ?? [], to: entries, account: context.account, interaction: interaction, initial: initial, scrollToItem: scrollToItem)
         }
         |> deliverOnMainQueue).start(next: { [weak self] transition in
             guard let strongSelf = self else {
@@ -594,14 +612,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 return controller
             }
             return nil
-        }, updateContent: { [weak self] content in
-            if let strongSelf = self {
-                var item: StickerPreviewPeekItem?
-                if let content = content as? StickerPreviewPeekContent {
-                    item = content.item
-                }
-                //strongSelf.updatePreviewingItem(item: item, animated: true)
-            }
+        }, updateContent: { _ in
         }))
     }
     
@@ -691,7 +702,15 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             self.enqueuedTransitions.remove(at: 0)
             
             let itemTransition: ContainedViewLayoutTransition = .immediate
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: transition.initial), completion: { _ in })
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: transition.initial), completion: { [weak self] _ in
+                if let strongSelf = self, transition.initial {
+                    strongSelf.gridNode.forEachItemNode({ itemNode in
+                        if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode, itemNode.item?.info.id == strongSelf.controller?.highlightedPackId {
+                            itemNode.highlight()
+                        }
+                    })
+                }
+            })
         }
     }
     
@@ -720,6 +739,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
 
 final class FeaturedStickersScreen: ViewController {
     private let context: AccountContext
+    fileprivate let highlightedPackId: ItemCollectionId?
     private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     
     private var controllerNode: FeaturedStickersScreenNode {
@@ -736,8 +756,9 @@ final class FeaturedStickersScreen: ViewController {
     
     fileprivate var searchNavigationNode: SearchNavigationContentNode?
     
-    public init(context: AccountContext, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) {
         self.context = context
+        self.highlightedPackId = highlightedPackId
         self.sendSticker = sendSticker
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -748,7 +769,7 @@ final class FeaturedStickersScreen: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        let searchNavigationNode = SearchNavigationContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, cancel: { [weak self] in
+        let searchNavigationNode = SearchNavigationContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, placeholder: { strings in return strings.Stickers_Search }, cancel: { [weak self] in
             self?.dismiss()
         })
         self.searchNavigationNode = searchNavigationNode
@@ -831,15 +852,17 @@ private final class SearchNavigationContentNode: NavigationBarContentNode {
     private let searchBar: SearchBarNode
     
     private var queryUpdated: ((String, String?) -> Void)?
+    private var placeholder: ((PresentationStrings) -> String)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, cancel: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, placeholder: ((PresentationStrings) -> String)? = nil, cancel: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
+        self.placeholder = placeholder
         
         self.cancel = cancel
         
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings, fieldStyle: .modern, cancelText: strings.Common_Done)
-        let placeholderText = strings.Common_Search
+        let placeholderText = placeholder?(strings) ?? strings.Common_Search
         let searchBarFont = Font.regular(17.0)
         
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
@@ -862,7 +885,7 @@ private final class SearchNavigationContentNode: NavigationBarContentNode {
         self.theme = theme
         self.strings = strings
         
-        self.searchBar.updateThemeAndStrings(theme:  SearchBarNodeTheme(theme: theme), strings: strings)
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme), strings: strings)
     }
     
     func setQueryUpdated(_ f: @escaping (String, String?) -> Void) {
@@ -965,7 +988,7 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
                 interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
+            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: true, fillsRow: true, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info, topItems, !installed)
@@ -1096,7 +1119,6 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            let account = strongSelf.context.account
             if install {
                 let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: []).start()
             } else {

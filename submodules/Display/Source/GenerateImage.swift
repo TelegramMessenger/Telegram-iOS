@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Accelerate
 import AsyncDisplayKit
+import CoreMedia
 
 public let deviceColorSpace: CGColorSpace = {
     if #available(iOSApplicationExtension 9.3, iOS 9.3, *) {
@@ -300,18 +301,23 @@ public func generateGradientTintedImage(image: UIImage?, colors: [UIColor]) -> U
         context.scaleBy(x: 1.0, y: -1.0)
         context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
         context.clip(to: imageRect, mask: image.cgImage!)
-        
-        let gradientColors = colors.map { $0.cgColor } as CFArray
-        let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
-        
-        var locations: [CGFloat] = []
-        for i in 0 ..< colors.count {
-            locations.append(delta * CGFloat(i))
+
+        if colors.count >= 2 {
+            let gradientColors = colors.map { $0.cgColor } as CFArray
+
+            var locations: [CGFloat] = []
+            for i in 0 ..< colors.count {
+                let t = CGFloat(i) / CGFloat(colors.count - 1)
+                locations.append(t)
+            }
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: imageRect.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
+        } else if !colors.isEmpty {
+            context.setFillColor(colors[0].cgColor)
+            context.fill(imageRect)
         }
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-        
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: imageRect.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
         
         context.restoreGState()
     }
@@ -553,7 +559,6 @@ public class DrawingContext {
         }
         if self.hasGeneratedImage {
             preconditionFailure()
-            return nil
         }
         self.hasGeneratedImage = true
 
@@ -576,6 +581,30 @@ public class DrawingContext {
         } else {
             return nil
         }
+    }
+
+    public func generatePixelBuffer() -> CVPixelBuffer? {
+        if self.scaledSize.width.isZero || self.scaledSize.height.isZero {
+            return nil
+        }
+        if self.hasGeneratedImage {
+            preconditionFailure()
+        }
+
+        let ioSurfaceProperties = NSMutableDictionary()
+        let options = NSMutableDictionary()
+        options.setObject(ioSurfaceProperties, forKey: kCVPixelBufferIOSurfacePropertiesKey as NSString)
+
+        var pixelBuffer: CVPixelBuffer?
+        CVPixelBufferCreateWithBytes(nil, Int(self.scaledSize.width), Int(self.scaledSize.height), kCVPixelFormatType_32BGRA, self.bytes, self.bytesPerRow, { pointer, _ in
+            if let pointer = pointer {
+                Unmanaged<ASCGImageBuffer>.fromOpaque(pointer).release()
+            }
+        }, Unmanaged.passRetained(self.imageBuffer).toOpaque(), options as CFDictionary, &pixelBuffer)
+
+        self.hasGeneratedImage = true
+
+        return pixelBuffer
     }
     
     public func colorAt(_ point: CGPoint) -> UIColor {
@@ -645,6 +674,76 @@ public class DrawingContext {
     }
 }
 
+public extension UIImage {
+    var cvPixelBuffer: CVPixelBuffer? {
+        guard let cgImage = self.cgImage else {
+            return nil
+        }
+        let _ = cgImage
+
+        var maybePixelBuffer: CVPixelBuffer? = nil
+        let ioSurfaceProperties = NSMutableDictionary()
+        let options = NSMutableDictionary()
+        options.setObject(ioSurfaceProperties, forKey: kCVPixelBufferIOSurfacePropertiesKey as NSString)
+
+        let _ = CVPixelBufferCreate(kCFAllocatorDefault, Int(size.width * self.scale), Int(size.height * self.scale), kCVPixelFormatType_32ARGB, options as CFDictionary, &maybePixelBuffer)
+        guard let pixelBuffer = maybePixelBuffer else {
+            return nil
+        }
+        CVPixelBufferLockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
+        defer {
+            CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
+        }
+
+        let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer)
+
+        let context = CGContext(
+            data: baseAddress,
+            width: Int(self.size.width * self.scale),
+            height: Int(self.size.height * self.scale),
+            bitsPerComponent: 8,
+            bytesPerRow: CVPixelBufferGetBytesPerRow(pixelBuffer),
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue,
+            releaseCallback: nil,
+            releaseInfo: nil
+        )!
+        context.clear(CGRect(origin: .zero, size: CGSize(width: self.size.width * self.scale, height: self.size.height * self.scale)))
+        context.draw(cgImage, in: CGRect(origin: .zero, size: CGSize(width: self.size.width * self.scale, height: self.size.height * self.scale)))
+
+        return pixelBuffer
+    }
+
+    var cmSampleBuffer: CMSampleBuffer? {
+        guard let pixelBuffer = self.cvPixelBuffer else {
+            return nil
+        }
+        var newSampleBuffer: CMSampleBuffer? = nil
+
+        var timingInfo = CMSampleTimingInfo(
+            duration: CMTimeMake(value: 1, timescale: 30),
+            presentationTimeStamp: CMTimeMake(value: 0, timescale: 30),
+            decodeTimeStamp: CMTimeMake(value: 0, timescale: 30)
+        )
+
+        var videoInfo: CMVideoFormatDescription? = nil
+        CMVideoFormatDescriptionCreateForImageBuffer(allocator: nil, imageBuffer: pixelBuffer, formatDescriptionOut: &videoInfo)
+        guard let videoInfo = videoInfo else {
+            return nil
+        }
+        CMSampleBufferCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: videoInfo, sampleTiming: &timingInfo, sampleBufferOut: &newSampleBuffer)
+
+        if let newSampleBuffer = newSampleBuffer {
+            let attachments = CMSampleBufferGetSampleAttachmentsArray(newSampleBuffer, createIfNecessary: true)! as NSArray
+            let dict = attachments[0] as! NSMutableDictionary
+
+            dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DisplayImmediately as NSString as String)
+        }
+
+        return newSampleBuffer
+    }
+}
+
 public enum ParsingError: Error {
     case Generic
 }
@@ -683,6 +782,7 @@ public func readCGFloat(_ index: inout UnsafePointer<UInt8>, end: UnsafePointer<
 public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: Bool = false) throws {
     var index: UnsafePointer<UInt8> = path.utf8Start
     let end = path.utf8Start.advanced(by: path.utf8CodeUnitCount)
+    var currentPoint = CGPoint()
     while index < end {
         let c = index.pointee
         index = index.successor()
@@ -692,18 +792,32 @@ public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: 
             let y = try readCGFloat(&index, end: end, separator: 32)
             
             //print("Move to \(x), \(y)")
-            context.move(to: CGPoint(x: x, y: y))
+            currentPoint = CGPoint(x: x, y: y)
+            context.move(to: currentPoint)
         } else if c == 76 { // L
             let x = try readCGFloat(&index, end: end, separator: 44)
             let y = try readCGFloat(&index, end: end, separator: 32)
             
             //print("Line to \(x), \(y)")
-            context.addLine(to: CGPoint(x: x, y: y))
+            currentPoint = CGPoint(x: x, y: y)
+            context.addLine(to: currentPoint)
             
             if strokeOnMove {
                 context.strokePath()
-                context.move(to: CGPoint(x: x, y: y))
+                context.move(to: currentPoint)
             }
+        } else if c == 72 { // H
+            let x = try readCGFloat(&index, end: end, separator: 32)
+            
+            //print("Move to \(x), \(y)")
+            currentPoint = CGPoint(x: x, y: currentPoint.y)
+            context.addLine(to: currentPoint)
+        } else if c == 86 { // V
+            let y = try readCGFloat(&index, end: end, separator: 32)
+            
+            //print("Move to \(x), \(y)")
+            currentPoint = CGPoint(x: currentPoint.x, y: y)
+            context.addLine(to: currentPoint)
         } else if c == 67 { // C
             let x1 = try readCGFloat(&index, end: end, separator: 44)
             let y1 = try readCGFloat(&index, end: end, separator: 32)
@@ -711,12 +825,14 @@ public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: 
             let y2 = try readCGFloat(&index, end: end, separator: 32)
             let x = try readCGFloat(&index, end: end, separator: 44)
             let y = try readCGFloat(&index, end: end, separator: 32)
-            context.addCurve(to: CGPoint(x: x, y: y), control1: CGPoint(x: x1, y: y1), control2: CGPoint(x: x2, y: y2))
+            
+            currentPoint = CGPoint(x: x, y: y)
+            context.addCurve(to: currentPoint, control1: CGPoint(x: x1, y: y1), control2: CGPoint(x: x2, y: y2))
             
             //print("Line to \(x), \(y)")
             if strokeOnMove {
                 context.strokePath()
-                context.move(to: CGPoint(x: x, y: y))
+                context.move(to: currentPoint)
             }
         } else if c == 90 { // Z
             if index != end && index.pointee != 32 {

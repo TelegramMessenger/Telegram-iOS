@@ -11,8 +11,8 @@ const CGFloat TGPhotoPaintColorWeightGestureRange = 320.0f;
 const CGFloat TGPhotoPaintVerticalThreshold = 5.0f;
 const CGFloat TGPhotoPaintPreviewOffset = -70.0f;
 const CGFloat TGPhotoPaintPreviewScale = 2.0f;
-const CGFloat TGPhotoPaintDefaultBrushWeight = 0.22f;
-const CGFloat TGPhotoPaintDefaultColorLocation = 1.0f;
+const CGFloat TGPhotoPaintDefaultBrushWeight = 0.08f;
+const CGFloat TGPhotoPaintDefaultColorLocation = 0.0f;
 
 @interface TGPhotoPaintColorPickerKnobCircleView : UIView
 {
@@ -97,7 +97,7 @@ const CGFloat TGPhotoPaintDefaultColorLocation = 1.0f;
         [self addGestureRecognizer:_tapGestureRecognizer];
         
         _location = [self restoreLastColorLocation];
-        _weight = 0.08f;
+        _weight = TGPhotoPaintDefaultBrushWeight;
     }
     return self;
 }
@@ -107,7 +107,7 @@ const CGFloat TGPhotoPaintDefaultColorLocation = 1.0f;
     NSNumber *lastColor = [[NSUserDefaults standardUserDefaults] objectForKey:@"TG_paintLastColorLocation_v0"];
     if (lastColor != nil)
         return [lastColor floatValue];
-    
+
     return TGPhotoPaintDefaultColorLocation;
 }
 

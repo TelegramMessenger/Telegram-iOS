@@ -4,15 +4,77 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
-
 private enum AccountKind {
     case authorized
     case unauthorized
 }
 
+public enum TelegramAccountRecordAttribute: AccountRecordAttribute, Equatable {
+    enum CodingKeys: String, CodingKey {
+        case backupData
+        case environment
+        case sortOrder
+        case loggedOut
+        case legacyRootObject = "_"
+    }
+
+    case backupData(AccountBackupDataAttribute)
+    case environment(AccountEnvironmentAttribute)
+    case sortOrder(AccountSortOrderAttribute)
+    case loggedOut(LoggedOutAccountAttribute)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        if let backupData = try? container.decodeIfPresent(AccountBackupDataAttribute.self, forKey: .backupData) {
+            self = .backupData(backupData)
+        } else if let environment = try? container.decodeIfPresent(AccountEnvironmentAttribute.self, forKey: .environment) {
+            self = .environment(environment)
+        } else if let sortOrder = try? container.decodeIfPresent(AccountSortOrderAttribute.self, forKey: .sortOrder) {
+            self = .sortOrder(sortOrder)
+        } else if let loggedOut = try? container.decodeIfPresent(LoggedOutAccountAttribute.self, forKey: .loggedOut) {
+            self = .loggedOut(loggedOut)
+        } else {
+            let legacyRootObjectData = try! container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .legacyRootObject)
+            if legacyRootObjectData.typeHash == postboxEncodableTypeHash(AccountBackupDataAttribute.self) {
+                self = .backupData(try! AdaptedPostboxDecoder().decode(AccountBackupDataAttribute.self, from: legacyRootObjectData.data))
+            } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(AccountEnvironmentAttribute.self) {
+                self = .environment(try! AdaptedPostboxDecoder().decode(AccountEnvironmentAttribute.self, from: legacyRootObjectData.data))
+            } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(AccountSortOrderAttribute.self) {
+                self = .sortOrder(try! AdaptedPostboxDecoder().decode(AccountSortOrderAttribute.self, from: legacyRootObjectData.data))
+            } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(LoggedOutAccountAttribute.self) {
+                self = .loggedOut(try! AdaptedPostboxDecoder().decode(LoggedOutAccountAttribute.self, from: legacyRootObjectData.data))
+            } else {
+                preconditionFailure()
+            }
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case let .backupData(backupData):
+            try container.encode(backupData, forKey: .backupData)
+        case let .environment(environment):
+            try container.encode(environment, forKey: .environment)
+        case let .sortOrder(sortOrder):
+            try container.encode(sortOrder, forKey: .sortOrder)
+        case let .loggedOut(loggedOut):
+            try container.encode(loggedOut, forKey: .loggedOut)
+        }
+    }
+
+    public func isEqual(to: AccountRecordAttribute) -> Bool {
+        return self == to as? TelegramAccountRecordAttribute
+    }
+}
+
+public final class TelegramAccountManagerTypes: AccountManagerTypes {
+    public typealias Attribute = TelegramAccountRecordAttribute
+}
+
 private var declaredEncodables: Void = {
-    declareEncodable(AuthAccountRecord.self, f: { AuthAccountRecord(decoder: $0) })
     declareEncodable(UnauthorizedAccountState.self, f: { UnauthorizedAccountState(decoder: $0) })
     declareEncodable(AuthorizedAccountState.self, f: { AuthorizedAccountState(decoder: $0) })
     declareEncodable(TelegramUser.self, f: { TelegramUser(decoder: $0) })
@@ -54,7 +116,6 @@ private var declaredEncodables: Void = {
     declareEncodable(SourceReferenceMessageAttribute.self, f: { SourceReferenceMessageAttribute(decoder: $0) })
     declareEncodable(EditedMessageAttribute.self, f: { EditedMessageAttribute(decoder: $0) })
     declareEncodable(ReplyMarkupMessageAttribute.self, f: { ReplyMarkupMessageAttribute(decoder: $0) })
-    declareEncodable(CachedResolvedByNamePeer.self, f: { CachedResolvedByNamePeer(decoder: $0) })
     declareEncodable(OutgoingChatContextResultMessageAttribute.self, f: { OutgoingChatContextResultMessageAttribute(decoder: $0) })
     declareEncodable(HttpReferenceMediaResource.self, f: { HttpReferenceMediaResource(decoder: $0) })
     declareEncodable(WebFileReferenceMediaResource.self, f: { WebFileReferenceMediaResource(decoder: $0) })
@@ -68,16 +129,9 @@ private var declaredEncodables: Void = {
     declareEncodable(CloudChatRemoveMessagesOperation.self, f: { CloudChatRemoveMessagesOperation(decoder: $0) })
     declareEncodable(AutoremoveTimeoutMessageAttribute.self, f: { AutoremoveTimeoutMessageAttribute(decoder: $0) })
     declareEncodable(AutoclearTimeoutMessageAttribute.self, f: { AutoclearTimeoutMessageAttribute(decoder: $0) })
-    declareEncodable(GlobalNotificationSettings.self, f: { GlobalNotificationSettings(decoder: $0) })
     declareEncodable(CloudChatRemoveChatOperation.self, f: { CloudChatRemoveChatOperation(decoder: $0) })
     declareEncodable(SynchronizePinnedChatsOperation.self, f: { SynchronizePinnedChatsOperation(decoder: $0) })
     declareEncodable(SynchronizeConsumeMessageContentsOperation.self, f: { SynchronizeConsumeMessageContentsOperation(decoder: $0) })
-    declareEncodable(RecentMediaItem.self, f: { RecentMediaItem(decoder: $0) })
-    declareEncodable(RecentPeerItem.self, f: { RecentPeerItem(decoder: $0) })
-    declareEncodable(RecentHashtagItem.self, f: { RecentHashtagItem(decoder: $0) })
-    declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
-    declareEncodable(AccountEnvironmentAttribute.self, f: { AccountEnvironmentAttribute(decoder: $0) })
-    declareEncodable(AccountSortOrderAttribute.self, f: { AccountSortOrderAttribute(decoder: $0) })
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })
@@ -85,58 +139,28 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaInvoice.self, f: { TelegramMediaInvoice(decoder: $0) })
     declareEncodable(TelegramMediaWebFile.self, f: { TelegramMediaWebFile(decoder: $0) })
     declareEncodable(SynchronizeInstalledStickerPacksOperation.self, f: { SynchronizeInstalledStickerPacksOperation(decoder: $0) })
-    declareEncodable(FeaturedStickerPackItem.self, f: { FeaturedStickerPackItem(decoder: $0) })
     declareEncodable(SynchronizeMarkFeaturedStickerPacksAsSeenOperation.self, f: { SynchronizeMarkFeaturedStickerPacksAsSeenOperation(decoder: $0) })
-    declareEncodable(ArchivedStickerPacksInfo.self, f: { ArchivedStickerPacksInfo(decoder: $0) })
     declareEncodable(SynchronizeChatInputStateOperation.self, f: { SynchronizeChatInputStateOperation(decoder: $0) })
     declareEncodable(SynchronizeSavedGifsOperation.self, f: { SynchronizeSavedGifsOperation(decoder: $0) })
     declareEncodable(SynchronizeSavedStickersOperation.self, f: { SynchronizeSavedStickersOperation(decoder: $0) })
     declareEncodable(SynchronizeRecentlyUsedMediaOperation.self, f: { SynchronizeRecentlyUsedMediaOperation(decoder: $0) })
-    declareEncodable(CacheStorageSettings.self, f: { CacheStorageSettings(decoder: $0) })
-    declareEncodable(LocalizationSettings.self, f: { LocalizationSettings(decoder: $0) })
-    declareEncodable(LocalizationListState.self, f: { LocalizationListState(decoder: $0) })
-    declareEncodable(ProxySettings.self, f: { ProxySettings(decoder: $0) })
-    declareEncodable(NetworkSettings.self, f: { NetworkSettings(decoder: $0) })
-    declareEncodable(RemoteStorageConfiguration.self, f: { RemoteStorageConfiguration(decoder: $0) })
-    declareEncodable(LimitsConfiguration.self, f: { LimitsConfiguration(decoder: $0) })
-    declareEncodable(VoipConfiguration.self, f: { VoipConfiguration(decoder: $0) })
-    declareEncodable(SuggestedLocalizationEntry.self, f: { SuggestedLocalizationEntry(decoder: $0) })
     declareEncodable(SynchronizeLocalizationUpdatesOperation.self, f: { SynchronizeLocalizationUpdatesOperation(decoder: $0) })
     declareEncodable(ChannelMessageStateVersionAttribute.self, f: { ChannelMessageStateVersionAttribute(decoder: $0) })
     declareEncodable(PeerGroupMessageStateVersionAttribute.self, f: { PeerGroupMessageStateVersionAttribute(decoder: $0) })
     declareEncodable(CachedSecretChatData.self, f: { CachedSecretChatData(decoder: $0) })
-    declareEncodable(TemporaryTwoStepPasswordToken.self, f: { TemporaryTwoStepPasswordToken(decoder: $0) })
     declareEncodable(AuthorSignatureMessageAttribute.self, f: { AuthorSignatureMessageAttribute(decoder: $0) })
     declareEncodable(TelegramMediaExpiredContent.self, f: { TelegramMediaExpiredContent(decoder: $0) })
-    declareEncodable(SavedStickerItem.self, f: { SavedStickerItem(decoder: $0) })
     declareEncodable(ConsumablePersonalMentionMessageAttribute.self, f: { ConsumablePersonalMentionMessageAttribute(decoder: $0) })
     declareEncodable(ConsumePersonalMessageAction.self, f: { ConsumePersonalMessageAction(decoder: $0) })
-    declareEncodable(CachedStickerPack.self, f: { CachedStickerPack(decoder: $0) })
-    declareEncodable(LoggingSettings.self, f: { LoggingSettings(decoder: $0) })
-    declareEncodable(CachedLocalizationInfos.self, f: { CachedLocalizationInfos(decoder: $0) })
-    declareEncodable(CachedSecureIdConfiguration.self, f: { CachedSecureIdConfiguration(decoder: $0) })
-    declareEncodable(CachedWallpapersConfiguration.self, f: { CachedWallpapersConfiguration(decoder: $0) })
-    declareEncodable(CachedThemesConfiguration.self, f: { CachedThemesConfiguration(decoder: $0) })
+    declareEncodable(ReadReactionAction.self, f: { ReadReactionAction(decoder: $0) })
     declareEncodable(SynchronizeGroupedPeersOperation.self, f: { SynchronizeGroupedPeersOperation(decoder: $0) })
-    declareEncodable(ContentPrivacySettings.self, f: { ContentPrivacySettings(decoder: $0) })
     declareEncodable(TelegramDeviceContactImportedData.self, f: { TelegramDeviceContactImportedData(decoder: $0) })
     declareEncodable(SecureFileMediaResource.self, f: { SecureFileMediaResource(decoder: $0) })
-    declareEncodable(CachedStickerQueryResult.self, f: { CachedStickerQueryResult(decoder: $0) })
-    declareEncodable(TelegramWallpaper.self, f: { TelegramWallpaper(decoder: $0) })
-    declareEncodable(TelegramTheme.self, f: { TelegramTheme(decoder: $0) })
-    declareEncodable(ThemeSettings.self, f: { ThemeSettings(decoder: $0) })
     declareEncodable(SynchronizeMarkAllUnseenPersonalMessagesOperation.self, f: { SynchronizeMarkAllUnseenPersonalMessagesOperation(decoder: $0) })
+    declareEncodable(SynchronizeMarkAllUnseenReactionsOperation.self, f: { SynchronizeMarkAllUnseenReactionsOperation(decoder: $0) })
     declareEncodable(SynchronizeAppLogEventsOperation.self, f: { SynchronizeAppLogEventsOperation(decoder: $0) })
-    declareEncodable(CachedRecentPeers.self, f: { CachedRecentPeers(decoder: $0) })
-    declareEncodable(AppChangelogState.self, f: { AppChangelogState(decoder: $0) })
-    declareEncodable(AppConfiguration.self, f: { AppConfiguration(decoder: $0) })
-    declareEncodable(JSON.self, f: { JSON(decoder: $0) })
-    declareEncodable(SearchBotsConfiguration.self, f: { SearchBotsConfiguration(decoder: $0) })
-    declareEncodable(AutodownloadSettings.self, f: { AutodownloadSettings(decoder: $0 )})
     declareEncodable(TelegramMediaPoll.self, f: { TelegramMediaPoll(decoder: $0) })
     declareEncodable(TelegramMediaUnsupported.self, f: { TelegramMediaUnsupported(decoder: $0) })
-    declareEncodable(ContactsSettings.self, f: { ContactsSettings(decoder: $0) })
-    declareEncodable(SecretChatSettings.self, f: { SecretChatSettings(decoder: $0) })
     declareEncodable(EmojiKeywordCollectionInfo.self, f: { EmojiKeywordCollectionInfo(decoder: $0) })
     declareEncodable(EmojiKeywordItem.self, f: { EmojiKeywordItem(decoder: $0) })
     declareEncodable(SynchronizeEmojiKeywordsOperation.self, f: { SynchronizeEmojiKeywordsOperation(decoder: $0) })
@@ -144,38 +168,25 @@ private var declaredEncodables: Void = {
     declareEncodable(CloudDocumentSizeMediaResource.self, f: { CloudDocumentSizeMediaResource(decoder: $0) })
     declareEncodable(CloudPeerPhotoSizeMediaResource.self, f: { CloudPeerPhotoSizeMediaResource(decoder: $0) })
     declareEncodable(CloudStickerPackThumbnailMediaResource.self, f: { CloudStickerPackThumbnailMediaResource(decoder: $0) })
-    declareEncodable(AccountBackupDataAttribute.self, f: { AccountBackupDataAttribute(decoder: $0) })
     declareEncodable(ContentRequiresValidationMessageAttribute.self, f: { ContentRequiresValidationMessageAttribute(decoder: $0) })
     declareEncodable(WasScheduledMessageAttribute.self, f: { WasScheduledMessageAttribute(decoder: $0) })
     declareEncodable(OutgoingScheduleInfoMessageAttribute.self, f: { OutgoingScheduleInfoMessageAttribute(decoder: $0) })
     declareEncodable(UpdateMessageReactionsAction.self, f: { UpdateMessageReactionsAction(decoder: $0) })
     declareEncodable(RestrictedContentMessageAttribute.self, f: { RestrictedContentMessageAttribute(decoder: $0) })
     declareEncodable(SendScheduledMessageImmediatelyAction.self, f: { SendScheduledMessageImmediatelyAction(decoder: $0) })
-    declareEncodable(WalletCollection.self, f: { WalletCollection(decoder: $0) })
     declareEncodable(EmbeddedMediaStickersMessageAttribute.self, f: { EmbeddedMediaStickersMessageAttribute(decoder: $0) })
     declareEncodable(TelegramMediaWebpageAttribute.self, f: { TelegramMediaWebpageAttribute(decoder: $0) })
-    declareEncodable(CachedPollOptionResult.self, f: { CachedPollOptionResult(decoder: $0) })
-    declareEncodable(ChatListFiltersState.self, f: { ChatListFiltersState(decoder: $0) })
-    declareEncodable(PeersNearbyState.self, f: { PeersNearbyState(decoder: $0) })
     declareEncodable(TelegramMediaDice.self, f: { TelegramMediaDice(decoder: $0) })
-    declareEncodable(ChatListFiltersFeaturedState.self, f: { ChatListFiltersFeaturedState(decoder: $0) })
     declareEncodable(SynchronizeChatListFiltersOperation.self, f: { SynchronizeChatListFiltersOperation(decoder: $0) })
     declareEncodable(PromoChatListItem.self, f: { PromoChatListItem(decoder: $0) })
     declareEncodable(TelegramMediaFile.VideoThumbnail.self, f: { TelegramMediaFile.VideoThumbnail(decoder: $0) })
-    declareEncodable(CachedChatContextResult.self, f: { CachedChatContextResult(decoder: $0) })
     declareEncodable(PeerAccessRestrictionInfo.self, f: { PeerAccessRestrictionInfo(decoder: $0) })
     declareEncodable(TelegramMediaImage.VideoRepresentation.self, f: { TelegramMediaImage.VideoRepresentation(decoder: $0) })
-    declareEncodable(Country.self, f: { Country(decoder: $0) })
-    declareEncodable(Country.CountryCode.self, f: { Country.CountryCode(decoder: $0) })
-    declareEncodable(CountriesList.self, f: { CountriesList(decoder: $0) })
     declareEncodable(ValidationMessageAttribute.self, f: { ValidationMessageAttribute(decoder: $0) })
     declareEncodable(EmojiSearchQueryMessageAttribute.self, f: { EmojiSearchQueryMessageAttribute(decoder: $0) })
-    declareEncodable(CachedPeerInvitationImporters.self, f: { CachedPeerInvitationImporters(decoder: $0) })
-    declareEncodable(CachedPeerExportedInvitations.self, f: { CachedPeerExportedInvitations(decoder: $0) })
-    declareEncodable(ExportedInvitation.self, f: { ExportedInvitation(decoder: $0) })
-    declareEncodable(CachedDisplayAsPeers.self, f: { CachedDisplayAsPeers(decoder: $0) })
-    declareEncodable(WallpapersState.self, f: { WallpapersState(decoder: $0) })
     declareEncodable(WallpaperDataResource.self, f: { WallpaperDataResource(decoder: $0) })
+    declareEncodable(ForwardOptionsMessageAttribute.self, f: { ForwardOptionsMessageAttribute(decoder: $0) })
+    declareEncodable(SendAsMessageAttribute.self, f: { SendAsMessageAttribute(decoder: $0) })
     
     return
 }()
@@ -221,37 +232,7 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
     }
 }
 
-public final class TemporaryAccount {
-    public let id: AccountRecordId
-    public let basePath: String
-    public let postbox: Postbox
-    
-    init(id: AccountRecordId, basePath: String, postbox: Postbox) {
-        self.id = id
-        self.basePath = basePath
-        self.postbox = postbox
-    }
-}
-
-public func temporaryAccount(manager: AccountManager, rootPath: String, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<TemporaryAccount, NoError> {
-    return manager.allocatedTemporaryAccountId()
-    |> mapToSignal { id -> Signal<TemporaryAccount, NoError> in
-        let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-        return openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: false, isReadOnly: false, useCopy: false)
-        |> mapToSignal { result -> Signal<TemporaryAccount, NoError> in
-            switch result {
-                case .upgrading:
-                    return .complete()
-                case .error:
-                    return .complete()
-                case let .postbox(postbox):
-                    return .single(TemporaryAccount(id: id, basePath: path, postbox: postbox))
-            }
-        }
-    }
-}
-
-public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountResult?, NoError> {
+public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountResult?, NoError> {
     return manager.currentAccountRecord(allocateIfNotExists: allocateIfNotExists)
     |> distinctUntilChanged(isEqual: { lhs, rhs in
         return lhs?.0 == rhs?.0
@@ -262,7 +243,7 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
             return reload.get()
             |> mapToSignal { _ -> Signal<AccountResult?, NoError> in
                 let beginWithTestingEnvironment = record.1.contains(where: { attribute in
-                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                    if case let .environment(environment) = attribute, case .test = environment.environment {
                         return true
                     } else {
                         return false
@@ -315,7 +296,7 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
     }
 }
 
-public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
+public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager<TelegramAccountManagerTypes>, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
     Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
     return accountManager.transaction { transaction -> Void in
         transaction.updateRecord(id, { current in
@@ -324,7 +305,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
             } else if let current = current {
                 var found = false
                 for attribute in current.attributes {
-                    if attribute is LoggedOutAccountAttribute {
+                    if case .loggedOut = attribute {
                         found = true
                         break
                     }
@@ -332,7 +313,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                 if found {
                     return current
                 } else {
-                    return AccountRecord(id: current.id, attributes: current.attributes + [LoggedOutAccountAttribute()], temporarySessionId: nil)
+                    return AccountRecord(id: current.id, attributes: current.attributes + [.loggedOut(LoggedOutAccountAttribute())], temporarySessionId: nil)
                 }
             } else {
                 return nil
@@ -341,7 +322,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
     }
 }
 
-public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Void, NoError> {
+public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Void, NoError> {
     let currentTemporarySessionId = accountManager.temporarySessionId
     return Signal { subscriber in
         let loggedOutAccounts = Atomic<[AccountRecordId: MetaDisposable]>(value: [:])
@@ -356,12 +337,12 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
         }).start()
         let disposable = accountManager.accountRecords().start(next: { view in
             var disposeList: [(AccountRecordId, MetaDisposable)] = []
-            var beginList: [(AccountRecordId, [AccountRecordAttribute], MetaDisposable)] = []
+            var beginList: [(AccountRecordId, [TelegramAccountManagerTypes.Attribute], MetaDisposable)] = []
             let _ = loggedOutAccounts.modify { disposables in
-                var validIds: [AccountRecordId: [AccountRecordAttribute]] = [:]
+                var validIds: [AccountRecordId: [TelegramAccountManagerTypes.Attribute]] = [:]
                 outer: for record in view.records {
                     for attribute in record.attributes {
-                        if attribute is LoggedOutAccountAttribute {
+                        if case .loggedOut = attribute {
                             validIds[record.id] = record.attributes
                             continue outer
                         }
@@ -409,11 +390,13 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 validPaths.insert("\(accountRecordIdPathName(record.id))")
             }
             
-            if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: [], options: []) {
-                for url in files {
-                    if url.lastPathComponent.hasPrefix("account-") {
-                        if !validPaths.contains(url.lastPathComponent) {
-                            try? FileManager.default.removeItem(at: url)
+            DispatchQueue.global(qos: .utility).async {
+                if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: [], options: []) {
+                    for url in files {
+                        if url.lastPathComponent.hasPrefix("account-") {
+                            if !validPaths.contains(url.lastPathComponent) {
+                                try? FileManager.default.removeItem(at: url)
+                            }
                         }
                     }
                 }
@@ -426,9 +409,11 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
     }
 }
 
-private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, attributes: [AccountRecordAttribute], rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
+public typealias AccountManagerPreferencesEntry = PreferencesEntry
+
+private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, attributes: [TelegramAccountManagerTypes.Attribute], rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
     let beginWithTestingEnvironment = attributes.contains(where: { attribute in
-        if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+        if case let .environment(accountEnvironment) = attribute, case .test = accountEnvironment.environment {
             return true
         } else {
             return false
@@ -445,10 +430,27 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
                 account.shouldBeServiceTaskMaster.set(.single(.always))
                 return account.network.request(Api.functions.auth.logOut())
                 |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-                    return .single(.boolFalse)
+                |> `catch` { _ -> Signal<Api.auth.LoggedOut?, NoError> in
+                    return .single(nil)
                 }
-                |> mapToSignal { _ -> Signal<Void, NoError> in
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    let _ = (accountManager.transaction { transaction -> Void in
+                        var tokens = transaction.getStoredLoginTokens()
+                        switch result {
+                        case let .loggedOut(_, futureAuthToken):
+                            if let futureAuthToken = futureAuthToken {
+                                tokens.insert(futureAuthToken.makeData(), at: 0)
+                            }
+                        default:
+                            break
+                        }
+                        
+                        if tokens.count > 20 {
+                            tokens.removeLast(tokens.count - 20)
+                        }
+                        
+                        transaction.setStoredLoginTokens(tokens)
+                    }).start()
                     account.shouldBeServiceTaskMaster.set(.single(.never))
                     return accountManager.transaction { transaction -> Void in
                         transaction.updateRecord(id, { _ in

@@ -107,8 +107,10 @@ private final class FdReadConnection {
                         break
                     } else {
                         assert(bytesRead == 4)
-                        assert(length > 0 && length <= 30 * 1024 * 1024)
-                        strongSelf.currendData = PendingData(count: Int(length))
+                        if length > 0 {
+                            assert(length > 0 && length <= 30 * 1024 * 1024)
+                            strongSelf.currendData = PendingData(count: Int(length))
+                        }
                     }
                 }
             }
@@ -513,6 +515,7 @@ public final class IpcGroupCallBufferBroadcastContext {
             case callEnded
             case error
         }
+        case active
         case finished(FinishReason)
     }
 
@@ -620,6 +623,8 @@ public final class IpcGroupCallBufferBroadcastContext {
             }, queue: .mainQueue())
             self.keepaliveInfoTimer = keepaliveInfoTimer
             keepaliveInfoTimer.start()
+
+            self.statusPromise.set(.single(.active))
         }
     }
 

@@ -2,9 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -71,7 +69,7 @@ public final class LanguageLinkPreviewController: ViewController {
                 return
             }
             if result.languageCode == strongSelf.presentationData.strings.primaryComponent.languageCode {
-                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.ApplyLanguage_ChangeLanguageAlreadyActive(result.localizedTitle).0, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.ApplyLanguage_ChangeLanguageAlreadyActive(result.localizedTitle).string, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 strongSelf.dismiss()
             } else {
                 strongSelf.localizationInfo = result

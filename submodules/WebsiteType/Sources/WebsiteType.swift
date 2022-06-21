@@ -1,5 +1,5 @@
 import Foundation
-import SyncCore
+import TelegramCore
 
 public enum WebsiteType {
     case generic

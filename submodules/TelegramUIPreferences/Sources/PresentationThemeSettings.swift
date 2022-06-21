@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Display
 
@@ -68,14 +67,14 @@ public struct PresentationLocalTheme: PostboxCoding, Equatable {
     public init(decoder: PostboxDecoder) {
         self.title = decoder.decodeStringForKey("title", orElse: "")
         self.resource = decoder.decodeObjectForKey("resource", decoder: { LocalFileMediaResource(decoder: $0) }) as! LocalFileMediaResource
-        self.resolvedWallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
+        self.resolvedWallpaper = decoder.decode(TelegramWallpaperNativeCodable.self, forKey: "wallpaper")?.value
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.title, forKey: "title")
         encoder.encodeObject(self.resource, forKey: "resource")
         if let resolvedWallpaper = self.resolvedWallpaper {
-            encoder.encodeObject(resolvedWallpaper, forKey: "wallpaper")
+            encoder.encode(TelegramWallpaperNativeCodable(resolvedWallpaper), forKey: "wallpaper")
         } else {
             encoder.encodeNil(forKey: "wallpaper")
         }
@@ -95,7 +94,7 @@ public struct PresentationLocalTheme: PostboxCoding, Equatable {
     }
 }
 
-public struct PresentationCloudTheme: PostboxCoding, Equatable {
+public struct PresentationCloudTheme: Codable, Equatable {
     public let theme: TelegramTheme
     public let resolvedWallpaper: TelegramWallpaper?
     public let creatorAccountId: AccountRecordId?
@@ -105,25 +104,21 @@ public struct PresentationCloudTheme: PostboxCoding, Equatable {
         self.resolvedWallpaper = resolvedWallpaper
         self.creatorAccountId = creatorAccountId
     }
-    
-    public init(decoder: PostboxDecoder) {
-        self.theme = decoder.decodeObjectForKey("theme", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme
-        self.resolvedWallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
-        self.creatorAccountId = decoder.decodeOptionalInt64ForKey("account").flatMap { AccountRecordId(rawValue: $0) }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.theme = (try container.decode(TelegramThemeNativeCodable.self, forKey: "theme")).value
+        self.resolvedWallpaper = (try container.decodeIfPresent(TelegramWallpaperNativeCodable.self, forKey: "wallpaper"))?.value
+        self.creatorAccountId = (try container.decodeIfPresent(Int64.self, forKey: "account")).flatMap(AccountRecordId.init(rawValue:))
     }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.theme, forKey: "theme")
-        if let resolvedWallpaper = self.resolvedWallpaper {
-            encoder.encodeObject(resolvedWallpaper, forKey: "wallpaper")
-        } else {
-            encoder.encodeNil(forKey: "wallpaper")
-        }
-        if let accountId = self.creatorAccountId {
-            encoder.encodeInt64(accountId.int64, forKey: "account")
-        } else {
-            encoder.encodeNil(forKey: "account")
-        }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(TelegramThemeNativeCodable(self.theme), forKey: "theme")
+        try container.encodeIfPresent(self.resolvedWallpaper.flatMap(TelegramWallpaperNativeCodable.init), forKey: "wallpaper")
+        try container.encodeIfPresent(self.creatorAccountId?.int64, forKey: "account")
     }
     
     public static func ==(lhs: PresentationCloudTheme, rhs: PresentationCloudTheme) -> Bool {
@@ -153,11 +148,13 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
                     self = .builtin(.dayClassic)
                 }
             case 2:
-                if let cloudTheme = decoder.decodeObjectForKey("cloudTheme", decoder: { PresentationCloudTheme(decoder: $0) }) as? PresentationCloudTheme {
+                if let cloudTheme = decoder.decode(PresentationCloudTheme.self, forKey: "cloudTheme") {
                     self = .cloud(cloudTheme)
                 } else {
                     self = .builtin(.dayClassic)
                 }
+            case 3:
+                self = .builtin(.dayClassic)
             default:
                 assertionFailure()
                 self = .builtin(.dayClassic)
@@ -174,7 +171,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
                 encoder.encodeObject(theme, forKey: "localTheme")
             case let .cloud(theme):
                 encoder.encodeInt32(2, forKey: "v")
-                encoder.encodeObject(theme, forKey: "cloudTheme")
+                encoder.encode(theme, forKey: "cloudTheme")
         }
     }
     
@@ -211,7 +208,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             let high = UInt32((UInt64(bitPattern: id) >> 32) & (0xffffffff as UInt64))
             acc = (acc &* 20261) &+ high
             acc = (acc &* 20261) &+ low
-            
+
             return Int32(bitPattern: acc & UInt32(0x7fffffff))
         }
         
@@ -232,18 +229,29 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
     
     public var generalThemeReference: PresentationThemeReference {
         let generalThemeReference: PresentationThemeReference
-        if case let .cloud(theme) = self, let settings = theme.theme.settings {
+        if case let .cloud(theme) = self, let settings = theme.theme.settings?.first {
             generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
         } else {
             generalThemeReference = self
         }
         return generalThemeReference
     }
+    
+    public var emoticon: String? {
+        switch self {
+            case .builtin(.dayClassic):
+                return "🏠"
+            case let .cloud(theme):
+                return theme.theme.emoticon
+            default:
+                return nil
+        }
+    }
 }
 
 public func coloredThemeIndex(reference: PresentationThemeReference, accentColor: PresentationThemeAccentColor?) -> Int64 {
     if let accentColor = accentColor {
-        if case let .builtin(theme) = reference {
+        if case .builtin = reference {
             return reference.index * 1000 &+ Int64(accentColor.index)
         } else {
             return reference.index &+ Int64(accentColor.index)
@@ -263,51 +271,57 @@ public enum PresentationFontSize: Int32, CaseIterable {
     case medium = 6
 }
 
-public enum AutomaticThemeSwitchTimeBasedSetting: PostboxCoding, Equatable {
+public enum AutomaticThemeSwitchTimeBasedSetting: Codable, Equatable {
     case manual(fromSeconds: Int32, toSeconds: Int32)
     case automatic(latitude: Double, longitude: Double, localizedName: String)
     
-    public init(decoder: PostboxDecoder) {
-        switch decoder.decodeInt32ForKey("_t", orElse: 0) {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        switch try container.decode(Int32.self, forKey: "_t") {
             case 0:
-                self = .manual(fromSeconds: decoder.decodeInt32ForKey("fromSeconds", orElse: 0), toSeconds: decoder.decodeInt32ForKey("toSeconds", orElse: 0))
+                self = .manual(fromSeconds: try container.decode(Int32.self, forKey: "fromSeconds"), toSeconds: try container.decode(Int32.self, forKey: "toSeconds"))
             case 1:
-                self = .automatic(latitude: decoder.decodeDoubleForKey("latitude", orElse: 0.0), longitude: decoder.decodeDoubleForKey("longitude", orElse: 0.0), localizedName: decoder.decodeStringForKey("localizedName", orElse: ""))
+                self = .automatic(latitude: try container.decode(Double.self, forKey: "latitude"), longitude: try container.decode(Double.self, forKey: "longitude"), localizedName: try container.decode(String.self, forKey: "localizedName"))
             default:
                 assertionFailure()
                 self = .manual(fromSeconds: 0, toSeconds: 1)
         }
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
         switch self {
             case let .manual(fromSeconds, toSeconds):
-                encoder.encodeInt32(0, forKey: "_t")
-                encoder.encodeInt32(fromSeconds, forKey: "fromSeconds")
-                encoder.encodeInt32(toSeconds, forKey: "toSeconds")
+                try container.encode(0 as Int32, forKey: "_t")
+                try container.encode(fromSeconds, forKey: "fromSeconds")
+                try container.encode(toSeconds, forKey: "toSeconds")
             case let .automatic(latitude, longitude, localizedName):
-                encoder.encodeInt32(1, forKey: "_t")
-                encoder.encodeDouble(latitude, forKey: "latitude")
-                encoder.encodeDouble(longitude, forKey: "longitude")
-                encoder.encodeString(localizedName, forKey: "localizedName")
+                try container.encode(1 as Int32, forKey: "_t")
+                try container.encode(latitude, forKey: "latitude")
+                try container.encode(longitude, forKey: "longitude")
+                try container.encode(localizedName, forKey: "localizedName")
         }
     }
 }
 
-public enum AutomaticThemeSwitchTrigger: PostboxCoding, Equatable {
+public enum AutomaticThemeSwitchTrigger: Codable, Equatable {
     case system
     case explicitNone
     case timeBased(setting: AutomaticThemeSwitchTimeBasedSetting)
     case brightness(threshold: Double)
     
-    public init(decoder: PostboxDecoder) {
-        switch decoder.decodeInt32ForKey("_t", orElse: 0) {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        switch try container.decode(Int32.self, forKey: "_t") {
             case 0:
                 self = .system
             case 1:
-                self = .timeBased(setting: decoder.decodeObjectForKey("setting", decoder: { AutomaticThemeSwitchTimeBasedSetting(decoder: $0) }) as! AutomaticThemeSwitchTimeBasedSetting)
+                self = .timeBased(setting: try container.decode(AutomaticThemeSwitchTimeBasedSetting.self, forKey: "setting"))
             case 2:
-                self = .brightness(threshold: decoder.decodeDoubleForKey("threshold", orElse: 0.2))
+                self = .brightness(threshold: try container.decode(Double.self, forKey: "threshold"))
             case 3:
                 self = .explicitNone
             default:
@@ -316,45 +330,55 @@ public enum AutomaticThemeSwitchTrigger: PostboxCoding, Equatable {
         }
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
         switch self {
             case .system:
-                encoder.encodeInt32(0, forKey: "_t")
+                try container.encode(0 as Int32, forKey: "_t")
             case let .timeBased(setting):
-                encoder.encodeInt32(1, forKey: "_t")
-                encoder.encodeObject(setting, forKey: "setting")
+                try container.encode(1 as Int32, forKey: "_t")
+                try container.encode(setting, forKey: "setting")
             case let .brightness(threshold):
-                encoder.encodeInt32(2, forKey: "_t")
-                encoder.encodeDouble(threshold, forKey: "threshold")
+                try container.encode(2 as Int32, forKey: "_t")
+                try container.encode(threshold, forKey: "threshold")
             case .explicitNone:
-                 encoder.encodeInt32(3, forKey: "_t")
+                try container.encode(3 as Int32, forKey: "_t")
         }
     }
 }
 
-public struct AutomaticThemeSwitchSetting: PostboxCoding, Equatable {
+public struct AutomaticThemeSwitchSetting: Codable, Equatable {
+    public var force: Bool
     public var trigger: AutomaticThemeSwitchTrigger
     public var theme: PresentationThemeReference
     
-    public init(trigger: AutomaticThemeSwitchTrigger, theme: PresentationThemeReference) {
+    public init(force: Bool, trigger: AutomaticThemeSwitchTrigger, theme: PresentationThemeReference) {
+        self.force = force
         self.trigger = trigger
         self.theme = theme
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.trigger = decoder.decodeObjectForKey("trigger", decoder: { AutomaticThemeSwitchTrigger(decoder: $0) }) as! AutomaticThemeSwitchTrigger
-        if let theme = decoder.decodeObjectForKey("theme_v2", decoder: { PresentationThemeReference(decoder: $0) }) as? PresentationThemeReference {
-            self.theme = theme
-        } else if let legacyValue = decoder.decodeOptionalInt32ForKey("theme") {
-            self.theme = .builtin(PresentationBuiltinThemeReference(rawValue: legacyValue) ?? .nightAccent)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.force = try container.decodeIfPresent(Bool.self, forKey: "force") ?? false
+        self.trigger = try container.decode(AutomaticThemeSwitchTrigger.self, forKey: "trigger")
+        if let themeData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "theme_v2") {
+            self.theme = PresentationThemeReference(decoder: PostboxDecoder(buffer: MemoryBuffer(data: themeData.data)))
         } else {
-            self.theme = .builtin(.nightAccent)
+            self.theme = .builtin(.night)
         }
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.trigger, forKey: "trigger")
-        encoder.encodeObject(self.theme, forKey: "theme_v2")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.force, forKey: "force")
+        try container.encode(self.trigger, forKey: "trigger")
+
+        let themeData = PostboxEncoder().encodeObjectToRawData(self.theme)
+        try container.encode(themeData, forKey: "theme_v2")
     }
 }
 
@@ -408,13 +432,13 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
 
 public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
     public static func == (lhs: PresentationThemeAccentColor, rhs: PresentationThemeAccentColor) -> Bool {
-        return lhs.index == rhs.index && lhs.baseColor == rhs.baseColor && lhs.accentColor == rhs.accentColor && lhs.bubbleColors?.0 == rhs.bubbleColors?.0 && lhs.bubbleColors?.1 == rhs.bubbleColors?.1
+        return lhs.index == rhs.index && lhs.baseColor == rhs.baseColor && lhs.accentColor == rhs.accentColor && lhs.bubbleColors == rhs.bubbleColors
     }
     
     public var index: Int32
     public var baseColor: PresentationThemeBaseColor
     public var accentColor: UInt32?
-    public var bubbleColors: (UInt32, UInt32?)?
+    public var bubbleColors: [UInt32]
     public var wallpaper: TelegramWallpaper?
     public var themeIndex: Int64?
     
@@ -426,11 +450,11 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         }
         self.baseColor = baseColor
         self.accentColor = nil
-        self.bubbleColors = nil
+        self.bubbleColors = []
         self.wallpaper = nil
     }
     
-    public init(index: Int32, baseColor: PresentationThemeBaseColor, accentColor: UInt32? = nil, bubbleColors: (UInt32, UInt32?)? = nil, wallpaper: TelegramWallpaper? = nil) {
+    public init(index: Int32, baseColor: PresentationThemeBaseColor, accentColor: UInt32? = nil, bubbleColors: [UInt32] = [], wallpaper: TelegramWallpaper? = nil) {
         self.index = index
         self.baseColor = baseColor
         self.accentColor = accentColor
@@ -442,7 +466,7 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         self.index = -1
         self.baseColor = .theme
         self.accentColor = nil
-        self.bubbleColors = nil
+        self.bubbleColors = []
         self.wallpaper = nil
         self.themeIndex = themeIndex
     }
@@ -451,16 +475,23 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         self.index = decoder.decodeInt32ForKey("i", orElse: -1)
         self.baseColor = PresentationThemeBaseColor(rawValue: decoder.decodeInt32ForKey("b", orElse: 0)) ?? .blue
         self.accentColor = decoder.decodeOptionalInt32ForKey("c").flatMap { UInt32(bitPattern: $0) }
-        if let bubbleTopColor = decoder.decodeOptionalInt32ForKey("bt") {
-            if let bubbleBottomColor = decoder.decodeOptionalInt32ForKey("bb") {
-                self.bubbleColors = (UInt32(bitPattern: bubbleTopColor), UInt32(bitPattern: bubbleBottomColor))
-            } else {
-                self.bubbleColors = (UInt32(bitPattern: bubbleTopColor), nil)
-            }
+
+        let bubbleColors = decoder.decodeInt32ArrayForKey("bubbleColors")
+        if !bubbleColors.isEmpty {
+            self.bubbleColors = bubbleColors.map(UInt32.init(bitPattern:))
         } else {
-            self.bubbleColors = nil
+            if let bubbleTopColor = decoder.decodeOptionalInt32ForKey("bt") {
+                if let bubbleBottomColor = decoder.decodeOptionalInt32ForKey("bb") {
+                    self.bubbleColors = [UInt32(bitPattern: bubbleTopColor), UInt32(bitPattern: bubbleBottomColor)]
+                } else {
+                    self.bubbleColors = [UInt32(bitPattern: bubbleTopColor)]
+                }
+            } else {
+                self.bubbleColors = []
+            }
         }
-        self.wallpaper = decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
+
+        self.wallpaper = decoder.decode(TelegramWallpaperNativeCodable.self, forKey: "w")?.value
         self.themeIndex = decoder.decodeOptionalInt64ForKey("t")
     }
     
@@ -472,19 +503,9 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "c")
         }
-        if let bubbleColors = self.bubbleColors {
-            encoder.encodeInt32(Int32(bitPattern: bubbleColors.0), forKey: "bt")
-            if let bubbleBottomColor = bubbleColors.1 {
-                encoder.encodeInt32(Int32(bitPattern: bubbleBottomColor), forKey: "bb")
-            } else {
-                encoder.encodeNil(forKey: "bb")
-            }
-        } else {
-            encoder.encodeNil(forKey: "bt")
-            encoder.encodeNil(forKey: "bb")
-        }
+        encoder.encodeInt32Array(self.bubbleColors.map(Int32.init(bitPattern:)), forKey: "bubbleColors")
         if let wallpaper = self.wallpaper {
-            encoder.encodeObject(wallpaper, forKey: "w")
+            encoder.encode(TelegramWallpaperNativeCodable(wallpaper), forKey: "w")
         } else {
             encoder.encodeNil(forKey: "w")
         }
@@ -503,28 +524,12 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         }
     }
     
-    public var customBubbleColors: (UIColor, UIColor?)? {
-        if let bubbleColors = self.bubbleColors {
-            if let bottomColor = bubbleColors.1 {
-                return (UIColor(rgb: UInt32(bitPattern: bubbleColors.0)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
-            } else {
-                return (UIColor(rgb: UInt32(bitPattern: bubbleColors.0)), nil)
-            }
-       } else {
-            return nil
-       }
+    public var customBubbleColors: [UInt32] {
+        return self.bubbleColors
     }
     
-    public var plainBubbleColors: (UIColor, UIColor)? {
-        if let bubbleColors = self.bubbleColors {
-            if let bottomColor = bubbleColors.1 {
-                return (UIColor(rgb: UInt32(bitPattern: bubbleColors.0)), UIColor(rgb: UInt32(bitPattern: bottomColor)))
-            } else {
-                return (UIColor(rgb: UInt32(bitPattern: bubbleColors.0)), UIColor(rgb: UInt32(bitPattern: bubbleColors.0)))
-            }
-       } else {
-            return nil
-       }
+    public var plainBubbleColors: [UInt32] {
+        return self.bubbleColors
     }
     
     public func withUpdatedWallpaper(_ wallpaper: TelegramWallpaper?) -> PresentationThemeAccentColor {
@@ -532,7 +537,7 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
     }
 }
 
-public struct PresentationChatBubbleSettings: PostboxCoding, Equatable {
+public struct PresentationChatBubbleSettings: Codable, Equatable {
     public var mainRadius: Int32
     public var auxiliaryRadius: Int32
     public var mergeBubbleCorners: Bool
@@ -545,21 +550,46 @@ public struct PresentationChatBubbleSettings: PostboxCoding, Equatable {
         self.mergeBubbleCorners = mergeBubbleCorners
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.mainRadius = decoder.decodeInt32ForKey("mainRadius", orElse: 16)
-        self.auxiliaryRadius = decoder.decodeInt32ForKey("auxiliaryRadius", orElse: 8)
-        self.mergeBubbleCorners = decoder.decodeInt32ForKey("mergeBubbleCorners", orElse: 1) != 0
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.mainRadius = try container.decodeIfPresent(Int32.self, forKey: "mainRadius") ?? 16
+        self.auxiliaryRadius = try container.decodeIfPresent(Int32.self, forKey: "auxiliaryRadius") ?? 8
+        self.mergeBubbleCorners = (try container.decodeIfPresent(Int32.self, forKey: "mergeBubbleCorners") ?? 1) != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.mainRadius, forKey: "mainRadius")
-        encoder.encodeInt32(self.auxiliaryRadius, forKey: "auxiliaryRadius")
-        encoder.encodeInt32(self.mergeBubbleCorners ? 1 : 0, forKey: "mergeBubbleCorners")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.mainRadius, forKey: "mainRadius")
+        try container.encode(self.auxiliaryRadius, forKey: "auxiliaryRadius")
+        try container.encode((self.mergeBubbleCorners ? 1 : 0) as Int32, forKey: "mergeBubbleCorners")
     }
 }
 
-public struct PresentationThemeSettings: PreferencesEntry {
+public struct PresentationThemeSettings: Codable {
+    private struct DictionaryKey: Codable, Hashable {
+        var key: Int64
+
+        init(_ key: Int64) {
+            self.key = key
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+            self.key = try container.decode(Int64.self, forKey: "k")
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: StringCodingKey.self)
+
+            try container.encode(self.key, forKey: "k")
+        }
+    }
+
     public var theme: PresentationThemeReference
+    public var themePreferredBaseTheme: [Int64: TelegramBaseTheme]
     public var themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     public var themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
     public var useSystemFont: Bool
@@ -574,10 +604,10 @@ public struct PresentationThemeSettings: PreferencesEntry {
         switch wallpaper {
             case let .image(representations, _):
                 return representations.map { $0.resource.id }
-            case let .file(_, _, _, _, _, _, _, file, _):
+            case let .file(file):
                 var resources: [MediaResourceId] = []
-                resources.append(file.resource.id)
-                resources.append(contentsOf: file.previewRepresentations.map { $0.resource.id })
+                resources.append(file.file.resource.id)
+                resources.append(contentsOf: file.file.previewRepresentations.map { $0.resource.id })
                 return resources
             default:
                 return []
@@ -606,11 +636,12 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], useSystemFont: true, fontSize: .regular, listsFontSize: .regular, chatBubbleSettings: .default, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night)), largeEmoji: true, reduceMotion: false)
+        return PresentationThemeSettings(theme: .builtin(.dayClassic), themePreferredBaseTheme: [:], themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], useSystemFont: true, fontSize: .regular, listsFontSize: .regular, chatBubbleSettings: .default, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(force: false, trigger: .system, theme: .builtin(.night)), largeEmoji: true, reduceMotion: false)
     }
     
-    public init(theme: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], useSystemFont: Bool, fontSize: PresentationFontSize, listsFontSize: PresentationFontSize, chatBubbleSettings: PresentationChatBubbleSettings, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, reduceMotion: Bool) {
+    public init(theme: PresentationThemeReference, themePreferredBaseTheme: [Int64: TelegramBaseTheme], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], useSystemFont: Bool, fontSize: PresentationFontSize, listsFontSize: PresentationFontSize, chatBubbleSettings: PresentationChatBubbleSettings, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, reduceMotion: Bool) {
         self.theme = theme
+        self.themePreferredBaseTheme = themePreferredBaseTheme
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.themeSpecificChatWallpapers = themeSpecificChatWallpapers
         self.useSystemFont = useSystemFont
@@ -622,107 +653,139 @@ public struct PresentationThemeSettings: PreferencesEntry {
         self.reduceMotion = reduceMotion
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.theme = decoder.decodeObjectForKey("t", decoder: { PresentationThemeReference(decoder: $0) }) as? PresentationThemeReference ?? .builtin(.dayClassic)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        self.themeSpecificChatWallpapers = decoder.decodeObjectDictionaryForKey("themeSpecificChatWallpapers", keyDecoder: { decoder in
-            return decoder.decodeInt64ForKey("k", orElse: 0)
-        }, valueDecoder: { decoder in
-            return TelegramWallpaper(decoder: decoder)
-        })
-        
-        self.themeSpecificAccentColors = decoder.decodeObjectDictionaryForKey("themeSpecificAccentColors", keyDecoder: { decoder in
-            return decoder.decodeInt64ForKey("k", orElse: 0)
-        }, valueDecoder: { decoder in
-            return PresentationThemeAccentColor(decoder: decoder)
-        })
-        
-        self.useSystemFont = decoder.decodeInt32ForKey("useSystemFont", orElse: 1) != 0
-        let fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular
-        self.fontSize = fontSize
-        self.listsFontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("lf", orElse: PresentationFontSize.regular.rawValue)) ?? fontSize
-        self.chatBubbleSettings = decoder.decodeObjectForKey("chatBubbleSettings", decoder: { PresentationChatBubbleSettings(decoder: $0) }) as? PresentationChatBubbleSettings ?? PresentationChatBubbleSettings.default
-        self.automaticThemeSwitchSetting = (decoder.decodeObjectForKey("automaticThemeSwitchSetting", decoder: { AutomaticThemeSwitchSetting(decoder: $0) }) as? AutomaticThemeSwitchSetting) ?? AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night))
-        self.largeEmoji = decoder.decodeBoolForKey("largeEmoji", orElse: true)
-        self.reduceMotion = decoder.decodeBoolForKey("reduceMotion", orElse: false)
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.theme, forKey: "t")
-        encoder.encodeObjectDictionary(self.themeSpecificAccentColors, forKey: "themeSpecificAccentColors", keyEncoder: { key, encoder in
-            encoder.encodeInt64(key, forKey: "k")
-        })
-        encoder.encodeObjectDictionary(self.themeSpecificChatWallpapers, forKey: "themeSpecificChatWallpapers", keyEncoder: { key, encoder in
-            encoder.encodeInt64(key, forKey: "k")
-        })
-        encoder.encodeInt32(self.useSystemFont ? 1 : 0, forKey: "useSystemFont")
-        encoder.encodeInt32(self.fontSize.rawValue, forKey: "f")
-        encoder.encodeInt32(self.listsFontSize.rawValue, forKey: "lf")
-        encoder.encodeObject(self.chatBubbleSettings, forKey: "chatBubbleSettings")
-        encoder.encodeObject(self.automaticThemeSwitchSetting, forKey: "automaticThemeSwitchSetting")
-        encoder.encodeBool(self.largeEmoji, forKey: "largeEmoji")
-        encoder.encodeBool(self.reduceMotion, forKey: "reduceMotion")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? PresentationThemeSettings {
-            return self == to
+        if let themeData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "t") {
+            self.theme = PresentationThemeReference(decoder: PostboxDecoder(buffer: MemoryBuffer(data: themeData.data)))
         } else {
-            return false
+            self.theme = .builtin(.dayClassic)
         }
+        
+        var mappedThemePreferredBaseTheme: [Int64: TelegramBaseTheme] = [:]
+        let themePreferredBaseThemeDict = try container.decodeIfPresent([Int64: Int64].self, forKey: "themePreferredBaseTheme") ?? [:]
+        for (key, value) in themePreferredBaseThemeDict {
+            if let baseTheme = TelegramBaseTheme(rawValue: Int32(clamping: value)) {
+                mappedThemePreferredBaseTheme[key] = baseTheme
+            }
+        }
+        self.themePreferredBaseTheme = mappedThemePreferredBaseTheme
+
+        let themeSpecificChatWallpapersDict = try container.decode([DictionaryKey: TelegramWallpaperNativeCodable].self, forKey: "themeSpecificChatWallpapers")
+        var mappedThemeSpecificChatWallpapers: [Int64: TelegramWallpaper] = [:]
+        for (key, value) in themeSpecificChatWallpapersDict {
+            mappedThemeSpecificChatWallpapers[key.key] = value.value
+        }
+        self.themeSpecificChatWallpapers = mappedThemeSpecificChatWallpapers
+
+        let themeSpecificAccentColorsDict = try container.decode([DictionaryKey: AdaptedPostboxDecoder.RawObjectData].self, forKey: "themeSpecificAccentColors")
+        var mappedThemeSpecificAccentColors: [Int64: PresentationThemeAccentColor] = [:]
+        for (key, value) in themeSpecificAccentColorsDict {
+            let innerDecoder = PostboxDecoder(buffer: MemoryBuffer(data: value.data))
+            mappedThemeSpecificAccentColors[key.key] = PresentationThemeAccentColor(decoder: innerDecoder)
+        }
+        self.themeSpecificAccentColors = mappedThemeSpecificAccentColors
+        
+        self.useSystemFont = (try container.decodeIfPresent(Int32.self, forKey: "useSystemFont") ?? 1) != 0
+
+        let fontSize = PresentationFontSize(rawValue: try container.decodeIfPresent(Int32.self, forKey: "f") ?? PresentationFontSize.regular.rawValue) ?? .regular
+        self.fontSize = fontSize
+        self.listsFontSize = PresentationFontSize(rawValue: try container.decodeIfPresent(Int32.self, forKey: "lf") ?? PresentationFontSize.regular.rawValue) ?? fontSize
+
+        self.chatBubbleSettings = try container.decodeIfPresent(PresentationChatBubbleSettings.self, forKey: "chatBubbleSettings") ?? PresentationChatBubbleSettings.default
+        self.automaticThemeSwitchSetting = try container.decodeIfPresent(AutomaticThemeSwitchSetting.self, forKey: "automaticThemeSwitchSetting") ?? AutomaticThemeSwitchSetting(force: false, trigger: .system, theme: .builtin(.night))
+
+        self.largeEmoji = try container.decodeIfPresent(Bool.self, forKey: "largeEmoji") ?? true
+        self.reduceMotion = try container.decodeIfPresent(Bool.self, forKey: "reduceMotion") ?? false
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(PostboxEncoder().encodeObjectToRawData(self.theme), forKey: "t")
+
+        var mappedThemePreferredBaseTheme: [Int64: Int64] = [:]
+        for (key, value) in self.themePreferredBaseTheme {
+            mappedThemePreferredBaseTheme[key] = Int64(value.rawValue)
+        }
+        try container.encode(mappedThemePreferredBaseTheme, forKey: "themePreferredBaseTheme")
+        
+        var mappedThemeSpecificAccentColors: [DictionaryKey: AdaptedPostboxEncoder.RawObjectData] = [:]
+        for (key, value) in self.themeSpecificAccentColors {
+            mappedThemeSpecificAccentColors[DictionaryKey(key)] = PostboxEncoder().encodeObjectToRawData(value)
+        }
+        try container.encode(mappedThemeSpecificAccentColors, forKey: "themeSpecificAccentColors")
+
+        var mappedThemeSpecificChatWallpapers: [DictionaryKey: TelegramWallpaperNativeCodable] = [:]
+        for (key, value) in self.themeSpecificChatWallpapers {
+            mappedThemeSpecificChatWallpapers[DictionaryKey(key)] = TelegramWallpaperNativeCodable(value)
+        }
+        try container.encode(mappedThemeSpecificChatWallpapers, forKey: "themeSpecificChatWallpapers")
+
+        try container.encode((self.useSystemFont ? 1 : 0) as Int32, forKey: "useSystemFont")
+        try container.encode(self.fontSize.rawValue, forKey: "f")
+        try container.encode(self.listsFontSize.rawValue, forKey: "lf")
+        try container.encode(self.chatBubbleSettings, forKey: "chatBubbleSettings")
+        try container.encode(self.automaticThemeSwitchSetting, forKey: "automaticThemeSwitchSetting")
+        try container.encode(self.largeEmoji, forKey: "largeEmoji")
+        try container.encode(self.reduceMotion, forKey: "reduceMotion")
     }
     
     public static func ==(lhs: PresentationThemeSettings, rhs: PresentationThemeSettings) -> Bool {
-        return lhs.theme == rhs.theme && lhs.themeSpecificAccentColors == rhs.themeSpecificAccentColors && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.useSystemFont == rhs.useSystemFont && lhs.fontSize == rhs.fontSize && lhs.listsFontSize == rhs.listsFontSize && lhs.chatBubbleSettings == rhs.chatBubbleSettings && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.largeEmoji == rhs.largeEmoji && lhs.reduceMotion == rhs.reduceMotion
+        return lhs.theme == rhs.theme && lhs.themePreferredBaseTheme == rhs.themePreferredBaseTheme && lhs.themeSpecificAccentColors == rhs.themeSpecificAccentColors && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.useSystemFont == rhs.useSystemFont && lhs.fontSize == rhs.fontSize && lhs.listsFontSize == rhs.listsFontSize && lhs.chatBubbleSettings == rhs.chatBubbleSettings && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.largeEmoji == rhs.largeEmoji && lhs.reduceMotion == rhs.reduceMotion
     }
     
     public func withUpdatedTheme(_ theme: PresentationThemeReference) -> PresentationThemeSettings {
-        return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
+        return PresentationThemeSettings(theme: theme, themePreferredBaseTheme: self.themePreferredBaseTheme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
+    }
+    
+    public func withUpdatedThemePreferredBaseTheme(_ themePreferredBaseTheme: [Int64: TelegramBaseTheme]) -> PresentationThemeSettings {
+        return PresentationThemeSettings(theme: self.theme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
     }
     
     public func withUpdatedThemeSpecificAccentColors(_ themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]) -> PresentationThemeSettings {
-        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
+        return PresentationThemeSettings(theme: self.theme, themePreferredBaseTheme: self.themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
     }
     
     public func withUpdatedThemeSpecificChatWallpapers(_ themeSpecificChatWallpapers: [Int64: TelegramWallpaper]) -> PresentationThemeSettings {
-        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
+        return PresentationThemeSettings(theme: self.theme, themePreferredBaseTheme: self.themePreferredBaseTheme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
     }
     
     public func withUpdatedUseSystemFont(_ useSystemFont: Bool) -> PresentationThemeSettings {
-        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
+        return PresentationThemeSettings(theme: self.theme, themePreferredBaseTheme: self.themePreferredBaseTheme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
     }
     
     public func withUpdatedFontSizes(fontSize: PresentationFontSize, listsFontSize: PresentationFontSize) -> PresentationThemeSettings {
-        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: fontSize, listsFontSize: listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
+        return PresentationThemeSettings(theme: self.theme, themePreferredBaseTheme: self.themePreferredBaseTheme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: fontSize, listsFontSize: listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
     }
     
     public func withUpdatedChatBubbleSettings(_ chatBubbleSettings: PresentationChatBubbleSettings) -> PresentationThemeSettings {
-        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
+        return PresentationThemeSettings(theme: self.theme, themePreferredBaseTheme: self.themePreferredBaseTheme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
     }
     
     public func withUpdatedAutomaticThemeSwitchSetting(_ automaticThemeSwitchSetting: AutomaticThemeSwitchSetting) -> PresentationThemeSettings {
-        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
+        return PresentationThemeSettings(theme: self.theme, themePreferredBaseTheme: self.themePreferredBaseTheme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: self.reduceMotion)
     }
     
     public func withUpdatedLargeEmoji(_ largeEmoji: Bool) -> PresentationThemeSettings {
-        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: largeEmoji, reduceMotion: self.reduceMotion)
+        return PresentationThemeSettings(theme: self.theme, themePreferredBaseTheme: self.themePreferredBaseTheme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: largeEmoji, reduceMotion: self.reduceMotion)
     }
     
     public func withUpdatedReduceMotion(_ reduceMotion: Bool) -> PresentationThemeSettings {
-        return PresentationThemeSettings(theme: self.theme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: reduceMotion)
+        return PresentationThemeSettings(theme: self.theme, themePreferredBaseTheme: self.themePreferredBaseTheme, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, useSystemFont: self.useSystemFont, fontSize: self.fontSize, listsFontSize: self.listsFontSize, chatBubbleSettings: self.chatBubbleSettings, automaticThemeSwitchSetting: self.automaticThemeSwitchSetting, largeEmoji: self.largeEmoji, reduceMotion: reduceMotion)
     }
 }
 
-public func updatePresentationThemeSettingsInteractively(accountManager: AccountManager, _ f: @escaping (PresentationThemeSettings) -> PresentationThemeSettings) -> Signal<Void, NoError> {
+public func updatePresentationThemeSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (PresentationThemeSettings) -> PresentationThemeSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
             let currentSettings: PresentationThemeSettings
-            if let entry = entry as? PresentationThemeSettings {
+            if let entry = entry?.get(PresentationThemeSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = PresentationThemeSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

@@ -3,9 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -318,12 +316,12 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     let context: AccountContext
-    let peer: Peer
+    let peer: EnginePeer
     let height: ItemListPeerItemHeight
     let aliasHandling: ItemListPeerItemAliasHandling
     let nameColor: ItemListPeerItemNameColor
     let nameStyle: ItemListPeerItemNameStyle
-    let presence: PeerPresence?
+    let presence: EnginePeer.Presence?
     let text: ItemListPeerItemText
     let label: ItemListPeerItemLabel
     let editing: ItemListPeerItemEditing
@@ -334,20 +332,21 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     public let selectable: Bool
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
-    let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
-    let removePeer: (PeerId) -> Void
+    let setPeerIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
+    let removePeer: (EnginePeer.Id) -> Void
     let toggleUpdated: ((Bool) -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     let hasTopStripe: Bool
     let hasTopGroupInset: Bool
     let noInsets: Bool
+    let noCorners: Bool
     public let tag: ItemListItemTag?
     let header: ListViewItemHeader?
     let shimmering: ItemListPeerItemShimmering?
     let displayDecorations: Bool
     let disableInteractiveTransitionIfNecessary: Bool
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, highlighted: Bool = false, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil, header: ListViewItemHeader? = nil, shimmering: ItemListPeerItemShimmering? = nil, displayDecorations: Bool = true, disableInteractiveTransitionIfNecessary: Bool = false) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: EnginePeer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: EnginePeer.Presence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, highlighted: Bool = false, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, noCorners: Bool = false, tag: ItemListItemTag? = nil, header: ListViewItemHeader? = nil, shimmering: ItemListPeerItemShimmering? = nil, displayDecorations: Bool = true, disableInteractiveTransitionIfNecessary: Bool = false) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -375,6 +374,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.hasTopStripe = hasTopStripe
         self.hasTopGroupInset = hasTopGroupInset
         self.noInsets = noInsets
+        self.noCorners = noCorners
         self.tag = tag
         self.header = header
         self.shimmering = shimmering
@@ -439,7 +439,6 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     }
 }
 
-private let avatarFont = avatarPlaceholderFont(size: floor(40.0 * 16.0 / 37.0))
 private let badgeFont = Font.regular(15.0)
 
 public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
@@ -451,6 +450,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     private let maskNode: ASImageNode
     
     private let containerNode: ContextControllerSourceNode
+    public override var controlsContainer: ASDisplayNode {
+        return self.containerNode
+    }
     
     fileprivate let avatarNode: AvatarNode
     private let titleNode: TextNode
@@ -494,11 +496,13 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.containerNode = ContextControllerSourceNode()
         
-        self.avatarNode = AvatarNode(font: avatarFont)
+        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: floor(40.0 * 16.0 / 37.0)))
         //self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
         self.titleNode = TextNode()
@@ -695,7 +699,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: currentBoldFont, textColor: titleColor)
             } else if item.peer.id.isReplies {
                 titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: currentBoldFont, textColor: titleColor)
-            } else if let user = item.peer as? TelegramUser {
+            } else if case let .user(user) = item.peer {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                     let string = NSMutableAttributedString()
                     switch item.nameDisplayOrder {
@@ -716,15 +720,15 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 } else {
                     titleAttributedString = NSAttributedString(string: item.presentationData.strings.User_DeletedAccount, font: currentBoldFont, textColor: titleColor)
                 }
-            } else if let group = item.peer as? TelegramGroup {
+            } else if case let .legacyGroup(group) = item.peer {
                 titleAttributedString = NSAttributedString(string: group.title, font: currentBoldFont, textColor: titleColor)
-            } else if let channel = item.peer as? TelegramChannel {
+            } else if case let .channel(channel) = item.peer {
                 titleAttributedString = NSAttributedString(string: channel.title, font: currentBoldFont, textColor: titleColor)
             }
             
             switch item.text {
             case .presence:
-                if let user = item.peer as? TelegramUser, let botInfo = user.botInfo {
+                if case let .user(user) = item.peer, let botInfo = user.botInfo {
                     let botStatus: String
                     if botInfo.flags.contains(.hasAccessToChatHistory) {
                         botStatus = item.presentationData.strings.Bot_GroupStatusReadsHistory
@@ -732,7 +736,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         botStatus = item.presentationData.strings.Bot_GroupStatusDoesNotReadHistory
                     }
                     statusAttributedString = NSAttributedString(string: botStatus, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-                } else if let presence = item.presence as? TelegramUserPresence {
+                } else if let presence = item.presence {
                     let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                     let (string, activity) = stringAndActivityForUserPresence(strings: item.presentationData.strings, dateTimeFormat: item.dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
                     statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
@@ -758,6 +762,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             let verticalInset: CGFloat
             let verticalOffset: CGFloat
             let avatarSize: CGFloat
+            let avatarFontSize: CGFloat
             switch item.height {
             case .generic:
                 if case .none = item.text {
@@ -768,6 +773,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 verticalOffset = 0.0
                 avatarSize = 31.0
                 leftInset = 59.0 + params.leftInset
+                avatarFontSize = floor(31.0 * 16.0 / 37.0)
             case .peerList:
                 if case .none = item.text {
                     verticalInset = 14.0
@@ -777,6 +783,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 verticalOffset = 0.0
                 avatarSize = 40.0
                 leftInset = 65.0 + params.leftInset
+                avatarFontSize = floor(40.0 * 16.0 / 37.0)
             }
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
@@ -838,7 +845,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - editingOffset - rightInset - labelLayout.size.width - labelInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - labelLayout.size.width - labelInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            var insets = itemListNeighborsGroupedInsets(neighbors)
+            var insets = itemListNeighborsGroupedInsets(neighbors, params)
             if !item.hasTopGroupInset {
                 switch neighbors.top {
                 case .none:
@@ -881,6 +888,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
+                    
+                    strongSelf.avatarNode.font = avatarPlaceholderFont(size: avatarFontSize)
                     
                     strongSelf.accessibilityLabel = titleAttributedString?.string
                     var combinedValueString = ""
@@ -993,10 +1002,10 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     if strongSelf.maskNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        strongSelf.addSubnode(strongSelf.maskNode)
                     }
                     
-                    let hasCorners = itemListHasRoundedBlockLayout(params) && !item.noInsets
+                    let hasCorners = itemListHasRoundedBlockLayout(params) && !item.noCorners
                     var hasTopCorners = false
                     var hasBottomCorners = false
                     switch neighbors.top {
@@ -1012,6 +1021,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     case .sameSection(false):
                         bottomStripeInset = leftInset + editingOffset
                         bottomStripeOffset = -separatorHeight
+                        strongSelf.bottomStripeNode.isHidden = !item.displayDecorations
                     default:
                         bottomStripeInset = 0.0
                         bottomStripeOffset = 0.0
@@ -1120,7 +1130,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel))
                     
-                    if let presence = item.presence as? TelegramUserPresence {
+                    if let presence = item.presence {
                         strongSelf.peerPresenceManager?.reset(presence: presence)
                     }
                     
@@ -1328,8 +1338,12 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
-        return self.layoutParams?.0.header
+    override public func headers() -> [ListViewItemHeader]? {
+        if let item = self.layoutParams?.0 {
+            return item.header.flatMap { [$0] }
+        } else {
+            return nil
+        }
     }
     
     override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
@@ -1350,10 +1364,11 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
 }
 
 public final class ItemListPeerItemHeader: ListViewItemHeader {
-    public let id: Int64
+    public let id: ListViewItemNode.HeaderId
     public let text: String
     public let additionalText: String
     public let stickDirection: ListViewItemHeaderStickDirection = .topEdge
+    public let stickOverInsets: Bool = true
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let actionTitle: String?
@@ -1364,14 +1379,22 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
     public init(theme: PresentationTheme, strings: PresentationStrings, text: String, additionalText: String, actionTitle: String? = nil, id: Int64, action: (() -> Void)? = nil) {
         self.text = text
         self.additionalText = additionalText
-        self.id = id
+        self.id = ListViewItemNode.HeaderId(space: 0, id: id)
         self.theme = theme
         self.strings = strings
         self.actionTitle = actionTitle
         self.action = action
     }
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ItemListPeerItemHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
-    public func node() -> ListViewItemHeaderNode {
+    public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ItemListPeerItemHeaderNode(theme: self.theme, strings: self.strings, text: self.text, additionalText: self.additionalText, actionTitle: self.actionTitle, action: self.action)
     }
     

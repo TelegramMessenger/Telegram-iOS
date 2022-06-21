@@ -4,7 +4,6 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ActivityIndicator
 import AccountContext
@@ -335,7 +334,6 @@ public func languageSuggestionController(context: AccountContext, suggestedLocal
     }
     
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let theme = context.sharedContext.presentationData
     let strings = LanguageSuggestionControllerStrings(localization: suggestedLocalization)
     guard let mainPath = getAppBundle().path(forResource: "en", ofType: "lproj") else {
         return nil

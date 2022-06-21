@@ -2,7 +2,7 @@ import Foundation
 import Display
 import SwiftSignalKit
 
-private let impactTime: Double = 0.4
+private let impactTime: Double = 0.6
 
 final class PeachHaptic: EmojiHaptic {
     private var hapticFeedback = HapticFeedback()

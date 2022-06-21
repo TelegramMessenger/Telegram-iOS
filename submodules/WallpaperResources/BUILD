@@ -6,9 +6,11 @@ swift_library(
     srcs = glob([
 		"Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
     	"//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
     	"//submodules/Postbox:Postbox",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Display:Display",
@@ -22,6 +24,7 @@ swift_library(
         "//submodules/Svg:Svg",
         "//submodules/GZip:GZip",
         "//submodules/GradientBackground:GradientBackground",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
     ],
     visibility = [
         "//visibility:public",

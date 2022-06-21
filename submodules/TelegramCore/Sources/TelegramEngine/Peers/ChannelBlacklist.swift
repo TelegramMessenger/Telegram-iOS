@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
-import SyncCore
 
 func _internal_updateChannelMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, rights: TelegramChatBannedRights?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> {
     return _internal_fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)
@@ -103,6 +102,21 @@ func _internal_updateChannelMemberBannedRights(account: Account, peerId: PeerId,
                                 if isMember != wasMember {
                                     if let memberCount = updatedData.participantsSummary.memberCount {
                                         updatedData = updatedData.withUpdatedParticipantsSummary(updatedData.participantsSummary.withUpdatedMemberCount(max(0, memberCount + (isMember ? 1 : -1))))
+                                    }
+                                }
+                                
+                                if let memberPeer = memberPeer as? TelegramUser, let _ = memberPeer.botInfo {
+                                    if isMember != wasMember {
+                                        if isMember {
+//                                            var updatedBotInfos = updatedData.botInfos
+//                                            if updatedBotInfos.firstIndex(where: { $0.peerId == memberPeer.id }) == nil {
+//                                                updatedBotInfos.append(CachedPeerBotInfo(peerId: memberPeer.id, botInfo: ))
+//                                            }
+//                                            updatedData = updatedData.withUpdatedBotInfos(updatedBotInfos)
+                                        } else {
+                                            let filteredBotInfos = updatedData.botInfos.filter { $0.peerId != memberPeer.id }
+                                            updatedData = updatedData.withUpdatedBotInfos(filteredBotInfos)
+                                        }
                                     }
                                 }
                                 

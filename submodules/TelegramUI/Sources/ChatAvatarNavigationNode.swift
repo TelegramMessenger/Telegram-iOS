@@ -52,4 +52,34 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     
     func onLayout() {
     }
+
+    final class SnapshotState {
+        fileprivate let snapshotView: UIView?
+
+        fileprivate init(snapshotView: UIView?) {
+            self.snapshotView = snapshotView
+        }
+    }
+
+    func prepareSnapshotState() -> SnapshotState {
+        let snapshotView = self.avatarNode.view.snapshotView(afterScreenUpdates: false)
+        return SnapshotState(
+            snapshotView: snapshotView
+        )
+    }
+
+    func animateFromSnapshot(_ snapshotState: SnapshotState) {
+        self.avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.avatarNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true)
+
+        if let snapshotView = snapshotState.snapshotView {
+            snapshotView.frame = self.frame
+            self.containerNode.view.addSubview(snapshotView)
+
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+            snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        }
+    }
 }

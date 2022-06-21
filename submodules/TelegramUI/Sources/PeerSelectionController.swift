@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
@@ -20,7 +19,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private var customTitle: String?
     
     public var peerSelected: ((Peer) -> Void)?
-    public var multiplePeersSelected: (([Peer], NSAttributedString) -> Void)?
+    public var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
     private let filter: ChatListNodePeersFilter
     
     private let attemptSelection: ((Peer) -> Void)?
@@ -59,6 +58,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private let hasContactSelector: Bool
     private let hasGlobalSearch: Bool
     private let pretendPresentedInModal: Bool
+    private let forwardedMessageIds: [EngineMessage.Id]
+    private let hasTypeHeaders: Bool
     
     override public var _presentedInModal: Bool {
         get {
@@ -82,10 +83,12 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.hasChatListSelector = params.hasChatListSelector
         self.hasContactSelector = params.hasContactSelector
         self.hasGlobalSearch = params.hasGlobalSearch
-        self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = params.updatedPresentationData?.initial ?? params.context.sharedContext.currentPresentationData.with { $0 }
         self.attemptSelection = params.attemptSelection
         self.createNewGroup = params.createNewGroup
         self.pretendPresentedInModal = params.pretendPresentedInModal
+        self.forwardedMessageIds = params.forwardedMessageIds
+        self.hasTypeHeaders = params.hasTypeHeaders
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -107,7 +110,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
             }
         }
         
-        self.presentationDataDisposable = (self.context.sharedContext.presentationData
+        self.presentationDataDisposable = ((params.updatedPresentationData?.signal ?? self.context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -146,19 +149,22 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.customTitle ?? self.presentationData.strings.Conversation_ForwardTitle
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.peerSelectionNode.updatePresentationData(self.presentationData)
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
+        self.displayNode = PeerSelectionControllerNode(context: self.context, presentationData: self.presentationData, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, forwardedMessageIds: self.forwardedMessageIds, hasTypeHeaders: self.hasTypeHeaders, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
+        }, presentInGlobalOverlay: { [weak self] c, a in
+            self?.presentInGlobalOverlay(c, with: a)
         }, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
         
         self.peerSelectionNode.navigationBar = self.navigationBar
         
-        self.peerSelectionNode.requestSend = { [weak self] peers, text in
-            self?.multiplePeersSelected?(peers, text)
+        self.peerSelectionNode.requestSend = { [weak self] peers, peerMap, text, mode, forwardOptionsState in
+            self?.multiplePeersSelected?(peers, peerMap, text, mode, forwardOptionsState)
         }
         
         self.peerSelectionNode.requestDeactivateSearch = { [weak self] in

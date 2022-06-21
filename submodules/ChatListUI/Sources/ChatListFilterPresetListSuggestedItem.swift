@@ -226,7 +226,7 @@ public class ChatListFilterPresetListSuggestedItemNode: ListViewItemNode, ItemLi
                 itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                 contentSize = CGSize(width: params.width, height: height)
-                insets = itemListNeighborsGroupedInsets(neighbors)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -294,6 +294,7 @@ public class ChatListFilterPresetListSuggestedItemNode: ListViewItemNode, ItemLi
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
+                                strongSelf.bottomStripeNode.isHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true

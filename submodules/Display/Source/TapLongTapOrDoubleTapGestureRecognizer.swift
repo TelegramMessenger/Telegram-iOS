@@ -294,7 +294,7 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
                     self.state = .ended
                 case .waitForDoubleTap:
                     self.state = .began
-                    let timer = Timer(timeInterval: 0.2, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.tapEvent), userInfo: nil, repeats: false)
+                    let timer = Timer(timeInterval: 0.16, target: TapLongTapOrDoubleTapGestureRecognizerTimerTarget(target: self), selector: #selector(TapLongTapOrDoubleTapGestureRecognizerTimerTarget.tapEvent), userInfo: nil, repeats: false)
                     self.timer = timer
                     RunLoop.main.add(timer, forMode: .common)
                 case let .waitForHold(_, acceptTap):

@@ -4,18 +4,22 @@ final class MutableCachedPeerDataView: MutablePostboxView {
     let peerId: PeerId
     var cachedPeerData: CachedPeerData?
     
-    init(postbox: Postbox, peerId: PeerId) {
+    init(postbox: PostboxImpl, peerId: PeerId) {
         self.peerId = peerId
         self.cachedPeerData = postbox.cachedPeerDataTable.get(peerId)
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         if let cachedPeerData = transaction.currentUpdatedCachedPeerData[self.peerId] {
             self.cachedPeerData = cachedPeerData
             return true
         } else {
             return false
         }
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
     }
     
     func immutableView() -> PostboxView {

@@ -1,8 +1,8 @@
 import Foundation
 import UIKit
 import Display
+import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import Postbox
 import AccountContext
 import GalleryUI
@@ -10,6 +10,7 @@ import InstantPageUI
 import ChatListUI
 import PeerAvatarGalleryUI
 import SettingsUI
+import ChatPresentationInterfaceState
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false
@@ -20,16 +21,18 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let updateTextInputState = params.updateTextInputState {
                     controller.updateTextInputState(updateTextInputState)
                 }
-                if let subject = params.subject, case let .message(messageId, _, timecode) = subject {
-                    let navigationController = params.navigationController
-                    let animated = params.animated
-                    controller.navigateToMessage(messageLocation: .id(messageId, timecode), animated: isFirst, completion: { [weak navigationController, weak controller] in
-                        if let navigationController = navigationController, let controller = controller {
-                            let _ = navigationController.popToViewController(controller, animated: animated)
-                        }
-                    }, customPresentProgress: { [weak navigationController] c, a in
-                        (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
-                    })
+                if let subject = params.subject, case let .message(messageSubject, _, timecode) = subject {
+                    if case let .id(messageId) = messageSubject {
+                        let navigationController = params.navigationController
+                        let animated = params.animated
+                        controller.navigateToMessage(messageLocation: .id(messageId, timecode), animated: isFirst, completion: { [weak navigationController, weak controller] in
+                            if let navigationController = navigationController, let controller = controller {
+                                let _ = navigationController.popToViewController(controller, animated: animated)
+                            }
+                        }, customPresentProgress: { [weak navigationController] c, a in
+                            (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
+                        })
+                    }
                 } else if params.scrollToEndIfExists && isFirst {
                     controller.scrollToEndOfHistory()
                     let _ = params.navigationController.popToViewController(controller, animated: params.animated)
@@ -50,11 +53,18 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if params.activateInput {
                     controller.activateInput()
                 }
+                if params.changeColors {
+                    controller.presentThemeSelection()
+                }
                 if let botStart = params.botStart {
                     controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
                         return state.updatedBotStartPayload(botStart.payload)
                     })
                 }
+                if let attachBotStart = params.attachBotStart {
+                    controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload)
+                }
+                params.setupController(controller)
                 found = true
                 break
             }
@@ -70,8 +80,11 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     return state.updatedBotStartPayload(botStart.payload)
                 })
             }
+            if let attachBotStart = params.attachBotStart {
+                controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload)
+            }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, attachBotStart: params.attachBotStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
         }
         controller.purposefulAction = params.purposefulAction
         if let search = params.activateMessageSearch {
@@ -109,13 +122,25 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     params.completion(controller)
                 })
             } else {
-                params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: {
-                    params.completion(controller)
-                })
+                if params.useBackAnimation {
+                    params.navigationController.viewControllers = [controller] + params.navigationController.viewControllers
+                    params.navigationController.replaceControllers(controllers: viewControllers + [controller], animated: params.animated, options: params.options, completion: {
+                        params.completion(controller)
+                    })
+                } else {
+                    params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: {
+                        params.completion(controller)
+                    })
+                }
             }
         }
         if params.activateInput {
             controller.activateInput()
+        }
+        if params.changeColors {
+            Queue.mainQueue().after(0.1) {
+                controller.presentThemeSelection()
+            }
         }
     }
     
@@ -125,14 +150,16 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let item = item as? ChatMessageNotificationItem {
                     for message in item.messages {
                         switch params.chatLocation {
-                            case let .peer(peerId):
-                                if message.id.peerId == peerId {
-                                    return true
-                                }
-                            case let .replyThread(replyThreadMessage):
-                                if message.id.peerId == replyThreadMessage.messageId.peerId {
-                                    return true
-                                }
+                        case let .peer(peerId):
+                            if message.id.peerId == peerId {
+                                return true
+                            }
+                        case let .replyThread(replyThreadMessage):
+                            if message.id.peerId == replyThreadMessage.messageId.peerId {
+                                return true
+                            }
+                        case .feed:
+                            break
                         }
                     }
                 }

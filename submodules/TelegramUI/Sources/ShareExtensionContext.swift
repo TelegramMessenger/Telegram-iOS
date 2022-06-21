@@ -2,7 +2,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
@@ -24,6 +23,7 @@ import ChatImportUI
 import ZipArchive
 import ActivityIndicator
 import DebugSettingsUI
+import ManagedFile
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 
@@ -33,7 +33,7 @@ private final class InternalContext {
     
     init(sharedContext: SharedAccountContextImpl) {
         self.sharedContext = sharedContext
-        self.wakeupManager = SharedWakeupManager(beginBackgroundTask: { _, _ in nil }, endBackgroundTask: { _ in }, backgroundTimeRemaining: { 0.0 }, activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1.map { ($0.0, $0.1) }) }, liveLocationPolling: .single(nil), watchTasks: .single(nil), inForeground: inForeground.get(), hasActiveAudioSession: .single(false), notificationManager: nil, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+        self.wakeupManager = SharedWakeupManager(beginBackgroundTask: { _, _ in nil }, endBackgroundTask: { _ in }, backgroundTimeRemaining: { 0.0 }, activeAccounts: sharedContext.activeAccountContexts |> map { ($0.0?.account, $0.1.map { ($0.0, $0.1.account) }) }, liveLocationPolling: .single(nil), watchTasks: .single(nil), inForeground: inForeground.get(), hasActiveAudioSession: .single(false), notificationManager: nil, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
             return sharedContext.accountUserInterfaceInUse(id)
         })
     }
@@ -206,7 +206,7 @@ public class ShareRootControllerImpl {
             
             let internalContext: InternalContext
             
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
             
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
@@ -232,7 +232,7 @@ public class ShareRootControllerImpl {
                     return nil
                 })
                 
-                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
@@ -249,7 +249,7 @@ public class ShareRootControllerImpl {
             }
             
             let account: Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> = internalContext.sharedContext.accountManager.transaction { transaction -> (SharedAccountContextImpl, LoggingSettings) in
-                return (internalContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
+                return (internalContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings)
             }
             |> castError(ShareAuthorizationError.self)
             |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
@@ -262,7 +262,7 @@ public class ShareRootControllerImpl {
                     let accountRecords = Set(transaction.getRecords().map { record in
                         return record.id
                     })
-                    let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
+                    let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings)?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
                     return (accountRecords, intentsSettings.account)
                 })
                 |> castError(ShareAuthorizationError.self)
@@ -301,7 +301,7 @@ public class ShareRootControllerImpl {
             |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContext, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
                 let limitsConfigurationAndContentSettings = account.postbox.transaction { transaction -> (LimitsConfiguration, ContentSettings, AppConfiguration) in
                     return (
-                        transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue,
+                        transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue,
                         getContentSettings(transaction: transaction),
                         getAppConfiguration(transaction: transaction)
                     )
@@ -349,8 +349,8 @@ public class ShareRootControllerImpl {
                             } |> runOn(Queue.mainQueue())
                         }
                         
-                        let sentItems: ([PeerId], [PreparedShareItemContent], Account) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, contents, account in
-                            let sentItems = sentShareItems(account: account, to: peerIds, items: contents)
+                        let sentItems: ([PeerId], [PreparedShareItemContent], Account, Bool) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, contents, account, silently in
+                            let sentItems = sentShareItems(account: account, to: peerIds, items: contents, silently: silently)
                             |> `catch` { _ -> Signal<
                                 Float, NoError> in
                                 return .complete()
@@ -362,7 +362,7 @@ public class ShareRootControllerImpl {
                             |> then(.single(.done))
                         }
                                             
-                        let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account in
+                        let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account, silently in
                             if let strongSelf = self, let inputItems = strongSelf.getExtensionContext()?.inputItems, !inputItems.isEmpty, !peerIds.isEmpty {
                                 let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
                                 return preparedShareItems(account: account, to: peerIds[0], dataItems: rawSignals, additionalText: additionalText)
@@ -382,10 +382,10 @@ public class ShareRootControllerImpl {
                                         case let .userInteractionRequired(value):
                                             return requestUserInteraction(value)
                                             |> mapToSignal { contents -> Signal<ShareControllerExternalStatus, NoError> in
-                                                return sentItems(peerIds, contents, account)
+                                                return sentItems(peerIds, contents, account, silently)
                                             }
                                         case let .done(contents):
-                                            return sentItems(peerIds, contents, account)
+                                            return sentItems(peerIds, contents, account, silently)
                                     }
                                 }
                             } else {
@@ -730,9 +730,9 @@ public class ShareRootControllerImpl {
                                                                     switch result {
                                                                     case .allowed:
                                                                         if let groupTitle = groupTitle {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithTitle(groupTitle, peer.debugDisplayTitle).0
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithTitle(groupTitle, peer.debugDisplayTitle).string
                                                                         } else {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithoutTitle(peer.debugDisplayTitle).0
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithoutTitle(peer.debugDisplayTitle).string
                                                                         }
                                                                     case let .alert(textValue):
                                                                         text = textValue
@@ -777,7 +777,7 @@ public class ShareRootControllerImpl {
                                                         } else {
                                                             resolvedGroupTitle = "Group"
                                                         }
-                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
+                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
                                                             var signal: Signal<PeerId?, NoError> = context.engine.peers.createSupergroup(title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
                                                             |> map(Optional.init)
                                                             |> `catch` { _ -> Signal<PeerId?, NoError> in
@@ -855,9 +855,9 @@ public class ShareRootControllerImpl {
                                                             switch result {
                                                             case .allowed:
                                                                 if let title = title {
-                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                 } else {
-                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                 }
                                                             case let .alert(textValue):
                                                                 text = textValue
@@ -952,14 +952,14 @@ public class ShareRootControllerImpl {
                                                                 strongSelf.mainWindow?.present(controller, on: .root)
                                                             } else {
                                                                 let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                                if let user = peer as? TelegramUser {
+                                                                if let _ = peer as? TelegramUser {
                                                                     let text: String
                                                                     switch result {
                                                                     case .allowed:
                                                                         if let title = peerTitle {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                         } else {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                         }
                                                                     case let .alert(textValue):
                                                                         text = textValue
@@ -974,9 +974,9 @@ public class ShareRootControllerImpl {
                                                                     switch result {
                                                                     case .allowed:
                                                                         if let groupTitle = peerTitle {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithTitle(groupTitle, peer.debugDisplayTitle).0
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithTitle(groupTitle, peer.debugDisplayTitle).string
                                                                         } else {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithoutTitle(peer.debugDisplayTitle).0
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationGroupWithoutTitle(peer.debugDisplayTitle).string
                                                                         }
                                                                     case let .alert(textValue):
                                                                         text = textValue
@@ -1021,7 +1021,7 @@ public class ShareRootControllerImpl {
                                                         } else {
                                                             resolvedGroupTitle = "Group"
                                                         }
-                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
+                                                        let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatImport_CreateGroupAlertTitle, text: presentationData.strings.ChatImport_CreateGroupAlertText(resolvedGroupTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatImport_CreateGroupAlertImportAction, action: {
                                                             var signal: Signal<PeerId?, NoError> = context.engine.peers.createSupergroup(title: resolvedGroupTitle, description: nil, isForHistoryImport: true)
                                                             |> map(Optional.init)
                                                             |> `catch` { _ -> Signal<PeerId?, NoError> in

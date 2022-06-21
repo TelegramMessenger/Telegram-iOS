@@ -3,7 +3,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import PassKit
 import Lottie
@@ -74,12 +73,12 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 }, openUrl: params.openUrl, openPeer: { peer in
                     params.openPeer(peer, .info)
                 }, showAll: params.modal)
-                let controller = LocationViewController(context: params.context, subject: params.message, params: controllerParams)
+                let controller = LocationViewController(context: params.context, updatedPresentationData: params.updatedPresentationData, subject: params.message, params: controllerParams)
                 controller.navigationPresentation = .modal
                 params.navigationController?.pushViewController(controller)
                 return true
             case let .stickerPack(reference):
-                let controller = StickerPackScreen(context: params.context, mainStickerPack: reference, stickerPacks: [reference], parentNavigationController: params.navigationController, sendSticker: params.sendSticker, actionPerformed: { info, items, action in
+                let controller = StickerPackScreen(context: params.context, updatedPresentationData: params.updatedPresentationData, mainStickerPack: reference, stickerPacks: [reference], parentNavigationController: params.navigationController, sendSticker: params.sendSticker, actionPerformed: { info, items, action in
                     let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
                     var animateInAsReplacement = false
                     if let navigationController = params.navigationController {
@@ -92,11 +91,11 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                     switch action {
                     case .add:
-                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
                             return true
                         }))
                     case let .remove(positionInList):
-                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).0, undo: true, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
                             if case .undo = action {
                                 let _ = params.context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
                             }
@@ -115,7 +114,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     params.present(controller, nil)
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     let proceed = {
-                        presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
+                        presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: !params.message.isCopyProtected())
                     }
                     if file.mimeType.contains("image/svg") {
                         let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
@@ -138,7 +137,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
-                        location = .messages(chatLocation: params.chatLocation ?? .peer(params.message.id.peerId), tagMask: .voiceOrInstantVideo, at: params.message.id)
+                        location = .messages(chatLocation: params.chatLocation ?? .peer(id: params.message.id.peerId), tagMask: .voiceOrInstantVideo, at: params.message.id)
                     }
                     playerType = .voice
                 } else if file.isMusic && params.message.tags.contains(.music) {
@@ -147,7 +146,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
-                        location = .messages(chatLocation: params.chatLocation ?? .peer(params.message.id.peerId), tagMask: .music, at: params.message.id)
+                        location = .messages(chatLocation: params.chatLocation ?? .peer(id: params.message.id.peerId), tagMask: .music, at: params.message.id)
                     }
                     playerType = .music
                 } else {
@@ -204,7 +203,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         } else {
                             contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName, lastName: contact.lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: contact.phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
                         }
-                        let controller = deviceContactInfoController(context: params.context, subject: .vcard(peer, nil, contactData), completed: nil, cancelled: nil)
+                        let controller = deviceContactInfoController(context: params.context, updatedPresentationData: params.updatedPresentationData, subject: .vcard(peer, nil, contactData), completed: nil, cancelled: nil)
                         params.navigationController?.pushViewController(controller)
                     })
                     return true
@@ -263,7 +262,7 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
                         case let .color(color):
                             source = .wallpaper(.color(color.argb), nil, [], nil, nil, message)
                         case let .gradient(colors, rotation):
-                            source = .wallpaper(.gradient(nil, colors, WallpaperSettings(rotation: rotation)), nil, [], nil, rotation, message)
+                            source = .wallpaper(.gradient(TelegramWallpaper.Gradient(id: nil, colors: colors, settings: WallpaperSettings(rotation: rotation))), nil, [], nil, rotation, message)
                     }
                     
                     let controller = WallpaperGalleryController(context: context, source: source)

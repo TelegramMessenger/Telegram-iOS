@@ -4,7 +4,6 @@ import TelegramApi
 import SwiftSignalKit
 import MtProtoKit
 
-import SyncCore
 
 func addSecretChatOutgoingOperation(transaction: Transaction, peerId: PeerId, operation: SecretChatOutgoingOperationContents, state: SecretChatState) -> SecretChatState {
     var updatedState = state
@@ -210,6 +209,10 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
         
         let gb = MTExp(network.encryptionProvider, g, bData, p)!
         
+        if !MTCheckIsSafeGAOrB(network.encryptionProvider, gb, p) {
+            return .complete()
+        }
+        
         var key = MTExp(network.encryptionProvider, gA.makeData(), bData, p)!
         
         if key.count > 256 {
@@ -220,14 +223,15 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
             }
         }
         
-        let keyHash = MTSha1(key)!
+        let keyHash = MTSha1(key)
         
         var keyFingerprint: Int64 = 0
-        keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        keyHash.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
         }
         
-        let result = network.request(Api.functions.messages.acceptEncryption(peer: .inputEncryptedChat(chatId: peerId.id._internalGetInt32Value(), accessHash: accessHash), gB: Buffer(data: gb), keyFingerprint: keyFingerprint))
+        let result = network.request(Api.functions.messages.acceptEncryption(peer: .inputEncryptedChat(chatId: Int32(peerId.id._internalGetInt64Value()), accessHash: accessHash), gB: Buffer(data: gb), keyFingerprint: keyFingerprint))
         
         let response = result
         |> map { result -> Api.EncryptedChat? in
@@ -284,6 +288,10 @@ private func pfsRequestKey(postbox: Postbox, network: Network, peerId: PeerId, l
         let aData = a.makeData()
         let ga = MTExp(network.encryptionProvider, g, aData, p)!
         
+        if !MTCheckIsSafeGAOrB(network.encryptionProvider, ga, p) {
+            return .complete()
+        }
+        
         return postbox.transaction { transaction -> Signal<Void, NoError> in
             if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
                 switch state.embeddedState {
@@ -308,9 +316,17 @@ private func pfsAcceptKey(postbox: Postbox, network: Network, peerId: PeerId, la
         let g = Data(bytes: &gValue, count: 4)
         let p = config.p.makeData()
         
+        if !MTCheckIsSafeGAOrB(network.encryptionProvider, gA.makeData(), p) {
+            return .complete()
+        }
+        
         let bData = b.makeData()
         
         let gb = MTExp(network.encryptionProvider, g, bData, p)!
+        
+        if !MTCheckIsSafeGAOrB(network.encryptionProvider, gb, p) {
+            return .complete()
+        }
         
         var key = MTExp(network.encryptionProvider, gA.makeData(), bData, p)!
         
@@ -322,10 +338,11 @@ private func pfsAcceptKey(postbox: Postbox, network: Network, peerId: PeerId, la
             }
         }
         
-        let keyHash = MTSha1(key)!
+        let keyHash = MTSha1(key)
         
         var keyFingerprint: Int64 = 0
-        keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        keyHash.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
         }
         
@@ -516,7 +533,7 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], t
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:
@@ -575,7 +592,7 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:
@@ -634,7 +651,7 @@ private func decryptedAttributes101(_ attributes: [TelegramMediaFileAttribute], 
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:
@@ -690,6 +707,8 @@ private func decryptedEntities73(_ entities: [MessageTextEntity]?) -> [SecretApi
                 break
             case .BankCard:
                 break
+            case .Spoiler:
+                break
             case .Custom:
                 break
         }
@@ -738,6 +757,8 @@ private func decryptedEntities101(_ entities: [MessageTextEntity]?) -> [SecretAp
             case .Underline:
                 result.append(.messageEntityUnderline(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
             case .BankCard:
+                break
+            case .Spoiler:
                 break
             case .Custom:
                 break
@@ -1636,7 +1657,7 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
     decryptedMessage.serialize(payload, role: state.role, sequenceInfo: sequenceInfo)
     let encryptedPayload = encryptedMessageContents(parameters: parameters, data: MemoryBuffer(payload))
     let sendMessage: Signal<Api.messages.SentEncryptedMessage, MTRpcError>
-    let inputPeer = Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: peer.accessHash)
+    let inputPeer = Api.InputEncryptedChat.inputEncryptedChat(chatId: Int32(peer.id.id._internalGetInt64Value()), accessHash: peer.accessHash)
     
     var flags: Int32 = 0
     if silent {
@@ -1676,7 +1697,7 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
     if requestRemoteHistoryRemoval {
         flags |= 1 << 0
     }
-    return network.request(Api.functions.messages.discardEncryption(flags: flags, chatId: peerId.id._internalGetInt32Value()))
+    return network.request(Api.functions.messages.discardEncryption(flags: flags, chatId: Int32(peerId.id._internalGetInt64Value())))
     |> map(Optional.init)
     |> `catch` { _ in
         return .single(nil)
@@ -1692,7 +1713,7 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
             }
             |> mapToSignal { peer -> Signal<Void, NoError> in
                 if let peer = peer {
-                    return network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: peer.accessHash)))
+                    return network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: Int32(peer.id.id._internalGetInt64Value()), accessHash: peer.accessHash)))
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                         return .single(nil)

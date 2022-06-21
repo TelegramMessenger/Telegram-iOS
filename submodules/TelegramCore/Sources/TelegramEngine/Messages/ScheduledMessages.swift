@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 func _internal_sendScheduledMessageNowInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Void in
@@ -104,7 +103,7 @@ func managedApplyPendingScheduledMessagesActions(postbox: Postbox, network: Netw
                 })
                 |> then(
                     postbox.transaction { transaction -> Void in
-                        var resourceIds: [WrappedMediaResourceId] = []
+                        var resourceIds: [MediaResourceId] = []
                         transaction.deleteMessages([entry.id], forEachMedia: { media in
                             addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
                         })

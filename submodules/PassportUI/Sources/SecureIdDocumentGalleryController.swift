@@ -6,7 +6,6 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import GalleryUI
@@ -245,7 +244,7 @@ class SecureIdDocumentGalleryController: ViewController, StandalonePresentableCo
             }
         }
         
-        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself, useSimpleAnimation: false)
     }
     
     private var firstLayout = true

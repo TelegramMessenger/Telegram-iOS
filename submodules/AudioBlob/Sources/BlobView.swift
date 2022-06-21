@@ -1,16 +1,53 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Display
 import LegacyComponents
 
+public final class VoiceBlobNode: ASDisplayNode {
+    public init(
+        maxLevel: CGFloat,
+        smallBlobRange: VoiceBlobView.BlobRange,
+        mediumBlobRange: VoiceBlobView.BlobRange,
+        bigBlobRange: VoiceBlobView.BlobRange
+    ) {
+        super.init()
+        
+        self.setViewBlock({
+            return VoiceBlobView(frame: CGRect(), maxLevel: maxLevel, smallBlobRange: smallBlobRange, mediumBlobRange: mediumBlobRange, bigBlobRange: bigBlobRange)
+        })
+    }
+    
+    public func startAnimating(immediately: Bool = false) {
+        (self.view as? VoiceBlobView)?.startAnimating(immediately: immediately)
+    }
+    
+    public func stopAnimating(duration: Double = 0.15) {
+        (self.view as? VoiceBlobView)?.stopAnimating(duration: duration)
+    }
+    
+    public func setColor(_ color: UIColor, animated: Bool = false) {
+        (self.view as? VoiceBlobView)?.setColor(color, animated: animated)
+    }
+    
+    public func updateLevel(_ level: CGFloat, immediately: Bool = false) {
+        (self.view as? VoiceBlobView)?.updateLevel(level, immediately: immediately)
+    }
+}
+
 public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration {
-    private let smallBlob: BlobView
-    private let mediumBlob: BlobView
-    private let bigBlob: BlobView
+    private let smallBlob: BlobNode
+    private let mediumBlob: BlobNode
+    private let bigBlob: BlobNode
     
     private let maxLevel: CGFloat
     
     private var displayLinkAnimator: ConstantDisplayLinkAnimator?
+
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = true
+
+    public var isManuallyInHierarchy: Bool?
     
     private var audioLevel: CGFloat = 0
     public var presentationAudioLevel: CGFloat = 0
@@ -28,7 +65,7 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     ) {
         self.maxLevel = maxLevel
         
-        self.smallBlob = BlobView(
+        self.smallBlob = BlobNode(
             pointsCount: 8,
             minRandomness: 0.1,
             maxRandomness: 0.5,
@@ -39,34 +76,41 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
             scaleSpeed: 0.2,
             isCircle: true
         )
-        self.mediumBlob = BlobView(
+        self.mediumBlob = BlobNode(
             pointsCount: 8,
             minRandomness: 1,
             maxRandomness: 1,
-            minSpeed: 1.5,
-            maxSpeed: 7,
+            minSpeed: 0.9,
+            maxSpeed: 4,
             minScale: mediumBlobRange.min,
             maxScale: mediumBlobRange.max,
             scaleSpeed: 0.2,
             isCircle: false
         )
-        self.bigBlob = BlobView(
+        self.bigBlob = BlobNode(
             pointsCount: 8,
             minRandomness: 1,
             maxRandomness: 1,
-            minSpeed: 1.5,
-            maxSpeed: 7,
+            minSpeed: 0.9,
+            maxSpeed: 4,
             minScale: bigBlobRange.min,
             maxScale: bigBlobRange.max,
             scaleSpeed: 0.2,
             isCircle: false
         )
+
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
         
         super.init(frame: frame)
+
+        self.addSubnode(self.hierarchyTrackingNode)
         
-        addSubview(bigBlob)
-        addSubview(mediumBlob)
-        addSubview(smallBlob)
+        self.addSubnode(self.bigBlob)
+        self.addSubnode(self.mediumBlob)
+        self.addSubnode(self.smallBlob)
         
         displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
             guard let strongSelf = self else { return }
@@ -76,6 +120,12 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
             strongSelf.smallBlob.level = strongSelf.presentationAudioLevel
             strongSelf.mediumBlob.level = strongSelf.presentationAudioLevel
             strongSelf.bigBlob.level = strongSelf.presentationAudioLevel
+        }
+
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+            }
         }
     }
     
@@ -88,6 +138,9 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     }
     
     public func setColor(_ color: UIColor, animated: Bool) {
+        if let isManuallyInHierarchy = self.isManuallyInHierarchy, !isManuallyInHierarchy {
+            return
+        }
         smallBlob.setColor(color, animated: animated)
         mediumBlob.setColor(color.withAlphaComponent(0.3), animated: animated)
         bigBlob.setColor(color.withAlphaComponent(0.15), animated: animated)
@@ -148,8 +201,8 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     }
     
     private func updateBlobsState() {
-        if isAnimating {
-            if smallBlob.frame.size != .zero {
+        if self.isAnimating {
+            if self.smallBlob.frame.size != .zero {
                 smallBlob.startAnimating()
                 mediumBlob.startAnimating()
                 bigBlob.startAnimating()
@@ -164,15 +217,15 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        smallBlob.frame = bounds
-        mediumBlob.frame = bounds
-        bigBlob.frame = bounds
+        self.smallBlob.frame = bounds
+        self.mediumBlob.frame = bounds
+        self.bigBlob.frame = bounds
         
-        updateBlobsState()
+        self.updateBlobsState()
     }
 }
 
-final class BlobView: UIView {
+final class BlobNode: ASDisplayNode {
     let pointsCount: Int
     let smoothness: CGFloat
     
@@ -185,8 +238,6 @@ final class BlobView: UIView {
     let minScale: CGFloat
     let maxScale: CGFloat
     let scaleSpeed: CGFloat
-    
-    var scaleLevelsToBalance = [CGFloat]()
     
     let isCircle: Bool
     
@@ -236,6 +287,9 @@ final class BlobView: UIView {
             )
         }
     }
+
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = true
     
     init(
         pointsCount: Int,
@@ -260,12 +314,24 @@ final class BlobView: UIView {
         
         let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
         self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
+
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
         
-        super.init(frame: .zero)
-        
-        layer.addSublayer(shapeLayer)
+        super.init()
+
+        self.addSubnode(self.hierarchyTrackingNode)
+        self.layer.addSublayer(self.shapeLayer)
         
         self.shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
+
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -275,17 +341,13 @@ final class BlobView: UIView {
     func setColor(_ color: UIColor, animated: Bool) {
         let previousColor = self.shapeLayer.fillColor
         self.shapeLayer.fillColor = color.cgColor
-        if animated, let previousColor = previousColor {
+        if animated, let previousColor = previousColor, self.isCurrentlyInHierarchy {
             self.shapeLayer.animate(from: previousColor, to: color.cgColor, keyPath: "fillColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
         }
     }
     
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
         self.speedLevel = max(self.speedLevel, newSpeedLevel)
-        
-//        if abs(lastSpeedLevel - newSpeedLevel) > 0.5 {
-//            animateToNewShape()
-//        }
     }
     
     func startAnimating() {
@@ -368,16 +430,16 @@ final class BlobView: UIView {
         return points
     }
     
-    override func layoutSubviews() {
-        super.layoutSubviews()
+    override func layout() {
+        super.layout()
         
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
-        if isCircle {
-            let halfWidth = bounds.width * 0.5
-            shapeLayer.path = UIBezierPath(
-                roundedRect: bounds.offsetBy(dx: -halfWidth, dy: -halfWidth),
+        self.shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        if self.isCircle {
+            let halfWidth = self.bounds.width * 0.5
+            self.shapeLayer.path = UIBezierPath(
+                roundedRect: self.bounds.offsetBy(dx: -halfWidth, dy: -halfWidth),
                 cornerRadius: halfWidth
             ).cgPath
         }
@@ -386,7 +448,6 @@ final class BlobView: UIView {
 }
 
 private extension UIBezierPath {
-    
     static func smoothCurve(
         through points: [CGPoint],
         length: CGFloat,
@@ -439,7 +500,6 @@ private extension UIBezierPath {
     }
     
     struct SmoothPoint {
-        
         let point: CGPoint
         
         let inAngle: CGFloat
@@ -464,4 +524,3 @@ private extension UIBezierPath {
         }
     }
 }
-

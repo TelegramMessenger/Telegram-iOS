@@ -4,7 +4,7 @@ final class MutablePreferencesView: MutablePostboxView {
     fileprivate let keys: Set<ValueBoxKey>
     fileprivate var values: [ValueBoxKey: PreferencesEntry]
     
-    init(postbox: Postbox, keys: Set<ValueBoxKey>) {
+    init(postbox: PostboxImpl, keys: Set<ValueBoxKey>) {
         self.keys = keys
         var values: [ValueBoxKey: PreferencesEntry] = [:]
         for key in keys {
@@ -15,7 +15,7 @@ final class MutablePreferencesView: MutablePostboxView {
         self.values = values
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         for operation in transaction.currentPreferencesOperations {
             switch operation {
@@ -24,7 +24,7 @@ final class MutablePreferencesView: MutablePostboxView {
                         let currentValue = self.values[key]
                         var updatedValue = false
                         if let value = value, let currentValue = currentValue {
-                            if !value.isEqual(to: currentValue) {
+                            if value != currentValue {
                                 updatedValue = true
                             }
                         } else if (value != nil) != (currentValue != nil) {
@@ -43,6 +43,22 @@ final class MutablePreferencesView: MutablePostboxView {
         }
         
         return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        /*var values: [ValueBoxKey: PreferencesEntry] = [:]
+        for key in self.keys {
+            if let value = postbox.preferencesTable.get(key: key) {
+                values[key] = value
+            }
+        }
+        if self.values != values {
+            self.values = values
+            return true
+        } else {
+            return false
+        }*/
+        return false
     }
     
     func immutableView() -> PostboxView {

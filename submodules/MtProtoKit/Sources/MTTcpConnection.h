@@ -32,9 +32,11 @@
 @property (nonatomic, strong, readonly) MTTransportScheme *scheme;
 @property (nonatomic, strong, readonly) NSString *interface;
 
+@property (nonatomic, strong) NSString *(^getLogPrefix)();
+
 + (MTQueue *)tcpQueue;
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo getLogPrefix:(NSString *(^)())getLogPrefix;
 
 - (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
 

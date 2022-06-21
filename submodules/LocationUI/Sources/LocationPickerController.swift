@@ -3,7 +3,6 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -12,6 +11,7 @@ import AppBundle
 import CoreLocation
 import PresentationDataUtils
 import DeviceAccess
+import AttachmentUI
 
 public enum LocationPickerMode {
     case share(peer: Peer?, selfPeer: Peer?, hasLiveLocation: Bool)
@@ -52,7 +52,7 @@ class LocationPickerInteraction {
     }
 }
 
-public final class LocationPickerController: ViewController {
+public final class LocationPickerController: ViewController, AttachmentContainable {
     private var controllerNode: LocationPickerControllerNode {
         return self.displayNode as! LocationPickerControllerNode
     }
@@ -70,12 +70,19 @@ public final class LocationPickerController: ViewController {
     private var permissionDisposable: Disposable?
     
     private var interaction: LocationPickerInteraction?
-        
-    public init(context: AccountContext, mode: LocationPickerMode, completion: @escaping (TelegramMediaMap, String?) -> Void) {
+    
+    public var requestAttachmentMenuExpansion: () -> Void = {}
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    public var cancelPanGesture: () -> Void = { }
+    public var isContainerPanning: () -> Bool = { return false }
+    public var isContainerExpanded: () -> Bool = { return false }
+    
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: LocationPickerMode, completion: @escaping (TelegramMediaMap, String?) -> Void) {
         self.context = context
         self.mode = mode
         self.completion = completion
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                      
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(.clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
@@ -83,10 +90,9 @@ public final class LocationPickerController: ViewController {
         
         self.title = self.presentationData.strings.Map_ChooseLocationTitle
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.searchPressed))
-        self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Common_Search
+        self.updateBarButtons()
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             guard let strongSelf = self, strongSelf.presentationData.theme !== presentationData.theme else {
                 return
@@ -95,7 +101,8 @@ public final class LocationPickerController: ViewController {
             
             strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.presentationData.theme).withUpdatedSeparatorColor(.clear), strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)))
             strongSelf.searchNavigationContentNode?.updatePresentationData(strongSelf.presentationData)
-            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.searchPressed))
+            
+            strongSelf.updateBarButtons()
             
             if strongSelf.isNodeLoaded {
                 strongSelf.controllerNode.updatePresentationData(presentationData)
@@ -120,14 +127,14 @@ public final class LocationPickerController: ViewController {
                 strongSelf.present(c, in: .window(.root), with: a)
             }, openSettings: {
                 strongSelf.context.sharedContext.applicationBindings.openSettings()
-            }) { [weak self] authorized in
+            }, { [weak self] authorized in
                 guard let strongSelf = self, authorized else {
                     return
                 }
                 let controller = ActionSheetController(presentationData: strongSelf.presentationData)
                 var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
                 if case let .share(peer, _, _) = strongSelf.mode, let receiver = peer as? TelegramUser {
-                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).0
+                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(EnginePeer(receiver).compactDisplayTitle).string
                 }
                 controller.setItemGroups([
                     ActionSheetItemGroup(items: [
@@ -161,7 +168,7 @@ public final class LocationPickerController: ViewController {
                     ])
                 ])
                 strongSelf.present(controller, in: .window(.root))
-            }
+            })
         }, sendVenue: { [weak self] venue in
             guard let strongSelf = self else {
                 return
@@ -257,7 +264,7 @@ public final class LocationPickerController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            let controller = textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Map_HomeAndWorkTitle, text: strongSelf.presentationData.strings.Map_HomeAndWorkInfo, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})])
+            let controller = textAlertController(context: strongSelf.context, updatedPresentationData: updatedPresentationData, title: strongSelf.presentationData.strings.Map_HomeAndWorkTitle, text: strongSelf.presentationData.strings.Map_HomeAndWorkInfo, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})])
             strongSelf.present(controller, in: .window(.root))
         }, showPlacesInThisArea: { [weak self] in
             guard let strongSelf = self else {
@@ -283,14 +290,31 @@ public final class LocationPickerController: ViewController {
         self.isSearchingDisposable.dispose()
     }
     
+    private var locationAccessDenied = false
+    private func updateBarButtons() {
+        if self.locationAccessDenied {
+            self.navigationItem.rightBarButtonItem = nil
+        } else {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.searchPressed))
+            self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Common_Search
+        }
+    }
+    
     override public func loadDisplayNode() {
         super.loadDisplayNode()
         guard let interaction = self.interaction else {
             return
         }
         
-        self.displayNode = LocationPickerControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction, locationManager: self.locationManager)
+        self.displayNode = LocationPickerControllerNode(controller: self, context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction, locationManager: self.locationManager)
         self.displayNodeDidLoad()
+        self.controllerNode.beganInteractiveDragging = { [weak self] in
+            self?.requestAttachmentMenuExpansion()
+        }
+        self.controllerNode.locationAccessDeniedUpdated = { [weak self] denied in
+            self?.locationAccessDenied = denied
+            self?.updateBarButtons()
+        }
         
         self.permissionDisposable = (DeviceAccess.authorizationStatus(subject: .location(.send))
         |> deliverOnMainQueue).start(next: { [weak self] next in
@@ -314,6 +338,8 @@ public final class LocationPickerController: ViewController {
                     break
             }
         })
+        
+        self.navigationBar?.passthroughTouches = false
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -327,6 +353,14 @@ public final class LocationPickerController: ViewController {
     }
     
     @objc private func searchPressed() {
+        self.requestAttachmentMenuExpansion()
+        
         self.interaction?.openSearch()
+    }
+    
+    public func resetForReuse() {
+        self.interaction?.updateMapMode(.map)
+        self.interaction?.dismissSearch()
+        self.scrollToTop?()
     }
 }

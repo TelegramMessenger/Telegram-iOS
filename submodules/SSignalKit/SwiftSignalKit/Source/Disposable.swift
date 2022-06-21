@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol Disposable: class {
+public protocol Disposable: AnyObject {
     func dispose()
 }
 

@@ -2,17 +2,16 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 extension GroupParticipant {
     init(apiParticipant: Api.ChatParticipant) {
         switch apiParticipant {
             case let .chatParticipantCreator(userId):
-                self = .creator(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)))
+                self = .creator(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)))
             case let .chatParticipantAdmin(userId, inviterId, date):
-                self = .admin(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), invitedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(inviterId)), invitedAt: date)
+                self = .admin(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), invitedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(inviterId)), invitedAt: date)
             case let .chatParticipant(userId, inviterId, date):
-                self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), invitedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(inviterId)), invitedAt: date)
+                self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), invitedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(inviterId)), invitedAt: date)
         }
     }
 }

@@ -2,7 +2,6 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Contacts
 import Intents
 
@@ -34,8 +33,8 @@ private func parseAppSpecificContactReference(_ value: String) -> PeerId? {
         return nil
     }
     let idString = String(value[value.index(value.startIndex, offsetBy: phonebookUsernamePrefix.count)...])
-    if let id = Int32(idString) {
-        return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id))
+    if let id = Int64(idString) {
+        return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))
     }
     return nil
 }

@@ -4,7 +4,6 @@ import Postbox
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AvatarNode
 import AccountContext
@@ -169,8 +168,8 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
     func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor, controllerInteraction: ChatControllerInteraction) {
         self.controllerInteraction = controllerInteraction
         self.peer = peer
-        if let messageReference = authorOfMessage, case let .message(m) = messageReference.content {
-            self.messageId = m.id
+        if let messageReference = authorOfMessage, case let .message(_, id, _, _, _) = messageReference.content {
+            self.messageId = id
         }
         
         self.contextActionIsEnabled = peer.smallProfileImage != nil
@@ -179,6 +178,6 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
         if peer.isDeleted {
             overrideImage = .deletedIcon
         }
-        self.avatarNode.setPeer(context: context, theme: theme, peer: peer, authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: 38.0, height: 38.0))
+        self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: 38.0, height: 38.0))
     }
 }

@@ -1,12 +1,12 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import Postbox
 import Display
 import AccountContext
 import Emoji
 import ChatInterfaceState
+import ChatPresentationInterfaceState
 
 struct PossibleContextQueryTypes: OptionSet {
     var rawValue: Int32
@@ -204,7 +204,7 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
 func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext) -> ChatTextInputPanelState {
     var contextPlaceholder: NSAttributedString?
     loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
-        if case let .contextRequestResult(peer, _) = result, let botUser = peer as? TelegramUser, let botInfo = botUser.botInfo, let inlinePlaceholder = botInfo.inlinePlaceholder {
+        if case let .contextRequestResult(peer, _) = result, case let .user(botUser) = peer, let botInfo = botUser.botInfo, let inlinePlaceholder = botInfo.inlinePlaceholder {
             let inputQueries = inputContextQueriesForChatPresentationIntefaceState(chatPresentationInterfaceState)
             for inputQuery in inputQueries {
                 if case let .contextRequest(addressName, query) = inputQuery, query.isEmpty {
@@ -312,10 +312,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                             stickersEnabled = false
                         }
                     }
-//                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo {
-//                        accessoryItems.append(.commands)
-//                    } else
-                    if chatPresentationInterfaceState.hasBots {
+                    if chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands {
                         accessoryItems.append(.commands)
                     }
                     accessoryItems.append(.stickers(stickersEnabled))

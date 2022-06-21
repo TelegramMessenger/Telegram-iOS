@@ -207,8 +207,12 @@ typedef enum {
     }
 }
 
-- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector sessionInfo:(MTSessionInfo *)sessionInfo
+- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector sessionInfo:(MTSessionInfo *)sessionInfo scheme:(MTTransportScheme *)scheme
 {
+    if (MTLogEnabled()) {
+        MTLog(@"[MTDatacenterAuthMessageService#%p mtProto#%p (media: %s) mtProtoMessageTransaction scheme:%@]", self, mtProto, mtProto.media ? "true" : "false", scheme);
+    }
+
     if (_currentStageTransactionId == nil)
     {
         switch (_stage)

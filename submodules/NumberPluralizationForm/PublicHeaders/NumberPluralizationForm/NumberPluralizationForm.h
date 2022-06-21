@@ -10,3 +10,5 @@ typedef NS_ENUM(int32_t, NumberPluralizationForm) {
 };
 
 NumberPluralizationForm numberPluralizationForm(unsigned int lc, int n);
+
+NSString * _Nonnull formatNumberWithGroupingSeparator(NSString * _Nonnull groupingSeparator, int32_t value);

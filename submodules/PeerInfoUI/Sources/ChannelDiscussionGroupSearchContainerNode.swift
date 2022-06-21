@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
@@ -72,7 +71,7 @@ private final class ChannelDiscussionGroupSearchEntry: Comparable, Identifiable 
     func item(context: AccountContext, presentationData: PresentationData, interaction: ChannelDiscussionGroupSearchInteraction) -> ListViewItem {
         switch self.content {
             case let .peer(peer):
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: .firstLast, displayOrder: .firstLast, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: .firstLast, displayOrder: .firstLast, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(peer), chatPeer: EnginePeer(peer)), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
                     interaction.peerSelected(peer)
                 })
         }
@@ -132,7 +131,7 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
         self.dimNode = ASDisplayNode()
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()

@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import Display
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import WatchCommon
 import TelegramPresentationData
@@ -61,7 +60,7 @@ final class WatchChatListHandler: WatchRequestHandler {
                             users = users.merging(chatUsers, uniquingKeysWith: { (_, last) in last })
                         }
                     }
-                    subscriber?.putNext([ TGBridgeChatsArrayKey: chats, TGBridgeUsersDictionaryKey: users ])
+                    subscriber.putNext([ TGBridgeChatsArrayKey: chats, TGBridgeUsersDictionaryKey: users ])
                 })
                 
                 return SBlockDisposable {
@@ -92,7 +91,7 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                 |> take(1)
                 |> mapToSignal({ context -> Signal<(MessageHistoryView, Bool, PresentationData), NoError> in
                     if let context = context {
-                        return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: limit, fixedCombinedReadStates: nil)
+                        return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId), index: .upperBound, anchorIndex: .upperBound, count: limit, fixedCombinedReadStates: nil)
                         |> map { messageHistoryView, _, _ -> (MessageHistoryView, Bool, PresentationData) in
                             return (messageHistoryView, peerId == context.account.peerId, context.sharedContext.currentPresentationData.with { $0 })
                         }
@@ -109,7 +108,7 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                             users = users.merging(messageUsers, uniquingKeysWith: { (_, last) in last })
                         }
                     }
-                    subscriber?.putNext([ TGBridgeMessagesArrayKey: messages, TGBridgeUsersDictionaryKey: users ])
+                    subscriber.putNext([ TGBridgeMessagesArrayKey: messages, TGBridgeUsersDictionaryKey: users ])
                 })
                 
                 return SBlockDisposable {
@@ -129,9 +128,9 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                     }
                 })
                 let disposable = signal.start(next: { _ in
-                    subscriber?.putNext(true)
+                    subscriber.putNext(true)
                 },  completed: {
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 })
                 
                 return SBlockDisposable {
@@ -164,9 +163,9 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                         if peerId.namespace != Namespaces.Peer.CloudUser {
                             response[TGBridgeChatKey] = peers[makeBridgeIdentifier(peerId)]
                         }
-                        subscriber?.putNext(response)
+                        subscriber.putNext(response)
                     }
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 })
                 return SBlockDisposable {
                     disposable.dispose()
@@ -238,9 +237,9 @@ final class WatchSendMessageHandler: WatchRequestHandler {
             })
 
             let disposable = signal.start(next: { _ in
-                subscriber?.putNext(true)
+                subscriber.putNext(true)
             }, completed: {
-                subscriber?.putCompletion()
+                subscriber.putCompletion()
             })
             
             return SBlockDisposable {
@@ -273,9 +272,9 @@ final class WatchPeerInfoHandler: WatchRequestHandler {
                 })
                 let disposable = signal.start(next: { view in
                     if let user = makeBridgeUser(peerViewMainPeer(view), presence: view.peerPresences[view.peerId], cachedData: view.cachedData) {
-                        subscriber?.putNext([user.identifier: user])
+                        subscriber.putNext([user.identifier: user])
                     } else {
-                        subscriber?.putCompletion()
+                        subscriber.putCompletion()
                     }
                 })
                 
@@ -296,7 +295,7 @@ final class WatchPeerInfoHandler: WatchRequestHandler {
                 })
                 let disposable = signal.start(next: { view in
                     let (chat, users) = makeBridgeChat(peerViewMainPeer(view), view: view)
-                    subscriber?.putNext([ TGBridgeChatKey: chat, TGBridgeUsersDictionaryKey: users ])
+                    subscriber.putNext([ TGBridgeChatKey: chat, TGBridgeUsersDictionaryKey: users ])
                 })
             
                 return SBlockDisposable {
@@ -314,11 +313,11 @@ private func mediaForSticker(documentId: Int64, account: Account) -> Signal<Tele
     |> map { view -> TelegramMediaFile? in
         for view in view.orderedItemListsViews {
             for entry in view.items {
-                if let file = (entry.contents as? SavedStickerItem)?.file {
+                if let file = entry.contents.get(SavedStickerItem.self)?.file {
                     if file.id?.id == documentId {
                         return file
                     }
-                } else if let file = (entry.contents as? RecentMediaItem)?.media as? TelegramMediaFile {
+                } else if let file = entry.contents.get(RecentMediaItem.self)?.media {
                     if file.id?.id == documentId {
                         return file
                     }
@@ -431,9 +430,9 @@ final class WatchMediaHandler: WatchRequestHandler {
                     if let image = image, let imageData = image.jpegData(compressionQuality: compressionRate) {
                         sendData(manager: manager, data: imageData, key: key, ext: ".jpg", type: TGBridgeIncomingFileTypeImage, forceAsData: true)
                     }
-                    subscriber?.putNext(key)
+                    subscriber.putNext(key)
                 }, completed: {
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 })
                 
                 return SBlockDisposable {
@@ -498,9 +497,9 @@ final class WatchMediaHandler: WatchRequestHandler {
                     if let image = image, let imageData = image.jpegData(compressionQuality: 0.2) {
                         sendData(manager: manager, data: imageData, key: key, ext: ".jpg", type: TGBridgeIncomingFileTypeImage, forceAsData: args.notification)
                     }
-                    subscriber?.putNext(key)
+                    subscriber.putNext(key)
                 }, completed: {
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 })
                 
                 return SBlockDisposable {
@@ -557,7 +556,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                                             imageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                                             roundVideo = fileReference.media.isInstantVideo
                                         } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                                            imageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
+                                            imageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                                         }
                                     }
                                 }
@@ -583,9 +582,9 @@ final class WatchMediaHandler: WatchRequestHandler {
                     if let image = image, let imageData = image.jpegData(compressionQuality: 0.5) {
                         sendData(manager: manager, data: imageData, key: key, ext: ".jpg", type: TGBridgeIncomingFileTypeImage, forceAsData: args.notification)
                     }
-                    subscriber?.putNext(key)
+                    subscriber.putNext(key)
                 }, completed: {
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 })
                 
                 return SBlockDisposable {
@@ -619,12 +618,12 @@ final class WatchStickersHandler: WatchRequestHandler {
                     var added: Set<Int64> = []
                     outer: for view in view.orderedItemListsViews {
                         for entry in view.items {
-                            if let file = (entry.contents as? SavedStickerItem)?.file {
+                            if let file = entry.contents.get(SavedStickerItem.self)?.file {
                                 if let sticker = makeBridgeDocument(file), !added.contains(sticker.documentId) {
                                     stickers.append(sticker)
                                     added.insert(sticker.documentId)
                                 }
-                            } else if let file = (entry.contents as? RecentMediaItem)?.media as? TelegramMediaFile {
+                            } else if let file = entry.contents.get(RecentMediaItem.self)?.media {
                                 if let sticker = makeBridgeDocument(file), !added.contains(sticker.documentId) {
                                     stickers.append(sticker)
                                     added.insert(sticker.documentId)
@@ -635,7 +634,7 @@ final class WatchStickersHandler: WatchRequestHandler {
                             }
                         }
                     }
-                    subscriber?.putNext(stickers)
+                    subscriber.putNext(stickers)
                 })
                 
                 return SBlockDisposable {
@@ -694,9 +693,9 @@ final class WatchAudioHandler: WatchRequestHandler {
                 
                 let disposable = signal.start(next: { path in
                     let _ = manager.sendFile(url: URL(fileURLWithPath: path), metadata: [TGBridgeIncomingFileTypeKey: TGBridgeIncomingFileTypeAudio, TGBridgeIncomingFileIdentifierKey: key]).start()
-                    subscriber?.putNext(key)
+                    subscriber.putNext(key)
                 }, completed: {
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 })
                 
                 return SBlockDisposable {
@@ -751,11 +750,11 @@ final class WatchLocationHandler: WatchRequestHandler {
                     if let context = context {
                         return context.engine.peers.resolvePeerByName(name: "foursquare")
                         |> take(1)
-                        |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
-                            guard let peerId = peerId else {
+                        |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
+                            guard let peer = peer else {
                                 return .single(nil)
                             }
-                            return requestChatContextResults(account: context.account, botId: peerId, peerId: context.account.peerId, query: "", location: .single((args.coordinate.latitude, args.coordinate.longitude)), offset: "")
+                            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: "", location: .single((args.coordinate.latitude, args.coordinate.longitude)), offset: "")
                             |> map { results -> ChatContextResultCollection? in
                                 return results?.results
                             }
@@ -781,7 +780,7 @@ final class WatchLocationHandler: WatchRequestHandler {
                             venues.append(venue)
                         }
                     }
-                    subscriber?.putNext(venues)
+                    subscriber.putNext(venues)
                 })
                 
                 return SBlockDisposable {
@@ -825,7 +824,7 @@ final class WatchPeerSettingsHandler: WatchRequestHandler {
                         blocked = cachedData.isBlocked
                     }
                     
-                    subscriber?.putNext([ "muted": muted, "blocked": blocked ])
+                    subscriber.putNext([ "muted": muted, "blocked": blocked ])
                 })
                 
                 return SBlockDisposable {
@@ -859,9 +858,9 @@ final class WatchPeerSettingsHandler: WatchRequestHandler {
                 })
                 
                 let disposable = signal.start(next: { _ in
-                    subscriber?.putNext(true)
+                    subscriber.putNext(true)
                 },  completed: {
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 })
                 
                 return SBlockDisposable {

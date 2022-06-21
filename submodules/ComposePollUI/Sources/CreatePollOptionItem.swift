@@ -261,7 +261,7 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
             
             let separatorHeight = UIScreenPixel
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let leftInset: CGFloat = params.leftInset + (item.isSelected != nil ? 60.0 : 16.0)
             let rightInset: CGFloat = 44.0 + params.rightInset
@@ -372,6 +372,10 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                             strongSelf.containerNode.addSubnode(checkNode)
                             checkNode.frame = checkFrame
                             transition.animatePositionAdditive(node: checkNode, offset: CGPoint(x: -checkFrame.maxX, y: 0.0))
+                        }
+                        
+                        if let checkNode = strongSelf.checkNode {
+                            transition.updateAlpha(node: checkNode, alpha: strongSelf.textNode.textView.text.isEmpty && item.placeholder == item.presentationData.strings.CreatePoll_AddOption ? 0.0 : 1.0)
                         }
                     } else if let checkNode = strongSelf.checkNode {
                         strongSelf.checkNode = nil

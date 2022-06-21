@@ -69,7 +69,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         }
     }
     
-    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
+    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, requestLayout: @escaping () -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
         self.presentationData = presentationData
         self.feedbackTap = feedbackTap
         self.blurBackground = blurBackground
@@ -78,12 +78,16 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         self.containerNode.clipsToBounds = true
         self.containerNode.cornerRadius = 14.0
         self.containerNode.backgroundColor = presentationData.theme.contextMenu.backgroundColor
+
+        var requestUpdateAction: ((AnyHashable, ContextMenuActionItem) -> Void)?
         
         var itemNodes: [ContextItemNode] = []
         for i in 0 ..< items.count {
             switch items[i] {
             case let .action(action):
-                itemNodes.append(.action(ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected)))
+                itemNodes.append(.action(ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, requestUpdateAction: { id, action in
+                    requestUpdateAction?(id, action)
+                })))
                 if i != items.count - 1 {
                     switch items[i + 1] {
                     case .action, .custom:
@@ -116,7 +120,24 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         self.itemNodes = itemNodes
         
         super.init()
-                        
+
+        requestUpdateAction = { [weak self] id, action in
+            guard let strongSelf = self else {
+                return
+            }
+            loop: for itemNode in strongSelf.itemNodes {
+                switch itemNode {
+                case let .action(contextActionNode):
+                    if contextActionNode.action.id == id {
+                        contextActionNode.updateAction(item: action)
+                        break loop
+                    }
+                default:
+                    break
+                }
+            }
+        }
+
         self.addSubnode(self.containerNode)
         
         self.itemNodes.forEach({ itemNode in
@@ -139,7 +160,10 @@ private final class InnerActionsContainerNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            let actionNode = strongSelf.actionNode(at: point)
+            var actionNode = strongSelf.actionNode(at: point)
+            if let actionNodeValue = actionNode, !actionNodeValue.isActionEnabled {
+                actionNode = nil
+            }
             if actionNode !== strongSelf.currentHighlightedActionNode {
                 if actionNode != nil, moved {
                     strongSelf.feedbackTap()
@@ -165,7 +189,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         gesture.isEnabled = self.panSelectionGestureEnabled
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, minimalWidth: CGFloat?, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, minimalWidth: CGFloat?, transition: ContainedViewLayoutTransition) -> CGSize {
         var minActionsWidth: CGFloat = 250.0
         if let minimalWidth = minimalWidth, minimalWidth > minActionsWidth {
             minActionsWidth = minimalWidth
@@ -226,7 +250,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                 heightsAndCompletions.append((minSize.height, complete))
                 contentHeight += minSize.height
             case let .custom(itemNode):
-                let (minSize, complete) = itemNode.updateLayout(constrainedWidth: constrainedWidth)
+                let (minSize, complete) = itemNode.updateLayout(constrainedWidth: constrainedWidth, constrainedHeight: constrainedHeight)
                 maxWidth = max(maxWidth, minSize.width)
                 heightsAndCompletions.append((minSize.height, complete))
                 contentHeight += minSize.height
@@ -303,7 +327,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                 }
             case let .custom(node):
                 if let node = node as? ContextActionNodeProtocol, node.frame.contains(point) {
-                    return node
+                    return node.actionNode(at: self.convert(point, to: node))
                 }
             default:
                 break
@@ -313,7 +337,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
     }
 }
 
-private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
+final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let presentationData: PresentationData
     private var effectView: UIVisualEffectView?
     private let textNode: TextNode
@@ -321,26 +345,39 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let iconNode: ASImageNode
     
     private let text: String
-    private let targetSelectionIndex: Int
+    private let targetSelectionIndex: Int?
     
-    init(presentationData: PresentationData) {
+    init(presentationData: PresentationData, tip: ContextController.Tip) {
         self.presentationData = presentationData
         self.textNode = TextNode()
-        
-        var rawText = self.presentationData.strings.ChatContextMenu_TextSelectionTip
-        if let range = rawText.range(of: "|") {
-            rawText.removeSubrange(range)
-            self.text = rawText
-            self.targetSelectionIndex = NSRange(range, in: rawText).lowerBound
-        } else {
-            self.text = rawText
-            self.targetSelectionIndex = 1
+
+        var icon: UIImage?
+        switch tip {
+        case .textSelection:
+            var rawText = self.presentationData.strings.ChatContextMenu_TextSelectionTip
+            if let range = rawText.range(of: "|") {
+                rawText.removeSubrange(range)
+                self.text = rawText
+                self.targetSelectionIndex = NSRange(range, in: rawText).lowerBound
+            } else {
+                self.text = rawText
+                self.targetSelectionIndex = 1
+            }
+            icon = UIImage(bundleImageName: "Chat/Context Menu/Tip")
+        case .messageViewsPrivacy:
+            self.text = self.presentationData.strings.ChatContextMenu_MessageViewsPrivacyTip
+            self.targetSelectionIndex = nil
+            icon = UIImage(bundleImageName: "Chat/Context Menu/Tip")
+        case let .messageCopyProtection(isChannel):
+            self.text = isChannel ? self.presentationData.strings.Conversation_CopyProtectionInfoChannel : self.presentationData.strings.Conversation_CopyProtectionInfoGroup
+            self.targetSelectionIndex = nil
+            icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
         }
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Tip"), color: presentationData.theme.contextMenu.primaryColor)
+        self.iconNode.image = generateTintedImage(image: icon, color: presentationData.theme.contextMenu.primaryColor)
         
         super.init()
         
@@ -427,13 +464,13 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     }
     
     func animateIn() {
-        if let textSelectionNode = self.textSelectionNode {
+        if let textSelectionNode = self.textSelectionNode, let targetSelectionIndex = self.targetSelectionIndex {
             textSelectionNode.pretendInitiateSelection()
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.5, execute: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.textSelectionNode?.pretendExtendSelection(to: strongSelf.targetSelectionIndex)
+                strongSelf.textSelectionNode?.pretendExtendSelection(to: targetSelectionIndex)
             })
         }
     }
@@ -460,7 +497,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         return self.additionalActionsNode != nil
     }
     
-    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, displayTextSelectionTip: Bool, blurBackground: Bool) {
+    init(presentationData: PresentationData, items: ContextController.Items, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, requestLayout: @escaping () -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
         self.blurBackground = blurBackground
         self.shadowNode = ASImageNode()
         self.shadowNode.displaysAsynchronously = false
@@ -470,7 +507,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.shadowNode.isHidden = true
         
         var items = items
-        if let firstItem = items.first, case let .custom(_, additional) = firstItem, additional {
+        if case var .list(itemList) = items.content, let firstItem = itemList.first, case let .custom(_, additional) = firstItem, additional {
             let additionalShadowNode = ASImageNode()
             additionalShadowNode.displaysAsynchronously = false
             additionalShadowNode.displayWithoutProcessing = true
@@ -479,16 +516,22 @@ final class ContextActionsContainerNode: ASDisplayNode {
             additionalShadowNode.isHidden = true
             self.additionalShadowNode = additionalShadowNode
             
-            self.additionalActionsNode = InnerActionsContainerNode(presentationData: presentationData, items: [firstItem], getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
-            items.removeFirst()
+            self.additionalActionsNode = InnerActionsContainerNode(presentationData: presentationData, items: [firstItem], getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
+            itemList.removeFirst()
+            items.content = .list(itemList)
         } else {
             self.additionalShadowNode = nil
             self.additionalActionsNode = nil
         }
         
-        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items, getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
-        if displayTextSelectionTip {
-            let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData)
+        var itemList: [ContextMenuItem] = []
+        if case let .list(list) = items.content {
+            itemList = list
+        }
+        
+        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: itemList, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
+        if let tip = items.tip {
+            let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
             textSelectionTipNode.isUserInteractionEnabled = false
             self.textSelectionTipNode = textSelectionTipNode
         } else {
@@ -513,17 +556,17 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.addSubnode(self.scrollNode)
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         var widthClass = widthClass
         if !self.blurBackground {
             widthClass = .regular
         }
         
         var contentSize = CGSize()
-        let actionsSize = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, minimalWidth: nil, transition: transition)
+        let actionsSize = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, constrainedHeight: constrainedHeight, minimalWidth: nil, transition: transition)
             
         if let additionalActionsNode = self.additionalActionsNode, let additionalShadowNode = self.additionalShadowNode {
-            let additionalActionsSize = additionalActionsNode.updateLayout(widthClass: widthClass, constrainedWidth: actionsSize.width, minimalWidth: actionsSize.width, transition: transition)
+            let additionalActionsSize = additionalActionsNode.updateLayout(widthClass: widthClass, constrainedWidth: actionsSize.width, constrainedHeight: constrainedHeight, minimalWidth: actionsSize.width, transition: transition)
             contentSize = additionalActionsSize
             
             let bounds = CGRect(origin: CGPoint(), size: additionalActionsSize)

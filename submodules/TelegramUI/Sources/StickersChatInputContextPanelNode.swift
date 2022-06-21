@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -12,6 +11,7 @@ import MergeLists
 import AccountContext
 import StickerPackPreviewUI
 import ContextUI
+import ChatPresentationInterfaceState
 
 private struct StickersChatInputContextPanelEntryStableId: Hashable {
     let ids: [MediaId]
@@ -92,7 +92,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         self.listView.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).0
+            return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.stickersInteraction = StickersChatInputContextPanelInteraction()

@@ -5,7 +5,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 public struct TelegramPeerPhoto {
     public let image: TelegramMediaImage
@@ -41,12 +40,12 @@ func _internal_requestPeerPhotos(postbox: Postbox, network: Network, peerId: Pee
                     let totalCount:Int
                     let photos: [Api.Photo]
                     switch result {
-                        case let .photos(data):
-                            photos = data.photos
+                        case let .photos(photosValue, _):
+                            photos = photosValue
                             totalCount = photos.count
-                        case let .photosSlice(data):
-                            photos = data.photos
-                            totalCount = Int(data.count)
+                        case let .photosSlice(count, photosValue, _):
+                            photos = photosValue
+                            totalCount = Int(count)
                     }
                     
                     var images: [TelegramPeerPhoto] = []

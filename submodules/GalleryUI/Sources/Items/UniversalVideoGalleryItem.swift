@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import Display
 import Postbox
 import TelegramPresentationData
@@ -15,6 +14,14 @@ import PresentationDataUtils
 import OverlayStatusController
 import StickerPackPreviewUI
 import AppBundle
+import AnimationUI
+import ContextUI
+import SaveToCameraRoll
+import UndoUI
+import TelegramUIPreferences
+import OpenInExternalAppUI
+import AVKit
+import TextFormat
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message)
@@ -33,20 +40,23 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let indexData: GalleryItemIndexData?
     let contentInfo: UniversalVideoGalleryItemContentInfo?
     let caption: NSAttributedString
+    let description: NSAttributedString?
     let credit: NSAttributedString?
     let displayInfoOnTop: Bool
     let hideControls: Bool
     let fromPlayingVideo: Bool
+    let isSecret: Bool
     let landscape: Bool
     let timecode: Double?
+    let playbackRate: () -> Double?
     let configuration: GalleryConfiguration?
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
-    let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
-    let storeMediaPlaybackState: (MessageId, Double?) -> Void
+    let openActionOptions: (GalleryControllerInteractionTapAction, Message) -> Void
+    let storeMediaPlaybackState: (MessageId, Double?, Double) -> Void
     let present: (ViewController, Any?) -> Void
 
-    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, displayInfoOnTop: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, description: NSAttributedString? = nil, credit: NSAttributedString? = nil, displayInfoOnTop: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: @escaping () -> Double?, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -54,12 +64,15 @@ public class UniversalVideoGalleryItem: GalleryItem {
         self.indexData = indexData
         self.contentInfo = contentInfo
         self.caption = caption
+        self.description = description
         self.credit = credit
         self.displayInfoOnTop = displayInfoOnTop
         self.hideControls = hideControls
         self.fromPlayingVideo = fromPlayingVideo
+        self.isSecret = isSecret
         self.landscape = landscape
         self.timecode = timecode
+        self.playbackRate = playbackRate
         self.configuration = configuration
         self.playbackCompleted = playbackCompleted
         self.performAction = performAction
@@ -72,7 +85,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
         let node = UniversalVideoGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions, present: self.present)
         
         if let indexData = self.indexData {
-            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").string))
         }
         
         node.setupItem(self)
@@ -87,7 +100,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     public func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? UniversalVideoGalleryItemNode {
             if let indexData = self.indexData {
-                node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
+                node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").string))
             }
             
             node.setupItem(self)
@@ -129,6 +142,8 @@ public class UniversalVideoGalleryItem: GalleryItem {
 
 private let pictureInPictureImage = UIImage(bundleImageName: "Media Gallery/PictureInPictureIcon")?.precomposed()
 private let pictureInPictureButtonImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/PictureInPictureButton"), color: .white)
+private let moreButtonImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: .white)
+
 private let placeholderFont = Font.regular(16.0)
 
 private final class UniversalVideoGalleryItemPictureInPictureNode: ASDisplayNode {
@@ -170,7 +185,7 @@ private let minimizeImage = generateTintedImage(image: UIImage(bundleImageName: 
 private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentNode {
     private let wrapperNode: ASDisplayNode
     private let fullscreenNode: HighlightableButtonNode
-    private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, LayoutMetrics, UIEdgeInsets)?
     
     var action: ((Bool) -> Void)?
     
@@ -191,15 +206,15 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.fullscreenNode.addTarget(self, action: #selector(self.toggleFullscreenPressed), forControlEvents: .touchUpInside)
     }
     
-    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, metrics, leftInset, rightInset, bottomInset)
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, metrics, insets)
         
         let isLandscape = size.width > size.height
         self.fullscreenNode.isSelected = isLandscape
         
         let iconSize: CGFloat = 42.0
         let inset: CGFloat = 4.0
-        let buttonFrame = CGRect(origin: CGPoint(x: size.width - iconSize - inset - rightInset, y: size.height - iconSize - inset - bottomInset), size: CGSize(width: iconSize, height: iconSize))
+        let buttonFrame = CGRect(origin: CGPoint(x: size.width - iconSize - inset - insets.right, y: size.height - iconSize - inset - insets.bottom), size: CGSize(width: iconSize, height: iconSize))
         transition.updateFrame(node: self.wrapperNode, frame: buttonFrame)
         transition.updateFrame(node: self.fullscreenNode, frame: CGRect(origin: CGPoint(), size: buttonFrame.size))
     }
@@ -223,13 +238,13 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.wrapperNode.alpha = self.visibilityAlpha
         
         if let validLayout = self.validLayout {
-            self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, transition: .animated(duration: 0.3, curve: .easeInOut))
+            self.updateLayout(size: validLayout.0, metrics: validLayout.1, insets: validLayout.2, isHidden: false, transition: .animated(duration: 0.3, curve: .easeInOut))
         }
     }
     
     @objc func toggleFullscreenPressed() {
         var toLandscape = false
-        if let (size, _, _, _ ,_) = self.validLayout, size.width < size.height {
+        if let (size, _, _) = self.validLayout, size.width < size.height {
             toLandscape = true
         }
         if toLandscape {
@@ -251,6 +266,440 @@ private struct FetchControls {
     let cancel: () -> Void
 }
 
+func optionsBackgroundImage(dark: Bool) -> UIImage? {
+    return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+
+        context.setFillColor(UIColor(rgb: dark ? 0x1c1c1e : 0x2c2c2e).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+    })?.stretchableImage(withLeftCapWidth: 14, topCapHeight: 14)
+}
+
+private func optionsCircleImage(dark: Bool) -> UIImage? {
+    return generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+
+        context.setStrokeColor(UIColor.white.cgColor)
+        let lineWidth: CGFloat = 1.3
+        context.setLineWidth(lineWidth)
+
+        context.strokeEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: lineWidth, dy: lineWidth))
+    })
+}
+
+private func optionsRateImage(rate: String, isLarge: Bool, color: UIColor = .white) -> UIImage? {
+    return generateImage(isLarge ? CGSize(width: 30.0, height: 30.0) : CGSize(width: 24.0, height: 24.0), rotatedContext: { size, context in
+        UIGraphicsPushContext(context)
+
+        context.clear(CGRect(origin: CGPoint(), size: size))
+
+        if let image = generateTintedImage(image: UIImage(bundleImageName: isLarge ? "Chat/Context Menu/Playspeed30" : "Chat/Context Menu/Playspeed24"), color: .white) {
+            image.draw(at: CGPoint(x: 0.0, y: 0.0))
+        }
+
+        let string = NSMutableAttributedString(string: rate, font: Font.with(size: isLarge ? 11.0 : 10.0, design: .round, weight: .semibold), textColor: color)
+
+        var offset = CGPoint(x: 1.0, y: 0.0)
+        if rate.count >= 3 {
+            if rate == "0.5x" {
+                string.addAttribute(.kern, value: -0.8 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+                offset.x += -0.5
+            } else {
+                string.addAttribute(.kern, value: -0.5 as NSNumber, range: NSRange(string.string.startIndex ..< string.string.endIndex, in: string.string))
+                offset.x += -0.3
+            }
+        } else {
+            offset.x += -0.3
+        }
+
+        if !isLarge {
+            offset.x *= 0.5
+            offset.y *= 0.5
+        }
+
+        let boundingRect = string.boundingRect(with: size, options: [], context: nil)
+        string.draw(at: CGPoint(x: offset.x + floor((size.width - boundingRect.width) / 2.0), y: offset.y + floor((size.height - boundingRect.height) / 2.0)))
+
+        UIGraphicsPopContext()
+    })
+}
+
+private final class MoreHeaderButton: HighlightableButtonNode {
+    enum Content {
+        case image(UIImage?)
+        case more(UIImage?)
+    }
+
+    let referenceNode: ContextReferenceContentNode
+    let containerNode: ContextControllerSourceNode
+    private let iconNode: ASImageNode
+    private var animationNode: AnimationNode?
+
+    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+
+    private let wide: Bool
+
+    init(wide: Bool = false) {
+        self.wide = wide
+
+        self.referenceNode = ContextReferenceContentNode()
+        self.containerNode = ContextControllerSourceNode()
+        self.containerNode.animateScale = false
+        self.iconNode = ASImageNode()
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
+        self.iconNode.contentMode = .scaleToFill
+
+        super.init()
+
+        self.containerNode.addSubnode(self.referenceNode)
+        self.referenceNode.addSubnode(self.iconNode)
+        self.addSubnode(self.containerNode)
+
+        self.containerNode.shouldBegin = { [weak self] location in
+            guard let strongSelf = self, let _ = strongSelf.contextAction else {
+                return false
+            }
+            return true
+        }
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.contextAction?(strongSelf.containerNode, gesture)
+        }
+
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 44.0))
+        self.referenceNode.frame = self.containerNode.bounds
+
+        self.iconNode.image = optionsCircleImage(dark: false)
+        if let image = self.iconNode.image {
+            self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+        }
+
+        self.hitTestSlop = UIEdgeInsets(top: 0.0, left: -4.0, bottom: 0.0, right: -4.0)
+    }
+
+    private var content: Content?
+    func setContent(_ content: Content, animated: Bool = false) {
+        if case .more = content, self.animationNode == nil {
+            let iconColor = UIColor(rgb: 0xffffff)
+            let animationNode = AnimationNode(animation: "anim_profilemore", colors: ["Point 2.Group 1.Fill 1": iconColor,
+                                                                                      "Point 3.Group 1.Fill 1": iconColor,
+                                                                                      "Point 1.Group 1.Fill 1": iconColor], scale: 1.0)
+            let animationSize = CGSize(width: 22.0, height: 22.0)
+            animationNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - animationSize.width) / 2.0), y: floor((self.containerNode.bounds.height - animationSize.height) / 2.0)), size: animationSize)
+            self.addSubnode(animationNode)
+            self.animationNode = animationNode
+        }
+        if animated {
+            if let snapshotView = self.referenceNode.view.snapshotContentTree() {
+                snapshotView.frame = self.referenceNode.frame
+                self.view.addSubview(snapshotView)
+
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+                snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, removeOnCompletion: false)
+
+                self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                self.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3)
+
+                self.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                self.animationNode?.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3)
+            }
+
+            switch content {
+                case let .image(image):
+                    if let image = image {
+                        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+                    }
+
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.animationNode?.isHidden = true
+                case let .more(image):
+                    if let image = image {
+                        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+                    }
+
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.animationNode?.isHidden = false
+            }
+        } else {
+            self.content = content
+            switch content {
+                case let .image(image):
+                    if let image = image {
+                        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+                    }
+
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.animationNode?.isHidden = true
+                case let .more(image):
+                    if let image = image {
+                        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+                    }
+
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.animationNode?.isHidden = false
+            }
+        }
+    }
+
+    override func didLoad() {
+        super.didLoad()
+        self.view.isOpaque = false
+    }
+
+    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        return CGSize(width: wide ? 32.0 : 22.0, height: 44.0)
+    }
+
+    func onLayout() {
+    }
+
+    func play() {
+        self.animationNode?.playOnce()
+    }
+}
+
+@available(iOS 15.0, *)
+private final class PictureInPictureContentImpl: NSObject, PictureInPictureContent, AVPictureInPictureControllerDelegate {
+    private final class PlaybackDelegate: NSObject, AVPictureInPictureSampleBufferPlaybackDelegate {
+        private let node: UniversalVideoNode
+        private var statusDisposable: Disposable?
+        private var status: MediaPlayerStatus?
+        weak var pictureInPictureController: AVPictureInPictureController?
+
+        init(node: UniversalVideoNode) {
+            self.node = node
+
+            super.init()
+
+            self.statusDisposable = (self.node.status
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.status = status
+                strongSelf.pictureInPictureController?.invalidatePlaybackState()
+            })
+        }
+
+        deinit {
+            self.statusDisposable?.dispose()
+        }
+
+        public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
+            self.node.togglePlayPause()
+        }
+
+        public func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
+            guard let status = self.status else {
+                return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)))
+            }
+            return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: status.duration, preferredTimescale: CMTimeScale(30.0)))
+        }
+
+        public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+            guard let status = self.status else {
+                return false
+            }
+            switch status.status {
+            case .playing:
+                return false
+            case .buffering, .paused:
+                return true
+            }
+        }
+
+        public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
+        }
+
+        public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
+            let node = self.node
+            let _ = (self.node.status
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak node] status in
+                if let node = node, let timestamp = status?.timestamp, let duration = status?.duration {
+                    let nextTimestamp = timestamp + skipInterval.seconds
+                    if nextTimestamp > duration {
+                        node.seek(0.0)
+                        node.pause()
+                    } else {
+                        node.seek(min(duration, nextTimestamp))
+                    }
+                }
+
+                completionHandler()
+            })
+        }
+
+        public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+            return false
+        }
+    }
+
+    private weak var overlayController: OverlayMediaController?
+    private weak var mediaManager: MediaManager?
+    private var pictureInPictureController: AVPictureInPictureController?
+    private var contentDelegate: PlaybackDelegate?
+    private let node: UniversalVideoNode
+    private let willBegin: (PictureInPictureContentImpl) -> Void
+    private let didEnd: (PictureInPictureContentImpl) -> Void
+    private let expand: (@escaping () -> Void) -> Void
+    private var pictureInPictureTimer: SwiftSignalKit.Timer?
+    private var didExpand: Bool = false
+
+    private var hiddenMediaManagerIndex: Int?
+
+    private var messageRemovedDisposable: Disposable?
+
+    init(context: AccountContext, overlayController: OverlayMediaController, mediaManager: MediaManager, accountId: AccountRecordId, hiddenMedia: (MessageId, Media)?, videoNode: UniversalVideoNode, canSkip: Bool, willBegin: @escaping (PictureInPictureContentImpl) -> Void, didEnd: @escaping (PictureInPictureContentImpl) -> Void, expand: @escaping (@escaping () -> Void) -> Void) {
+        self.overlayController = overlayController
+        self.mediaManager = mediaManager
+        self.node = videoNode
+        self.willBegin = willBegin
+        self.didEnd = didEnd
+        self.expand = expand
+
+        self.node.setCanPlaybackWithoutHierarchy(true)
+
+        super.init()
+
+        let contentDelegate = PlaybackDelegate(node: self.node)
+        self.contentDelegate = contentDelegate
+
+        let pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: videoNode.getVideoLayer()!, playbackDelegate: contentDelegate))
+        self.pictureInPictureController = pictureInPictureController
+        contentDelegate.pictureInPictureController = pictureInPictureController
+        
+        pictureInPictureController.canStartPictureInPictureAutomaticallyFromInline = false
+        pictureInPictureController.requiresLinearPlayback = !canSkip
+        pictureInPictureController.delegate = self
+        self.pictureInPictureController = pictureInPictureController
+        let timer = SwiftSignalKit.Timer(timeout: 0.005, repeat: true, completion: { [weak self] in
+            guard let strongSelf = self, let pictureInPictureController = strongSelf.pictureInPictureController else {
+                return
+            }
+            if pictureInPictureController.isPictureInPicturePossible {
+                strongSelf.pictureInPictureTimer?.invalidate()
+                strongSelf.pictureInPictureTimer = nil
+
+                pictureInPictureController.startPictureInPicture()
+            }
+        }, queue: .mainQueue())
+        self.pictureInPictureTimer = timer
+        timer.start()
+
+        if let hiddenMedia = hiddenMedia {
+            self.hiddenMediaManagerIndex = mediaManager.galleryHiddenMediaManager.addSource(Signal<(MessageId, Media)?, NoError>.single(hiddenMedia)
+            |> map { messageIdAndMedia in
+                if let (messageId, media) = messageIdAndMedia {
+                    return .chat(accountId, messageId, media)
+                } else {
+                    return nil
+                }
+            })
+        }
+
+        if let (messageId, _) = hiddenMedia {
+            self.messageRemovedDisposable = (context.account.postbox.combinedView(keys: [PostboxViewKey.messages([messageId])])
+            |> map { views -> Bool in
+                if let view = views.views[PostboxViewKey.messages([messageId])] as? MessagesView {
+                    if view.messages[messageId] == nil {
+                        return true
+                    }
+                }
+                return false
+            }
+            |> filter { $0 }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                overlayController.removePictureInPictureContent(content: strongSelf)
+                strongSelf.node.canAttachContent = false
+            })
+        }
+    }
+
+    deinit {
+        self.messageRemovedDisposable?.dispose()
+        self.pictureInPictureTimer?.invalidate()
+        self.node.setCanPlaybackWithoutHierarchy(false)
+
+        if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex, let mediaManager = self.mediaManager {
+            mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
+        }
+    }
+
+    var videoNode: ASDisplayNode {
+        return self.node
+    }
+
+    public func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        Queue.mainQueue().after(0.1, { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.willBegin(strongSelf)
+
+            if let overlayController = strongSelf.overlayController {
+                overlayController.setPictureInPictureContentHidden(content: strongSelf, isHidden: true)
+            }
+        })
+    }
+
+    public func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        self.didEnd(self)
+    }
+
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, failedToStartPictureInPictureWithError error: Error) {
+    }
+
+    public func pictureInPictureControllerWillStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+    }
+
+    public func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        guard let overlayController = self.overlayController else {
+            return
+        }
+        overlayController.removePictureInPictureContent(content: self)
+        self.node.canAttachContent = false
+        if self.didExpand {
+            return
+        }
+        self.node.continuePlayingWithoutSound()
+    }
+
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
+        self.expand { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+
+            strongSelf.didExpand = true
+
+            if let overlayController = strongSelf.overlayController {
+                overlayController.setPictureInPictureContentHidden(content: strongSelf, isHidden: false)
+                strongSelf.node.alpha = 0.02
+            }
+
+            completionHandler(true)
+
+            /*Queue.mainQueue().after(0.2, {
+                self?.node.canAttachContent = false
+            })*/
+        }
+    }
+}
+
 final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
     private let presentationData: PresentationData
@@ -261,14 +710,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     fileprivate let _rightBarButtonItems = Promise<[UIBarButtonItem]?>()
     
     fileprivate var titleContentView: GalleryTitleView?
-    private let scrubberView: ChatVideoGalleryItemScrubberView
+    private var scrubberView: ChatVideoGalleryItemScrubberView?
     private let footerContentNode: ChatItemGalleryFooterContentNode
     private let overlayContentNode: UniversalVideoGalleryItemOverlayNode
+
+    private let moreBarButton: MoreHeaderButton
+    private var moreBarButtonRate: Double = 1.0
+    private var moreBarButtonRateTimestamp: Double?
     
     private var videoNode: UniversalVideoNode?
     private var videoNodeUserInteractionEnabled: Bool = false
     private var videoFramePreview: FramePreview?
     private var pictureInPictureNode: UniversalVideoGalleryItemPictureInPictureNode?
+    private var disablePictureInPicturePlaceholder: Bool = false
     private let statusButtonNode: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     private var statusNodeShouldBeHidden = true
@@ -286,12 +740,17 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var dismissOnOrientationChange = false
     private var keepSoundOnDismiss = false
     private var hasPictureInPicture = false
+
+    private var pictureInPictureButton: UIBarButtonItem?
     
     private var requiresDownload = false
     
     private var item: UniversalVideoGalleryItem?
+    private var playbackRate: Double?
+    private let playbackRatePromise = ValuePromise<Double>()
     
     private let statusDisposable = MetaDisposable()
+    private let moreButtonStateDisposable = MetaDisposable()
     private let mediaPlaybackStateDisposable = MetaDisposable()
 
     private let fetchDisposable = MetaDisposable()
@@ -305,19 +764,24 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let isPlayingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let isInteractingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let controlsVisiblePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
+    private let isShowingContextMenuPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let hasExpandedCaptionPromise = Promise<Bool>()
     private var hideControlsDisposable: Disposable?
     
     var playbackCompleted: (() -> Void)?
     
     private var customUnembedWhenPortrait: ((OverlayMediaItemNode) -> Bool)?
+
+    private var pictureInPictureContent: AnyObject?
     
-    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
-        self.scrubberView = ChatVideoGalleryItemScrubberView()
+
         
         self.footerContentNode = ChatItemGalleryFooterContentNode(context: context, presentationData: presentationData, present: present)
-        self.footerContentNode.scrubberView = self.scrubberView
+        self.hasExpandedCaptionPromise.set(self.footerContentNode.hasExpandedCaption)
+        
         self.footerContentNode.performAction = performAction
         self.footerContentNode.openActionOptions = openActionOptions
         
@@ -328,8 +792,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.statusNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
         
         self._title.set(.single(""))
+
+        self.moreBarButton = MoreHeaderButton()
+        self.moreBarButton.isUserInteractionEnabled = true
+        self.moreBarButton.setContent(.more(optionsCircleImage(dark: false)))
         
         super.init()
+
+        self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         
         self.footerContentNode.interacting = { [weak self] value in
             self?.isInteractingPromise.set(value)
@@ -338,34 +808,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.overlayContentNode.action = { [weak self] toLandscape in
             self?.updateControlsVisibility(!toLandscape)
             self?.updateOrientation(toLandscape ? .landscapeRight : .portrait)
-        }
-        
-        self.scrubberView.seek = { [weak self] timecode in
-            self?.videoNode?.seek(timecode)
-        }
-        
-        self.scrubberView.updateScrubbing = { [weak self] timecode in
-            guard let strongSelf = self else {
-                return
-            }
-            
-            strongSelf.isInteractingPromise.set(timecode != nil)
-            
-            if let videoFramePreview = strongSelf.videoFramePreview {        
-                if let timecode = timecode {
-                    if !strongSelf.scrubbingFrames {
-                        strongSelf.scrubbingFrames = true
-                        strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
-                        |> map(Optional.init))
-                    }
-                    videoFramePreview.generateFrame(at: timecode)
-                } else {
-                    strongSelf.isInteractingPromise.set(false)
-                    strongSelf.scrubbingFrame.set(.single(nil))
-                    videoFramePreview.cancelPendingFrames()
-                    strongSelf.scrubbingFrames = false
-                }
-            }
         }
         
         self.statusButtonNode.addSubnode(self.statusNode)
@@ -410,6 +852,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setPlayRate = { [weak self] rate in
             if let strongSelf = self, let videoNode = strongSelf.videoNode {
                 videoNode.setBaseRate(rate)
+
+                if let controller = strongSelf.galleryController() as? GalleryController {
+                    controller.updateSharedPlaybackRate(rate)
+                }
             }
         }
         
@@ -420,11 +866,24 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             switch fetchStatus {
                 case .Fetching:
                     fetchControls.cancel()
-                case .Remote:
+                case .Remote, .Paused:
                     fetchControls.fetch()
                 case .Local:
                     break
             }
+        }
+
+        self.footerContentNode.toggleFullscreen = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            var toLandscape = false
+            let size = strongSelf.bounds.size
+            if size.width < size.height {
+                toLandscape = true
+            }
+            strongSelf.updateControlsVisibility(!toLandscape)
+            strongSelf.updateOrientation(toLandscape ? .landscapeRight : .portrait)
         }
         
         self.scrubbingFrameDisposable = (self.scrubbingFrame.get()
@@ -451,13 +910,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             strongSelf.pictureInPictureButtonPressed()
             return true
         }
+
+        self.moreBarButton.contextAction = { [weak self] sourceNode, gesture in
+            self?.openMoreMenu(sourceNode: sourceNode, gesture: gesture)
+        }
         
         self.titleContentView = GalleryTitleView(frame: CGRect())
         self._titleView.set(.single(self.titleContentView))
         
-        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get())
-        |> mapToSignal { isPlaying, isIntracting, controlsVisible -> Signal<Void, NoError> in
-            if isPlaying && !isIntracting && controlsVisible {
+        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get(), self.hasExpandedCaptionPromise.get())
+        |> mapToSignal { isPlaying, isInteracting, controlsVisible, isShowingContextMenu, hasExpandedCaptionPromise -> Signal<Void, NoError> in
+            if isShowingContextMenu || hasExpandedCaptionPromise {
+                return .complete()
+            }
+            if isPlaying && !isInteracting && controlsVisible {
                 return .single(Void())
                 |> delay(4.0, queue: Queue.mainQueue())
             } else {
@@ -475,6 +941,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     deinit {
         self.statusDisposable.dispose()
+        self.moreButtonStateDisposable.dispose()
         self.mediaPlaybackStateDisposable.dispose()
         self.scrubbingFrameDisposable?.dispose()
         self.hideControlsDisposable?.dispose()
@@ -522,6 +989,68 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     func setupItem(_ item: UniversalVideoGalleryItem) {
         if self.item?.content.id != item.content.id {
+            func parseChapters(_ string: NSAttributedString) -> [MediaPlayerScrubbingChapter] {
+                var timecodeRanges: [(NSRange, TelegramTimecode)] = []
+                var lineRanges: [NSRange] = []
+                string.enumerateAttributes(in: NSMakeRange(0, string.length), options: [], using: { attributes, range, _ in
+                    if let timecode = attributes[NSAttributedString.Key(TelegramTextAttributes.Timecode)] as? TelegramTimecode {
+                        timecodeRanges.append((range, timecode))
+                    }
+                })
+                (string.string as NSString).enumerateSubstrings(in: NSMakeRange(0, string.length), options: .byLines, using: { _, range, _, _ in
+                    lineRanges.append(range)
+                })
+                
+                var chapters: [MediaPlayerScrubbingChapter] = []
+                for (timecodeRange, timecode) in timecodeRanges {
+                    inner: for lineRange in lineRanges {
+                        if lineRange.contains(timecodeRange.location) {
+                            if lineRange.length > timecodeRange.length {
+                                var title = ((string.string as NSString).substring(with: lineRange) as NSString).replacingCharacters(in: NSMakeRange(timecodeRange.location - lineRange.location, timecodeRange.length), with: "")
+                                title = title.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters)
+                                chapters.append(MediaPlayerScrubbingChapter(title: title, start: timecode.time))
+                            }
+                            break inner
+                        }
+                    }
+                }
+                return chapters
+            }
+            
+            var chapters = parseChapters(item.caption)
+            if chapters.isEmpty, let description = item.description {
+                chapters = parseChapters(description)
+            }
+            let scrubberView = ChatVideoGalleryItemScrubberView(chapters: chapters)
+            self.scrubberView = scrubberView
+            scrubberView.seek = { [weak self] timecode in
+                self?.videoNode?.seek(timecode)
+            }
+            scrubberView.updateScrubbing = { [weak self] timecode in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                strongSelf.isInteractingPromise.set(timecode != nil)
+                
+                if let videoFramePreview = strongSelf.videoFramePreview {
+                    if let timecode = timecode {
+                        if !strongSelf.scrubbingFrames {
+                            strongSelf.scrubbingFrames = true
+                            strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
+                            |> map(Optional.init))
+                        }
+                        videoFramePreview.generateFrame(at: timecode)
+                    } else {
+                        strongSelf.isInteractingPromise.set(false)
+                        strongSelf.scrubbingFrame.set(.single(nil))
+                        videoFramePreview.cancelPendingFrames()
+                        strongSelf.scrubbingFrames = false
+                    }
+                }
+            }
+            self.footerContentNode.scrubberView = scrubberView
+            
             self.isPlayingPromise.set(false)
             
             if item.hideControls {
@@ -540,6 +1069,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var forceEnablePiP = false
             var forceEnableUserInteraction = false
             var isAnimated = false
+            var isEnhancedWebPlayer = false
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
                 self.videoFramePreview = MediaPlayerFramePreview(postbox: item.context.account.postbox, fileReference: content.fileReference)
@@ -549,9 +1079,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 let type = webEmbedType(content: content.webpageContent)
                 switch type {
                     case .youtube:
+                        isEnhancedWebPlayer = true
                         forceEnableUserInteraction = true
                         disablePictureInPicture = !(item.configuration?.youtubePictureInPictureEnabled ?? false)
                         self.videoFramePreview = YoutubeEmbedFramePreview(context: item.context, content: content)
+                    case .vimeo:
+                        isEnhancedWebPlayer = true
                     case .iframe:
                         disablePlayerControls = true
                     default:
@@ -602,6 +1135,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         } else {
                             strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: isAnimated ? .loop : strongSelf.actionAtEnd)
                         }
+
+                        if let playbackRate = strongSelf.playbackRate {
+                            strongSelf.videoNode?.setBaseRate(playbackRate)
+                        }
                     }
                 }
             }
@@ -615,7 +1152,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             }
             
-            self.scrubberView.setStatusSignal(videoNode.status |> map { value -> MediaPlayerStatus in
+            scrubberView.setStatusSignal(videoNode.status |> map { value -> MediaPlayerStatus in
                 if let value = value, !value.duration.isZero {
                     return value
                 } else {
@@ -623,7 +1160,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             })
             
-            self.scrubberView.setBufferingStatusSignal(videoNode.bufferingStatus)
+            scrubberView.setBufferingStatusSignal(videoNode.bufferingStatus)
             
             self.requiresDownload = true
             var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
@@ -635,16 +1172,21 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 } else {
                     let throttledSignal = videoNode.status
                     |> mapToThrottled { next -> Signal<MediaPlayerStatus?, NoError> in
-                        return .single(next) |> then(.complete() |> delay(2.0, queue: Queue.concurrentDefaultQueue()))
+                        return .single(next) |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))
                     }
                     
-                    self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { status in
+                    self.mediaPlaybackStateDisposable.set((throttledSignal
+                    |> deliverOnMainQueue).start(next: { [weak self] status in
+                        guard let strongSelf = self, let videoNode = strongSelf.videoNode, videoNode.ownsContentNode else {
+                            return
+                        }
+
                         if let status = status, status.duration >= 60.0 * 10.0 {
                             var timestamp: Double?
                             if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
                                 timestamp = status.timestamp
                             }
-                            item.storeMediaPlaybackState(message.id, timestamp)
+                            item.storeMediaPlaybackState(message.id, timestamp, status.baseRate)
                         }
                     }))
                 }
@@ -670,7 +1212,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                     let status = messageMediaFileStatus(context: item.context, messageId: message.id, file: file)
                     if !isWebpage {
-                        self.scrubberView.setFetchStatusSignal(status, strings: self.presentationData.strings, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator, fileSize: file.size)
+                        scrubberView.setFetchStatusSignal(status, strings: self.presentationData.strings, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator, fileSize: file.size)
                     }
                     
                     self.requiresDownload = !isMediaStreamable(message: message, media: file)
@@ -684,6 +1226,53 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     })
                 }
             }
+
+            self.moreButtonStateDisposable.set(combineLatest(queue: .mainQueue(),
+                self.playbackRatePromise.get(),
+                self.isShowingContextMenuPromise.get()
+            ).start(next: { [weak self] playbackRate, isShowingContextMenu in
+                guard let strongSelf = self else {
+                    return
+                }
+
+                let effectiveBaseRate: Double
+                if isShowingContextMenu {
+                    effectiveBaseRate = 1.0
+                } else {
+                    effectiveBaseRate = playbackRate
+                }
+
+                if abs(effectiveBaseRate - strongSelf.moreBarButtonRate) > 0.01 {
+                    strongSelf.moreBarButtonRate = effectiveBaseRate
+                    let animated: Bool
+                    if let moreBarButtonRateTimestamp = strongSelf.moreBarButtonRateTimestamp {
+                        animated = CFAbsoluteTimeGetCurrent() > (moreBarButtonRateTimestamp + 0.2)
+                    } else {
+                        animated = false
+                    }
+                    strongSelf.moreBarButtonRateTimestamp = CFAbsoluteTimeGetCurrent()
+
+                    if abs(effectiveBaseRate - 1.0) > 0.01 {
+                        let rateString: String
+                        if abs(effectiveBaseRate - 0.5) < 0.01 {
+                            rateString = "0.5x"
+                        } else if abs(effectiveBaseRate - 1.5) < 0.01 {
+                            rateString = "1.5x"
+                        } else if abs(effectiveBaseRate - 2.0) < 0.01 {
+                            rateString = "2x"
+                        } else {
+                            rateString = "x"
+                        }
+                        strongSelf.moreBarButton.setContent(.image(optionsRateImage(rate: rateString, isLarge: true)), animated: animated)
+                    } else {
+                        strongSelf.moreBarButton.setContent(.more(optionsCircleImage(dark: false)), animated: animated)
+                    }
+                } else {
+                    if strongSelf.moreBarButtonRateTimestamp == nil {
+                        strongSelf.moreBarButtonRateTimestamp = CFAbsoluteTimeGetCurrent()
+                    }
+                }
+            }))
 
             self.statusDisposable.set((combineLatest(queue: .mainQueue(), videoNode.status, mediaFileStatus)
             |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
@@ -818,11 +1407,38 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             if forceEnablePiP || (!isAnimated && !disablePlayerControls && !disablePictureInPicture) {
                 let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
+                self.pictureInPictureButton = rightBarButtonItem
                 barButtonItems.append(rightBarButtonItem)
                 self.hasPictureInPicture = true
             } else {
                 self.hasPictureInPicture = false
             }
+
+            if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+                var file: TelegramMediaFile?
+                for m in message.media {
+                    if let m = m as? TelegramMediaFile, m.isVideo {
+                        file = m
+                        break
+                    } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
+                        file = f
+                        break
+                    }
+                }
+
+                var hasMoreButton = false
+                if isEnhancedWebPlayer {
+                    hasMoreButton = true
+                } else if let file = file, !file.isAnimated {
+                    hasMoreButton = true
+                }
+                 
+                if hasMoreButton {
+                    let moreMenuItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)!
+                    barButtonItems.append(moreMenuItem)
+                }
+            }
+
             self._rightBarButtonItems.set(.single(barButtonItems))
         
             videoNode.playbackCompleted = { [weak self, weak videoNode] in
@@ -843,6 +1459,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         self.item = item
+
+        if let _ = item.content as? NativeVideoContent {
+            self.playbackRate = item.playbackRate()
+        } else if let _ = item.content as? WebEmbedVideoContent {
+            self.playbackRate = item.playbackRate()
+        }
+
+        self.playbackRatePromise.set(self.playbackRate ?? 1.0)
         
         if let contentInfo = item.contentInfo {
             switch contentInfo {
@@ -863,7 +1487,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     private func updateDisplayPlaceholder(_ displayPlaceholder: Bool) {
-        if displayPlaceholder {
+        if displayPlaceholder && !self.disablePictureInPicturePlaceholder {
             if self.pictureInPictureNode == nil {
                 let pictureInPictureNode = UniversalVideoGalleryItemPictureInPictureNode(strings: self.presentationData.strings)
                 pictureInPictureNode.isUserInteractionEnabled = false
@@ -883,6 +1507,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             pictureInPictureNode.removeFromSupernode()
             self.videoNode?.backgroundColor = .black
         }
+
+        self.pictureInPictureButton?.isEnabled = self.pictureInPictureNode == nil
     }
     
     private func shouldAutoplayOnCentrality() -> Bool {
@@ -929,6 +1555,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         } else if self.shouldAutoplayOnCentrality()  {
                             self.initiallyActivated = true
                             videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: self.actionAtEnd)
+
+                            videoNode.setBaseRate(self.playbackRate ?? 1.0)
                         }
                     } else {
                         if self.shouldAutoplayOnCentrality()  {
@@ -988,7 +1616,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         switch action {
             case let .timecode(timecode):
-                self.scrubberView.animateTo(timecode)
+                self.scrubberView?.animateTo(timecode)
                 videoNode.seek(timecode)
         }
     }
@@ -1011,6 +1639,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
             }
+
+            videoNode.setBaseRate(self.playbackRate ?? 1.0)
+
             if isAnimated {
                 videoNode.seek(0.0)
                 videoNode.play()
@@ -1024,7 +1655,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd {
         if let item = self.item {
-            if let content = item.content as? NativeVideoContent, content.duration <= 30 {
+            if !item.isSecret, let content = item.content as? NativeVideoContent, content.duration <= 30 {
                 return .loop
             }
         }
@@ -1413,7 +2044,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 switch fetchStatus {
                     case .Local:
                         videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: self.actionAtEnd)
-                    case .Remote:
+                    case .Remote, .Paused:
                         if self.requiresDownload {
                             self.fetchControls?.fetch()
                         } else {
@@ -1442,6 +2073,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }, close: { [weak mediaManager] in
                 mediaManager?.setOverlayVideoNode(nil)
             })
+
+            let playbackRate = self.playbackRate
+
             expandImpl = { [weak overlayNode] in
                 guard let contentInfo = item.contentInfo, let overlayNode = overlayNode else {
                     return
@@ -1449,7 +2083,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 switch contentInfo {
                     case let .message(message):
-                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), replaceRootController: { controller, ready in
+                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                             }
@@ -1502,7 +2136,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             if customUnembedWhenPortrait(overlayNode) {
-                self.beginCustomDismiss()
+                self.beginCustomDismiss(false)
                 self.statusNode.isHidden = true
                 self.animateOut(toOverlay: overlayNode, completion: { [weak self] in
                     self?.completeCustomDismiss()
@@ -1512,77 +2146,142 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     @objc func pictureInPictureButtonPressed() {
-        if let item = self.item, let videoNode = self.videoNode {
+        var isNativePictureInPictureSupported = false
+        switch self.item?.contentInfo {
+        case let .message(message):
+            for media in message.media {
+                if let media = media as? TelegramMediaFile, media.isVideo {
+                    if message.id.namespace == Namespaces.Message.Cloud {
+                        isNativePictureInPictureSupported = true
+                    }
+                }
+            }
+        default:
+            break
+        }
+
+        if let item = self.item, let videoNode = self.videoNode, let overlayController = self.context.sharedContext.mediaManager.overlayMediaManager.controller {
             videoNode.setContinuePlayingWithoutSoundOnLostAudioSession(false)
-            
+
             let context = self.context
             let baseNavigationController = self.baseNavigationController()
-            let mediaManager = self.context.sharedContext.mediaManager
-            var expandImpl: (() -> Void)?
-            
-            let shouldBeDismissed: Signal<Bool, NoError>
-            if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
-                let viewKey = PostboxViewKey.messages(Set([message.id]))
-                shouldBeDismissed = context.account.postbox.combinedView(keys: [viewKey])
-                |> map { views -> Bool in
-                    guard let view = views.views[viewKey] as? MessagesView else {
-                        return false
+            let playbackRate = self.playbackRate
+
+            if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported(), isNativePictureInPictureSupported {
+                self.disablePictureInPicturePlaceholder = true
+
+                let overlayVideoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .overlay)
+                let absoluteRect = videoNode.view.convert(videoNode.view.bounds, to: nil)
+                overlayVideoNode.frame = absoluteRect
+                overlayVideoNode.updateLayout(size: absoluteRect.size, transition: .immediate)
+                overlayVideoNode.canAttachContent = true
+
+                var hiddenMedia: (MessageId, Media)? = nil
+                switch item.contentInfo {
+                case let .message(message):
+                    for media in message.media {
+                        if let media = media as? TelegramMediaImage {
+                            hiddenMedia = (message.id, media)
+                        } else if let media = media as? TelegramMediaFile, media.isVideo {
+                            hiddenMedia = (message.id, media)
+                        }
                     }
-                    if view.messages.isEmpty {
-                        return true
-                    } else {
-                        return false
+                default:
+                    break
+                }
+
+                let content = PictureInPictureContentImpl(context: self.context, overlayController: overlayController, mediaManager: self.context.sharedContext.mediaManager, accountId: self.context.account.id, hiddenMedia: hiddenMedia, videoNode: overlayVideoNode, canSkip: true, willBegin: { [weak self] content in
+                    guard let strongSelf = self else {
+                        return
                     }
-                }
-                |> distinctUntilChanged
-            } else {
-                shouldBeDismissed = .single(false)
-            }
-            
-            let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, content: item.content, shouldBeDismissed: shouldBeDismissed, expand: {
-                expandImpl?()
-            }, close: { [weak mediaManager] in
-                mediaManager?.setOverlayVideoNode(nil)
-            })
-            expandImpl = { [weak overlayNode] in
-                guard let contentInfo = item.contentInfo, let overlayNode = overlayNode else {
-                    return
-                }
-                
-                switch contentInfo {
+                    strongSelf.beginCustomDismiss(true)
+                }, didEnd: { [weak self] _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.completeCustomDismiss()
+                }, expand: { [weak baseNavigationController] completion in
+                    guard let contentInfo = item.contentInfo else {
+                        return
+                    }
+
+                    switch contentInfo {
                     case let .message(message):
-                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), replaceRootController: { controller, ready in
+                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { [weak baseNavigationController] controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                             }
                         }, baseNavigationController: baseNavigationController)
                         gallery.temporaryDoNotWaitForReady = true
-                        
+                        gallery.useSimpleAnimation = true
+
                         baseNavigationController?.view.endEditing(true)
-                        
-                        (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak overlayNode] id, media in
-                            if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
-                                return GalleryTransitionArguments(transitionNode: (overlayNode, overlayNode.bounds, { [weak overlayNode] in
-                                    return (overlayNode?.view.snapshotContentTree(), nil)
-                                }), addToTransitionSurface: { [weak context, weak overlaySupernode, weak overlayNode] view in
-                                    guard let context = context, let overlayNode = overlayNode else {
-                                        return
-                                    }
-                                    if context.sharedContext.mediaManager.hasOverlayVideoNode(overlayNode) {
-                                        overlaySupernode?.view.addSubview(view)
-                                    }
-                                    overlayNode.canAttachContent = false
-                                })
-                            } else if let info = context.sharedContext.mediaManager.galleryHiddenMediaManager.findTarget(messageId: id, media: media) {
-                                return GalleryTransitionArguments(transitionNode: (info.1, info.1.bounds, {
-                                    return info.2()
-                                }), addToTransitionSurface: info.0)
-                            }
+
+                        (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { id, media in
                             return nil
                         }))
-                    case let .webPage(_, _, expandFromPip):
-                        if let expandFromPip = expandFromPip, let baseNavigationController = baseNavigationController {
-                            expandFromPip({ [weak overlayNode] in
+
+                        gallery.onDidAppear = {
+                            completion()
+                        }
+                    case .webPage:
+                        break
+                    }
+                })
+
+                self.pictureInPictureContent = content
+
+                self.context.sharedContext.mediaManager.overlayMediaManager.controller?.setPictureInPictureContent(content: content, absoluteRect: absoluteRect)
+            } else {
+                let context = self.context
+                let baseNavigationController = self.baseNavigationController()
+                let mediaManager = self.context.sharedContext.mediaManager
+                var expandImpl: (() -> Void)?
+
+                let shouldBeDismissed: Signal<Bool, NoError>
+                if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+                    let viewKey = PostboxViewKey.messages(Set([message.id]))
+                    shouldBeDismissed = context.account.postbox.combinedView(keys: [viewKey])
+                    |> map { views -> Bool in
+                        guard let view = views.views[viewKey] as? MessagesView else {
+                            return false
+                        }
+                        if view.messages.isEmpty {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    shouldBeDismissed = .single(false)
+                }
+
+                let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, content: item.content, shouldBeDismissed: shouldBeDismissed, expand: {
+                    expandImpl?()
+                }, close: { [weak mediaManager] in
+                    mediaManager?.setOverlayVideoNode(nil)
+                })
+
+                let playbackRate = self.playbackRate
+
+                expandImpl = { [weak overlayNode] in
+                    guard let contentInfo = item.contentInfo, let overlayNode = overlayNode else {
+                        return
+                    }
+
+                    switch contentInfo {
+                        case let .message(message):
+                            let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { controller, ready in
+                                if let baseNavigationController = baseNavigationController {
+                                    baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
+                                }
+                            }, baseNavigationController: baseNavigationController)
+                            gallery.temporaryDoNotWaitForReady = true
+
+                            baseNavigationController?.view.endEditing(true)
+
+                            (baseNavigationController?.topViewController as? ViewController)?.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak overlayNode] id, media in
                                 if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
                                     return GalleryTransitionArguments(transitionNode: (overlayNode, overlayNode.bounds, { [weak overlayNode] in
                                         return (overlayNode?.view.snapshotContentTree(), nil)
@@ -1595,36 +2294,299 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                         }
                                         overlayNode.canAttachContent = false
                                     })
+                                } else if let info = context.sharedContext.mediaManager.galleryHiddenMediaManager.findTarget(messageId: id, media: media) {
+                                    return GalleryTransitionArguments(transitionNode: (info.1, info.1.bounds, {
+                                        return info.2()
+                                    }), addToTransitionSurface: info.0)
                                 }
                                 return nil
-                            }, baseNavigationController, { [weak baseNavigationController] c, a in
-                                (baseNavigationController?.topViewController as? ViewController)?.present(c, in: .window(.root), with: a)
-                            })
+                            }))
+                        case let .webPage(_, _, expandFromPip):
+                            if let expandFromPip = expandFromPip, let baseNavigationController = baseNavigationController {
+                                expandFromPip({ [weak overlayNode] in
+                                    if let overlayNode = overlayNode, let overlaySupernode = overlayNode.supernode {
+                                        return GalleryTransitionArguments(transitionNode: (overlayNode, overlayNode.bounds, { [weak overlayNode] in
+                                            return (overlayNode?.view.snapshotContentTree(), nil)
+                                        }), addToTransitionSurface: { [weak context, weak overlaySupernode, weak overlayNode] view in
+                                            guard let context = context, let overlayNode = overlayNode else {
+                                                return
+                                            }
+                                            if context.sharedContext.mediaManager.hasOverlayVideoNode(overlayNode) {
+                                                overlaySupernode?.view.addSubview(view)
+                                            }
+                                            overlayNode.canAttachContent = false
+                                        })
+                                    }
+                                    return nil
+                                }, baseNavigationController, { [weak baseNavigationController] c, a in
+                                    (baseNavigationController?.topViewController as? ViewController)?.present(c, in: .window(.root), with: a)
+                                })
+                        }
                     }
                 }
-            }
-            context.sharedContext.mediaManager.setOverlayVideoNode(overlayNode)
-            if overlayNode.supernode != nil {
-                self.beginCustomDismiss()
-                self.statusNode.isHidden = true
-                self.animateOut(toOverlay: overlayNode, completion: { [weak self] in
-                    self?.completeCustomDismiss()
-                })
+                context.sharedContext.mediaManager.setOverlayVideoNode(overlayNode)
+                if overlayNode.supernode != nil {
+                    self.beginCustomDismiss(false)
+                    self.statusNode.isHidden = true
+                    self.animateOut(toOverlay: overlayNode, completion: { [weak self] in
+                        self?.completeCustomDismiss()
+                    })
+                }
             }
         }
     }
-    
+
+    private func contentInfo() -> (message: Message, file: TelegramMediaFile?, isWebpage: Bool)? {
+        guard let item = self.item else {
+            return nil
+        }
+        if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+            var file: TelegramMediaFile?
+            var isWebpage = false
+            for m in message.media {
+                if let m = m as? TelegramMediaFile, m.isVideo {
+                    file = m
+                    break
+                } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content {
+                    if let f = content.file, f.isVideo {
+                        file = f
+                    }
+                    isWebpage = true
+                    break
+                }
+            }
+            return (message, file, isWebpage)
+        }
+        return nil
+    }
+
+    private func canDelete() -> Bool {
+        guard let (message, _, _) = self.contentInfo() else {
+            return false
+        }
+
+        var canDelete = false
+        if let peer = message.peers[message.id.peerId] {
+            if peer is TelegramUser || peer is TelegramSecretChat {
+                canDelete = true
+            } else if let _ = peer as? TelegramGroup {
+                canDelete = true
+            } else if let channel = peer as? TelegramChannel {
+                if message.flags.contains(.Incoming) {
+                    canDelete = channel.hasPermission(.deleteAllMessages)
+                } else {
+                    canDelete = true
+                }
+            } else {
+                canDelete = false
+            }
+        } else {
+            canDelete = false
+        }
+        return canDelete
+    }
+
+    @objc private func moreButtonPressed() {
+        self.moreBarButton.play()
+        self.moreBarButton.contextAction?(self.moreBarButton.containerNode, nil)
+    }
+
+    private func openMoreMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
+        let items: Signal<[ContextMenuItem], NoError> = self.contextMenuMainItems()
+        guard let controller = self.baseNavigationController()?.topViewController as? ViewController else {
+            return
+        }
+
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.moreBarButton.referenceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+        self.isShowingContextMenuPromise.set(true)
+        controller.presentInGlobalOverlay(contextController)
+
+        contextController.dismissed = { [weak self] in
+            Queue.mainQueue().after(0.1, {
+                self?.isShowingContextMenuPromise.set(false)
+            })
+        }
+    }
+
+    private func speedList(strings: PresentationStrings) -> [(String, String, Double)] {
+        let speedList: [(String, String, Double)] = [
+            ("0.5x", "0.5x", 0.5),
+            (strings.PlaybackSpeed_Normal, "1x", 1.0),
+            ("1.5x", "1.5x", 1.5),
+            ("2x", "2x", 2.0)
+        ]
+
+        return speedList
+    }
+
+    private func contextMenuMainItems() -> Signal<[ContextMenuItem], NoError> {
+        guard let videoNode = self.videoNode else {
+            return .single([])
+        }
+
+        return videoNode.status
+        |> take(1)
+        |> deliverOnMainQueue
+        |> map { [weak self] status -> [ContextMenuItem] in
+            guard let status = status, let strongSelf = self else {
+                return []
+            }
+
+            var items: [ContextMenuItem] = []
+
+            var speedValue: String = strongSelf.presentationData.strings.PlaybackSpeed_Normal
+            var speedIconText: String = "1x"
+            for (text, iconText, speed) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
+                if abs(speed - status.baseRate) < 0.01 {
+                    speedValue = text
+                    speedIconText = iconText
+                    break
+                }
+            }
+
+            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PlaybackSpeed_Title, textLayout: .secondLineWithValue(speedValue), icon: { theme in
+                return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
+            }, action: { c, _ in
+                guard let strongSelf = self else {
+                    c.dismiss(completion: nil)
+                    return
+                }
+
+                c.setItems(strongSelf.contextMenuSpeedItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
+            })))
+            
+            if let (message, _, _) = strongSelf.contentInfo() {
+                for media in message.media {
+                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                        let url = content.url
+                        
+                        let item = OpenInItem.url(url: url)
+                        let openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
+                        items.append(.action(ContextMenuActionItem(text: openText, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                            f(.default)
+
+                            if let strongSelf = self, let controller = strongSelf.galleryController() {
+                                var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                if !presentationData.theme.overallDarkAppearance {
+                                    presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                                }
+                                let actionSheet = OpenInActionSheetController(context: strongSelf.context, forceTheme: presentationData.theme, item: item, openUrl: { [weak self] url in
+                                    if let strongSelf = self {
+                                        strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: strongSelf.baseNavigationController(), dismissInput: {})
+                                    }
+                                })
+                                controller.present(actionSheet, in: .window(.root))
+                            }
+                        })))
+                        break
+                    }
+                }
+            }
+            
+            if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() {
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveVideo, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
+                    f(.default)
+
+                    if let strongSelf = self {
+                        switch strongSelf.fetchStatus {
+                        case .Local:
+                            let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .message(message: MessageReference(message), media: file))
+                            |> deliverOnMainQueue).start(completed: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                guard let controller = strongSelf.galleryController() else {
+                                    return
+                                }
+                                controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_VideoSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            })
+                        default:
+                            guard let controller = strongSelf.galleryController() else {
+                                return
+                            }
+                            controller.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Gallery_WaitForVideoDownoad, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            })]), in: .window(.root))
+                        }
+                    }
+                })))
+            }
+            if strongSelf.canDelete() {
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                    f(.default)
+
+                    if let strongSelf = self {
+                        strongSelf.footerContentNode.deleteButtonPressed()
+                    }
+                })))
+            }
+
+            return items
+        }
+    }
+
+    private func contextMenuSpeedItems() -> Signal<[ContextMenuItem], NoError> {
+        guard let videoNode = self.videoNode else {
+            return .single([])
+        }
+
+        return videoNode.status
+        |> take(1)
+        |> deliverOnMainQueue
+        |> map { [weak self] status -> [ContextMenuItem] in
+            guard let status = status, let strongSelf = self else {
+                return []
+            }
+
+            var items: [ContextMenuItem] = []
+
+            for (text, _, rate) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
+                let isSelected = abs(status.baseRate - rate) < 0.01
+                items.append(.action(ContextMenuActionItem(text: text, icon: { theme in
+                    if isSelected {
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                    } else {
+                        return nil
+                    }
+                }, action: { _, f in
+                    f(.default)
+
+                    guard let strongSelf = self, let videoNode = strongSelf.videoNode else {
+                        return
+                    }
+
+                    videoNode.setBaseRate(rate)
+
+                    if let controller = strongSelf.galleryController() as? GalleryController {
+                        controller.updateSharedPlaybackRate(rate)
+                    }
+                })))
+            }
+
+            items.append(.separator)
+            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+            }, action: { c, _ in
+                guard let strongSelf = self else {
+                    c.dismiss(completion: nil)
+                    return
+                }
+                c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
+            })))
+
+            return items
+        }
+    }
+
     @objc func openStickersButtonPressed() {
         if let content = self.item?.content as? NativeVideoContent {
+            let context = self.context
             let media = content.fileReference.abstract
 
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-                guard let strongSelf = self else {
-                    return EmptyDisposable
-                }
+            let topController = (self.baseNavigationController()?.topViewController as? ViewController)
+            let progressSignal = Signal<Never, NoError> { subscriber in
                 let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                (strongSelf.baseNavigationController()?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
+                topController?.present(controller, in: .window(.root), with: nil)
                 return ActionDisposable { [weak controller] in
                     Queue.mainQueue().async() {
                         controller?.dismiss()
@@ -1650,7 +2612,22 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 let baseNavigationController = strongSelf.baseNavigationController()
                 baseNavigationController?.view.endEditing(true)
-                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil, dismissed: { [weak self] in
+                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil, actionPerformed: { info, items, action in
+                    let animateInAsReplacement = false
+                    switch action {
+                    case .add:
+                        topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                            return true
+                        }), in: .window(.root))
+                    case let .remove(positionInList):
+                        topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                            if case .undo = action {
+                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                            }
+                            return true
+                        }), in: .window(.root))
+                    }
+                }, dismissed: { [weak self] in
                     self?.isInteractingPromise.set(false)
                 })
                 (baseNavigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
@@ -1661,10 +2638,34 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     override func adjustForPreviewing() {
         super.adjustForPreviewing()
         
-        self.scrubberView.isHidden = true
+        self.scrubberView?.isHidden = true
     }
     
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
-        return .single((self.footerContentNode, self.overlayContentNode))
+        return .single((self.footerContentNode, nil))
+    }
+
+    func updatePlaybackRate(_ playbackRate: Double?) {
+        self.playbackRate = playbackRate
+
+        if let playbackRate = self.playbackRate {
+            self.videoNode?.setBaseRate(playbackRate)
+        }
+
+        self.playbackRatePromise.set(self.playbackRate ?? 1.0)
+    }
+}
+
+private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

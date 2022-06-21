@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
@@ -44,7 +43,7 @@ private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<(Peer?, Cac
     }
 }
 
-public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func openAddPersonContactImpl(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
     |> deliverOnMainQueue).start(next: { peer, cachedData in
         guard let user = peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: user) else {
@@ -56,13 +55,13 @@ public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, pu
             shareViaException = peerStatusSettings.contains(.addExceptionWhenAddingContact)
         }
         
-        pushController(deviceContactInfoController(context: context, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
+        pushController(deviceContactInfoController(context: context, updatedPresentationData: updatedPresentationData, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
             if let peer = peer as? TelegramUser {
                 if let phone = peer.phone, !phone.isEmpty {
                 }
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
+                present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(EnginePeer(peer).compactDisplayTitle).string, true)), nil)
             }
         }), completed: nil, cancelled: nil))
     })

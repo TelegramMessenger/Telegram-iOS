@@ -1,15 +1,13 @@
 import Foundation
 import TelegramCore
-import SyncCore
-import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import PhoneNumberFormat
 
-public extension Peer {
+public extension EnginePeer {
     var compactDisplayTitle: String {
         switch self {
-        case let user as TelegramUser:
+        case let .user(user):
             if let firstName = user.firstName, !firstName.isEmpty {
                 return firstName
             } else if let lastName = user.lastName, !lastName.isEmpty {
@@ -19,18 +17,18 @@ public extension Peer {
             } else {
                 return ""
             }
-        case let group as TelegramGroup:
+        case let .legacyGroup(group):
             return group.title
-        case let channel as TelegramChannel:
+        case let .channel(channel):
             return channel.title
-        default:
+        case .secretChat:
             return ""
         }
     }
-    
+
     func displayTitle(strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) -> String {
         switch self {
-        case let user as TelegramUser:
+        case let .user(user):
             if user.id.isReplies {
                 return strings.DialogList_Replies
             }
@@ -52,11 +50,11 @@ public extension Peer {
             } else {
                 return strings.User_DeletedAccount
             }
-        case let group as TelegramGroup:
+        case let .legacyGroup(group):
             return group.title
-        case let channel as TelegramChannel:
+        case let .channel(channel):
             return channel.title
-        default:
+        case .secretChat:
             return ""
         }
     }

@@ -191,6 +191,8 @@ public final class GradientBackgroundNode: ASDisplayNode {
             self.parentNode = parentNode
 
             super.init()
+            
+            self.displaysAsynchronously = false
 
             self.index = parentNode.cloneNodes.add(Weak<CloneNode>(self))
             self.image = parentNode.dimmedImage
@@ -232,7 +234,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
         if let current = self._dimmedImage {
             return current
         } else if let (size, colors, positions) = self.dimmedImageParams {
-            self._dimmedImage = generateGradient(size: size, colors: colors, positions: positions, adjustSaturation: 1.7)
+            self._dimmedImage = generateGradient(size: size, colors: colors, positions: positions, adjustSaturation: self.saturation)
             return self._dimmedImage
         } else {
             return nil
@@ -245,8 +247,11 @@ public final class GradientBackgroundNode: ASDisplayNode {
     private let useSharedAnimationPhase: Bool
     static var sharedPhase: Int = 0
 
-    public init(colors: [UIColor]? = nil, useSharedAnimationPhase: Bool = false) {
+    private let saturation: CGFloat
+    
+    public init(colors: [UIColor]? = nil, useSharedAnimationPhase: Bool = false, adjustSaturation: Bool = true) {
         self.useSharedAnimationPhase = useSharedAnimationPhase
+        self.saturation = adjustSaturation ? 1.7 : 1.0
         self.contentView = UIImageView()
         let defaultColors: [UIColor] = [
             UIColor(rgb: 0x7FA381),
@@ -270,7 +275,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
     deinit {
     }
 
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, extendAnimation: Bool = false, backwards: Bool = false) {
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, extendAnimation: Bool, backwards: Bool, completion: @escaping () -> Void) {
         let sizeUpdated = self.validLayout != size
         self.validLayout = size
 
@@ -345,7 +350,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
                         images.append(generateGradient(size: imageSize, colors: self.colors, positions: morphedPositions))
                         if needDimmedImages {
-                            dimmedImages.append(generateGradient(size: imageSize, colors: self.colors, positions: morphedPositions, adjustSaturation: 1.7))
+                            dimmedImages.append(generateGradient(size: imageSize, colors: self.colors, positions: morphedPositions, adjustSaturation: self.saturation))
                         }
                     }
 
@@ -365,6 +370,10 @@ public final class GradientBackgroundNode: ASDisplayNode {
                     if extendAnimation && !backwards {
                         animation.fillMode = .backwards
                         animation.beginTime = self.contentView.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.25
+                    }
+
+                    animation.completion = { _ in
+                        completion()
                     }
 
                     self.contentView.layer.removeAnimation(forKey: "contents")
@@ -393,20 +402,24 @@ public final class GradientBackgroundNode: ASDisplayNode {
                     let image = generateGradient(size: imageSize, colors: self.colors, positions: positions)
                     self.contentView.image = image
 
-                    let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: 1.7)
+                    let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: self.saturation)
                     self._dimmedImage = dimmedImage
                     self.dimmedImageParams = (imageSize, self.colors, positions)
 
                     for cloneNode in self.cloneNodes {
                         cloneNode.value?.image = dimmedImage
                     }
+
+                    completion()
                 }
+            } else {
+                completion()
             }
         } else if sizeUpdated {
             let image = generateGradient(size: imageSize, colors: self.colors, positions: positions)
             self.contentView.image = image
 
-            let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: 1.7)
+            let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: self.saturation)
             self.dimmedImageParams = (imageSize, self.colors, positions)
 
             for cloneNode in self.cloneNodes {
@@ -414,6 +427,10 @@ public final class GradientBackgroundNode: ASDisplayNode {
             }
 
             self.validPhase = self.phase
+
+            completion()
+        } else {
+            completion()
         }
 
         transition.updateFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: size))
@@ -435,13 +452,14 @@ public final class GradientBackgroundNode: ASDisplayNode {
             self.colors = colors
             self.invalidated = true
             if let size = self.validLayout {
-                self.updateLayout(size: size, transition: .immediate)
+                self.updateLayout(size: size, transition: .immediate, extendAnimation: false, backwards: false, completion: {})
             }
         }
     }
 
-    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool = false, backwards: Bool = false) {
+    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool, backwards: Bool, completion: @escaping () -> Void) {
         guard case let .animated(duration, _) = transition, duration > 0.001 else {
+            completion()
             return
         }
 
@@ -458,7 +476,9 @@ public final class GradientBackgroundNode: ASDisplayNode {
             GradientBackgroundNode.sharedPhase = self.phase
         }
         if let size = self.validLayout {
-            self.updateLayout(size: size, transition: transition, extendAnimation: extendAnimation, backwards: backwards)
+            self.updateLayout(size: size, transition: transition, extendAnimation: extendAnimation, backwards: backwards, completion: completion)
+        } else {
+            completion()
         }
     }
 }

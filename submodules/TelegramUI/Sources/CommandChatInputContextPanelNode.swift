@@ -3,12 +3,12 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
 import AccountContext
+import ChatPresentationInterfaceState
 
 private struct CommandChatInputContextPanelEntryStableId: Hashable {
     let command: PeerCommand
@@ -71,7 +71,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         self.listView.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).0
+            return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)

@@ -1,7 +1,5 @@
 import Foundation
-import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
@@ -15,7 +13,7 @@ private enum MessageGroupType {
     case generic
 }
 
-private func singleMessageType(message: Message) -> MessageGroupType {
+private func singleMessageType(message: EngineMessage) -> MessageGroupType {
     for media in message.media {
         if let _ = media as? TelegramMediaImage {
             return .photos
@@ -32,7 +30,7 @@ private func singleMessageType(message: Message) -> MessageGroupType {
     return .generic
 }
 
-private func messageGroupType(messages: [Message]) -> MessageGroupType {
+private func messageGroupType(messages: [EngineMessage]) -> MessageGroupType {
     if messages.isEmpty {
         return .generic
     }
@@ -46,13 +44,14 @@ private func messageGroupType(messages: [Message]) -> MessageGroupType {
     return currentType
 }
 
-public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], chatPeer: RenderedPeer, accountPeerId: PeerId, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
-    let peer: Peer?
+public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, messages: [EngineMessage], chatPeer: EngineRenderedPeer, accountPeerId: EnginePeer.Id, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: EnginePeer?, hideAuthor: Bool, messageText: String, spoilers: [NSRange]?) {
+    let peer: EnginePeer?
     
     let message = messages.last
     
     var hideAuthor = false
     var messageText: String
+    var spoilers: [NSRange]?
     if let message = message {
         if let messageMain = messageMainPeer(message) {
             peer = messageMain
@@ -101,7 +100,15 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     textIsReady = true
                 }
             case .generic:
-                break
+                var messageTypes = Set<MessageGroupType>()
+                for message in messages {
+                    messageTypes.insert(singleMessageType(message: message))
+                }
+                if messageTypes.count == 2 && messageTypes.contains(.photos) && messageTypes.contains(.videos) {
+                    if !messageText.isEmpty {
+                        textIsReady = true
+                    }
+                }
             }
         }
         
@@ -159,7 +166,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                         processed = true
                                         break inner
                                     } else {
-                                        messageText = strings.Message_StickerText(displayText).0
+                                        messageText = strings.Message_StickerText(displayText).string
                                         processed = true
                                         break inner
                                     }
@@ -262,12 +269,13 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 }
                             default:
                                 hideAuthor = true
-                                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
+                                if let (text, textSpoilers) = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
                                     messageText = text
+                                    spoilers = textSpoilers
                                 }
                         }
                     case _ as TelegramMediaExpiredContent:
-                        if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
+                        if let (text, _) = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
                             messageText = text
                         }
                     case let poll as TelegramMediaPoll:
@@ -283,21 +291,21 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
         peer = chatPeer.chatMainPeer
         messageText = ""
         if chatPeer.peerId.namespace == Namespaces.Peer.SecretChat {
-            if let secretChat = chatPeer.peers[chatPeer.peerId] as? TelegramSecretChat {
+            if case let .secretChat(secretChat) = chatPeer.peers[chatPeer.peerId] {
                 switch secretChat.embeddedState {
                     case .active:
                         switch secretChat.role {
                             case .creator:
-                                messageText = strings.DialogList_EncryptedChatStartedOutgoing(peer?.compactDisplayTitle ?? "").0
+                                messageText = strings.DialogList_EncryptedChatStartedOutgoing(peer?.compactDisplayTitle ?? "").string
                             case .participant:
-                                messageText = strings.DialogList_EncryptedChatStartedIncoming(peer?.compactDisplayTitle ?? "").0
+                                messageText = strings.DialogList_EncryptedChatStartedIncoming(peer?.compactDisplayTitle ?? "").string
                         }
                     case .terminated:
                         messageText = strings.DialogList_EncryptionRejected
                     case .handshake:
                         switch secretChat.role {
                             case .creator:
-                                messageText = strings.DialogList_AwaitingEncryption(peer?.compactDisplayTitle ?? "").0
+                                messageText = strings.DialogList_AwaitingEncryption(peer?.compactDisplayTitle ?? "").string
                             case .participant:
                                 messageText = strings.DialogList_EncryptionProcessing
                         }
@@ -306,5 +314,5 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
         }
     }
     
-    return (peer, hideAuthor, messageText)
+    return (peer, hideAuthor, messageText, spoilers)
 }

@@ -1,17 +1,17 @@
 import Foundation
 import UIKit
-import Postbox
 import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import TelegramUIPreferences
+import TelegramPresentationData
 import AccountContext
+import AttachmentUI
 
-public func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, staleCachedResults: Bool = false, limit: Int = 60) -> Signal<RequestChatContextResultsResult?, NoError> {
-    return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset, incompleteResults: incompleteResults, staleCachedResults: staleCachedResults)
+public func requestContextResults(context: AccountContext, botId: EnginePeer.Id, query: String, peerId: EnginePeer.Id, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, staleCachedResults: Bool = false, limit: Int = 60) -> Signal<RequestChatContextResultsResult?, NoError> {
+    return context.engine.messages.requestChatContextResults(botId: botId, peerId: peerId, query: query, offset: offset, incompleteResults: incompleteResults, staleCachedResults: staleCachedResults)
     |> `catch` { error -> Signal<RequestChatContextResultsResult?, NoError> in
         return .single(nil)
     }
@@ -40,7 +40,7 @@ public func requestContextResults(account: Account, botId: PeerId, query: String
             updated = true
         }
         if let collection = collection, collection.results.count < limit, let nextOffset = collection.nextOffset, updated {
-            let nextResults = requestContextResults(account: account, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection, limit: limit)
+            let nextResults = requestContextResults(context: context, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection, limit: limit)
             if collection.results.count > 10 {
                 return .single(RequestChatContextResultsResult(results: collection, isStale: resultsStruct?.isStale ?? false))
                 |> then(nextResults)
@@ -61,7 +61,7 @@ public enum WebSearchMode {
 }
 
 public enum WebSearchControllerMode {
-    case media(completion: (ChatContextResultCollection, TGMediaSelectionContext, TGMediaEditingContext, Bool) -> Void)
+    case media(attachment: Bool, completion: (ChatContextResultCollection, TGMediaSelectionContext, TGMediaEditingContext, Bool) -> Void)
     case avatar(initialQuery: String?, completion: (UIImage) -> Void)
     
     var mode: WebSearchMode {
@@ -79,18 +79,20 @@ final class WebSearchControllerInteraction {
     let setSearchQuery: (String) -> Void
     let deleteRecentQuery: (String) -> Void
     let toggleSelection: (ChatContextResult, Bool) -> Void
-    let sendSelected: (ChatContextResultCollection, ChatContextResult?) -> Void
+    let sendSelected: (ChatContextResult?, Bool, Int32?) -> Void
+    let schedule: () -> Void
     let avatarCompleted: (UIImage) -> Void
     let selectionState: TGMediaSelectionContext?
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     
-    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Void, sendSelected: @escaping (ChatContextResultCollection, ChatContextResult?) -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Void, sendSelected: @escaping (ChatContextResult?, Bool, Int32?) -> Void, schedule: @escaping () -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
         self.openResult = openResult
         self.setSearchQuery = setSearchQuery
         self.deleteRecentQuery = deleteRecentQuery
         self.toggleSelection = toggleSelection
         self.sendSelected = sendSelected
+        self.schedule = schedule
         self.avatarCompleted = avatarCompleted
         self.selectionState = selectionState
         self.editingState = editingState
@@ -125,7 +127,7 @@ public final class WebSearchController: ViewController {
     
     private let context: AccountContext
     private let mode: WebSearchControllerMode
-    private let peer: Peer?
+    private let peer: EnginePeer?
     private let chatLocation: ChatLocation?
     private let configuration: SearchBotsConfiguration
     
@@ -156,14 +158,26 @@ public final class WebSearchController: ViewController {
         }
     }
     
-    public init(context: AccountContext, peer: Peer?, chatLocation: ChatLocation?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
+    public var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil } {
+        didSet {
+            self.controllerNode.getCaptionPanelView = self.getCaptionPanelView
+        }
+    }
+    
+    public var presentSchedulePicker: (Bool, @escaping (Int32) -> Void) -> Void = { _, _ in }
+    
+    public var dismissed: () -> Void = { }
+    
+    public var searchingUpdated: (Bool) -> Void = { _ in }
+    
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode
         self.peer = peer
         self.chatLocation = chatLocation
         self.configuration = configuration
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.interfaceState = WebSearchInterfaceState(presentationData: presentationData)
         
         var searchQuery: String?
@@ -172,7 +186,7 @@ public final class WebSearchController: ViewController {
             self.interfaceState = self.interfaceState.withUpdatedQuery(query)
         }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme).withUpdatedSeparatorColor(presentationData.theme.rootController.navigationBar.opaqueBackgroundColor), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme).withUpdatedSeparatorColor(presentationData.theme.list.plainBackgroundColor).withUpdatedBackgroundColor(presentationData.theme.list.plainBackgroundColor), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         self.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
         
         self.scrollToTop = { [weak self] in
@@ -183,7 +197,7 @@ public final class WebSearchController: ViewController {
         
         let settings = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webSearchSettings])
         |> map { sharedData -> WebSearchSettings in
-            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webSearchSettings] as? WebSearchSettings {
+            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webSearchSettings]?.get(WebSearchSettings.self) {
                 return current
             } else {
                 return WebSearchSettings.defaultSettings
@@ -192,7 +206,7 @@ public final class WebSearchController: ViewController {
         
         let gifProvider = self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { view -> String? in
-            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
                 return nil
             }
             let configuration = WebSearchConfiguration(appConfiguration: appConfiguration)
@@ -200,7 +214,7 @@ public final class WebSearchController: ViewController {
         }
         |> distinctUntilChanged
 
-        self.disposable = ((combineLatest(settings, context.sharedContext.presentationData, gifProvider))
+        self.disposable = ((combineLatest(settings, (updatedPresentationData?.signal ?? context.sharedContext.presentationData), gifProvider))
         |> deliverOnMainQueue).start(next: { [weak self] settings, presentationData, gifProvider in
             guard let strongSelf = self else {
                 return
@@ -220,11 +234,21 @@ public final class WebSearchController: ViewController {
             }
         })
         
-        let navigationContentNode = WebSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings)
+        var attachment = false
+        if case let .media(attachmentValue, _) = mode {
+            attachment = attachmentValue
+        }
+        let navigationContentNode = WebSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, attachment: attachment)
         self.navigationContentNode = navigationContentNode
         navigationContentNode.setQueryUpdated { [weak self] query in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 strongSelf.updateSearchQuery(query)
+                strongSelf.searchingUpdated(!query.isEmpty)
+            }
+        }
+        navigationContentNode.cancel = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.cancel()
             }
         }
         self.navigationBar?.setContentNode(navigationContentNode, animated: false)
@@ -263,15 +287,21 @@ public final class WebSearchController: ViewController {
                 let item = LegacyWebSearchItem(result: result)
                 strongSelf.controllerInteraction?.selectionState?.setItem(item, selected: value)
             }
-        }, sendSelected: { results, current in
-            if let selectionState = selectionState {
+        }, sendSelected: { [weak self] current, silently, scheduleTime in
+            if let selectionState = selectionState, let results = self?.controllerNode.currentExternalResults {
                 if let current = current {
                     let currentItem = LegacyWebSearchItem(result: current)
                     selectionState.setItem(currentItem, selected: true)
                 }
-                if case let .media(sendSelected) = mode {
+                if case let .media(_, sendSelected) = mode {
                     sendSelected(results, selectionState, editingState, false)
                 }
+            }
+        }, schedule: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.presentSchedulePicker(false, { [weak self] time in
+                    self?.controllerInteraction?.sendSelected(nil, false, time)
+                })
             }
         }, avatarCompleted: { result in
             if case let .avatar(_, avatarCompleted) = mode {
@@ -299,6 +329,14 @@ public final class WebSearchController: ViewController {
         self.selectionDisposable?.dispose()
     }
     
+    public func cancel() {
+        self.controllerNode.dismissInput?()
+        self.controllerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.dismissed()
+            self?.dismiss()
+        })
+    }
+    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
@@ -310,6 +348,7 @@ public final class WebSearchController: ViewController {
         }
     }
     
+    private var didActivateSearch = false
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
@@ -317,11 +356,22 @@ public final class WebSearchController: ViewController {
         if case let .avatar(initialQuery, _) = mode, let _ = initialQuery {
             select = true
         }
-        self.navigationContentNode?.activate(select: select)
+        if case let .media(attachment, _) = mode, attachment && !self.didPlayPresentationAnimation {
+            self.didPlayPresentationAnimation = true
+            self.controllerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        }
+        if !self.didActivateSearch {
+            self.didActivateSearch = true
+            self.navigationContentNode?.activate(select: select)
+        }
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WebSearchControllerNode(context: self.context, presentationData: self.interfaceState.presentationData, controllerInteraction: self.controllerInteraction!, peer: self.peer, chatLocation: self.chatLocation, mode: self.mode.mode)
+        var attachment: Bool = false
+        if case let .media(attachmentValue, _) = self.mode, attachmentValue {
+            attachment = true
+        }
+        self.displayNode = WebSearchControllerNode(controller: self, context: self.context, presentationData: self.interfaceState.presentationData, controllerInteraction: self.controllerInteraction!, peer: self.peer, chatLocation: self.chatLocation, mode: self.mode.mode, attachment: attachment)
         self.controllerNode.requestUpdateInterfaceState = { [weak self] animated, f in
             if let strongSelf = self {
                 strongSelf.updateInterfaceState(f)
@@ -444,25 +494,17 @@ public final class WebSearchController: ViewController {
             return .single({ _ in return .contextRequestResult(nil, nil) })
         }
         
-        let account = self.context.account
+        let context = self.context
         let contextBot = self.context.engine.peers.resolvePeerByName(name: name)
-        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-            if let peerId = peerId {
-                return account.postbox.loadedPeerWithId(peerId)
-                |> map { peer -> Peer? in
-                    return peer
-                }
-                |> take(1)
-            } else {
-                return .single(nil)
-            }
+        |> mapToSignal { peer -> Signal<EnginePeer?, NoError> in
+            return .single(peer)
         }
         |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
-            if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                let results = requestContextResults(account: account, botId: user.id, query: query, peerId: peerId, limit: 64)
+            if case let .user(user) = peer, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
+                let results = requestContextResults(context: context, botId: user.id, query: query, peerId: peerId, limit: 64)
                 |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                     return { _ in
-                        return .contextRequestResult(user, results?.results)
+                        return .contextRequestResult(.user(user), results?.results)
                     }
                 }
             
@@ -504,11 +546,78 @@ public final class WebSearchController: ViewController {
         }
     }
     
+    public var mediaPickerContext: WebSearchPickerContext? {
+        if let interaction = self.controllerInteraction {
+            return WebSearchPickerContext(interaction: interaction)
+        } else {
+            return nil
+        }
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+        let navigationBarHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+    }
+}
+
+public class WebSearchPickerContext: AttachmentMediaPickerContext {
+    private weak var interaction: WebSearchControllerInteraction?
+    
+    public var selectionCount: Signal<Int, NoError> {
+        return Signal { [weak self] subscriber in
+            let disposable = self?.interaction?.selectionState?.selectionChangedSignal().start(next: { [weak self] value in
+                subscriber.putNext(Int(self?.interaction?.selectionState?.count() ?? 0))
+            }, error: { _ in }, completed: { })
+            return ActionDisposable {
+                disposable?.dispose()
+            }
+        }
+    }
+    
+    public var caption: Signal<NSAttributedString?, NoError> {
+        return Signal { [weak self] subscriber in
+            let disposable = self?.interaction?.editingState.forcedCaption().start(next: { caption in
+                if let caption = caption as? NSAttributedString {
+                    subscriber.putNext(caption)
+                } else {
+                    subscriber.putNext(nil)
+                }
+            }, error: { _ in }, completed: { })
+            return ActionDisposable {
+                disposable?.dispose()
+            }
+        }
+    }
+        
+    public var loadingProgress: Signal<CGFloat?, NoError> {
+        return .single(nil)
+    }
+    
+    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return .single(nil)
+    }
+
+    init(interaction: WebSearchControllerInteraction) {
+        self.interaction = interaction
+    }
+    
+    public func setCaption(_ caption: NSAttributedString) {
+        self.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
+    }
+    
+    public func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
+        self.interaction?.sendSelected(nil, silently, nil)
+    }
+    
+    public func schedule() {
+        self.interaction?.schedule()
+    }
+    
+    public func mainButtonAction() {
+        
     }
 }

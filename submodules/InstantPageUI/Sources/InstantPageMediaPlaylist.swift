@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import AccountContext
 import MusicAlbumArtResources
@@ -47,13 +46,13 @@ final class InstantPageMediaPlaylistItem: SharedMediaPlaylistItem {
                 switch attribute {
                     case let .Audio(isVoice, _, _, _, _):
                         if isVoice {
-                            return SharedMediaPlaybackData(type: .voice, source: .telegramFile(.webPage(webPage: WebpageReference(self.webPage), media: file)))
+                            return SharedMediaPlaybackData(type: .voice, source: .telegramFile(reference: .webPage(webPage: WebpageReference(self.webPage), media: file), isCopyProtected: false))
                         } else {
-                            return SharedMediaPlaybackData(type: .music, source: .telegramFile(.webPage(webPage: WebpageReference(self.webPage), media: file)))
+                            return SharedMediaPlaybackData(type: .music, source: .telegramFile(reference: .webPage(webPage: WebpageReference(self.webPage), media: file), isCopyProtected: false))
                         }
                     case let .Video(_, _, flags):
                         if flags.contains(.instantRoundVideo) {
-                            return SharedMediaPlaybackData(type: .instantVideo, source: .telegramFile(.webPage(webPage: WebpageReference(self.webPage), media: file)))
+                            return SharedMediaPlaybackData(type: .instantVideo, source: .telegramFile(reference: .webPage(webPage: WebpageReference(self.webPage), media: file), isCopyProtected: false))
                         } else {
                             return nil
                         }
@@ -62,12 +61,12 @@ final class InstantPageMediaPlaylistItem: SharedMediaPlaylistItem {
                 }
             }
             if file.mimeType.hasPrefix("audio/") {
-                return SharedMediaPlaybackData(type: .music, source: .telegramFile(.webPage(webPage: WebpageReference(self.webPage), media: file)))
+                return SharedMediaPlaybackData(type: .music, source: .telegramFile(reference: .webPage(webPage: WebpageReference(self.webPage), media: file), isCopyProtected: false))
             }
             if let fileName = file.fileName {
                 let ext = (fileName as NSString).pathExtension.lowercased()
                 if ext == "wav" || ext == "opus" {
-                    return SharedMediaPlaybackData(type: .music, source: .telegramFile(.webPage(webPage: WebpageReference(self.webPage), media: file)))
+                    return SharedMediaPlaybackData(type: .music, source: .telegramFile(reference: .webPage(webPage: WebpageReference(self.webPage), media: file), isCopyProtected: false))
                 }
             }
         }

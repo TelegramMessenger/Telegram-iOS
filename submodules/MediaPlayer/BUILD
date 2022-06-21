@@ -6,9 +6,11 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/Postbox:Postbox",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
@@ -16,6 +18,7 @@ swift_library(
         "//submodules/TelegramAudio:TelegramAudio",
         "//submodules/FFMpegBinding:FFMpegBinding",
         "//submodules/RingBuffer:RingBuffer",
+        "//submodules/YuvConversion:YuvConversion",
     ],
     visibility = [
         "//visibility:public",

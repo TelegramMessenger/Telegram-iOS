@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -173,7 +172,7 @@ private enum OldChannelsEntry: ItemListNodeEntry {
         case let .peersHeader(title):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .peer(_, peer, selected):
-            return ContactsPeerItem(presentationData: presentationData, style: .blocks, sectionId: self.section, sortOrder: .firstLast, displayOrder: .firstLast, context: arguments.context, peerMode: .peer, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .custom(string: localizedOldChannelDate(peer: peer, strings: presentationData.strings), multiline: false), badge: nil, enabled: true, selection: ContactsPeerItemSelection.selectable(selected: selected), editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .none, index: nil, header: nil, action: { _ in
+            return ContactsPeerItem(presentationData: presentationData, style: .blocks, sectionId: self.section, sortOrder: .firstLast, displayOrder: .firstLast, context: arguments.context, peerMode: .peer, peer: .peer(peer: EnginePeer(peer.peer), chatPeer: EnginePeer(peer.peer)), status: .custom(string: localizedOldChannelDate(peer: peer, strings: presentationData.strings), multiline: false), badge: nil, enabled: true, selection: ContactsPeerItemSelection.selectable(selected: selected), editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .none, index: nil, header: nil, action: { _ in
                 arguments.togglePeer(peer.peer.id, true)
             }, setPeerIdWithRevealedOptions: nil, deletePeer: nil, itemHighlighting: nil, contextAction: nil)
         }
@@ -245,7 +244,7 @@ private final class OldChannelsActionPanelNode: ASDisplayNode {
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
-        self.buttonNode.updateLayout(width: layout.size.width - sideInset * 2.0, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: layout.size.width - sideInset * 2.0, transition: transition)
         transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: CGSize(width: layout.size.width, height: buttonHeight)))
         
         return buttonHeight + verticalInset * 2.0 + insets.bottom
@@ -338,7 +337,7 @@ public enum OldChannelsControllerIntent {
     case upgrade
 }
 
-public func oldChannelsController(context: AccountContext, intent: OldChannelsControllerIntent, completed: @escaping (Bool) -> Void = { _ in }) -> ViewController {
+public func oldChannelsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, intent: OldChannelsControllerIntent, completed: @escaping (Bool) -> Void = { _ in }) -> ViewController {
     let initialState = OldChannelsState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -397,9 +396,10 @@ public func oldChannelsController(context: AccountContext, intent: OldChannelsCo
     
     var previousPeersWereEmpty = true
     
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(
         queue: Queue.mainQueue(),
-        context.sharedContext.presentationData,
+        presentationData,
         statePromise.get(),
         peersPromise.get()
     )

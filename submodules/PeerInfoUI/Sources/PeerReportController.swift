@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -30,6 +29,8 @@ public enum PeerReportOption {
     case copyright
     case pornography
     case childAbuse
+    case illegalDrugs
+    case personalDetails
     case other
 }
 
@@ -60,6 +61,12 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
             case .copyright:
                 title = presentationData.strings.ReportPeer_ReasonCopyright
                 icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
+            case .illegalDrugs:
+                title = presentationData.strings.ReportPeer_ReasonIllegalDrugs
+                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportDrugs")
+            case .personalDetails:
+                title = presentationData.strings.ReportPeer_ReasonPersonalDetails
+                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportPersonal")
             case .other:
                 title = presentationData.strings.ReportPeer_ReasonOther
                 icon = UIImage(bundleImageName: "Chat/Context Menu/Report")
@@ -83,6 +90,10 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                     reportReason = .childAbuse
                 case .copyright:
                     reportReason = .copyright
+                case .illegalDrugs:
+                    reportReason = .illegalDrugs
+                case .personalDetails:
+                    reportReason = .personalDetails
                 case .other:
                     reportReason = .custom
                 }
@@ -93,9 +104,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                 }
                 
                 let displaySuccess = {
-                    if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
-                        parent?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
-                    }
+                    parent?.present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
                 
                 if passthrough {
@@ -118,7 +127,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                                         displaySuccess()
                                         completion(nil, false)
                                     })
-                                case let .profilePhoto(peerId, photoId):
+                                case let .profilePhoto(peerId, _):
                                     let _ = (context.engine.peers.reportPeerPhoto(peerId: peerId, reason: reportReason, message: "")
                                     |> deliverOnMainQueue).start(completed: {
                                         displaySuccess()
@@ -161,7 +170,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                 backAction(c)
             })))
         }
-        contextController.setItems(.single(items))
+        contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil)
     } else {
         contextController?.dismiss(completion: nil)
         parent.view.endEditing(true)
@@ -194,6 +203,10 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                 title = presentationData.strings.ReportPeer_ReasonChildAbuse
             case .copyright:
                 title = presentationData.strings.ReportPeer_ReasonCopyright
+            case .illegalDrugs:
+                title = presentationData.strings.ReportPeer_ReasonIllegalDrugs
+            case .personalDetails:
+                title = presentationData.strings.ReportPeer_ReasonPersonalDetails
             case .other:
                 title = presentationData.strings.ReportPeer_ReasonOther
         }
@@ -212,6 +225,10 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                     reportReason = .childAbuse
                 case .copyright:
                     reportReason = .copyright
+                case .illegalDrugs:
+                    reportReason = .illegalDrugs
+                case .personalDetails:
+                    reportReason = .personalDetails
                 case .other:
                     reportReason = .custom
             }
@@ -222,9 +239,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                 }
                 
                 let displaySuccess = {
-                    if let path = getAppBundle().path(forResource: "PoliceCar", ofType: "tgs") {
-                        present(UndoOverlayController(presentationData: presentationData, content: .emoji(path: path, text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
-                    }
+                    present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), nil)
                 }
                 
                 let action: (String) -> Void = { message in
@@ -244,7 +259,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                                     displaySuccess()
                                     completion(nil, true)
                                 })
-                            case let .profilePhoto(peerId, photoId):
+                            case let .profilePhoto(peerId, _):
                                 let _ = (context.engine.peers.reportPeerPhoto(peerId: peerId, reason: reportReason, message: message)
                                 |> deliverOnMainQueue).start(completed: {
                                     displaySuccess()

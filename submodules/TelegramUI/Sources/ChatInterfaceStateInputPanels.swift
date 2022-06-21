@@ -2,14 +2,18 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import AccountContext
+import ChatPresentationInterfaceState
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputPanelNode?, currentSecondaryPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> (primary: ChatInputPanelNode?, secondary: ChatInputPanelNode?) {
     if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
         return (nil, nil)
     }
     if chatPresentationInterfaceState.isNotAccessible {
+        return (nil, nil)
+    }
+    
+    if case .forwardedMessages = chatPresentationInterfaceState.subject {
         return (nil, nil)
     }
     
@@ -148,7 +152,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 isMember = true
             case .left:
                 if case .replyThread = chatPresentationInterfaceState.chatLocation {
-                    isMember = true
+                    if !channel.flags.contains(.joinToSend) {
+                        isMember = true
+                    }
                 }
             }
                         
@@ -291,7 +297,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 textInputPanelNode.context = context
                 return (textInputPanelNode, nil)
             } else {
-                let panel = ChatTextInputPanelNode(presentationInterfaceState: chatPresentationInterfaceState, presentController: { [weak interfaceInteraction] controller in
+                let panel = ChatTextInputPanelNode(presentationInterfaceState: chatPresentationInterfaceState, presentationContext: nil, presentController: { [weak interfaceInteraction] controller in
                     interfaceInteraction?.presentController(controller, nil)
                 })
                 

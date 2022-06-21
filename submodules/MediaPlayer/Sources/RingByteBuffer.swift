@@ -17,7 +17,10 @@ public final class RingByteBuffer {
     }
     
     public func enqueue(data: Data) -> Bool {
-        return data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Bool in
+        return data.withUnsafeBytes { buffer -> Bool in
+            guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                return false
+            }
             return TPCircularBufferProduceBytes(&self.buffer, UnsafeRawPointer(bytes), Int32(data.count))
         }
     }

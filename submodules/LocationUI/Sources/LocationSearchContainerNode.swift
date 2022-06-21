@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import TelegramUIPreferences
@@ -51,7 +50,7 @@ private struct LocationSearchEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> ListViewItem {
+    func item(engine: TelegramEngine, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> ListViewItem {
         let venue = self.location
         let header: ChatListSearchItemHeader
         let subtitle: String?
@@ -60,9 +59,9 @@ private struct LocationSearchEntry: Identifiable, Comparable {
             subtitle = nil
         } else {
             header = ChatListSearchItemHeader(type: .mapAddress, theme: presentationData.theme, strings: presentationData.strings)
-            subtitle = presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: self.distance)).0
+            subtitle = presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: self.distance)).string
         }
-        return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: self.location, title: self.title, subtitle: subtitle, style: .plain, action: {
+        return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), engine: engine, venue: self.location, title: self.title, subtitle: subtitle, style: .plain, action: {
             sendVenue(venue)
         }, header: header)
     }
@@ -77,12 +76,12 @@ struct LocationSearchContainerTransition {
     let isEmpty: Bool
 }
 
-private func locationSearchContainerPreparedTransition(from fromEntries: [LocationSearchEntry], to toEntries: [LocationSearchEntry], query: String, isSearching: Bool, isEmpty: Bool, account: Account, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> LocationSearchContainerTransition {
+private func locationSearchContainerPreparedTransition(from fromEntries: [LocationSearchEntry], to toEntries: [LocationSearchEntry], query: String, isSearching: Bool, isEmpty: Bool, engine: TelegramEngine, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> LocationSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, sendVenue: sendVenue), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, sendVenue: sendVenue), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(engine: engine, presentationData: presentationData, sendVenue: sendVenue), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(engine: engine, presentationData: presentationData, sendVenue: sendVenue), directionHint: nil) }
     
     return LocationSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, query: query, isSearching: isSearching, isEmpty: isEmpty)
 }
@@ -124,7 +123,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
         self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.listNode.isHidden = true
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.emptyResultsTitleNode = ImmediateTextNode()
@@ -212,7 +211,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
             if let strongSelf = self {
                 let (items, query) = itemsAndQuery ?? (nil, "")
                 let previousItems = previousSearchItems.swap(items ?? [])
-                let transition = locationSearchContainerPreparedTransition(from: previousItems, to: items ?? [], query: query, isSearching: items != nil, isEmpty: items?.isEmpty ?? false, account: context.account, presentationData: strongSelf.presentationData, sendVenue: { venue in self?.listNode.clearHighlightAnimated(true)
+                let transition = locationSearchContainerPreparedTransition(from: previousItems, to: items ?? [], query: query, isSearching: items != nil, isEmpty: items?.isEmpty ?? false, engine: context.engine, presentationData: strongSelf.presentationData, sendVenue: { venue in self?.listNode.clearHighlightAnimated(true)
                     if let _ = venue.venue {
                         self?.interaction.sendVenue(venue)
                     } else {
@@ -267,7 +266,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
         
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         let padding: CGFloat = 16.0
         let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
@@ -313,7 +312,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
                 strongSelf.listNode.isHidden = !transition.isSearching
                 strongSelf.dimNode.isHidden = transition.isSearching
                 
-                strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.Map_SearchNoResultsDescription(transition.query).0, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
+                strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.Map_SearchNoResultsDescription(transition.query).string, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
                 
                 let emptyResults = transition.isSearching && transition.isEmpty
                 strongSelf.emptyResultsTitleNode.isHidden = !emptyResults

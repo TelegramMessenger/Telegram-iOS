@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import RLottieBinding
 import AppBundle
@@ -20,6 +19,13 @@ public final class ManagedAnimationState {
     
     var relativeTime: Double = 0.0
     public var frameIndex: Int?
+    public var position: CGFloat {
+        if let frameIndex = frameIndex {
+            return CGFloat(frameIndex) / CGFloat(frameCount)
+        } else {
+            return 0.0
+        }
+    }
     
     public var executedCallbacks = Set<Int>()
     
@@ -32,13 +38,15 @@ public final class ManagedAnimationState {
             guard let path = item.source.path else {
                 return nil
             }
-            guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            guard var data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
                 return nil
             }
-            guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
-                return nil
+            if path.hasSuffix(".json") {
+                
+            } else if let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
+                data = unpackedData
             }
-            guard let instance = LottieInstance(data: unpackedData, cacheKey: item.source.cacheKey) else {
+            guard let instance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: item.replaceColors, cacheKey: item.source.cacheKey) else {
                 return nil
             }
             resolvedInstance = instance
@@ -72,27 +80,30 @@ public enum ManagedAnimationFrameRange: Equatable {
 
 public enum ManagedAnimationSource: Equatable {
     case local(String)
-    case resource(Account, MediaResource)
+    case resource(Account, EngineMediaResource)
     
     var cacheKey: String {
         switch self {
             case let .local(name):
                 return name
             case let .resource(_, resource):
-                return resource.id.uniqueId
+                return resource.id.stringRepresentation
         }
     }
     
     var path: String? {
         switch self {
             case let .local(name):
-                return getAppBundle().path(forResource: name, ofType: "tgs")
+                if let tgsPath = getAppBundle().path(forResource: name, ofType: "tgs") {
+                    return tgsPath
+                }
+                return getAppBundle().path(forResource: name, ofType: "json")
             case let .resource(account, resource):
-                return account.postbox.mediaBox.completedResourcePath(resource)
+                return account.postbox.mediaBox.completedResourcePath(resource._asResource())
         }
     }
     
-    public static func == (lhs: ManagedAnimationSource, rhs: ManagedAnimationSource) -> Bool {
+    public static func ==(lhs: ManagedAnimationSource, rhs: ManagedAnimationSource) -> Bool {
         switch lhs {
             case let .local(lhsPath):
                 if case let .local(rhsPath) = rhs, lhsPath == rhsPath {
@@ -101,7 +112,7 @@ public enum ManagedAnimationSource: Equatable {
                     return false
                 }
             case let .resource(lhsAccount, lhsResource):
-                if case let .resource(rhsAccount, rhsResource) = rhs, lhsAccount === rhsAccount, lhsResource.isEqual(to: rhsResource) {
+                if case let .resource(rhsAccount, rhsResource) = rhs, lhsAccount === rhsAccount, lhsResource == rhsResource {
                     return true
                 } else {
                     return false
@@ -112,13 +123,15 @@ public enum ManagedAnimationSource: Equatable {
 
 public struct ManagedAnimationItem {
     public let source: ManagedAnimationSource
+    public let replaceColors: [UInt32: UInt32]?
     public var frames: ManagedAnimationFrameRange?
     public var duration: Double?
     public var loop: Bool
     var callbacks: [(Int, () -> Void)]
     
-    public init(source: ManagedAnimationSource, frames: ManagedAnimationFrameRange? = nil, duration: Double? = nil, loop: Bool = false, callbacks: [(Int, () -> Void)] = []) {
+    public init(source: ManagedAnimationSource, replaceColors: [UInt32: UInt32]? = nil, frames: ManagedAnimationFrameRange? = nil, duration: Double? = nil, loop: Bool = false, callbacks: [(Int, () -> Void)] = []) {
         self.source = source
+        self.replaceColors = replaceColors
         self.frames = frames
         self.duration = duration
         self.loop = loop
@@ -131,6 +144,11 @@ open class ManagedAnimationNode: ASDisplayNode {
     
     private let imageNode: ASImageNode
     private let displayLink: CADisplayLink
+    
+    public var imageUpdated: ((UIImage) -> Void)?
+    public var image: UIImage? {
+        return self.imageNode.image
+    }
     
     public var state: ManagedAnimationState?
     public var trackStack: [ManagedAnimationItem] = []
@@ -260,6 +278,7 @@ open class ManagedAnimationNode: ASDisplayNode {
                 } else {
                     self.imageNode.image = image
                 }
+                self.imageUpdated?(image)
             }
             
             for (callbackFrame, callback) in state.item.callbacks {
@@ -297,5 +316,37 @@ open class ManagedAnimationNode: ASDisplayNode {
         
         self.imageNode.bounds = self.bounds
         self.imageNode.position = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
+    }
+}
+
+public final class SimpleAnimationNode: ManagedAnimationNode {
+    private let stillItem: ManagedAnimationItem
+    private let animationItem: ManagedAnimationItem
+    
+    public let size: CGSize
+    private let playOnce: Bool
+    public private(set) var didPlay = false
+    
+    public init(animationName: String, replaceColors: [UInt32: UInt32]? = nil, size: CGSize, playOnce: Bool = false) {
+        self.size = size
+        self.playOnce = playOnce
+        self.stillItem = ManagedAnimationItem(source: .local(animationName), replaceColors: replaceColors, frames: .range(startFrame: 0, endFrame: 0), duration: 0.01)
+        self.animationItem = ManagedAnimationItem(source: .local(animationName), replaceColors: replaceColors)
+
+        super.init(size: size)
+        
+        self.trackTo(item: self.stillItem)
+    }
+    
+    public func play() {
+        if !self.playOnce || !self.didPlay {
+            self.didPlay = true
+            self.trackTo(item: self.animationItem)
+        }
+    }
+    
+    public func reset() {
+        self.didPlay = false
+        self.trackTo(item: self.stillItem)
     }
 }

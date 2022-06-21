@@ -3,15 +3,14 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 func _internal_currentlySuggestedLocalization(network: Network, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo?, NoError> {
     return network.request(Api.functions.help.getConfig())
         |> retryRequest
         |> mapToSignal { result -> Signal<SuggestedLocalizationInfo?, NoError> in
             switch result {
-                case let .config(config):
-                    if let suggestedLangCode = config.suggestedLangCode {
+                case let .config(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, suggestedLangCode, _, _):
+                    if let suggestedLangCode = suggestedLangCode {
                         return _internal_suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map(Optional.init)
                     } else {
                         return .single(nil)
@@ -44,7 +43,7 @@ func _internal_availableLocalizations(postbox: Postbox, network: Network, allowC
     let cached: Signal<[LocalizationInfo], NoError>
     if allowCached {
         cached = postbox.transaction { transaction -> Signal<[LocalizationInfo], NoError> in
-            if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0))) as? CachedLocalizationInfos {
+            if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)))?.get(CachedLocalizationInfos.self) {
                 return .single(entry.list)
             }
             return .complete()
@@ -57,7 +56,9 @@ func _internal_availableLocalizations(postbox: Postbox, network: Network, allowC
     |> mapToSignal { languages -> Signal<[LocalizationInfo], NoError> in
         let infos: [LocalizationInfo] = languages.map(LocalizationInfo.init(apiLanguage:))
         return postbox.transaction { transaction -> [LocalizationInfo] in
-            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: CachedLocalizationInfos(list: infos), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+            if let entry = CodableEntry(CachedLocalizationInfos(list: infos)) {
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+            }
             return infos
         }
     }
@@ -100,7 +101,7 @@ public enum DownloadAndApplyLocalizationError {
     case generic
 }
 
-func _internal_downloadAndApplyLocalization(accountManager: AccountManager, postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
+func _internal_downloadAndApplyLocalization(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
     return _internal_requestLocalizationPreview(network: network, identifier: languageCode)
     |> mapError { _ -> DownloadAndApplyLocalizationError in
         return .generic
@@ -125,7 +126,7 @@ func _internal_downloadAndApplyLocalization(accountManager: AccountManager, post
             }
             return accountManager.transaction { transaction -> Signal<Void, DownloadAndApplyLocalizationError> in
                 transaction.updateSharedData(SharedDataKeys.localizationSettings, { _ in
-                    return LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: preview.languageCode, localizedName: preview.localizedTitle, localization: primaryLocalization, customPluralizationCode: preview.customPluralizationCode), secondaryComponent: secondaryComponent)
+                    return PreferencesEntry(LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: preview.languageCode, localizedName: preview.localizedTitle, localization: primaryLocalization, customPluralizationCode: preview.customPluralizationCode), secondaryComponent: secondaryComponent))
                 })
                 
                 return postbox.transaction { transaction -> Signal<Void, DownloadAndApplyLocalizationError> in

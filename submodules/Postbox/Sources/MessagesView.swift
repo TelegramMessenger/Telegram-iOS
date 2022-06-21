@@ -5,7 +5,7 @@ final class MutableMessagesView: MutablePostboxView {
     private let peerIds: Set<PeerId>
     fileprivate var messages: [MessageId: Message] = [:]
     
-    init(postbox: Postbox, ids: Set<MessageId>) {
+    init(postbox: PostboxImpl, ids: Set<MessageId>) {
         self.ids = ids
         self.peerIds = Set(ids.map { $0.peerId })
         for id in ids {
@@ -15,7 +15,7 @@ final class MutableMessagesView: MutablePostboxView {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updatedIds = Set<MessageId>()
         for peerId in self.peerIds {
             if let operations = transaction.currentOperationsByPeerId[peerId] {
@@ -50,6 +50,10 @@ final class MutableMessagesView: MutablePostboxView {
         } else {
             return false
         }
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
     }
     
     func immutableView() -> PostboxView {

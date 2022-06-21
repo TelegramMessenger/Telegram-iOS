@@ -5,6 +5,7 @@ objc_library(
     module_name = "ogg",
     srcs = glob([
         "Sources/*.c",
+        "Sources/*.h",
     ]),
     hdrs = glob([
         "include/ogg/*.h",

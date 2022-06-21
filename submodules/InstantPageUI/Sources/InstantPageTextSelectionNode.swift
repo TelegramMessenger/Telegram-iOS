@@ -67,7 +67,7 @@ private enum Knob {
     case right
 }
 
-private final class InstantPageTextSelectionGetureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+private final class InstantPageTextSelectionGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
     private var longTapTimer: Timer?
     private var movingKnob: (Knob, CGPoint, CGPoint)?
     private var currentLocation: CGPoint?
@@ -220,7 +220,7 @@ final class InstantPageTextSelectionNode: ASDisplayNode {
     
     public let highlightAreaNode: ASDisplayNode
     
-    private var recognizer: InstantPageTextSelectionGetureRecognizer?
+    private var recognizer: InstantPageTextSelectionGestureRecognizer?
     private var displayLinkAnimator: DisplayLinkAnimator?
     
     public init(theme: InstantPageTextSelectionTheme, strings: PresentationStrings, textItemAtLocation: @escaping (CGPoint) -> (InstantPageTextItem, CGPoint)?, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, performAction: @escaping (String, InstantPageTextSelectionAction) -> Void) {
@@ -263,7 +263,7 @@ final class InstantPageTextSelectionNode: ASDisplayNode {
             return self?.hitTest(point, with: event)
         }
        
-        let recognizer = InstantPageTextSelectionGetureRecognizer(target: nil, action: nil)
+        let recognizer = InstantPageTextSelectionGestureRecognizer(target: nil, action: nil)
         recognizer.knobAtPoint = { [weak self] point in
             return self?.knobAtPoint(point)
         }

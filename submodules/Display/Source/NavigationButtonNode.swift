@@ -53,7 +53,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         }
     }
     
-    private var imageNode: ASImageNode?
+    private(set) var imageNode: ASImageNode?
     private let imageRippleNode: ASImageNode
     
     private var _image: UIImage?
@@ -104,7 +104,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         }
     }
     
-    public var color: UIColor = UIColor(rgb: 0x007ee5) {
+    public var color: UIColor = UIColor(rgb: 0x007aff) {
         didSet {
             if let text = self._text {
                 self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
@@ -226,7 +226,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         } else if let imageNode = self.imageNode {
             let nodeSize = imageNode.image?.size ?? CGSize()
             let size = CGSize(width: max(nodeSize.width, superSize.width), height: max(44.0, max(nodeSize.height, superSize.height)))
-            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - nodeSize.width) / 2.0) + 5.0, y: floorToScreenPixels((size.height - nodeSize.height) / 2.0)), size: nodeSize)
+            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - nodeSize.width) / 2.0), y: floorToScreenPixels((size.height - nodeSize.height) / 2.0)), size: nodeSize)
             imageNode.frame = imageFrame
             self.imageRippleNode.frame = imageFrame
             return size
@@ -255,8 +255,6 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
     
     public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesMoved(touches, with: event)
-        
-        //self.updateHighlightedState(self.touchInsideApparentBounds(touches.first!), animated: true)
     }
     
     public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -272,6 +270,19 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
         }
         if previousTouchCount != 0 && self.touchCount == 0 && self.isEnabled && touchInside {
             self.pressed()
+        }
+    }
+
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let node = self.node as? HighlightableButtonNode {
+            let result = node.view.hitTest(self.view.convert(point, to: node.view), with: event)
+            return result
+        } else {
+            let previousAlpha = self.alpha
+            self.alpha = 1.0
+            let result = super.hitTest(point, with: event)
+            self.alpha = previousAlpha
+            return result
         }
     }
     
@@ -293,7 +304,9 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
             }
             
             if shouldChangeHighlight {
-                self.alpha = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
+                if self.alpha > 0.0 {
+                    self.alpha = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
+                }
                 self.highlightChanged(highlighted)
             }
         }
@@ -312,7 +325,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
 }
 
 
-public final class NavigationButtonNode: ASDisplayNode {
+public final class NavigationButtonNode: ContextControllerSourceNode {
     private var nodes: [NavigationButtonItemNode] = []
     
     public var singleCustomNode: ASDisplayNode? {
@@ -325,7 +338,7 @@ public final class NavigationButtonNode: ASDisplayNode {
     public var pressed: (Int) -> () = { _ in }
     public var highlightChanged: (Int, Bool) -> () = { _, _ in }
     
-    public var color: UIColor = UIColor(rgb: 0x007ee5) {
+    public var color: UIColor = UIColor(rgb: 0x007aff) {
         didSet {
             if !self.color.isEqual(oldValue) {
                 for node in self.nodes {
@@ -366,10 +379,19 @@ public final class NavigationButtonNode: ASDisplayNode {
         super.init()
         
         self.isAccessibilityElement = false
+        self.isGestureEnabled = false
     }
     
     var manualText: String {
         return self.nodes.first?.text ?? ""
+    }
+    
+    var manualAlpha: CGFloat = 1.0 {
+        didSet {
+            for node in self.nodes {
+                node.alpha = self.manualAlpha
+            }
+        }
     }
     
     func updateManualText(_ text: String, isBack: Bool = true) {
@@ -397,12 +419,14 @@ public final class NavigationButtonNode: ASDisplayNode {
             self.nodes.append(node)
             self.addSubnode(node)
         }
+        node.alpha = self.manualAlpha
         node.item = nil
         node.image = nil
         node.text = text
         node.bold = false
         node.isEnabled = true
         node.node = nil
+        node.hitTestSlop = isBack ? UIEdgeInsets(top: 0.0, left: -20.0, bottom: 0.0, right: 0.0) : UIEdgeInsets()
         
         if 1 < self.nodes.count {
             for i in 1 ..< self.nodes.count {
@@ -438,6 +462,7 @@ public final class NavigationButtonNode: ASDisplayNode {
                 self.nodes.append(node)
                 self.addSubnode(node)
             }
+            node.alpha = self.manualAlpha
             node.item = items[i]
             node.image = items[i].image
             node.text = items[i].title ?? ""
@@ -453,23 +478,32 @@ public final class NavigationButtonNode: ASDisplayNode {
         }
     }
     
-    public func updateLayout(constrainedSize: CGSize) -> CGSize {
+    public func updateLayout(constrainedSize: CGSize, isLandscape: Bool) -> CGSize {
         var nodeOrigin = CGPoint()
-        var totalSize = CGSize()
-        for node in self.nodes {
-            if !totalSize.width.isZero {
-                totalSize.width += 16.0
-                nodeOrigin.x += 16.0
+        var totalHeight: CGFloat = 0.0
+        for i in 0 ..< self.nodes.count {
+            if i != 0 {
+                nodeOrigin.x += 10.0
             }
+
+            let node = self.nodes[i]
+
             var nodeSize = node.updateLayout(constrainedSize)
+
             nodeSize.width = ceil(nodeSize.width)
             nodeSize.height = ceil(nodeSize.height)
-            totalSize.width += nodeSize.width
-            totalSize.height = max(totalSize.height, nodeSize.height)
-            node.frame = CGRect(origin: CGPoint(x: nodeOrigin.x, y: floor((totalSize.height - nodeSize.height) / 2.0)), size: nodeSize)
+            totalHeight = max(totalHeight, nodeSize.height)
+            node.frame = CGRect(origin: CGPoint(x: nodeOrigin.x, y: floor((totalHeight - nodeSize.height) / 2.0)), size: nodeSize)
             nodeOrigin.x += node.bounds.width
+            if isLandscape {
+                nodeOrigin.x += 16.0
+            }
+
+            if node.node == nil && node.imageNode != nil && i == self.nodes.count - 1 {
+                nodeOrigin.x -= 5.0
+            }
         }
-        return totalSize
+        return CGSize(width: nodeOrigin.x, height: totalHeight)
     }
     
     func internalHitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

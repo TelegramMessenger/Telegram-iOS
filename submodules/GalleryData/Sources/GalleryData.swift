@@ -3,7 +3,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import PassKit
 import Lottie
@@ -91,6 +90,11 @@ public func instantPageGalleryMedia(webpageId: MediaId, page: InstantPage, galle
 }
 
 public func chatMessageGalleryControllerData(context: AccountContext, chatLocation: ChatLocation?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode, source: GalleryControllerItemSource?, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
+    var standalone = standalone
+    if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.namespace != Namespaces.Message.Cloud {
+        standalone = true
+    }
+    
     var galleryMedia: Media?
     var otherMedia: Media?
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
@@ -98,9 +102,9 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
         if let action = media as? TelegramMediaAction {
             switch action.action {
             case let .photoUpdated(image):
-                if let peer = messageMainPeer(message), let image = image {
-                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer, message.timestamp, nil, message.id, image.immediateThumbnailData, "action")])
-                    let galleryController = AvatarGalleryController(context: context, peer: peer, sourceCorners: .roundRect(15.5), remoteEntries: promise, skipInitial: true, replaceRootController: { controller, ready in
+                if let peer = messageMainPeer(EngineMessage(message)), let image = image {
+                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer._asPeer(), message.timestamp, nil, message.id, image.immediateThumbnailData, "action")])
+                    let galleryController = AvatarGalleryController(context: context, peer: peer._asPeer(), sourceCorners: .roundRect(15.5), remoteEntries: promise, skipInitial: true, replaceRootController: { controller, ready in
                         
                     })
                     return .chatAvatars(galleryController, image)
@@ -200,22 +204,14 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                         return .theme(file)
                     } else if ext == "wav" || ext == "opus" {
                         return .audio(file)
-                    } else if ext == "json", let fileSize = file.size, fileSize < 1024 * 1024 {
-                        if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let composition = LOTComposition(filePath: path), composition.timeDuration > 0.0 {
-                            let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: chatLocation ?? ChatLocation.peer(message.id.peerId), chatLocationContextHolder: chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
-                                navigationController?.replaceTopController(controller, animated: false, ready: ready)
-                                }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                            return .gallery(.single(gallery))
-                        }
                     }
-                    
                     if ext == "mkv" {
                         return .document(file, true)
                     }
                 }
                 
                 if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName ?? "file") {
-                    let gallery = GalleryController(context: context, source: source ?? .peerMessagesAtId(messageId: message.id, chatLocation: chatLocation ?? .peer(message.id.peerId), chatLocationContextHolder: chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                    let gallery = GalleryController(context: context, source: source ?? .peerMessagesAtId(messageId: message.id, chatLocation: chatLocation ?? .peer(id: message.id.peerId), chatLocationContextHolder: chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                         navigationController?.replaceTopController(controller, animated: false, ready: ready)
                         }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
                     return .gallery(.single(gallery))
@@ -230,20 +226,20 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                 let gallery = SecretMediaPreviewController(context: context, messageId: message.id)
                 return .secretGallery(gallery)
             } else {
-                let startTimecode: Signal<Double?, NoError>
+                let startState: Signal<(timecode: Double?, rate: Double), NoError>
                 if let timecode = timecode {
-                    startTimecode = .single(timecode)
+                    startState = .single((timecode: timecode, rate: 1.0))
                 } else {
-                    startTimecode = mediaPlaybackStoredState(postbox: context.account.postbox, messageId: message.id)
+                    startState = mediaPlaybackStoredState(postbox: context.account.postbox, messageId: message.id)
                     |> map { state in
-                        return state?.timestamp
+                        return (state?.timestamp, state?.playbackRate.doubleValue ?? 1.0)
                     }
                 }
                 
-                return .gallery(startTimecode
+                return .gallery(startState
                 |> deliverOnMainQueue
-                |> map { timecode in
-                    let gallery = GalleryController(context: context, source: source ?? (standalone ? .standaloneMessage(message) : .peerMessagesAtId(messageId: message.id, chatLocation: chatLocation ?? .peer(message.id.peerId), chatLocationContextHolder: chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil))), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                |> map { startState in
+                    let gallery = GalleryController(context: context, source: source ?? (standalone ? .standaloneMessage(message) : .peerMessagesAtId(messageId: message.id, chatLocation: chatLocation ?? .peer(id: message.id.peerId), chatLocationContextHolder: chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil))), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: startState.timecode, playbackRate: startState.rate, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                         navigationController?.replaceTopController(controller, animated: false, ready: ready)
                     }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
                     gallery.temporaryDoNotWaitForReady = autoplayingVideo
@@ -267,7 +263,7 @@ public enum ChatMessagePreviewControllerData {
 public func chatMessagePreviewControllerData(context: AccountContext, chatLocation: ChatLocation?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
     if let mediaData = chatMessageGalleryControllerData(context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, source: nil, synchronousLoad: true, actionInteraction: nil) {
         switch mediaData {
-            case let .gallery(gallery):
+            case .gallery:
                 break
             case let .instantPage(gallery, centralIndex, galleryMedia):
                 return .instantPage(gallery, centralIndex, galleryMedia)

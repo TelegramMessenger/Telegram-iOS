@@ -130,7 +130,7 @@ public class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
                     itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
                     contentSize = CGSize(width: params.width, height: height)
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in

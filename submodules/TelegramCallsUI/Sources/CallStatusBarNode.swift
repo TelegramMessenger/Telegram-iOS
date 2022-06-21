@@ -138,8 +138,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     }
     
     private func setupGradientAnimations() {
-        return
-        if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
+        /*if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
         } else {
             let previousValue = self.foregroundGradientLayer.startPoint
             let newValue: CGPoint
@@ -163,7 +162,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
             
             self.foregroundGradientLayer.add(animation, forKey: "movement")
             CATransaction.commit()
-        }
+        }*/
     }
     
     func updateAnimations() {
@@ -173,7 +172,9 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
             return
         }
         self.setupGradientAnimations()
-        self.maskCurveView.startAnimating()
+        if isCurrentlyInHierarchy {
+            self.maskCurveView.startAnimating()
+        }
     }
 }
 
@@ -207,6 +208,9 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private var currentScheduleTimestamp: Int32?
     private var currentMembers: PresentationGroupCallMembers?
     private var currentIsConnected = true
+
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = true
     
     public override init() {
         self.backgroundNode = CallStatusBarBackgroundNode()
@@ -214,13 +218,29 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         self.subtitleNode = ImmediateAnimatedCountLabelNode()
         self.subtitleNode.reverseAnimationDirection = true
         self.speakerNode = ImmediateTextNode()
+
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
         
         super.init()
+
+        self.addSubnode(self.hierarchyTrackingNode)
                 
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
         self.addSubnode(self.speakerNode)
+
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+                if value {
+                    strongSelf.update()
+                }
+            }
+        }
     }
     
     deinit {
@@ -232,13 +252,17 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     
     public func update(content: Content) {
         self.currentContent = content
-        self.update()
+        if self.isCurrentlyInHierarchy {
+            self.update()
+        }
     }
     
     public override func update(size: CGSize) {
         self.currentSize = size
         self.update()
     }
+
+    private let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
     
     private func update() {
         guard let size = self.currentSize, let content = self.currentContent else {
@@ -330,8 +354,10 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                                 currentIsConnected = false
                             }
                             strongSelf.currentIsConnected = currentIsConnected
-                            
-                            strongSelf.update()
+
+                            if strongSelf.isCurrentlyInHierarchy {
+                                strongSelf.update()
+                            }
                         }
                     }))
                     self.audioLevelDisposable.set((combineLatest(call.myAudioLevel, .single([]) |> then(call.audioLevels))
@@ -352,8 +378,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         
         var title: String = ""
         var speakerSubtitle: String = ""
-        
-        let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
+
         let textColor = UIColor.white
         var segments: [AnimatedCountLabelNode.Segment] = []
         var displaySpeakerSubtitle = false
@@ -363,7 +388,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             if let voiceChatTitle = self.currentGroupCallState?.info?.title, !voiceChatTitle.isEmpty {
                 title = voiceChatTitle
             } else if let currentPeer = self.currentPeer {
-                title = currentPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                title = EnginePeer(currentPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             var membersCount: Int32?
             if let groupCallState = self.currentGroupCallState {
@@ -384,7 +409,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             }
             
             if let speakingPeer = speakingPeer {
-                speakerSubtitle = speakingPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                speakerSubtitle = EnginePeer(speakingPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             displaySpeakerSubtitle = speakerSubtitle != title && !speakerSubtitle.isEmpty
             
@@ -396,12 +421,12 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                 let elapsedTime = scheduleTime - currentTime
                 let timerText: String
                 if elapsedTime >= 86400 {
-                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(scheduledTimeIntervalString(strings: presentationData.strings, value: elapsedTime)).0
+                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(scheduledTimeIntervalString(strings: presentationData.strings, value: elapsedTime)).string
                 } else if elapsedTime < 0 {
                     isLate = true
-                    timerText = presentationData.strings.VoiceChat_StatusLateBy(textForTimeout(value: abs(elapsedTime))).0
+                    timerText = presentationData.strings.VoiceChat_StatusLateBy(textForTimeout(value: abs(elapsedTime))).string
                 } else {
-                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(textForTimeout(value: elapsedTime)).0
+                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(textForTimeout(value: elapsedTime)).string
                 }
                 segments.append(.text(0, NSAttributedString(string: timerText, font: textFont, textColor: textColor)))
             } else if let membersCount = membersCount {
@@ -415,24 +440,25 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                 }
                 
                 let rawTextAndRanges = presentationData.strings.VoiceChat_Status_MembersFormat("\(membersCount)", membersPart)
-                
-                let (rawText, ranges) = rawTextAndRanges
+
                 var textIndex = 0
                 var latestIndex = 0
-                for (index, range) in ranges {
+                for rangeItem in rawTextAndRanges.ranges {
+                    let index = rangeItem.index
+                    let range = rangeItem.range
                     var lowerSegmentIndex = range.lowerBound
                     if index != 0 {
                         lowerSegmentIndex = min(lowerSegmentIndex, latestIndex)
                     } else {
                         if latestIndex < range.lowerBound {
-                            let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: latestIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.lowerBound)])
+                            let part = String(rawTextAndRanges.string[rawTextAndRanges.string.index(rawTextAndRanges.string.startIndex, offsetBy: latestIndex) ..< rawTextAndRanges.string.index(rawTextAndRanges.string.startIndex, offsetBy: range.lowerBound)])
                             segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: textColor)))
                             textIndex += 1
                         }
                     }
                     latestIndex = range.upperBound
                     
-                    let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.upperBound)])
+                    let part = String(rawTextAndRanges.string[rawTextAndRanges.string.index(rawTextAndRanges.string.startIndex, offsetBy: lowerSegmentIndex) ..< rawTextAndRanges.string.index(rawTextAndRanges.string.startIndex, offsetBy: range.upperBound)])
                     if index == 0 {
                         segments.append(.number(Int(membersCount), NSAttributedString(string: part, font: textFont, textColor: textColor)))
                     } else {
@@ -440,8 +466,8 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                         textIndex += 1
                     }
                 }
-                if latestIndex < rawText.count {
-                    let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: latestIndex)...])
+                if latestIndex < rawTextAndRanges.string.count {
+                    let part = String(rawTextAndRanges.string[rawTextAndRanges.string.index(rawTextAndRanges.string.startIndex, offsetBy: latestIndex)...])
                     segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: textColor)))
                     textIndex += 1
                 }

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -39,7 +38,6 @@ final class ComposeControllerNode: ASDisplayNode {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var openCreateNewGroupImpl: (() -> Void)?
-        var openCreateNewSecretChatImpl: (() -> Void)?
         var openCreateContactImpl: (() -> Void)?
         var openCreateNewChannelImpl: (() -> Void)?
         
@@ -67,9 +65,6 @@ final class ComposeControllerNode: ASDisplayNode {
         
         openCreateNewGroupImpl = { [weak self] in
             self?.openCreateNewGroup?()
-        }
-        openCreateNewSecretChatImpl = { [weak self] in
-            self?.openCreateNewSecretChat?()
         }
         openCreateContactImpl = { [weak self] in
             self?.contactListNode.listNode.clearHighlightAnimated(true)

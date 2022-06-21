@@ -3,8 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
-
 private struct SearchStickersConfiguration {
     static var defaultValue: SearchStickersConfiguration {
         return SearchStickersConfiguration(cacheTimeout: 86400)
@@ -17,8 +15,8 @@ private struct SearchStickersConfiguration {
     }
     
     static func with(appConfiguration: AppConfiguration) -> SearchStickersConfiguration {
-        if let data = appConfiguration.data, let value = data["stickers_emoji_cache_time"] as? Int32 {
-            return SearchStickersConfiguration(cacheTimeout: value)
+        if let data = appConfiguration.data, let value = data["stickers_emoji_cache_time"] as? Double {
+            return SearchStickersConfiguration(cacheTimeout: Int32(value))
         } else {
             return .defaultValue
         }
@@ -73,7 +71,8 @@ func _internal_randomGreetingSticker(account: Account) -> Signal<FoundStickerIte
     }
     |> take(1)
     |> map { items -> FoundStickerItem? in
-        if let randomItem = items?.randomElement(), let item = randomItem.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
+        if let randomItem = items?.randomElement(), let item = randomItem.contents.get(RecentMediaItem.self) {
+            let file = item.media
             return FoundStickerItem(file: file, stringRepresentations: [])
         }
         return nil
@@ -92,7 +91,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
         var result: [FoundStickerItem] = []
         if scope.contains(.installed) {
             for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudSavedStickers) {
-                if let item = entry.contents as? SavedStickerItem {
+                if let item = entry.contents.get(SavedStickerItem.self) {
                     for representation in item.stringRepresentations {
                         if representation.hasPrefix(query) {
                             result.append(FoundStickerItem(file: item.file, stringRepresentations: item.stringRepresentations))
@@ -109,14 +108,16 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
             var matchingRecentItemsIds = Set<MediaId>()
             
             for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentStickers) {
-                if let item = entry.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
+                if let item = entry.contents.get(RecentMediaItem.self) {
+                    let file = item.media
+
                     if !currentItems.contains(file.fileId) {
                         for case let .Sticker(displayText, _, _) in file.attributes {
                             if displayText.hasPrefix(query) {
                                 matchingRecentItemsIds.insert(file.fileId)
                             }
                             recentItemsIds.insert(file.fileId)
-                            if file.isAnimatedSticker {
+                            if file.isAnimatedSticker || file.isVideoSticker {
                                 recentAnimatedItems.append(file)
                             } else {
                                 recentItems.append(file)
@@ -146,7 +147,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
                             }
                         }
                         if !recentItemsIds.contains(item.file.fileId) {
-                            if item.file.isAnimatedSticker {
+                            if item.file.isAnimatedSticker || item.file.isVideoSticker {
                                 installedAnimatedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
                             } else {
                                 installedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
@@ -174,10 +175,10 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
             result.append(contentsOf: installedItems)
         }
         
-        var cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query))) as? CachedStickerQueryResult
+        var cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)))?.get(CachedStickerQueryResult.self)
         
         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-        let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+        let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
         let searchStickersConfiguration = SearchStickersConfiguration.with(appConfiguration: appConfiguration)
         
         if let currentCached = cached, currentTime > currentCached.timestamp + searchStickersConfiguration.cacheTimeout {
@@ -198,7 +199,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
             
             for file in cached.items {
                 if !currentItemIds.contains(file.fileId) {
-                    if file.isAnimatedSticker {
+                    if file.isAnimatedSticker || file.isVideoSticker {
                         cachedAnimatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
                     } else {
                         cachedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
@@ -229,7 +230,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
                             if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
                                 files.append(file)
                                 if !currentItemIds.contains(id) {
-                                    if file.isAnimatedSticker {
+                                    if file.isAnimatedSticker || file.isVideoSticker {
                                         animatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
                                     } else {
                                         items.append(FoundStickerItem(file: file, stringRepresentations: []))
@@ -242,7 +243,9 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
                         result.append(contentsOf: items)
                         
                         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: CachedStickerQueryResult(items: files, hash: hash, timestamp: currentTime), collectionSpec: collectionSpec)
+                        if let entry = CodableEntry(CachedStickerQueryResult(items: files, hash: hash, timestamp: currentTime)) {
+                            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: entry, collectionSpec: collectionSpec)
+                        }
                     
                         return result
                     case .stickersNotModified:
@@ -346,7 +349,7 @@ func _internal_searchGifs(account: Account, query: String, nextOffset: String = 
         return account.postbox.loadedPeerWithId(peerId)
     }
     |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
-        return requestChatContextResults(account: account, botId: peer.id, peerId: account.peerId, query: query, offset: nextOffset)
+        return _internal_requestChatContextResults(account: account, botId: peer.id, peerId: account.peerId, query: query, offset: nextOffset)
         |> map { results -> ChatContextResultCollection? in
             return results?.results
         }

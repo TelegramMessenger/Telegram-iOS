@@ -18,7 +18,7 @@ final class MutableItemCollectionInfosView: MutablePostboxView {
     let namespaces: [ItemCollectionId.Namespace]
     var entriesByNamespace: [ItemCollectionId.Namespace: [ItemCollectionInfoEntry]]
     
-    init(postbox: Postbox, namespaces: [ItemCollectionId.Namespace]) {
+    init(postbox: PostboxImpl, namespaces: [ItemCollectionId.Namespace]) {
         self.namespaces = namespaces
         
         var entriesByNamespace: [ItemCollectionId.Namespace: [ItemCollectionInfoEntry]] = [:]
@@ -34,7 +34,7 @@ final class MutableItemCollectionInfosView: MutablePostboxView {
         self.entriesByNamespace = entriesByNamespace
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         if transaction.currentItemCollectionInfosOperations.isEmpty && transaction.currentItemCollectionItemsOperations.isEmpty {
             return false
         }
@@ -90,12 +90,14 @@ final class MutableItemCollectionInfosView: MutablePostboxView {
         }
         return updated
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return ItemCollectionInfosView(self)
     }
-    
-   
 }
 
 public final class ItemCollectionInfosView: PostboxView {

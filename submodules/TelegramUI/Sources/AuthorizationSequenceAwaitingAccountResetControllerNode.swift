@@ -94,7 +94,7 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
         self.protectedUntil = protectedUntil
         self.updateTimerValue()
         
-        self.noticeNode.attributedText = NSAttributedString(string: strings.Login_ResetAccountProtected_Text(number).0, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        self.noticeNode.attributedText = NSAttributedString(string: strings.Login_ResetAccountProtected_Text(number).string, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         if let (layout, navigationHeight) = self.layoutArguments {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)

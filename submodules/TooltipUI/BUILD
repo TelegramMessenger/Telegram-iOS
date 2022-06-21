@@ -6,16 +6,20 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AppBundle:AppBundle",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
-        "//submodules/SyncCore:SyncCore",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/TextFormat:TextFormat",
         "//submodules/UrlEscaping:UrlEscaping",
+        "//submodules/AccountContext:AccountContext",
     ],
     visibility = [
         "//visibility:public",

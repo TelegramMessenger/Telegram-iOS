@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import LegacyComponents
@@ -233,33 +232,35 @@ private enum CreateGroupEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! CreateGroupArguments
         switch self {
-            case let .groupInfo(theme, strings, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
+            case let .groupInfo(_, _, dateTimeFormat, peer, state, avatar):
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer.flatMap(EnginePeer.init), presence: nil, memberCount: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
+                }, editingNameCompleted: {
+                    arguments.done()
                 }, avatarTapped: {
                     arguments.changeProfilePhoto()
                 }, updatingImage: avatar, tag: CreateGroupEntryTag.info)
-            case let .setProfilePhoto(theme, text):
+            case let .setProfilePhoto(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
-            case let .member(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, presence):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
-            case let .locationHeader(theme, title):
+            case let .member(_, _, _, dateTimeFormat, nameDisplayOrder, peer, presence):
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(peer), presence: presence.flatMap(EnginePeer.Presence.init), text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
+            case let .locationHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .location(theme, location):
-                let imageSignal = chatMapSnapshotImage(account: arguments.context.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
+                let imageSignal = chatMapSnapshotImage(engine: arguments.context.engine, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
                 return ItemListAddressItem(theme: theme, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: nil)
-            case let .changeLocation(theme, text):
+            case let .changeLocation(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeLocation()
                 })
-            case let .locationInfo(theme, text):
+            case let .locationInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .venueHeader(theme, title):
+            case let .venueHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
-            case let .venue(_, theme, venue):
-                return ItemListVenueItem(presentationData: presentationData, account: arguments.context.account, venue: venue, sectionId: self.section, style: .blocks, action: {
+            case let .venue(_, _, venue):
+                return ItemListVenueItem(presentationData: presentationData, engine: arguments.context.engine, venue: venue, sectionId: self.section, style: .blocks, action: {
                     arguments.updateWithVenue(venue)
                 })
         }
@@ -298,7 +299,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     
     let groupInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: nil)
     
-    let peer = TelegramGroup(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator(rank: nil), membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
+    let peer = TelegramGroup(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator(rank: nil), membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
     
     entries.append(.groupInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, groupInfoState, state.avatar))
     
@@ -376,7 +377,6 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushImpl: ((ViewController) -> Void)?
     var endEditingImpl: (() -> Void)?
-    var clearHighlightImpl: (() -> Void)?
     var ensureItemVisibleImpl: ((CreateGroupEntryTag, Bool) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -482,7 +482,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     return $0.avatar
                 }
                 if let _ = updatingAvatar {
-                    return updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
+                    return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     })
                     |> ignoreValues
@@ -490,7 +490,6 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         return .complete()
                     }
                     |> mapToSignal { _ -> Signal<PeerId?, CreateGroupError> in
-                        return .complete()
                     }
                     |> then(.single(peerId))
                 } else {
@@ -513,7 +512,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                             dismissImpl?()
                         })
                     } else {
-                        let controller = ChatControllerImpl(context: context, chatLocation: .peer(peerId))
+                        let controller = ChatControllerImpl(context: context, chatLocation: .peer(id: peerId))
                         replaceControllerImpl?(controller)
                     }
                 }
@@ -576,7 +575,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
-                    uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: resource))
+                    uploadedAvatar.set(context.engine.peers.uploadedPeerPhoto(resource: resource))
                     uploadedVideoAvatar = nil
                     updateState { current in
                         var current = current
@@ -611,22 +610,22 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                 return nil
                             }
                         }
-                        let uploadInterface = LegacyLiveUploadInterface(account: context.account)
+                        let uploadInterface = LegacyLiveUploadInterface(context: context)
                         let signal: SSignal
                         if let asset = asset as? AVAsset {
                             signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
                         } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
                             let durationSignal: SSignal = SSignal(generator: { subscriber in
                                 let disposable = (entityRenderer.duration()).start(next: { duration in
-                                    subscriber?.putNext(duration)
-                                    subscriber?.putCompletion()
+                                    subscriber.putNext(duration)
+                                    subscriber.putCompletion()
                                 })
                                 
                                 return SBlockDisposable(block: {
                                     disposable.dispose()
                                 })
                             })
-                            signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                            signal = durationSignal.map(toSignal: { duration -> SSignal in
                                 if let duration = duration as? Double {
                                     return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
                                 } else {
@@ -675,7 +674,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         }
                     }
                     
-                    uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: photoResource))
+                    uploadedAvatar.set(context.engine.peers.uploadedPeerPhoto(resource: photoResource))
                     
                     let promise = Promise<UploadedPeerPhotoData?>()
                     promise.set(signal
@@ -684,7 +683,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     }
                     |> mapToSignal { resource -> Signal<UploadedPeerPhotoData?, NoError> in
                         if let resource = resource {
-                            return uploadedPeerVideo(postbox: context.account.postbox, network: context.account.network, messageMediaPreuploadManager: context.account.messageMediaPreuploadManager, resource: resource) |> map(Optional.init)
+                            return context.engine.peers.uploadedPeerVideo(resource: resource) |> map(Optional.init)
                         } else {
                             return .single(nil)
                         }
@@ -704,7 +703,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
-                let controller = WebSearchController(context: context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
+                let controller = WebSearchController(context: context, peer: peer.flatMap(EnginePeer.init), chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
                     assetsController?.dismiss()
                     completedGroupPhotoImpl(result)
                 }))
@@ -778,7 +777,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         updateState { current in
             var current = current
             if current.editingName.isEmpty || current.nameSetFromVenue {
-                current.editingName = .title(title: venueData.title ?? "", type: .group)
+                current.editingName = .title(title: venueData.title, type: .group)
                 current.nameSetFromVenue = true
             }
             current.location = PeerGeoLocation(latitude: venue.latitude, longitude: venue.longitude, address: presentationData.strings.Map_Locating + "\n\n")
@@ -847,9 +846,6 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         [weak controller] in
         controller?.view.endEditing(true)
     }
-    clearHighlightImpl = { [weak controller] in
-        controller?.clearItemNodesHighlight(animated: true)
-    }
     ensureItemVisibleImpl = { [weak controller] targetTag, animated in
         controller?.afterLayout({
             guard let controller = controller else {
@@ -857,7 +853,6 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             }
             
             var resultItemNode: ListViewItemNode?
-            let state = stateValue.with({ $0 })
             let _ = controller.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListItemNode {
                     if let tag = itemNode.tag, tag.isEqual(to: targetTag) {

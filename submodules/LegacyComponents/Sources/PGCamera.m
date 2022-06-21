@@ -531,6 +531,9 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 {
     TGDispatchOnMainThread(^
     {
+        if (!_subscribedForCameraChanges) {
+            return;
+        }
         if ([keyPath isEqualToString:PGCameraAdjustingFocusKey])
         {
             bool adjustingFocus = [[change objectForKey:NSKeyValueChangeNewKey] isEqualToNumber:@YES];
@@ -690,9 +693,8 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
             [strongSelf.captureSession setCurrentCameraPosition:targetCameraPosition];
              
             if (strongSelf.finishedPositionChange != nil)
-                strongSelf.finishedPositionChange();
+                strongSelf.finishedPositionChange([PGCameraCaptureSession _isZoomAvailableForDevice:targetDevice]);
              
-            [strongSelf setZoomLevel:0.0f];
             [strongSelf _subscribeForCameraChanges];
         }];
     };
@@ -705,9 +707,25 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 #pragma mark - Zoom
 
+- (bool)hasUltrawideCamera {
+    return self.captureSession.hasUltrawideCamera;
+}
+
+- (bool)hasTelephotoCamera {
+    return self.captureSession.hasTelephotoCamera;
+}
+
 - (bool)isZoomAvailable
 {
     return self.captureSession.isZoomAvailable;
+}
+
+- (CGFloat)minZoomLevel {
+    return self.captureSession.minZoomLevel;
+}
+
+- (CGFloat)maxZoomLevel {
+    return self.captureSession.maxZoomLevel;
 }
 
 - (CGFloat)zoomLevel
@@ -717,14 +735,20 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)setZoomLevel:(CGFloat)zoomLevel
 {
-    zoomLevel = MAX(0.0f, MIN(1.0f, zoomLevel));
-    
+    [self setZoomLevel:zoomLevel animated:false];
+}
+
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated
+{
+    if (self.cameraMode == PGCameraModeVideo) {
+        animated = false;
+    }
     [[PGCamera cameraQueue] dispatch:^
     {
         if (self.disabled)
             return;
         
-        [self.captureSession setZoomLevel:zoomLevel];
+        [self.captureSession setZoomLevel:zoomLevel animated:animated];
     }];
 }
 
@@ -841,6 +865,16 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
         default:
             return PGMicrophoneAuthorizationStatusNotDetermined;
     }
+}
+
++ (bool)isPhotoCameraMode:(PGCameraMode)mode
+{
+    return mode == PGCameraModePhoto || mode == PGCameraModeSquarePhoto || mode == PGCameraModePhotoScan;
+}
+
++ (bool)isVideoCameraMode:(PGCameraMode)mode
+{
+    return mode == PGCameraModeVideo || mode == PGCameraModeSquareVideo;
 }
 
 @end

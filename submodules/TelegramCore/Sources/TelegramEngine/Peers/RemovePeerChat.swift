@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 func _internal_removePeerChat(account: Account, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool = false) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in
@@ -26,15 +25,9 @@ func _internal_terminateSecretChat(transaction: Transaction, peerId: PeerId, req
 
 func _internal_removePeerChat(account: Account, transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool) {
     if let _ = transaction.getPeerChatInterfaceState(peerId) {
-        transaction.updatePeerChatInterfaceState(peerId, update: { current in
-            if let current = current {
-                return account.auxiliaryMethods.updatePeerChatInputState(current, nil)
-            } else {
-                return nil
-            }
-        })
+        transaction.setPeerChatInterfaceState(peerId, state: nil)
     }
-    updateChatListFiltersInteractively(transaction: transaction, { filters in
+    _internal_updateChatListFiltersInteractively(transaction: transaction, { filters in
         var filters = filters
         for i in 0 ..< filters.count {
             if filters[i].data.includePeers.peers.contains(peerId) {

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 
@@ -18,14 +17,14 @@ public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestu
     
     private var presentationData: PresentationData
     
-    init(context: AccountContext, displayBackground: Bool) {
+    init(context: AccountContext, presentationData: PresentationData, displayBackground: Bool) {
         self.displayBackground = displayBackground
 
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         
         self.backgroundNode = ASDisplayNode()
         self.separatorNode = ASDisplayNode()
-        self.headerNode = MediaNavigationAccessoryHeaderNode(presentationData: self.presentationData)
+        self.headerNode = MediaNavigationAccessoryHeaderNode(context: context, presentationData: presentationData)
         
         super.init()
 

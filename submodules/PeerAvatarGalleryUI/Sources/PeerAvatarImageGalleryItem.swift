@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
@@ -13,6 +12,7 @@ import ShareController
 import PhotoResources
 import GalleryUI
 import TelegramUniversalVideoContent
+import UndoUI
 
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
@@ -71,7 +71,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
         let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer, sourceCorners: self.sourceCorners)
         
         if let indexData = self.entry.indexData {
-            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").string))
         }
         
         node.setEntry(self.entry, synchronous: synchronous)
@@ -85,7 +85,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? PeerAvatarImageGalleryItemNode {
             if let indexData = self.entry.indexData {
-                node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
+                node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").string))
             }
             let previousContentAnimations = node.imageNode.contentAnimations
             if synchronous {
@@ -186,13 +186,22 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.share = { [weak self] interaction in
             if let strongSelf = self, let entry = strongSelf.entry, !entry.representations.isEmpty {
                 let subject: ShareControllerSubject
+                var actionCompletionText: String?
                 if let video = entry.videoRepresentations.last, let peerReference = PeerReference(peer) {
                     let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
                     subject = .media(videoFileReference.abstract)
+                    actionCompletionText = strongSelf.presentationData.strings.Gallery_VideoSaved
                 } else {
                     subject = .image(entry.representations)
+                    actionCompletionText = strongSelf.presentationData.strings.Gallery_ImageSaved
                 }
                 let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: .saveToCameraRoll)
+                shareController.actionCompleted = { [weak self] in
+                    if let strongSelf = self, let actionCompletionText = actionCompletionText {
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        interaction.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: actionCompletionText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
+                    }
+                }
                 interaction.presentController(shareController, nil)
             }
         }
@@ -253,11 +262,11 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 var id: Int64
                 var category: String?
-                if case let .image(image) = entry {
-                    id = image.0.id
-                    category = image.9
+                if case let .image(mediaId, _, _, _, _, _, _, _, _, categoryValue) = entry {
+                    id = mediaId.id
+                    category = categoryValue
                 } else {
-                    id = Int64(entry.peer?.id.id._internalGetInt32Value() ?? 0)
+                    id = Int64(entry.peer?.id.id._internalGetInt64Value() ?? 0)
                     if let resource = entry.videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                         id = id &+ resource.photoId
                     }
@@ -430,7 +439,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.contentNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.contentNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
         
         self.contentNode.clipsToBounds = true
-        if case .round(true) = self.sourceCorners {
+        if case .round = self.sourceCorners {
             self.contentNode.layer.animate(from: (self.contentNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
                 if value {
                     self?.contentNode.clipsToBounds = false
@@ -463,7 +472,6 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var positionCompleted = false
         var boundsCompleted = false
         var copyCompleted = false
-        var surfaceCopyCompleted = false
         
         let (maybeCopyView, copyViewBackground) = node.2()
         copyViewBackground?.alpha = 1.0
@@ -509,11 +517,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             surfaceCopyView.layer.animatePosition(from: CGPoint(x: transformedSurfaceCopyViewInitialFrame.midX, y: transformedSurfaceCopyViewInitialFrame.midY), to: CGPoint(x: transformedSurfaceFrame.midX, y: transformedSurfaceFrame.midY), duration: 0.25 * durationFactor, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
             let scale = CGSize(width: transformedSurfaceCopyViewInitialFrame.size.width / transformedSurfaceFrame.size.width, height: transformedSurfaceCopyViewInitialFrame.size.height / transformedSurfaceFrame.size.height)
             surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), to: NSValue(caTransform3D: CATransform3DIdentity), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25 * durationFactor, removeOnCompletion: false, completion: { _ in
-                surfaceCopyCompleted = true
                 intermediateCompletion()
             })
-        } else {
-            surfaceCopyCompleted = true
         }
         
         copyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1 * durationFactor, removeOnCompletion: false)

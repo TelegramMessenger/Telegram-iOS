@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
@@ -29,7 +28,11 @@ private func dateStringForDay(strings: PresentationStrings, dateTimeFormat: Pres
     }
 }
 
-func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular, reactionCount: Int) -> String {
+func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
+    if message.adAttribute != nil {
+        return strings.Message_SponsoredLabel
+    }
+
     let timestamp: Int32
     if let scheduleTime = message.scheduleTime {
         timestamp = scheduleTime
@@ -42,13 +45,13 @@ func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, da
     }
     
     if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
-        dateText = strings.Message_ImportedDateFormat(dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date), stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat), dateText).0
+        dateText = strings.Message_ImportedDateFormat(dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date), stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat), dateText).string
     }
     
     var authorTitle: String?
     if let author = message.author as? TelegramUser {
         if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-            authorTitle = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+            authorTitle = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
         } else if let forwardInfo = message.forwardInfo, forwardInfo.sourceMessageId?.peerId.namespace == Namespaces.Peer.CloudChannel {
             authorTitle = forwardInfo.authorSignature
         }

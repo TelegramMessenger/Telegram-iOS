@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import QuickLook
 import Display
 import TelegramPresentationData
@@ -112,39 +111,21 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
 final class CompactDocumentPreviewController: QLPreviewController, QLPreviewControllerDelegate, QLPreviewControllerDataSource {
     private let postbox: Postbox
     private let file: TelegramMediaFile
+    private let canShare: Bool
     
     private var item: DocumentPreviewItem?
     
     private var tempFile: TempBoxFile?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile) {
+    init(theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile, canShare: Bool = true) {
         self.postbox = postbox
         self.file = file
+        self.canShare = canShare
         
         super.init(nibName: nil, bundle: nil)
         
         self.delegate = self
         self.dataSource = self
-        
-        /*self.navigationBar.barTintColor = theme.rootController.navigationBar.backgroundColor
-        self.navigationBar.tintColor = theme.rootController.navigationBar.accentTextColor
-        self.navigationBar.shadowImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.rootController.navigationBar.separatorColor.cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: UIScreenPixel)))
-        })
-        self.navigationBar.isTranslucent = false
-        self.navigationBar.titleTextAttributes = [NSAttributedString.Key.font: Font.semibold(17.0), NSAttributedString.Key.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
-        controller.navigationItem.setLeftBarButton(UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
-        self.setViewControllers([controller], animated: false)*/
-        
-        var pathExtension: String?
-        if let fileName = self.file.fileName {
-            let pathExtensionCandidate = (fileName as NSString).pathExtension
-            if !pathExtensionCandidate.isEmpty {
-                pathExtension = pathExtensionCandidate
-            }
-        }
         
         if let path = self.postbox.mediaBox.completedResourcePath(self.file.resource) {
             var updatedPath = path
@@ -165,6 +146,7 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
         if let tempFile = self.tempFile {
             TempBox.shared.dispose(tempFile)
         }
+        self.timer?.invalidate()
     }
     
     @objc private func cancelPressed() {
@@ -195,9 +177,66 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
     func previewControllerDidDismiss(_ controller: QLPreviewController) {
         //self.cancelPressed()
     }
+    
+    private var navigationBars: [UINavigationBar] = []
+    private var toolbars: [UIView] = []
+    private var observations : [NSKeyValueObservation] = []
+    
+    private var initialized = false
+    private var timer: SwiftSignalKit.Timer?
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        if !self.canShare && !self.initialized {
+            self.initialized = true
+            
+            self.timer = SwiftSignalKit.Timer(timeout: 0.01, repeat: true, completion: { [weak self] in
+                self?.tick()
+            }, queue: Queue.mainQueue())
+            self.timer?.start()
+        }
+    }
+    
+    private func tick() {
+        self.navigationItem.rightBarButtonItems = [UIBarButtonItem()]
+        self.navigationItem.setRightBarButton(UIBarButtonItem(), animated: false)
+        
+        self.navigationController?.toolbar.isHidden = true
+
+        let (navigationBars, toolbars) = navigationAndToolbarsInSubviews(forView: self.view)
+        self.navigationBars = navigationBars
+        self.toolbars = toolbars
+
+        for navigationBar in self.navigationBars {
+            navigationBar.topItem?.rightBarButtonItem = UIBarButtonItem()
+            navigationBar.topItem?.rightBarButtonItems = [UIBarButtonItem()]
+        }
+        
+        for toolbar in self.toolbars {
+            toolbar.isHidden = true
+        }
+    }
+
+    private func navigationAndToolbarsInSubviews(forView view: UIView) -> ([UINavigationBar], [UIView]) {
+        var navigationBars: [UINavigationBar] = []
+        var toolbars: [UIView] = []
+        for subview in view.subviews {
+            if let subview = subview as? UINavigationBar {
+                navigationBars.append(subview)
+            } else if let subview = subview as? UIToolbar {
+                toolbars.append(subview)
+            } else {
+                let (subNavigationBars, subToolbars) = navigationAndToolbarsInSubviews(forView: subview)
+                navigationBars.append(contentsOf: subNavigationBars)
+                toolbars.append(contentsOf: subToolbars)
+            }
+        }
+        return (navigationBars, toolbars)
+    }
+    
 }
 
-func presentDocumentPreviewController(rootController: UIViewController, theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile) {
+func presentDocumentPreviewController(rootController: UIViewController, theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile, canShare: Bool) {
     if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
         let navigationBar = UINavigationBar.appearance(whenContainedInInstancesOf: [QLPreviewController.self])
         navigationBar.barTintColor = theme.rootController.navigationBar.opaqueBackgroundColor
@@ -215,5 +254,5 @@ func presentDocumentPreviewController(rootController: UIViewController, theme: P
         navigationBar.titleTextAttributes = [NSAttributedString.Key.font: Font.semibold(17.0), NSAttributedString.Key.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
     }
     
-    rootController.present(CompactDocumentPreviewController(theme: theme, strings: strings, postbox: postbox, file: file), animated: true, completion: nil)
+    rootController.present(CompactDocumentPreviewController(theme: theme, strings: strings, postbox: postbox, file: file, canShare: canShare), animated: true, completion: nil)
 }

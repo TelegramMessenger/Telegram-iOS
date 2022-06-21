@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
-import SyncCore
 
 public func updateNetworkSettingsInteractively(postbox: Postbox, network: Network, _ f: @escaping (NetworkSettings) -> NetworkSettings) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
@@ -21,7 +20,7 @@ public func updateNetworkSettingsInteractively(transaction: Transaction, network
     var updateNetwork = false
     var updatedSettings: NetworkSettings?
     transaction.updatePreferencesEntry(key: PreferencesKeys.networkSettings, { current in
-        let previous = (current as? NetworkSettings) ?? NetworkSettings.defaultSettings
+        let previous = current?.get(NetworkSettings.self) ?? NetworkSettings.defaultSettings
         let updated = f(previous)
         updatedSettings = updated
         if updated.reducedBackupDiscoveryTimeout != previous.reducedBackupDiscoveryTimeout {
@@ -30,7 +29,7 @@ public func updateNetworkSettingsInteractively(transaction: Transaction, network
         if updated.backupHostOverride != previous.backupHostOverride {
             updateNetwork = true
         }
-        return updated
+        return PreferencesEntry(updated)
     })
     
     if let network = network, updateNetwork, let updatedSettings = updatedSettings {

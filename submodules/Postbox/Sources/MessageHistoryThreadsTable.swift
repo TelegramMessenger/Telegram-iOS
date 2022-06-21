@@ -11,8 +11,8 @@ class MessageHistoryThreadsTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 8 + 8 + 4 + 4 + 4)
     
-    override init(valueBox: ValueBox, table: ValueBoxTable) {
-        super.init(valueBox: valueBox, table: table)
+    override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(threadId: Int64, index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 8 + 4 + 4 + 4)) -> ValueBoxKey {
@@ -82,16 +82,30 @@ class MessageHistoryThreadsTable: Table {
         return indices
     }
     
-    func getMessageCountInRange(threadId: Int64, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
-        precondition(lowerBound.id.namespace == namespace)
-        precondition(upperBound.id.namespace == namespace)
-        var lowerBoundKey = self.key(threadId: threadId, index: lowerBound)
-        if lowerBound.timestamp > 1 {
-            lowerBoundKey = lowerBoundKey.predecessor
+    func getMessageCountInRange(threadId: Int64, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex?, upperBound: MessageIndex?) -> Int {
+        if let lowerBound = lowerBound {
+            precondition(lowerBound.id.namespace == namespace)
         }
-        var upperBoundKey = self.key(threadId: threadId, index: upperBound)
-        if upperBound.timestamp < Int32.max - 1 {
-            upperBoundKey = upperBoundKey.successor
+        if let upperBound = upperBound {
+            precondition(upperBound.id.namespace == namespace)
+        }
+        var lowerBoundKey: ValueBoxKey
+        if let lowerBound = lowerBound {
+            lowerBoundKey = self.key(threadId: threadId, index: lowerBound)
+            if lowerBound.timestamp > 1 {
+                lowerBoundKey = lowerBoundKey.predecessor
+            }
+        } else {
+            lowerBoundKey = self.lowerBound(threadId: threadId, peerId: peerId, namespace: namespace)
+        }
+        var upperBoundKey: ValueBoxKey
+        if let upperBound = upperBound {
+            upperBoundKey = self.key(threadId: threadId, index: upperBound)
+            if upperBound.timestamp < Int32.max - 1 {
+                upperBoundKey = upperBoundKey.successor
+            }
+        } else {
+            upperBoundKey = self.upperBound(threadId: threadId, peerId: peerId, namespace: namespace)
         }
         return Int(self.valueBox.count(self.table, start: lowerBoundKey, end: upperBoundKey))
     }

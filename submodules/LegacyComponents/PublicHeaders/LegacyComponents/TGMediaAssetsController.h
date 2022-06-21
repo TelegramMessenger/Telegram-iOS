@@ -2,7 +2,6 @@
 #import <LegacyComponents/LegacyComponentsContext.h>
 
 #import <LegacyComponents/TGMediaAssetsLibrary.h>
-#import <LegacyComponents/TGSuggestionContext.h>
 
 #import <LegacyComponents/TGMediaAssetsUtils.h>
 
@@ -53,7 +52,6 @@ typedef enum
 
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 @property (nonatomic, assign) bool localMediaCacheEnabled;
 @property (nonatomic, assign) bool captionsEnabled;
@@ -66,7 +64,7 @@ typedef enum
 @property (nonatomic, assign) bool hasSilentPosting;
 @property (nonatomic, assign) bool hasSchedule;
 @property (nonatomic, assign) bool reminder;
-@property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
+@property (nonatomic, copy) void (^presentScheduleController)(bool, void (^)(int32_t));
 @property (nonatomic, copy) void (^presentTimerController)(void (^)(int32_t));
 
 @property (nonatomic, assign) bool liveVideoUploadEnabled;
@@ -74,7 +72,7 @@ typedef enum
 
 @property (nonatomic, strong) NSString *recipientName;
 
-@property (nonatomic, copy) NSDictionary *(^descriptionGenerator)(id, NSString *, NSArray *, NSString *, NSString *);
+@property (nonatomic, copy) NSDictionary *(^descriptionGenerator)(id, NSAttributedString *, NSString *, NSString *);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
 @property (nonatomic, copy) void (^completionBlock)(NSArray *signals, bool silentPosting, int32_t scheduleTime);
 @property (nonatomic, copy) void (^avatarVideoCompletionBlock)(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments);
@@ -90,12 +88,16 @@ typedef enum
 
 @property (nonatomic, copy) void (^selectionLimitExceeded)(void);
 
+- (UIBarButtonItem *)leftBarButtonItem;
 - (UIBarButtonItem *)rightBarButtonItem;
 
-- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *, NSString *))descriptionGenerator;
+- (void)send:(bool)silently;
+- (void)schedule:(bool)schedule;
+
+- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *, NSString *))descriptionGenerator;
 
 - (void)completeWithAvatarImage:(UIImage *)image;
-- (void)completeWithAvatarVideo:(AVAsset *)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image;
+- (void)completeWithAvatarVideo:(id)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image;
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting scheduleTime:(int32_t)scheduleTime;
 
 - (void)dismiss;
@@ -105,6 +107,6 @@ typedef enum
 
 + (TGMediaAssetType)assetTypeForIntent:(TGMediaAssetsControllerIntent)intent;
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)useMediaCache descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos;
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets convertToJpeg:(bool)convertToJpeg descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos;
 
 @end

@@ -3,9 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ActivityIndicator
 import AccountContext
@@ -21,8 +19,8 @@ private struct ArchivedStickersNoticeEntry: Comparable, Identifiable {
     let topItem: StickerPackItem?
     let count: String
     
-    var stableId: ItemCollectionId {
-        return info.id
+    var stableId: AnyHashable {
+        return AnyHashable(self.info.id)
     }
 
     static func ==(lhs: ArchivedStickersNoticeEntry, rhs: ArchivedStickersNoticeEntry) -> Bool {
@@ -152,14 +150,14 @@ private final class ArchivedStickersNoticeAlertContentNode: AlertContentNode {
     }
        
     private func dequeueTransition() {
-        guard let layout = self.validLayout, let transition = self.enqueuedTransitions.first else {
+        guard let _ = self.validLayout, let transition = self.enqueuedTransitions.first else {
             return
         }
         self.enqueuedTransitions.remove(at: 0)
         
-        var options = ListViewDeleteAndInsertOptions()
+        let options = ListViewDeleteAndInsertOptions()
         
-        self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+        self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
         })
     }
     
@@ -303,14 +301,14 @@ public func archivedStickerPacksNoticeController(context: AccountContext, archiv
     })])
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
-    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
+    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
     })
     controller.dismissed = {
         presentationDataDisposable.dispose()
         disposable.dispose()
     }
-    dismissImpl = { [weak controller, weak contentNode] in
+    dismissImpl = { [weak controller] in
         controller?.dismissAnimated()
     }
     return controller

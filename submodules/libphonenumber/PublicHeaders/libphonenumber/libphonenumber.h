@@ -1,5 +1,8 @@
+#if TARGET_OS_IOS
 #import <UIKit/UIKit.h>
-
+#else
+#import <AppKit/AppKit.h>
+#endif
 //! Project version number for libphonenumber_iOS.
 FOUNDATION_EXPORT double libphonenumber_iOSVersionNumber;
 

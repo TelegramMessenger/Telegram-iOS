@@ -6,6 +6,8 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import TextFormat
+import ObjCRuntimeUtils
+import TextInputMenu
 
 public enum CreatePollTextInputItemTextLimitMode {
     case characters
@@ -107,95 +109,6 @@ public class CreatePollTextInputItem: ListViewItem, ItemListItem {
     }
 }
 
-private enum ChatTextInputMenuState {
-    case inactive
-    case general
-    case format
-}
-
-private final class ChatTextInputMenu {
-    private var stringBold: String = "Bold"
-    private var stringItalic: String = "Italic"
-    private var stringMonospace: String = "Monospace"
-    private var stringLink: String = "Link"
-    private var stringStrikethrough: String = "Strikethrough"
-    private var stringUnderline: String = "Underline"
-    
-    private(set) var state: ChatTextInputMenuState = .inactive {
-        didSet {
-            if self.state != oldValue {
-                switch self.state {
-                    case .inactive:
-                        UIMenuController.shared.menuItems = []
-                    case .general:
-                        UIMenuController.shared.menuItems = []
-                    case .format:
-                        UIMenuController.shared.menuItems = [
-                            UIMenuItem(title: self.stringBold, action: Selector(("formatAttributesBold:"))),
-                            UIMenuItem(title: self.stringItalic, action: Selector(("formatAttributesItalic:"))),
-                            UIMenuItem(title: self.stringMonospace, action: Selector(("formatAttributesMonospace:"))),
-                            UIMenuItem(title: self.stringStrikethrough, action: Selector(("formatAttributesStrikethrough:"))),
-                            UIMenuItem(title: self.stringUnderline, action: Selector(("formatAttributesUnderline:")))
-                        ]
-                }
-                
-            }
-        }
-    }
-    
-    private var observer: NSObjectProtocol?
-    
-    init() {
-        self.observer = NotificationCenter.default.addObserver(forName: UIMenuController.didHideMenuNotification, object: nil, queue: nil, using: { [weak self] _ in
-            self?.back()
-        })
-    }
-    
-    deinit {
-        if let observer = self.observer {
-            NotificationCenter.default.removeObserver(observer)
-        }
-    }
-    
-    func updateStrings(_ strings: PresentationStrings) {
-        self.stringBold = strings.TextFormat_Bold
-        self.stringItalic = strings.TextFormat_Italic
-        self.stringMonospace = strings.TextFormat_Monospace
-        self.stringLink = strings.TextFormat_Link
-        self.stringStrikethrough = strings.TextFormat_Strikethrough
-        self.stringUnderline = strings.TextFormat_Underline
-    }
-    
-    func activate() {
-        if self.state == .inactive {
-            self.state = .general
-        }
-    }
-    
-    func deactivate() {
-        self.state = .inactive
-    }
-    
-    func format(view: UIView, rect: CGRect) {
-        if self.state == .general {
-            self.state = .format
-            if #available(iOS 13.0, *) {
-                UIMenuController.shared.showMenu(from: view, rect: rect)
-            } else {
-                UIMenuController.shared.isMenuVisible = true
-                UIMenuController.shared.update()
-            }
-        }
-    }
-    
-    func back() {
-        if self.state == .format {
-            self.state = .general
-        }
-    }
-}
-
-
 public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDelegate, ItemListItemNode, ItemListItemFocusableNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -212,7 +125,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     private var item: CreatePollTextInputItem?
     private var layoutParams: ListViewItemLayoutParams?
     
-    private let inputMenu = ChatTextInputMenu()
+    private let inputMenu = TextInputMenu()
     
     public var tag: ItemListItemTag? {
         return self.item?.tag
@@ -292,7 +205,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
                 let textLength: Int
                 switch maxLength.mode {
                 case .characters:
-                    textLength = item.text.string.count ?? 0
+                    textLength = item.text.string.count
                 case .bytes:
                     textLength = item.text.string.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
                 }
@@ -315,7 +228,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
                 rightInset += inlineAction.icon.size.width + 8.0
             }
             
-            let itemText = textAttributedStringForStateText(item.text, fontSize: 17.0, textColor: item.presentationData.theme.chat.inputPanel.primaryTextColor, accentTextColor: item.presentationData.theme.chat.inputPanel.panelControlAccentColor, writingDirection: nil)
+            let itemText = textAttributedStringForStateText(item.text, fontSize: 17.0, textColor: item.presentationData.theme.chat.inputPanel.primaryTextColor, accentTextColor: item.presentationData.theme.chat.inputPanel.panelControlAccentColor, writingDirection: nil, spoilersRevealed: false)
             let measureText = NSMutableAttributedString(attributedString: itemText)
             let measureRawString = measureText.string
             if measureRawString.hasSuffix("\n") || measureRawString.isEmpty {
@@ -335,7 +248,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
             }
             
             let contentSize = CGSize(width: params.width, height: contentHeight)
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -415,6 +328,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
                     switch neighbors.bottom {
                         case .sameSection(false):
                             bottomStripeInset = leftInset
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             hasBottomCorners = true
@@ -511,7 +425,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     }
     
     public func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
-       if action == Selector(("_showTextStyleOptions:")) {
+       if action == makeSelectorFromString("_showTextStyleOptions:") {
             if case .general = self.inputMenu.state {
                 if self.textNode.attributedText == nil || self.textNode.attributedText!.length == 0 || self.textNode.selectedRange.length == 0 {
                     return ASEditableTextNodeTargetForAction(target: nil)

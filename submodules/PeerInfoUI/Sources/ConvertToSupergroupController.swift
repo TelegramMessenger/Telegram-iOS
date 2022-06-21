@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -80,13 +79,13 @@ private enum ConvertToSupergroupEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ConvertToSupergroupArguments
         switch self {
-            case let .info(theme, text):
+            case let .info(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
-            case let .action(theme, title):
+            case let .action(_, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.convert()
                 })
-            case let .actionInfo(theme, text):
+            case let .actionInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         }
     }
@@ -151,7 +150,7 @@ public func convertToSupergroupController(context: AccountContext, peerId: PeerI
             if !alreadyConverting {
                 convertDisposable.set((context.engine.peers.convertGroupToSupergroup(peerId: peerId)
                 |> deliverOnMainQueue).start(next: { createdPeerId in
-                    replaceControllerImpl?(context.sharedContext.makeChatController(context: context, chatLocation: .peer(createdPeerId), subject: nil, botStart: nil, mode: .standard(previewing: false)))
+                    replaceControllerImpl?(context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: createdPeerId), subject: nil, botStart: nil, mode: .standard(previewing: false)))
                 }))
             }
         })]), nil)

@@ -78,7 +78,7 @@ final class RecentSessionsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
     override func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         var insets = layout.insets(options: [])
-        insets.top += navigationBarHeight + 200.0
+        insets.top += navigationBarHeight + 270.0
         
         let imageSpacing: CGFloat = 8.0
         let textSpacing: CGFloat = 8.0
@@ -90,9 +90,7 @@ final class RecentSessionsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         if layout.size.width == 320 {
             textVisible = false
         }
-        
-        self.backgroundColor = .red
-        
+                
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right - 50.0, height: max(1.0, layout.size.height - insets.top - insets.bottom)))
         let textSize = self.textNode.measure(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right - 50.0, height: max(1.0, layout.size.height - insets.top - insets.bottom)))
         

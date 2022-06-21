@@ -5,7 +5,6 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -20,17 +19,19 @@ class SettingsSearchRecentItem: ListViewItem {
     let account: Account
     let title: String
     let breadcrumbs: [String]
+    let isFaq: Bool
     let action: () -> Void
     let deleted: () -> Void
     
     let header: ListViewItemHeader?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, title: String, breadcrumbs: [String], action: @escaping () -> Void, deleted: @escaping () -> Void, header: ListViewItemHeader) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, title: String, breadcrumbs: [String], isFaq: Bool, action: @escaping () -> Void, deleted: @escaping () -> Void, header: ListViewItemHeader) {
         self.theme = theme
         self.strings = strings
         self.account = account
         self.title = title
         self.breadcrumbs = breadcrumbs
+        self.isFaq = isFaq
         self.action = action
         self.deleted = deleted
         self.header = header
@@ -228,7 +229,12 @@ class SettingsSearchRecentItemNode: ItemListRevealOptionsItemNode {
                         
                         strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                         
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                        var revealOptions: [ItemListRevealOption] = []
+                        if item.isFaq {
+                        } else {
+                            revealOptions.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor))
+                        }
+                        strongSelf.setRevealOptions((left: [], right: revealOptions))
                     }
                 })
             })
@@ -243,9 +249,9 @@ class SettingsSearchRecentItemNode: ItemListRevealOptionsItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let item = self.item {
-            return item.header
+            return item.header.flatMap { [$0] }
         } else {
             return nil
         }

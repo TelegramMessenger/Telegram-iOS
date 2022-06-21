@@ -2,12 +2,11 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
-import SyncCore
 
 extension PeerStatusSettings {
     init(apiSettings: Api.PeerSettings) {
         switch apiSettings {
-            case let .peerSettings(flags, geoDistance):
+            case let .peerSettings(flags, geoDistance, requestChatTitle, requestChatDate):
                 var result = PeerStatusSettings.Flags()
                 if (flags & (1 << 1)) != 0 {
                     result.insert(.canAddContact)
@@ -33,7 +32,7 @@ extension PeerStatusSettings {
                 if (flags & (1 << 8)) != 0 {
                     result.insert(.suggestAddMembers)
                 }
-                self = PeerStatusSettings(flags: result, geoDistance: geoDistance)
+                self = PeerStatusSettings(flags: result, geoDistance: geoDistance, requestChatTitle: requestChatTitle, requestChatDate: requestChatDate, requestChatIsChannel: (flags & (1 << 10)) != 0)
         }
     }
 }

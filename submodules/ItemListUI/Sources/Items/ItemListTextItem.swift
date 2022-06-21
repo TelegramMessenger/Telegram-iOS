@@ -23,15 +23,17 @@ public class ItemListTextItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     let style: ItemListStyle
+    let trimBottomInset: Bool
     public let isAlwaysPlain: Bool = true
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks, tag: ItemListItemTag? = nil) {
+    public init(presentationData: ItemListPresentationData, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks, tag: ItemListItemTag? = nil, trimBottomInset: Bool = false) {
         self.presentationData = presentationData
         self.text = text
         self.sectionId = sectionId
         self.linkAction = linkAction
         self.style = style
+        self.trimBottomInset = trimBottomInset
         self.tag = tag
     }
     
@@ -111,7 +113,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 15.0 + params.leftInset
+            let leftInset: CGFloat = 15.0
             let topInset: CGFloat = 7.0
             var bottomInset: CGFloat = 7.0
             
@@ -130,16 +132,20 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     return (TelegramTextAttributes.URL, contents)
                 }))
             }
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0 - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             
-            var insets = itemListNeighborsGroupedInsets(neighbors)
+            var insets = itemListNeighborsGroupedInsets(neighbors, params)
             if case .large = item.text {
                 insets.top = 14.0
                 bottomInset = -6.0
             }
             contentSize = CGSize(width: params.width, height: titleLayout.size.height + topInset + bottomInset)
+            
+            if item.trimBottomInset {
+                insets.bottom -= 44.0
+            }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
@@ -152,7 +158,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     
                     let _ = titleApply()
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: topInset), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + params.leftInset, y: topInset), size: titleLayout.size)
                 }
             })
         }

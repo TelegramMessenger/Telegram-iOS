@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
-import SyncCore
 import MtProtoKit
 
 func telegramStickerPackThumbnailRepresentationFromApiSizes(datacenterId: Int32, thumbVersion: Int32?, sizes: [Api.PhotoSize]) -> (immediateThumbnail: Data?, representations: [TelegramMediaImageRepresentation]) {
@@ -43,6 +42,9 @@ extension StickerPackCollectionInfo {
                 }
                 if (flags & (1 << 5)) != 0 {
                     setFlags.insert(.isAnimated)
+                }
+                if (flags & (1 << 6)) != 0 {
+                    setFlags.insert(.isVideo)
                 }
                 
                 var thumbnailRepresentation: TelegramMediaImageRepresentation?

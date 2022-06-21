@@ -43,6 +43,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     let context: MTContext
     let mtProto: MTProto
     let requestService: MTRequestMessageService
+    private let logPrefix = Atomic<String?>(value: nil)
     
     private var shouldKeepConnectionDisposable: Disposable?
     
@@ -59,6 +60,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
         
         self.mtProto = MTProto(context: self.context, datacenterId: datacenterId, usageCalculationInfo: usageInfo, requiredAuthToken: requiredAuthToken, authTokenMasterDatacenterId: authTokenMasterDatacenterId)
+        let logPrefix = self.logPrefix
+        self.mtProto.getLogPrefix = {
+            return logPrefix.with { $0 }
+        }
         self.mtProto.cdn = isCdn
         self.mtProto.useTempAuthKeys = self.context.useTempAuthKeys && !isCdn
         self.mtProto.media = isMedia
@@ -375,7 +380,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false) -> Signal<(Any, Double), (MTRpcError, Double)> {
+    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, logPrefix: String = "") -> Signal<(Any, Double), (MTRpcError, Double)> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()

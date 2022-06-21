@@ -4,11 +4,10 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import MergeLists
 
-public protocol ItemListHeaderItemNode: class {
+public protocol ItemListHeaderItemNode: AnyObject {
     func updateTheme(theme: PresentationTheme)
 }
 
@@ -128,6 +127,7 @@ private struct ItemListNodeTransition {
     let emptyStateItem: ItemListControllerEmptyStateItem?
     let searchItem: ItemListControllerSearch?
     let toolbarItem: ItemListToolbarItem?
+    let footerItem: ItemListControllerFooterItem?
     let focusItemTag: ItemListItemTag?
     let ensureVisibleItemTag: ItemListItemTag?
     let scrollToItem: ListViewScrollToItem?
@@ -146,6 +146,7 @@ public final class ItemListNodeState {
     let emptyStateItem: ItemListControllerEmptyStateItem?
     let searchItem: ItemListControllerSearch?
     let toolbarItem: ItemListToolbarItem?
+    let footerItem: ItemListControllerFooterItem?
     let animateChanges: Bool
     let crossfadeState: Bool
     let scrollEnabled: Bool
@@ -153,13 +154,14 @@ public final class ItemListNodeState {
     let ensureVisibleItemTag: ItemListItemTag?
     let initialScrollToItem: ListViewScrollToItem?
     
-    public init<T: ItemListNodeEntry>(presentationData: ItemListPresentationData, entries: [T], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, toolbarItem: ItemListToolbarItem? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, scrollEnabled: Bool = true) {
+    public init<T: ItemListNodeEntry>(presentationData: ItemListPresentationData, entries: [T], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, toolbarItem: ItemListToolbarItem? = nil, footerItem: ItemListControllerFooterItem? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, scrollEnabled: Bool = true) {
         self.presentationData = presentationData
         self.entries = entries.map { $0 }
         self.style = style
         self.emptyStateItem = emptyStateItem
         self.searchItem = searchItem
         self.toolbarItem = toolbarItem
+        self.footerItem = footerItem
         self.crossfadeState = crossfadeState
         self.animateChanges = animateChanges
         self.focusItemTag = focusItemTag
@@ -249,6 +251,9 @@ open class ItemListControllerNode: ASDisplayNode {
     
     private var toolbarItem: ItemListToolbarItem?
     
+    private var footerItem: ItemListControllerFooterItem?
+    private var footerItemNode: ItemListControllerFooterItemNode?
+    
     private let transitionDisposable = MetaDisposable()
     
     private var enqueuedTransitions: [ItemListNodeTransition] = []
@@ -280,6 +285,8 @@ open class ItemListControllerNode: ASDisplayNode {
     }
 
     var alwaysSynchronous = false
+    
+    private var previousContentOffset: ListViewVisibleContentOffset?
     
     public init(controller: ItemListController?, navigationBar: NavigationBar, state: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError>) {
         self.navigationBar = navigationBar
@@ -337,6 +344,10 @@ open class ItemListControllerNode: ASDisplayNode {
         
         self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
             self?.visibleBottomContentOffsetChanged?(offset)
+            
+            if let strongSelf = self {
+                strongSelf.updateFooterBackgroundAlpha()
+            }
         }
         
         self.listNode.visibleContentOffsetChanged = { [weak self] offset in
@@ -344,7 +355,33 @@ open class ItemListControllerNode: ASDisplayNode {
             if let validLayout = self?.validLayout {
                 inVoiceOver = validLayout.0.inVoiceOver
             }
+            
             self?.contentOffsetChanged?(offset, inVoiceOver)
+            
+            if let strongSelf = self {
+                var previousContentOffsetValue: CGFloat?
+                if let previousContentOffset = strongSelf.previousContentOffset {
+                    if case let .known(value) = previousContentOffset {
+                        previousContentOffsetValue = value
+                    } else {
+                        previousContentOffsetValue = 30.0
+                    }
+                }
+                switch offset {
+                    case let .known(value):
+                        let transition: ContainedViewLayoutTransition
+                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue >= 30.0 {
+                            transition = .animated(duration: 0.2, curve: .easeInOut)
+                        } else {
+                            transition = .immediate
+                        }
+                        strongSelf.navigationBar.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
+                    case .unknown, .none:
+                        strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)
+                }
+                
+                strongSelf.previousContentOffset = offset
+            }
         }
         
         self.listNode.beganInteractiveDragging = { [weak self] _ in
@@ -353,7 +390,7 @@ open class ItemListControllerNode: ASDisplayNode {
             }
         }
         
-        self.listNode.didEndScrolling = { [weak self] in
+        self.listNode.didEndScrolling = { [weak self] _ in
             if let strongSelf = self {
                 let _ = strongSelf.contentScrollingEnded?(strongSelf.listNode)
             }
@@ -388,7 +425,7 @@ open class ItemListControllerNode: ASDisplayNode {
                 scrollToItem = state.initialScrollToItem
             }
             
-            return ItemListNodeTransition(theme: presentationData.theme, strings: presentationData.strings, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, toolbarItem: state.toolbarItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries, scrollEnabled: state.scrollEnabled)
+            return ItemListNodeTransition(theme: presentationData.theme, strings: presentationData.strings, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, toolbarItem: state.toolbarItem, footerItem: state.footerItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries, scrollEnabled: state.scrollEnabled)
         })
         |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
@@ -403,6 +440,8 @@ open class ItemListControllerNode: ASDisplayNode {
     
     override open func didLoad() {
         super.didLoad()
+        
+        self.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
         
         (self.view as? ItemListControllerNodeView)?.onLayout = { [weak self] in
             guard let strongSelf = self else {
@@ -437,36 +476,38 @@ open class ItemListControllerNode: ASDisplayNode {
         })
     }
     
+    func updateFooterBackgroundAlpha() {
+        guard let footerItemNode = self.footerItemNode else {
+            return
+        }
+
+        switch self.listNode.visibleBottomContentOffset() {
+            case let .known(value):
+                let backgroundAlpha: CGFloat = min(30.0, value) / 30.0
+                footerItemNode.updateBackgroundAlpha(backgroundAlpha, transition: .immediate)
+            case .unknown, .none:
+                footerItemNode.updateBackgroundAlpha(1.0, transition: .immediate)
+        }
+    }
+    
     open func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition, additionalInsets: UIEdgeInsets) {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         insets.bottom = max(insets.bottom, additionalInsets.bottom)
         
-        var addedInsets: UIEdgeInsets?
-        if layout.size.width > 480.0 {
-            let inset = max(20.0, floor((layout.size.width - 674.0) / 2.0))
+        let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+        if layout.size.width >= 375.0 {
             insets.left += inset
             insets.right += inset
-            addedInsets = UIEdgeInsets(top: 0.0, left: inset, bottom: 0.0, right: inset)
-            
-            if self.leftOverlayNode.supernode == nil {
-                self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
-            }
-            if self.rightOverlayNode.supernode == nil {
-                self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.listNode)
-            }
-        } else {
-            insets.left += layout.safeInsets.left
-            insets.right += layout.safeInsets.right
-            
-            if self.leftOverlayNode.supernode != nil {
-                self.leftOverlayNode.removeFromSupernode()
-            }
-            if self.rightOverlayNode.supernode != nil {
-                self.rightOverlayNode.removeFromSupernode()
-            }
         }
         
+        if self.rightOverlayNode.supernode == nil {
+            self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.listNode)
+        }
+        if self.leftOverlayNode.supernode == nil {
+            self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
+        }
+
         if let toolbarItem = self.toolbarItem {
             var tabBarHeight: CGFloat
             let bottomInset: CGFloat = insets.bottom
@@ -484,7 +525,7 @@ open class ItemListControllerNode: ASDisplayNode {
                 transition.updateFrame(node: toolbarNode, frame: toolbarFrame)
                 toolbarNode.updateLayout(size: toolbarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: layout.intrinsicInsets.bottom, toolbar: toolbarItem.toolbar, transition: transition)
             } else if let theme = self.theme {
-                let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: theme), displaySeparator: true)
+                let toolbarNode = ToolbarNode(theme: ToolbarTheme(rootControllerTheme: theme), displaySeparator: true)
                 toolbarNode.frame = toolbarFrame
                 toolbarNode.updateLayout(size: toolbarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: layout.intrinsicInsets.bottom, toolbar: toolbarItem.toolbar, transition: .immediate)
                 self.addSubnode(toolbarNode)
@@ -522,6 +563,11 @@ open class ItemListControllerNode: ASDisplayNode {
             }
         }
     
+        if let footerItemNode = self.footerItemNode {
+            let footerHeight = footerItemNode.updateLayout(layout: layout, transition: transition)
+            insets.bottom += footerHeight
+        }
+        
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
         
@@ -532,10 +578,6 @@ open class ItemListControllerNode: ASDisplayNode {
         self.rightOverlayNode.frame = CGRect(x: layout.size.width - insets.right, y: 0.0, width: insets.right, height: layout.size.height)
         
         if let emptyStateNode = self.emptyStateNode {
-            var layout = layout
-            if let addedInsets = addedInsets {
-                layout = layout.addedInsets(insets: addedInsets)
-            }
             emptyStateNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
         
@@ -607,11 +649,17 @@ open class ItemListControllerNode: ASDisplayNode {
                             self.listNode.backgroundColor = transition.theme.list.plainBackgroundColor
                             self.leftOverlayNode.backgroundColor = transition.theme.list.plainBackgroundColor
                             self.rightOverlayNode.backgroundColor = transition.theme.list.plainBackgroundColor
+                        
+                            self.leftOverlayNode.isHidden = true
+                            self.rightOverlayNode.isHidden = true
                         case .blocks:
                             self.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.leftOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.rightOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
+                        
+                            self.leftOverlayNode.isHidden = false
+                            self.rightOverlayNode.isHidden = false
                     }
                 }
             }
@@ -686,7 +734,11 @@ open class ItemListControllerNode: ASDisplayNode {
                         if let validLayout = self.validLayout {
                             updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
                         }
-                        self.insertSubnode(updatedNode, aboveSubnode: self.listNode)
+                        if self.rightOverlayNode.supernode != nil {
+                            self.insertSubnode(updatedNode, aboveSubnode: self.rightOverlayNode)
+                        } else {
+                            self.insertSubnode(updatedNode, aboveSubnode: self.listNode)
+                        }
                         updatedNode.activate()
                     }
                 } else {
@@ -705,7 +757,7 @@ open class ItemListControllerNode: ASDisplayNode {
             }
             
             self.listNode.accessibilityPageScrolledString = { row, count in
-                return transition.strings.VoiceOver_ScrollStatus(row, count).0
+                return transition.strings.VoiceOver_ScrollStatus(row, count).string
             }
             
             var updateToolbarItem = false
@@ -803,11 +855,38 @@ open class ItemListControllerNode: ASDisplayNode {
                     self.emptyStateNode = nil
                 }
             }
+            var updateFooterItem = false
+            if let footerItem = self.footerItem, let updatedFooterItem = transition.footerItem {
+                updateFooterItem = !footerItem.isEqual(to: updatedFooterItem)
+            } else if (self.footerItem != nil) != (transition.footerItem != nil) {
+                updateFooterItem = true
+            }
+            if updateFooterItem {
+                self.footerItem = transition.footerItem
+                if let footerItem = transition.footerItem {
+                    let updatedNode = footerItem.node(current: self.footerItemNode)
+                    if let footerItemNode = self.footerItemNode, updatedNode !== footerItemNode {
+                        footerItemNode.removeFromSupernode()
+                    }
+                    if self.footerItemNode !== updatedNode {
+                        self.footerItemNode = updatedNode
+                        if let validLayout = self.validLayout {
+                            let _ = updatedNode.updateLayout(layout: validLayout.0, transition: .immediate)
+                        }
+                        self.addSubnode(updatedNode)
+                    }
+                } else if let footerItemNode = self.footerItemNode {
+                    footerItemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak footerItemNode] _ in
+                        footerItemNode?.removeFromSupernode()
+                    })
+                    self.footerItemNode = nil
+                }
+            }
             self.listNode.scrollEnabled = transition.scrollEnabled
             
             if updateSearchItem {
                 self.requestLayout?(.animated(duration: 0.3, curve: .spring))
-            } else if updateToolbarItem, let (layout, navigationBarHeight, additionalInsets) = self.validLayout {
+            } else if updateToolbarItem || updateFooterItem, let (layout, navigationBarHeight, additionalInsets) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .spring), additionalInsets: additionalInsets)
             }
         }

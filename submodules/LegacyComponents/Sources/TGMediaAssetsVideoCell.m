@@ -74,8 +74,7 @@ NSString *const TGMediaAssetsVideoCellKind = @"TGMediaAssetsVideoCellKind";
         
         _adjustmentsDisposable = [[SMetaDisposable alloc] init];
         
-        if (iosMajorVersion() >= 11)
-        {
+        if (@available(iOS 11.0, *)) {
             _shadowView.accessibilityIgnoresInvertColors = true;
             _durationLabel.accessibilityIgnoresInvertColors = true;
         }

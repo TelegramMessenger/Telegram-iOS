@@ -5,7 +5,7 @@ import SwiftSignalKit
 import Display
 import UniversalMediaPlayer
 
-private let textFont = Font.regular(11.0)
+private let textFont = Font.with(size: 11.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
 
 private struct ChatInstantVideoMessageDurationNodeState: Equatable {
     let hours: Int32?

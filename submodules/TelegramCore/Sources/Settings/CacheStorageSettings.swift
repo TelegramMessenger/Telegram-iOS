@@ -2,18 +2,17 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
-public func updateCacheStorageSettingsInteractively(accountManager: AccountManager, _ f: @escaping (CacheStorageSettings) -> CacheStorageSettings) -> Signal<Void, NoError> {
+public func updateCacheStorageSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (CacheStorageSettings) -> CacheStorageSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(SharedDataKeys.cacheStorageSettings, { entry in
             let currentSettings: CacheStorageSettings
-            if let entry = entry as? CacheStorageSettings {
+            if let entry = entry?.get(CacheStorageSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = CacheStorageSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

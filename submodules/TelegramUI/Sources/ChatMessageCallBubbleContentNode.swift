@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import AppBundle
@@ -70,7 +69,6 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         return { item, layoutConstants, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let message = item.message
                 let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
                 
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
@@ -169,11 +167,11 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: 0)
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
                 
                 let statusText: String
                 if let callDuration = callDuration, callDuration > 1 {
-                    statusText = item.presentationData.strings.Notification_CallFormat(dateText, callDurationString(strings: item.presentationData.strings, value: callDuration)).0
+                    statusText = item.presentationData.strings.Notification_CallFormat(dateText, callDurationString(strings: item.presentationData.strings, value: callDuration)).string
                 } else {
                     statusText = dateText
                 }
@@ -266,9 +264,5 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         } else {
             return .none
         }
-    }
-    
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        return nil
     }
 }

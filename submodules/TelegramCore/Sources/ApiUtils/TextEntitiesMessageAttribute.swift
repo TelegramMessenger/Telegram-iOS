@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associatedPeers: SimpleDictionary<PeerId, Peer>) -> [Api.MessageEntity] {
     var apiEntities: [Api.MessageEntity] = []
@@ -47,6 +46,8 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
                 apiEntities.append(.messageEntityUnderline(offset: offset, length: length))
             case .BankCard:
                 apiEntities.append(.messageEntityBankCard(offset: offset, length: length))
+            case .Spoiler:
+                apiEntities.append(.messageEntitySpoiler(offset: offset, length: length))
             case .Custom:
                 break
         }

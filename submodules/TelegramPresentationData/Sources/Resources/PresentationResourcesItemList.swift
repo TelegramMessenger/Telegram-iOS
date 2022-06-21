@@ -181,6 +181,59 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func editThemeIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListEditThemeIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/EditTheme"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func knobImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListKnob.rawValue, { theme in
+            return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setShadow(offset: CGSize(width: 0.0, height: -3.0), blur: 12.0, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
+                context.setFillColor(UIColor.white.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
+            })
+        })
+    }
+    
+    public static func blockAccentIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListBlockAccentIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/Block"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func blockDestructiveIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListBlockDestructiveIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/Block"), color: theme.list.itemDestructiveColor)
+        })
+    }
+    
+    public static func addDeviceIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListAddDeviceIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func resetIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListResetIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/Reset"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func imageIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListImageIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/Image"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func cloudIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListCloudIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/Cloud"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     public static func cornersImage(_ theme: PresentationTheme, top: Bool, bottom: Bool) -> UIImage? {
         if !top && !bottom {
             return nil
@@ -214,6 +267,12 @@ public struct PresentationResourcesItemList {
                 context.addPath(path.cgPath)
                 context.fillPath()
             })?.stretchableImage(withLeftCapWidth: 25, topCapHeight: 25)
+        })
+    }
+    
+    public static func uploadToneIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.uploadToneIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/UploadTone"), color: theme.list.itemAccentColor)
         })
     }
 }

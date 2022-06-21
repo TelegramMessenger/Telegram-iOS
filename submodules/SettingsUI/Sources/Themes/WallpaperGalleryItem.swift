@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -137,7 +136,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
-        self.nativeNode = WallpaperBackgroundNode(context: context)
+        self.nativeNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         self.cropNode = WallpaperCropNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
@@ -302,21 +301,21 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             case let .wallpaper(wallpaper, _):
                 self.nativeNode.update(wallpaper: wallpaper)
 
-                if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper, isPattern {
+                if case let .file(file) = wallpaper, file.isPattern {
                     self.nativeNode.isHidden = false
-                    self.patternButtonNode.isSelected = isPattern
+                    self.patternButtonNode.isSelected = file.isPattern
 
-                    if isPattern && settings.colors.count >= 3 {
+                    if file.isPattern && file.settings.colors.count >= 3 {
                         self.playButtonNode.setImage(self.playButtonPlayImage, for: [])
                     } else {
                         self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
                     }
-                } else if case let .gradient(_, colors, _) = wallpaper {
+                } else if case let .gradient(gradient) = wallpaper {
                     self.nativeNode.isHidden = false
                     self.nativeNode.update(wallpaper: wallpaper)
                     self.patternButtonNode.isSelected = false
 
-                    if colors.count >= 3 {
+                    if gradient.colors.count >= 3 {
                         self.playButtonNode.setImage(self.playButtonPlayImage, for: [])
                     } else {
                         self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
@@ -355,7 +354,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             subtitleSignal = .single(nil)
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
-                        case let .color(color):
+                        case .color:
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
                             signal = .single({ _ in nil })
@@ -365,7 +364,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             actionSignal = .single(defaultAction)
                             colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
-                        case let .gradient(_, colors, settings):
+                        case .gradient:
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
                             signal = .single({ _ in nil })
@@ -603,7 +602,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case .Local:
                             state = .none
                             local = true
-                        case .Remote:
+                        case .Remote, .Paused:
                             state = .progress(color: statusForegroundColor, lineWidth: nil, value: 0.027, cancelEnabled: false, animateRotation: true)
                     }
                     strongSelf.statusNode.transitionToState(state, completion: {})
@@ -777,18 +776,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         switch entry {
         case let .wallpaper(wallpaper, _):
             switch wallpaper {
-            case let .file(_, _, _, _, isPattern, _, _, _, settings):
-                if isPattern {
-                    if settings.colors.isEmpty {
+            case let .file(file):
+                if file.isPattern {
+                    if file.settings.colors.isEmpty {
                         return nil
                     } else {
-                        return settings.colors.map(UIColor.init(rgb:))
+                        return file.settings.colors.map(UIColor.init(rgb:))
                     }
                 } else {
                     return nil
                 }
-            case let .gradient(_, colors, _):
-                return colors.map(UIColor.init(rgb:))
+            case let .gradient(gradient):
+                return gradient.colors.map(UIColor.init(rgb:))
             case let .color(color):
                 return [UIColor(rgb: color)]
             default:
@@ -811,17 +810,17 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             return
         }
         switch wallpaper {
-        case let .gradient(_, colors, settings):
-            if colors.count >= 3 {
-                self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
+        case let .gradient(gradient):
+            if gradient.colors.count >= 3 {
+                self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring), extendAnimation: false)
             } else {
-                let rotation = settings.rotation ?? 0
+                let rotation = gradient.settings.rotation ?? 0
                 self.requestRotateGradient?((rotation + 90) % 360)
             }
         case let .file(file):
             if file.isPattern {
                 if file.settings.colors.count >= 3 {
-                    self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
+                    self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring), extendAnimation: false)
                 } else {
                     let rotation = file.settings.rotation ?? 0
                     self.requestRotateGradient?((rotation + 90) % 360)
@@ -953,11 +952,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             blurFrame = leftButtonFrame
                             motionAlpha = 1.0
                             motionFrame = rightButtonFrame
-                        case let .gradient(_, colors, _):
+                        case let .gradient(gradient):
                             motionAlpha = 0.0
                             patternAlpha = 1.0
 
-                            if colors.count >= 2 {
+                            if gradient.colors.count >= 2 {
                                 playAlpha = 1.0
                                 patternFrame = leftButtonFrame.offsetBy(dx: -centerOffset, dy: 0.0)
                                 colorsFrame = colorsFrame.offsetBy(dx: centerOffset, dy: 0.0)
@@ -1023,14 +1022,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     private func updateMessagesLayout(layout: ContainerViewLayout, offset: CGPoint, transition: ContainedViewLayoutTransition) {
-        var bottomInset: CGFloat = 115.0
+        let bottomInset: CGFloat = 115.0
 
         if self.patternButtonNode.isSelected || self.colorsButtonNode.isSelected {
             //bottomInset = 350.0
         }
         
         var items: [ListViewItem] = []
-        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(1))
+        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
         let otherPeerId = self.context.account.peerId
         var peers = SimpleDictionary<PeerId, Peer>()
         let messages = SimpleDictionary<MessageId, Message>()
@@ -1056,8 +1055,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         if file.settings.colors.count >= 3 {
                             hasAnimatableGradient = true
                         }
-                    case let .gradient(_, colors, _):
-                        if colors.count >= 3 {
+                    case let .gradient(gradient):
+                        if gradient.colors.count >= 3 {
                             hasAnimatableGradient = true
                         }
                     default:
@@ -1078,8 +1077,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 if file.settings.colors.count >= 3 {
                                     hasAnimatableGradient = true
                                 }
-                            case let .gradient(_, colors, _):
-                                if colors.count >= 3 {
+                            case let .gradient(gradient):
+                                if gradient.colors.count >= 3 {
                                     hasAnimatableGradient = true
                                 }
                             default:
@@ -1104,10 +1103,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         let theme = self.presentationData.theme.withUpdated(preview: true)
                    
         let message1 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message1], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message1], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, isCentered: false))
         
         let message2 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message2], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode))
+        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message2], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, isCentered: false))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
         if let messageNodes = self.messageNodes {

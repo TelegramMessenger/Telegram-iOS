@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 public struct ChangeAccountPhoneNumberData: Equatable {
     public let type: SentAuthorizationCodeType
@@ -38,7 +37,7 @@ public enum RequestChangeAccountPhoneNumberVerificationError {
 }
 
 func _internal_requestChangeAccountPhoneNumberVerification(account: Account, phoneNumber: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
-    return account.network.request(Api.functions.account.sendChangePhoneCode(phoneNumber: phoneNumber, settings: .codeSettings(flags: 0)), automaticFloodWait: false)
+    return account.network.request(Api.functions.account.sendChangePhoneCode(phoneNumber: phoneNumber, settings: .codeSettings(flags: 0, logoutTokens: nil)), automaticFloodWait: false)
         |> mapError { error -> RequestChangeAccountPhoneNumberVerificationError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                 return .limitExceeded
@@ -115,6 +114,6 @@ func _internal_requestChangeAccountPhoneNumber(account: Account, phoneNumber: St
                 updatePeers(transaction: transaction, peers: [user], update: { _, updated in
                     return updated
                 })
-            } |> mapError { _ -> ChangeAccountPhoneNumberError in return .generic }
+            } |> mapError { _ -> ChangeAccountPhoneNumberError in }
         }
 }

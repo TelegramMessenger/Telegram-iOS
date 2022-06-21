@@ -178,6 +178,26 @@
     }
 }
 
+- (UIView *)transitionView {
+    id<TGModernGalleryItem> focusItem = nil;
+    if ([self currentItemIndex] < self.model.items.count)
+        focusItem = self.model.items[[self currentItemIndex]];
+    
+    for (TGModernGalleryItemView *itemView in self->_visibleItemViews)
+    {
+        if ([itemView.item isEqual:focusItem])
+        {
+            itemView.alpha = 0.01;
+            UIView *contentView = [itemView transitionContentView];
+            UIView *snapshotView = [contentView snapshotViewAfterScreenUpdates:true];
+            snapshotView.frame = [contentView convertRect:contentView.bounds toView:nil];
+            return snapshotView;
+        }
+    }
+    
+    return nil;
+}
+
 - (bool)isFullyOpaque
 {
     CGFloat alpha = 0.0f;
@@ -307,8 +327,9 @@
 {
     [_view showHideInterface];
     
-    if ([self respondsToSelector:@selector(setNeedsUpdateOfHomeIndicatorAutoHidden)])
+    if (@available(iOS 11.0, *)) {
         [self setNeedsUpdateOfHomeIndicatorAutoHidden];
+    }
 }
 
 - (void)itemViewDidRequestGalleryDismissal:(TGModernGalleryItemView *)__unused itemView animated:(bool)animated

@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
@@ -411,7 +410,7 @@ private func channelStatsControllerEntries(data: ChannelStats?, messages: [Messa
     return entries
 }
 
-public func channelStatsController(context: AccountContext, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
+public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
     var openMessageStatsImpl: ((MessageId) -> Void)?
     var contextActionImpl: ((MessageId, ASDisplayNode, ContextGesture?) -> Void)?
     
@@ -451,7 +450,7 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
         contextActionImpl?(messageId, node, gesture)
     })
     
-    let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil)
+    let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil)
     |> map { messageHistoryView, _, _ -> MessageHistoryView? in
         return messageHistoryView
     }
@@ -461,14 +460,15 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
     
     let previousData = Atomic<ChannelStats?>(value: nil)
     
-    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), messagesPromise.get(), longLoadingSignal)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, dataPromise.get(), messagesPromise.get(), longLoadingSignal)
     |> deliverOnMainQueue
     |> map { presentationData, data, messageView, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if data == nil {
             if longLoading {
-                emptyStateItem = StatsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
+                emptyStateItem = StatsEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings)
             } else {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
@@ -518,12 +518,12 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak controller] c, _ in
             c.dismiss(completion: {
                 if let navigationController = controller?.navigationController as? NavigationController {
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true, timecode: nil)))
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
                 }
             })
         })))
         
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(ChannelStatsContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false)), items: .single(items), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(ChannelStatsContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         controller.presentInGlobalOverlay(contextController)
     }
     return controller

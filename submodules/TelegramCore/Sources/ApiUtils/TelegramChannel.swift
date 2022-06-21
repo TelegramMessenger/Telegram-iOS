@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 
-import SyncCore
 
 public enum TelegramChannelPermission {
     case sendMessages
@@ -118,7 +117,7 @@ public extension TelegramChannel {
                     if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banChangeInfo) {
                         return false
                     }
-                    return true
+                    return false
                 }
             case .addAdmins:
                 if let adminRights = self.adminRights, adminRights.rights.contains(.canAddAdmins) {

@@ -25,10 +25,10 @@ public enum MessageHistoryInput: Equatable, Hashable {
 }
 
 private extension MessageHistoryInput {
-    func fetch(postbox: Postbox, peerId: PeerId, namespace: MessageId.Namespace, from fromIndex: MessageIndex, includeFrom: Bool, to toIndex: MessageIndex, limit: Int) -> [IntermediateMessage] {
+    func fetch(postbox: PostboxImpl, peerId: PeerId, namespace: MessageId.Namespace, from fromIndex: MessageIndex, includeFrom: Bool, to toIndex: MessageIndex, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, limit: Int) -> [IntermediateMessage] {
         switch self {
         case let .automatic(automatic):
-            var items = postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: automatic?.tag, threadId: nil, from: fromIndex, includeFrom: includeFrom, to: toIndex, limit: limit)
+            var items = postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: automatic?.tag, threadId: nil, from: fromIndex, includeFrom: includeFrom, to: toIndex, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, limit: limit)
             if let automatic = automatic, automatic.appendMessagesFromTheSameGroup {
                 enum Direction {
                     case lowToHigh
@@ -70,17 +70,112 @@ private extension MessageHistoryInput {
             }
             return items
         case let .external(input, tag):
-            return postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: tag, threadId: input.threadId, from: fromIndex, includeFrom: includeFrom, to: toIndex, limit: limit)
+            switch input.content {
+            case let .thread(peerId, id, _):
+                return postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: tag, threadId: id, from: fromIndex, includeFrom: includeFrom, to: toIndex, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, limit: limit)
+            case let .messages(allIndices, _, _):
+                if allIndices.isEmpty {
+                    return []
+                }
+                var indices: [MessageIndex] = []
+                var startIndex = fromIndex
+                var localIncludeFrom = includeFrom
+                while true {
+                    var sliceIndices: [MessageIndex] = []
+                    if fromIndex < toIndex {
+                        for i in 0 ..< allIndices.count {
+                            var matches = false
+                            if localIncludeFrom {
+                                if allIndices[i] >= startIndex {
+                                    matches = true
+                                }
+                            } else {
+                                if allIndices[i] > startIndex {
+                                    matches = true
+                                }
+                            }
+                            if matches {
+                                for j in i ..< min(i + limit, allIndices.count) {
+                                    sliceIndices.append(allIndices[j])
+                                }
+                                break
+                            }
+                        }
+                        //sliceIndices = self.threadsTable.laterIndices(threadId: threadId, peerId: peerId, namespace: namespace, index: startIndex, includeFrom: localIncludeFrom, count: limit)
+                    } else {
+                        for i in (0 ..< allIndices.count).reversed() {
+                            var matches = false
+                            if localIncludeFrom {
+                                if allIndices[i] <= startIndex {
+                                    matches = true
+                                }
+                            } else {
+                                if allIndices[i] < startIndex {
+                                    matches = true
+                                }
+                            }
+                            if matches {
+                                for j in (max(i - limit + 1, 0) ... i).reversed() {
+                                    sliceIndices.append(allIndices[j])
+                                }
+                                break
+                            }
+                        }
+                        
+                        //sliceIndices = self.threadsTable.earlierIndices(threadId: threadId, peerId: peerId, namespace: namespace, index: startIndex, includeFrom: localIncludeFrom, count: limit)
+                    }
+                    if sliceIndices.isEmpty {
+                        break
+                    }
+                    startIndex = sliceIndices[sliceIndices.count - 1]
+                    localIncludeFrom = false
+                    
+                    for index in sliceIndices {
+                        if let ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange {
+                            if ignoreMessagesInTimestampRange.contains(index.timestamp) {
+                                continue
+                            }
+                        }
+                        indices.append(index)
+                    }
+                    if indices.count >= limit {
+                        break
+                    }
+                }
+                var result: [IntermediateMessage] = []
+                if fromIndex < toIndex {
+                    assert(indices.sorted() == indices)
+                } else {
+                    assert(indices.sorted().reversed() == indices)
+                }
+                for index in indices {
+                    if fromIndex < toIndex {
+                        if index < fromIndex || index > toIndex {
+                            continue
+                        }
+                    } else {
+                        if index < toIndex || index > fromIndex {
+                            continue
+                        }
+                    }
+                    if let message = postbox.messageHistoryTable.getMessage(index) {
+                        result.append(message)
+                    } else {
+                        assertionFailure()
+                    }
+                }
+                return result
+            }
         }
     }
     
-    func getMessageCountInRange(postbox: Postbox, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
+    func getMessageCountInRange(postbox: PostboxImpl, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
         switch self {
         case let .automatic(automatic):
             if let automatic = automatic {
                 return postbox.messageHistoryTagsTable.getMessageCountInRange(tag: automatic.tag, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
             } else {
-                return 0
+                return postbox.messageHistoryTable.getMessageCountInRange(peerId: peerId, namespace: namespace, tag: nil, lowerBound: lowerBound, upperBound: upperBound)
             }
         case .external:
             return 0
@@ -105,8 +200,13 @@ private func canContainHoles(_ peerIdAndNamespace: PeerIdAndNamespace, input: Me
             return false
         }
         return messageNamespaces[peerIdAndNamespace.namespace] != nil
-    case .external:
-        return true
+    case let .external(data, _):
+        switch data.content {
+        case .thread:
+            return true
+        case .messages:
+            return false
+        }
     }
 }
 
@@ -395,14 +495,29 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
     case let .automatic(automatic):
         tag = automatic?.tag
     case let .external(value, _):
-        threadId = value.threadId
+        switch value.content {
+        case let .thread(_, id, _):
+            threadId = id
+        case .messages:
+            threadId = nil
+        }
     }
     
     for (space, indices) in holes.holesBySpace {
         if indices.isEmpty {
             continue
         }
-        assert(canContainHoles(space, input: input, seedConfiguration: seedConfiguration))
+        switch input {
+        case .automatic:
+            assert(canContainHoles(space, input: input, seedConfiguration: seedConfiguration))
+        case let .external(data, _):
+            switch data.content {
+            case .thread:
+                assert(canContainHoles(space, input: input, seedConfiguration: seedConfiguration))
+            case .messages:
+                break
+            }
+        }
         switch anchor {
             case .lowerBound, .upperBound:
                 break
@@ -764,7 +879,7 @@ struct OrderedHistoryViewEntries {
         if self.lowerOrAtAnchor.count > 1 {
             for i in 1 ..< self.lowerOrAtAnchor.count {
                 if self.lowerOrAtAnchor[i].index < self.lowerOrAtAnchor[i - 1].index {
-                    //assertionFailure()
+                    assertionFailure()
                     break
                 }
             }
@@ -772,7 +887,7 @@ struct OrderedHistoryViewEntries {
         if self.higherThanAnchor.count > 1 {
             for i in 1 ..< self.higherThanAnchor.count {
                 if self.higherThanAnchor[i].index < self.higherThanAnchor[i - 1].index {
-                    //assertionFailure()
+                    assertionFailure()
                     break
                 }
             }
@@ -878,45 +993,54 @@ final class HistoryViewLoadedState {
     let namespaces: MessageIdNamespaces
     let input: MessageHistoryInput
     let statistics: MessageHistoryViewOrderStatistics
+    let ignoreMessagesInTimestampRange: ClosedRange<Int32>?
     let halfLimit: Int
     let seedConfiguration: SeedConfiguration
     var orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries]
     var holes: HistoryViewHoles
     var spacesWithRemovals = Set<PeerIdAndNamespace>()
     
-    init(anchor: HistoryViewAnchor, tag: MessageTags?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, statistics: MessageHistoryViewOrderStatistics, halfLimit: Int, locations: MessageHistoryViewInput, postbox: Postbox, holes: HistoryViewHoles) {
+    init(anchor: HistoryViewAnchor, tag: MessageTags?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, statistics: MessageHistoryViewOrderStatistics, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, halfLimit: Int, locations: MessageHistoryViewInput, postbox: PostboxImpl, holes: HistoryViewHoles) {
         precondition(halfLimit >= 3)
         self.anchor = anchor
         self.namespaces = namespaces
         self.statistics = statistics
+        self.ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange
         self.halfLimit = halfLimit
         self.seedConfiguration = postbox.seedConfiguration
         self.orderedEntriesBySpace = [:]
         self.holes = holes
         
         var peerIds: [PeerId] = []
+        var spaces: [PeerIdAndNamespace] = []
+        
         let input: MessageHistoryInput
         switch locations {
-            case let .single(peerId):
+        case let .single(peerId):
+            peerIds.append(peerId)
+            input = .automatic(tag.flatMap { tag in
+                MessageHistoryInput.Automatic(tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup)
+            })
+        case let .associated(peerId, associatedId):
+            peerIds.append(peerId)
+            if let associatedId = associatedId {
+                peerIds.append(associatedId.peerId)
+            }
+            input = .automatic(tag.flatMap { tag in
+                MessageHistoryInput.Automatic(tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup)
+            })
+        case let .external(external):
+            switch external.content {
+            case let .thread(peerId, _, _):
                 peerIds.append(peerId)
-                input = .automatic(tag.flatMap { tag in
-                    MessageHistoryInput.Automatic(tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup)
-                })
-            case let .associated(peerId, associatedId):
-                peerIds.append(peerId)
-                if let associatedId = associatedId {
-                    peerIds.append(associatedId.peerId)
-                }
-                input = .automatic(tag.flatMap { tag in
-                    MessageHistoryInput.Automatic(tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup)
-                })
-            case let .external(external):
-                peerIds.append(external.peerId)
                 input = .external(external, tag)
+            case .messages:
+                input = .external(external, tag)
+                spaces.append(PeerIdAndNamespace(peerId: PeerId(namespace: PeerId.Namespace.max, id: PeerId.Id.max), namespace: 0))
+            }
         }
         self.input = input
         
-        var spaces: [PeerIdAndNamespace] = []
         for peerId in peerIds {
             for namespace in postbox.messageHistoryIndexTable.existingNamespaces(peerId: peerId) {
                 if namespaces.contains(namespace) {
@@ -930,7 +1054,7 @@ final class HistoryViewLoadedState {
         }
     }
     
-    private func fillSpace(space: PeerIdAndNamespace, postbox: Postbox) {
+    private func fillSpace(space: PeerIdAndNamespace, postbox: PostboxImpl) {
         let anchorIndex: MessageIndex
         let lowerBound = MessageIndex.lowerBound(peerId: space.peerId, namespace: space.namespace)
         let upperBound = MessageIndex.upperBound(peerId: space.peerId, namespace: space.namespace)
@@ -962,7 +1086,7 @@ final class HistoryViewLoadedState {
             } else {
                 nextLowerIndex = (anchorIndex, true)
             }
-            lowerOrAtAnchorMessages.append(contentsOf: self.input.fetch(postbox: postbox, peerId: space.peerId, namespace: space.namespace, from: nextLowerIndex.index, includeFrom: nextLowerIndex.includeFrom, to: lowerBound, limit: self.halfLimit - lowerOrAtAnchorMessages.count).map(mapEntry))
+            lowerOrAtAnchorMessages.append(contentsOf: self.input.fetch(postbox: postbox, peerId: space.peerId, namespace: space.namespace, from: nextLowerIndex.index, includeFrom: nextLowerIndex.includeFrom, to: lowerBound, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, limit: self.halfLimit - lowerOrAtAnchorMessages.count).map(mapEntry))
         }
         if higherThanAnchorMessages.count < self.halfLimit {
             let nextHigherIndex: MessageIndex
@@ -971,7 +1095,7 @@ final class HistoryViewLoadedState {
             } else {
                 nextHigherIndex = anchorIndex
             }
-            higherThanAnchorMessages.append(contentsOf: self.input.fetch(postbox: postbox, peerId: space.peerId, namespace: space.namespace, from: nextHigherIndex, includeFrom: false, to: upperBound, limit: self.halfLimit - higherThanAnchorMessages.count).map(mapEntry))
+            higherThanAnchorMessages.append(contentsOf: self.input.fetch(postbox: postbox, peerId: space.peerId, namespace: space.namespace, from: nextHigherIndex, includeFrom: false, to: upperBound, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, limit: self.halfLimit - higherThanAnchorMessages.count).map(mapEntry))
         }
         
         lowerOrAtAnchorMessages.reverse()
@@ -981,7 +1105,7 @@ final class HistoryViewLoadedState {
         
         var entries = OrderedHistoryViewEntries(lowerOrAtAnchor: lowerOrAtAnchorMessages, higherThanAnchor: higherThanAnchorMessages)
         
-        if case let .automatic(automaticValue) = self.input, let _ = automaticValue, self.statistics.contains(.combinedLocation), let first = entries.first {
+        if case .automatic = self.input, self.statistics.contains(.combinedLocation), let first = entries.first {
             let messageIndex = first.index
             let previousCount = self.input.getMessageCountInRange(postbox: postbox, peerId: space.peerId, namespace: space.namespace, lowerBound: MessageIndex.lowerBound(peerId: space.peerId, namespace: space.namespace), upperBound: messageIndex)
             let nextCount = self.input.getMessageCountInRange(postbox: postbox, peerId: space.peerId, namespace: space.namespace, lowerBound: messageIndex, upperBound: MessageIndex.upperBound(peerId: space.peerId, namespace: space.namespace))
@@ -999,30 +1123,7 @@ final class HistoryViewLoadedState {
                 }
             }
         }
-        
-        if case let .automatic(tagValue) = self.input, let _ = tagValue, self.statistics.contains(.locationWithinMonth), let first = entries.first {
-            let messageIndex = first.index
-            let monthIndex = MessageMonthIndex(timestamp: messageIndex.timestamp)
-            let count = self.input.getMessageCountInRange(postbox: postbox, peerId: space.peerId, namespace: space.namespace, lowerBound: messageIndex, upperBound: monthUpperBoundIndex(peerId: space.peerId, namespace: space.namespace, index: monthIndex))
-            
-            var nextLocation: (MessageMonthIndex, Int) = (monthIndex, count - 1)
-            
-            let _ = entries.mutableScan { entry in
-                let messageMonthIndex = MessageMonthIndex(timestamp: entry.index.timestamp)
-                if messageMonthIndex != nextLocation.0 {
-                    nextLocation = (messageMonthIndex, 0)
-                }
-                
-                let currentIndexInMonth = nextLocation.1
-                nextLocation.1 = max(0, nextLocation.1 - 1)
-                switch entry {
-                    case let .IntermediateMessageEntry(message, location, _):
-                        return .IntermediateMessageEntry(message, location, MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)))
-                    case let .MessageEntry(entry, reloadAssociatedMessages, reloadPeers):
-                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: entry.location, monthLocation: MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)), attributes: entry.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
-                }
-            }
-        }
+
         
         if canContainHoles(space, input: self.input, seedConfiguration: self.seedConfiguration) {
             entries.fixMonotony()
@@ -1040,7 +1141,7 @@ final class HistoryViewLoadedState {
         return self.holes.removeHole(space: space, range: range)
     }
     
-    func updateTimestamp(postbox: Postbox, index: MessageIndex, timestamp: Int32) -> Bool {
+    func updateTimestamp(postbox: PostboxImpl, index: MessageIndex, timestamp: Int32) -> Bool {
         let space = PeerIdAndNamespace(peerId: index.id.peerId, namespace: index.id.namespace)
         if self.orderedEntriesBySpace[space] == nil {
             return false
@@ -1154,6 +1255,12 @@ final class HistoryViewLoadedState {
     }
     
     func add(entry: MutableMessageHistoryEntry) -> Bool {
+        if let ignoreMessagesInTimestampRange = self.ignoreMessagesInTimestampRange {
+            if ignoreMessagesInTimestampRange.contains(entry.index.timestamp) {
+                return false
+            }
+        }
+        
         let space = PeerIdAndNamespace(peerId: entry.index.id.peerId, namespace: entry.index.id.namespace)
         
         if self.orderedEntriesBySpace[space] == nil {
@@ -1274,7 +1381,7 @@ final class HistoryViewLoadedState {
         return updated
     }
     
-    func completeAndSample(postbox: Postbox, clipHoles: Bool) -> HistoryViewLoadedSample {
+    func completeAndSample(postbox: PostboxImpl, clipHoles: Bool) -> HistoryViewLoadedSample {
         if !self.spacesWithRemovals.isEmpty {
             for space in self.spacesWithRemovals {
                 self.fillSpace(space: space, postbox: postbox)
@@ -1283,6 +1390,15 @@ final class HistoryViewLoadedState {
         }
         let combinedSpacesAndIndicesByDirection = sampleEntries(orderedEntriesBySpace: self.orderedEntriesBySpace, anchor: self.anchor, halfLimit: self.halfLimit)
         let (clipRanges, sampledHole) = sampleHoleRanges(input: self.input, orderedEntriesBySpace: self.orderedEntriesBySpace, holes: self.holes, anchor: self.anchor, halfLimit: self.halfLimit, seedConfiguration: self.seedConfiguration)
+        
+        /*switch self.input {
+        case .external:
+            if sampledHole == nil {
+                assert(true)
+            }
+        default:
+            break
+        }*/
         
         var holesToLower = false
         var holesToHigher = false
@@ -1364,7 +1480,7 @@ final class HistoryViewLoadedState {
     }
 }
 
-private func fetchHoles(postbox: Postbox, locations: MessageHistoryViewInput, tag: MessageTags?, namespaces: MessageIdNamespaces) -> [PeerIdAndNamespace: IndexSet] {
+private func fetchHoles(postbox: PostboxImpl, locations: MessageHistoryViewInput, tag: MessageTags?, namespaces: MessageIdNamespaces) -> [PeerIdAndNamespace: IndexSet] {
     var peerIds: [PeerId] = []
     switch locations {
     case let .single(peerId):
@@ -1375,7 +1491,17 @@ private func fetchHoles(postbox: Postbox, locations: MessageHistoryViewInput, ta
             peerIds.append(associatedId.peerId)
         }
     case let .external(input):
-        peerIds.append(input.peerId)
+        switch input.content {
+        case let .thread(peerId, _, _):
+            peerIds.append(peerId)
+        case let .messages(_, holes, _):
+            let key = PeerIdAndNamespace(peerId: PeerId(namespace: PeerId.Namespace.max, id: PeerId.Id.max), namespace: 0)
+            if let namespaceHoles = holes[0] {
+                return [key: namespaceHoles]
+            } else {
+                return [:]
+            }
+        }
     }
     switch locations {
     case .single, .associated:
@@ -1397,19 +1523,24 @@ private func fetchHoles(postbox: Postbox, locations: MessageHistoryViewInput, ta
         }
         return holesBySpace
     case let .external(input):
-        var holesBySpace: [PeerIdAndNamespace: IndexSet] = [:]
-        for peerId in peerIds {
-            for (namespace, indices) in input.holes {
-                if namespaces.contains(namespace) {
-                    if !indices.isEmpty {
-                        let peerIdAndNamespace = PeerIdAndNamespace(peerId: peerId, namespace: namespace)
-                        assert(canContainHoles(peerIdAndNamespace, input: .external(input, tag), seedConfiguration: postbox.seedConfiguration))
-                        holesBySpace[peerIdAndNamespace] = indices
+        switch input.content {
+        case let .thread(_, _, holes):
+            var holesBySpace: [PeerIdAndNamespace: IndexSet] = [:]
+            for peerId in peerIds {
+                for (namespace, indices) in holes {
+                    if namespaces.contains(namespace) {
+                        if !indices.isEmpty {
+                            let peerIdAndNamespace = PeerIdAndNamespace(peerId: peerId, namespace: namespace)
+                            assert(canContainHoles(peerIdAndNamespace, input: .external(input, tag), seedConfiguration: postbox.seedConfiguration))
+                            holesBySpace[peerIdAndNamespace] = indices
+                        }
                     }
                 }
             }
+            return holesBySpace
+        case .messages:
+            return [:]
         }
-        return holesBySpace
     }
 }
 
@@ -1425,7 +1556,7 @@ final class HistoryViewLoadingState {
     let halfLimit: Int
     var holes: HistoryViewHoles
     
-    init(postbox: Postbox, locations: MessageHistoryViewInput, tag: MessageTags?, threadId: Int64?, namespaces: MessageIdNamespaces, messageId: MessageId, halfLimit: Int) {
+    init(postbox: PostboxImpl, locations: MessageHistoryViewInput, tag: MessageTags?, threadId: Int64?, namespaces: MessageIdNamespaces, messageId: MessageId, halfLimit: Int) {
         self.messageId = messageId
         self.tag = tag
         self.threadId = threadId
@@ -1441,7 +1572,7 @@ final class HistoryViewLoadingState {
         return self.holes.removeHole(space: space, range: range)
     }
     
-    func checkAndSample(postbox: Postbox) -> HistoryViewLoadingSample {
+    func checkAndSample(postbox: PostboxImpl) -> HistoryViewLoadingSample {
         while true {
             if let indices = self.holes.holesBySpace[PeerIdAndNamespace(peerId: self.messageId.peerId, namespace: self.messageId.namespace)] {
                 if indices.contains(Int(messageId.id)) {
@@ -1470,14 +1601,14 @@ enum HistoryViewState {
     case loaded(HistoryViewLoadedState)
     case loading(HistoryViewLoadingState)
     
-    init(postbox: Postbox, inputAnchor: HistoryViewInputAnchor, tag: MessageTags?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, statistics: MessageHistoryViewOrderStatistics, halfLimit: Int, locations: MessageHistoryViewInput) {
+    init(postbox: PostboxImpl, inputAnchor: HistoryViewInputAnchor, tag: MessageTags?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, statistics: MessageHistoryViewOrderStatistics, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, halfLimit: Int, locations: MessageHistoryViewInput) {
         switch inputAnchor {
             case let .index(index):
-                self = .loaded(HistoryViewLoadedState(anchor: .index(index), tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
+            self = .loaded(HistoryViewLoadedState(anchor: .index(index), tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
             case .lowerBound:
-                self = .loaded(HistoryViewLoadedState(anchor: .lowerBound, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
+                self = .loaded(HistoryViewLoadedState(anchor: .lowerBound, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
             case .upperBound:
-                self = .loaded(HistoryViewLoadedState(anchor: .upperBound, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
+                self = .loaded(HistoryViewLoadedState(anchor: .upperBound, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
             case .unread:
                 let anchorPeerId: PeerId
                 switch locations {
@@ -1486,7 +1617,7 @@ enum HistoryViewState {
                     case let .associated(peerId, _):
                         anchorPeerId = peerId
                     case .external:
-                        self = .loaded(HistoryViewLoadedState(anchor: .upperBound, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
+                        self = .loaded(HistoryViewLoadedState(anchor: .upperBound, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
                         return
                 }
                 if postbox.chatListIndexTable.get(peerId: anchorPeerId).includedIndex(peerId: anchorPeerId) != nil, let combinedState = postbox.readStateTable.getCombinedState(anchorPeerId) {
@@ -1517,12 +1648,12 @@ enum HistoryViewState {
                         let sampledState = loadingState.checkAndSample(postbox: postbox)
                         switch sampledState {
                             case let .ready(anchor, holes):
-                                self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: holes))
+                                self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: holes))
                             case .loadHole:
                                 self = .loading(loadingState)
                         }
                     } else {
-                        self = .loaded(HistoryViewLoadedState(anchor: anchor ?? .upperBound, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
+                        self = .loaded(HistoryViewLoadedState(anchor: anchor ?? .upperBound, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
                     }
                 } else {
                     preconditionFailure()
@@ -1531,7 +1662,12 @@ enum HistoryViewState {
                 var threadId: Int64?
                 switch locations {
                 case let .external(input):
-                    threadId = input.threadId
+                    switch input.content {
+                    case let .thread(_, id, _):
+                        threadId = id
+                    case .messages:
+                        break
+                    }
                 default:
                     break
                 }
@@ -1539,14 +1675,14 @@ enum HistoryViewState {
                 let sampledState = loadingState.checkAndSample(postbox: postbox)
                 switch sampledState {
                     case let .ready(anchor, holes):
-                        self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: holes))
+                        self = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: holes))
                     case .loadHole:
                         self = .loading(loadingState)
                 }
         }
     }
     
-    func sample(postbox: Postbox, clipHoles: Bool) -> HistoryViewSample {
+    func sample(postbox: PostboxImpl, clipHoles: Bool) -> HistoryViewSample {
         switch self {
         case let .loading(loadingState):
             return .loading(loadingState.checkAndSample(postbox: postbox))

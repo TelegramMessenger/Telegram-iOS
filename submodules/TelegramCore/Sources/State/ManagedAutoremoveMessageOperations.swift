@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 private typealias SignalKitTimer = SwiftSignalKit.Timer
 
@@ -43,7 +42,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
     return Signal { _ in
         let helper = Atomic(value: ManagedAutoremoveMessageOperationsHelper())
         
-        /*let timeOffsetOnce = Signal<Double, NoError> { subscriber in
+        let timeOffsetOnce = Signal<Double, NoError> { subscriber in
             subscriber.putNext(network.globalTimeDifference)
             return EmptyDisposable
         }
@@ -59,9 +58,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
         |> map { value -> Double in
             round(value)
         }
-        |> distinctUntilChanged*/
-
-        let timeOffset: Signal<Double, NoError> = .single(0.0)
+        |> distinctUntilChanged
 
         Logger.shared.log("Autoremove", "starting isRemove: \(isRemove)")
 

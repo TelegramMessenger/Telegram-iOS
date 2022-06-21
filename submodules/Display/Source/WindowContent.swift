@@ -163,6 +163,7 @@ public final class WindowHostView {
     
     var present: ((ContainableController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
     var presentInGlobalOverlay: ((_ controller: ContainableController) -> Void)?
+    var addGlobalPortalHostViewImpl: ((PortalSourceView) -> Void)?
     var presentNative: ((UIViewController) -> Void)?
     var nativeController: (() -> UIViewController?)?
     var updateSize: ((CGSize, Double) -> Void)?
@@ -200,10 +201,23 @@ public protocol WindowHost {
     func forEachController(_ f: (ContainableController) -> Void)
     func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void)
     func presentInGlobalOverlay(_ controller: ContainableController)
+    func addGlobalPortalHostView(sourceView: PortalSourceView)
     func invalidateDeferScreenEdgeGestures()
     func invalidatePrefersOnScreenNavigationHidden()
     func invalidateSupportedOrientations()
     func cancelInteractiveKeyboardGestures()
+}
+
+public extension UIView {
+    var windowHost: WindowHost? {
+        if let window = self.window as? WindowHost {
+            return window
+        } else if let result = findWindow(self) {
+            return result
+        } else {
+            return nil
+        }
+    }
 }
 
 private func layoutMetricsForScreenSize(_ size: CGSize) -> LayoutMetrics {
@@ -377,6 +391,10 @@ public class Window1 {
         
         self.hostView.presentInGlobalOverlay = { [weak self] controller in
             self?.presentInGlobalOverlay(controller)
+        }
+        
+        self.hostView.addGlobalPortalHostViewImpl = { [weak self] sourceView in
+            self?.addGlobalPortalHostView(sourceView: sourceView)
         }
         
         self.hostView.presentNative = { [weak self] controller in
@@ -681,7 +699,7 @@ public class Window1 {
         if self.isInteractionBlocked {
             return nil
         }
-        
+                
         if let result = self.topPresentationContext.hitTest(view: self.hostView.containerView, point: point, with: event) {
             return result
         }
@@ -691,7 +709,8 @@ public class Window1 {
         }
         
         for view in self.hostView.eventView.subviews.reversed() {
-            if NSStringFromClass(type(of: view)) == "UITransitionView" {
+            let classString = NSStringFromClass(type(of: view))
+            if classString == "UITransitionView" || classString.contains("ContextMenuContainerView") {
                 if let result = view.hitTest(point, with: event) {
                     return result
                 }
@@ -1103,6 +1122,10 @@ public class Window1 {
             }
         }
         self.overlayPresentationContext.present(controller)
+    }
+    
+    public func addGlobalPortalHostView(sourceView: PortalSourceView) {
+        self.overlayPresentationContext.addGlobalPortalHostView(sourceView: sourceView)
     }
     
     public func presentNative(_ controller: UIViewController) {

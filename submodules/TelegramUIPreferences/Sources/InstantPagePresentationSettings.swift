@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public enum InstantPageThemeType: Int32 {
@@ -17,7 +18,7 @@ public enum InstantPagePresentationFontSize: Int32 {
     case xxlarge = 4
 }
 
-public final class InstantPagePresentationSettings: PreferencesEntry, Equatable {
+public final class InstantPagePresentationSettings: Codable, Equatable {
     public static var defaultSettings = InstantPagePresentationSettings(themeType: .light, fontSize: .standard, forceSerif: false, autoNightMode: true, ignoreAutoNightModeUntil: 0)
     
     public var themeType: InstantPageThemeType
@@ -34,28 +35,24 @@ public final class InstantPagePresentationSettings: PreferencesEntry, Equatable 
         self.ignoreAutoNightModeUntil = ignoreAutoNightModeUntil
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.themeType = InstantPageThemeType(rawValue: decoder.decodeInt32ForKey("themeType", orElse: 0))!
-        self.fontSize = InstantPagePresentationFontSize(rawValue: decoder.decodeInt32ForKey("fontSize", orElse: 0))!
-        self.forceSerif = decoder.decodeInt32ForKey("forceSerif", orElse: 0) != 0
-        self.autoNightMode = decoder.decodeInt32ForKey("autoNightMode", orElse: 0) != 0
-        self.ignoreAutoNightModeUntil = decoder.decodeInt32ForKey("ignoreAutoNightModeUntil", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.themeType = InstantPageThemeType(rawValue: try container.decode(Int32.self, forKey: "themeType"))!
+        self.fontSize = InstantPagePresentationFontSize(rawValue: try container.decode(Int32.self, forKey: "fontSize"))!
+        self.forceSerif = try container.decode(Int32.self, forKey: "forceSerif") != 0
+        self.autoNightMode = try container.decode(Int32.self, forKey: "autoNightMode") != 0
+        self.ignoreAutoNightModeUntil = try container.decode(Int32.self, forKey: "ignoreAutoNightModeUntil")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.themeType.rawValue, forKey: "themeType")
-        encoder.encodeInt32(self.fontSize.rawValue, forKey: "fontSize")
-        encoder.encodeInt32(self.forceSerif ? 1 : 0, forKey: "forceSerif")
-        encoder.encodeInt32(self.autoNightMode ? 1 : 0, forKey: "autoNightMode")
-        encoder.encodeInt32(self.ignoreAutoNightModeUntil, forKey: "ignoreAutoNightModeUntil")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? InstantPagePresentationSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.themeType.rawValue, forKey: "themeType")
+        try container.encode(self.fontSize.rawValue, forKey: "fontSize")
+        try container.encode((self.forceSerif ? 1 : 0) as Int32, forKey: "forceSerif")
+        try container.encode((self.autoNightMode ? 1 : 0) as Int32, forKey: "autoNightMode")
+        try container.encode(self.ignoreAutoNightModeUntil, forKey: "ignoreAutoNightModeUntil")
     }
     
     public static func ==(lhs: InstantPagePresentationSettings, rhs: InstantPagePresentationSettings) -> Bool {
@@ -98,16 +95,16 @@ public final class InstantPagePresentationSettings: PreferencesEntry, Equatable 
     }
 }
 
-public func updateInstantPagePresentationSettingsInteractively(accountManager: AccountManager, _ f: @escaping (InstantPagePresentationSettings) -> InstantPagePresentationSettings) -> Signal<Void, NoError> {
+public func updateInstantPagePresentationSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (InstantPagePresentationSettings) -> InstantPagePresentationSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.instantPagePresentationSettings, { entry in
             let currentSettings: InstantPagePresentationSettings
-            if let entry = entry as? InstantPagePresentationSettings {
+            if let entry = entry?.get(InstantPagePresentationSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = InstantPagePresentationSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 func _internal_requestStartBot(account: Account, botPeerId: PeerId, payload: String?) -> Signal<Void, NoError> {
     if let payload = payload, !payload.isEmpty {
@@ -45,7 +44,7 @@ func _internal_requestStartBotInGroup(account: Account, botPeerId: PeerId, group
     return account.postbox.transaction { transaction -> (Peer?, Peer?) in
         return (transaction.getPeer(botPeerId), transaction.getPeer(groupPeerId))
     }
-    |> mapError { _ -> RequestStartBotInGroupError in return .generic }
+    |> mapError { _ -> RequestStartBotInGroupError in }
     |> mapToSignal { botPeer, groupPeer -> Signal<StartBotInGroupResult, RequestStartBotInGroupError> in
         if let botPeer = botPeer, let inputUser = apiInputUser(botPeer), let groupPeer = groupPeer, let inputGroup = apiInputPeer(groupPeer) {
             let request = account.network.request(Api.functions.messages.startBot(bot: inputUser, peer: inputGroup, randomId: Int64.random(in: Int64.min ... Int64.max), startParam: payload ?? ""))
@@ -56,8 +55,7 @@ func _internal_requestStartBotInGroup(account: Account, botPeerId: PeerId, group
                 account.stateManager.addUpdates(result)
                 if groupPeerId.namespace == Namespaces.Peer.CloudChannel {
                     return _internal_fetchChannelParticipant(account: account, peerId: groupPeerId, participantId: botPeerId)
-                    |> mapError { _ -> RequestStartBotInGroupError in return .generic
-                    }
+                    |> mapError { _ -> RequestStartBotInGroupError in }
                     |> mapToSignal { participant -> Signal<StartBotInGroupResult, RequestStartBotInGroupError> in
                         return account.postbox.transaction { transaction -> StartBotInGroupResult in
                             if let participant = participant, let peer = transaction.getPeer(participant.peerId) {
@@ -70,8 +68,7 @@ func _internal_requestStartBotInGroup(account: Account, botPeerId: PeerId, group
                                 return .none
                             }
                         }
-                        |> mapError { _ -> RequestStartBotInGroupError in return .generic
-                        }
+                        |> mapError { _ -> RequestStartBotInGroupError in }
                     }
                 } else {
                     return .single(.none)

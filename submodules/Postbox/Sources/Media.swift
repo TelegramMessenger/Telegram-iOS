@@ -68,17 +68,19 @@ public struct MediaId: Hashable, PostboxCoding, CustomStringConvertible, Codable
     }
 }
 
-public protocol AssociatedMediaData: class, PostboxCoding {
+public protocol AssociatedMediaData: AnyObject, PostboxCoding {
     func isEqual(to: AssociatedMediaData) -> Bool
 }
 
-public protocol Media: class, PostboxCoding {
+public protocol Media: AnyObject, PostboxCoding {
     var id: MediaId? { get }
     var peerIds: [PeerId] { get }
     
     var indexableText: String? { get }
     
     func isLikelyToBeUpdated() -> Bool
+
+    func preventsAutomaticMessageSendingFailure() -> Bool
     
     func isEqual(to other: Media) -> Bool
     func isSemanticallyEqual(to other: Media) -> Bool
@@ -86,6 +88,10 @@ public protocol Media: class, PostboxCoding {
 
 public extension Media {
     func isLikelyToBeUpdated() -> Bool {
+        return false
+    }
+
+    func preventsAutomaticMessageSendingFailure() -> Bool {
         return false
     }
 

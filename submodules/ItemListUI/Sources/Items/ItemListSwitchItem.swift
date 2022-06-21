@@ -139,6 +139,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
         self.backgroundNode.backgroundColor = .white
         
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -220,7 +221,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                 itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                 contentSize = CGSize(width: params.width, height: 44.0)
-                insets = itemListNeighborsGroupedInsets(neighbors)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             if item.disableLeadingInset {
@@ -235,7 +236,6 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {
                     currentDisabledOverlayNode = ASDisplayNode()
-                    currentDisabledOverlayNode?.backgroundColor = itemBackgroundColor.withAlphaComponent(0.6)
                 }
             } else {
                 currentDisabledOverlayNode = nil
@@ -277,6 +277,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                         } else {
                             transition.updateFrame(node: currentDisabledOverlayNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height - separatorHeight)))
                         }
+                        currentDisabledOverlayNode.backgroundColor = itemBackgroundColor.withAlphaComponent(0.6)
                     } else if let disabledOverlayNode = strongSelf.disabledOverlayNode {
                         transition.updateAlpha(node: disabledOverlayNode, alpha: 0.0, completion: { [weak disabledOverlayNode] _ in
                             disabledOverlayNode?.removeFromSupernode()
@@ -328,7 +329,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                             }
                             if strongSelf.maskNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                                strongSelf.insertSubnode(strongSelf.maskNode, aboveSubnode: strongSelf.switchGestureNode)
                             }
                             
                             let hasCorners = itemListHasRoundedBlockLayout(params) && !item.noCorners
@@ -345,6 +346,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                             switch neighbors.bottom {
                                 case .sameSection(false):
                                     bottomStripeInset = 16.0 + params.leftInset
+                                    strongSelf.bottomStripeNode.isHidden = false
                                 default:
                                     bottomStripeInset = 0.0
                                     hasBottomCorners = true
@@ -437,10 +439,14 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+        self.layer.allowsGroupOpacity = true
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4, completion: { [weak self] _ in
+            self?.layer.allowsGroupOpacity = false
+        })
     }
     
     override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.layer.allowsGroupOpacity = true
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     

@@ -70,15 +70,18 @@ public final class SearchDisplayController {
         self.contentNode.dismissInput = { [weak self] in
             self?.searchBar.deactivate(clear: false)
         }
+        
+        var isFirstTime = true
         self.contentNode.setQuery = { [weak self] prefix, tokens, query in
             if let strongSelf = self {
                 strongSelf.searchBar.prefixString = prefix
                 let previousTokens = strongSelf.searchBar.tokens
                 strongSelf.searchBar.tokens = tokens
                 strongSelf.searchBar.text = query
-                if previousTokens.count < tokens.count {
+                if previousTokens.count < tokens.count && !isFirstTime {
                     strongSelf.searchBar.selectLastToken()
                 }
+                isFirstTime = false
             }
         }
         if let placeholder = placeholder {
@@ -153,7 +156,7 @@ public final class SearchDisplayController {
         self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: safeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
-    public func activate(insertSubnode: @escaping (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode?) {
+    public func activate(insertSubnode: @escaping (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode?, focus: Bool = true) {
         guard let (layout, navigationBarHeight) = self.containerLayout else {
             return
         }
@@ -228,7 +231,9 @@ public final class SearchDisplayController {
         insertSubnode(self.searchBar, true)
         self.searchBar.layout()
         
-        self.searchBar.activate()
+        if focus {
+            self.searchBar.activate()
+        }
         if let placeholder = placeholder {
             self.searchBar.animateIn(from: placeholder, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
             if self.contentNode.hasDim {

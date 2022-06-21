@@ -6,6 +6,9 @@ swift_library(
     srcs = glob([
 		"Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
@@ -13,6 +16,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/ComponentFlow:ComponentFlow",
     ],
     visibility = [
         "//visibility:public",

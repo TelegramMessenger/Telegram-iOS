@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
@@ -25,7 +24,7 @@ private enum ThemeSettingsColorEntry: Comparable, Identifiable {
     
     var stableId: ThemeSettingsColorEntryId {
         switch self {
-            case let .color(index, _, themeReference, accentColor, _):
+            case let .color(_, _, themeReference, accentColor, _):
                 return .color(themeReference.index &+ Int64(accentColor?.index ?? 0))
             case let .theme(_, _, _, theme, _):
                 return .theme(theme.index)
@@ -94,7 +93,7 @@ enum ThemeSettingsColorOption: Equatable {
             case let .accentColor(color):
                 return color.color
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings {
+            if case let .cloud(theme) = reference, let settings = theme.theme.settings?.first {
                     return UIColor(argb: settings.accentColor)
                 } else {
                     return nil
@@ -111,34 +110,28 @@ enum ThemeSettingsColorOption: Equatable {
         }
     }
     
-    var plainBubbleColors: (UIColor, UIColor)? {
+    var plainBubbleColors: [UInt32] {
         switch self {
             case let .accentColor(color):
                 return color.plainBubbleColors
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings, let messageColors = settings.messageColors {
-                    return (UIColor(argb: messageColors.top), UIColor(argb: messageColors.bottom))
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings?.first, !settings.messageColors.isEmpty {
+                    return settings.messageColors
                 } else {
-                    return nil
+                    return []
                 }
         }
     }
     
-    var customBubbleColors: (UIColor, UIColor?)? {
+    var customBubbleColors: [UInt32] {
         switch self {
             case let .accentColor(color):
                 return color.customBubbleColors
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings, let messageColors = settings.messageColors {
-                    let topColor = UIColor(argb: messageColors.top)
-                    let bottomColor = UIColor(argb: messageColors.bottom)
-                    if topColor.argb != bottomColor.argb {
-                        return (topColor, bottomColor)
-                    } else {
-                        return (topColor, nil)
-                    }
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings?.first, !settings.messageColors.isEmpty {
+                    return settings.messageColors
                 } else {
-                    return nil
+                    return []
                 }
         }
     }
@@ -382,9 +375,9 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                         var topColor: UIColor?
                         var bottomColor: UIColor?
                         
-                        if let colors = item.color?.plainBubbleColors {
-                            topColor = colors.0
-                            bottomColor = colors.1
+                        if let colors = item.color?.plainBubbleColors, !colors.isEmpty {
+                            topColor = UIColor(rgb: colors[0])
+                            bottomColor = UIColor(rgb: colors.last ?? colors[0])
                         } else if case .builtin(.dayClassic) = item.themeReference {
                             if let accentColor = item.color?.accentColor {
                                 let hsb = accentColor.hsb
@@ -392,7 +385,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                                 topColor = bubbleColor
                                 bottomColor = bubbleColor
                             } else {
-                                fillColor = UIColor(rgb: 0x007ee5)
+                                fillColor = UIColor(rgb: 0x007aff)
                                 strokeColor = fillColor
                                 topColor = UIColor(rgb: 0xe1ffc7)
                                 bottomColor = topColor
@@ -556,8 +549,6 @@ private final class ThemeSettingsAccentColorPickerItemNode : ListViewItemNode {
     }
     
     func asyncLayout() -> (ThemeSettingsAccentColorPickerItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
-        let currentItem = self.item
-
         return { [weak self] item, params in
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 60.0, height: 60.0), insets: UIEdgeInsets())
             return (itemLayout, { animated in
@@ -720,10 +711,12 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
     private var item: ThemeSettingsAccentColorItem?
     private var layoutParams: ListViewItemLayoutParams?
     
+    private var tapping = false
+    
     var tag: ItemListItemTag? {
         return self.item?.tag
     }
-    
+        
     init() {
         self.containerNode = ASDisplayNode()
         
@@ -768,16 +761,16 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         }
         self.enqueuedTransitions.remove(at: 0)
         
-        var options = ListViewDeleteAndInsertOptions()
+        let options = ListViewDeleteAndInsertOptions()
         var scrollToItem: ListViewScrollToItem?
-        if !self.initialized || transition.updatePosition {
+        if !self.initialized || transition.updatePosition || !self.tapping {
             if let index = item.colors.firstIndex(where: { $0.index == item.currentColor?.index }) {
                 scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-70.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
             }
         }
 
-        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
         })
     }
     
@@ -790,17 +783,12 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                 themeUpdated = true
             }
             
-            var colorUpdated: Bool
-            if currentItem?.currentColor != item.currentColor {
-                colorUpdated = true
-            }
-            
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
             contentSize = CGSize(width: params.width, height: 60.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -845,6 +833,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         case .sameSection(false):
                             bottomStripeInset = params.leftInset + 16.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
@@ -926,12 +915,16 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                                 }
                                 item.openColorPicker(create)
                             } else {
+                                strongSelf.tapping = true
                                 item.updated(color)
+                                Queue.mainQueue().after(0.4) {
+                                    strongSelf.tapping = false
+                                }
                             }
-                            ensureColorVisible(listNode: strongSelf.listNode, accentColor: color, animated: true)
+                            let _ = ensureColorVisible(listNode: strongSelf.listNode, accentColor: color, animated: true)
                         }
                     }
-                    let contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)? = { [weak item] color, selected, node, gesture in
+                    let contextAction: ((ThemeSettingsColorOption?, Bool, ASDisplayNode, ContextGesture?) -> Void)? = { color, selected, node, gesture in
                         if let strongSelf = self, let item = strongSelf.item {
                             item.contextAction?(selected, item.generalThemeReference, color, node, gesture)
                         }

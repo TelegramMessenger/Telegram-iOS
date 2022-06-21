@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ProgressNavigationButtonNode
@@ -15,7 +14,7 @@ import PhoneNumberFormat
 import CoreTelephony
 import MessageUI
 
-final class ChangePhoneNumberController: ViewController, MFMailComposeViewControllerDelegate {
+public final class ChangePhoneNumberController: ViewController, MFMailComposeViewControllerDelegate {
     private var controllerNode: ChangePhoneNumberControllerNode {
         return self.displayNode as! ChangePhoneNumberControllerNode
     }
@@ -42,7 +41,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
     
     private var presentationData: PresentationData
     
-    init(context: AccountContext) {
+    public init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -95,21 +94,23 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
                 strongSelf.controllerNode.updateCountryCode()
             }
         })
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
-    override func viewWillAppear(_ animated: Bool) {
+    override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         self.controllerNode.activateInput()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.controllerNode.activateInput()
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: 0.0, transition: transition)
@@ -144,7 +145,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
                             text = presentationData.strings.Login_InvalidPhoneError
                             actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneNumberOccupied:
-                            text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(phoneNumber)).0
+                            text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(phoneNumber)).string
                             actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneBanned:
                             text = presentationData.strings.Login_PhoneBannedError
@@ -160,7 +161,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
                                 let carrier = CTCarrier()
                                 let mnc = carrier.mobileNetworkCode ?? "none"
                                 
-                                strongSelf.presentEmailComposeController(address: "login@stel.com", subject: presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).0, body: presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0)
+                                strongSelf.presentEmailComposeController(address: "login@stel.com", subject: presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).string, body: presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string)
                             }))
                         case .generic:
                             text = presentationData.strings.Login_UnknownError

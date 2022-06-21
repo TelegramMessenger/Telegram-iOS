@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 
 public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> NSAttributedString {
     var nsString: NSString?
@@ -39,6 +38,8 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
                 string.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: range)
             case .Underline:
                 string.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: range)
+            case .Spoiler:
+                string.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: range)
             default:
                 break
         }
@@ -68,7 +69,9 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
         if nsString == nil {
             nsString = text as NSString
         }
-        if range.location + range.length > stringLength {
+        if range.location > stringLength {
+            continue
+        } else if range.location + range.length > stringLength {
             range.location = max(0, stringLength - range.length)
             range.length = stringLength - range.location
         }
@@ -224,6 +227,12 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     nsString = text as NSString
                 }
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard), value: nsString!.substring(with: range), range: range)
+            case .Spoiler:
+                if external {
+                    string.addAttribute(NSAttributedString.Key.backgroundColor, value: UIColor.gray, range: range)
+                } else {
+                    string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true as NSNumber, range: range)
+                }
             case let .Custom(type):
                 if type == ApplicationSpecificEntityType.Timecode {
                     string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
@@ -242,20 +251,56 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 break
         }
         
+        var addedAttributes: [(NSRange, ChatTextFontAttributes)] = []
+        func addFont(ranges: [NSRange], fontAttributes: ChatTextFontAttributes) {
+            for range in ranges {
+                var font: UIFont?
+                if fontAttributes == [.bold, .italic] {
+                    font = boldItalicFont
+                } else if fontAttributes == [.bold] {
+                    font = boldFont
+                    addedAttributes.append((range, fontAttributes))
+                } else if fontAttributes == [.italic] {
+                    font = italicFont
+                    addedAttributes.append((range, fontAttributes))
+                }
+                if let font = font {
+                    string.addAttribute(NSAttributedString.Key.font, value: font, range: range)
+                }
+            }
+        }
+        
         for (range, fontAttributes) in fontAttributes {
-            var font: UIFont?
-            if fontAttributes.contains(.blockQuote) {
-                font = blockQuoteFont
-            } else if fontAttributes == [.bold, .italic] {
-                font = boldItalicFont
-            } else if fontAttributes == [.bold] {
-                font = boldFont
-            } else if fontAttributes == [.italic] {
-                font = italicFont
+            var ranges = [range]
+            var fontAttributes = fontAttributes
+            if fontAttributes != [.bold, .italic] {
+                for (existingRange, existingAttributes) in addedAttributes {
+                    if let intersection = existingRange.intersection(range) {
+                        if intersection.length == range.length {
+                            if existingAttributes == .bold || existingAttributes == .italic {
+                                fontAttributes.insert(existingAttributes)
+                            }
+                        } else {
+                            var fontAttributes = fontAttributes
+                            if existingAttributes == .bold || existingAttributes == .italic {
+                                fontAttributes.insert(existingAttributes)
+                            }
+                            addFont(ranges: [intersection], fontAttributes: fontAttributes)
+                            
+                            ranges = []
+                            if range.upperBound > existingRange.lowerBound {
+                                ranges.append(NSRange(location: range.lowerBound, length: existingRange.lowerBound - range.lowerBound))
+                            }
+                            if range.upperBound > existingRange.upperBound {
+                                ranges.append(NSRange(location: existingRange.upperBound, length: range.upperBound - existingRange.upperBound))
+                            }
+                        }
+                        break
+                    }
+                }
             }
-            if let font = font {
-                string.addAttribute(NSAttributedString.Key.font, value: font, range: range)
-            }
+            
+            addFont(ranges: ranges, fontAttributes: fontAttributes)
         }
     }
     return string

@@ -3,13 +3,12 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 extension TelegramTheme {
-    convenience init?(apiTheme: Api.Theme) {
+    convenience init(apiTheme: Api.Theme) {
         switch apiTheme {
-            case let .theme(flags, id, accessHash, slug, title, document, settings, installCount):
-                self.init(id: id, accessHash: accessHash, slug: slug, title: title, file: document.flatMap(telegramMediaFileFromApiDocument), settings: settings.flatMap(TelegramThemeSettings.init(apiThemeSettings:)), isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0, installCount: installCount)
+            case let .theme(flags, id, accessHash, slug, title, document, settings, emoticon, installCount):
+                self.init(id: id, accessHash: accessHash, slug: slug, emoticon: emoticon, title: title, file: document.flatMap(telegramMediaFileFromApiDocument), settings: settings?.compactMap(TelegramThemeSettings.init(apiThemeSettings:)), isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0, installCount: installCount)
         }
     }
 }
@@ -47,19 +46,23 @@ extension TelegramBaseTheme {
 extension TelegramThemeSettings {
     convenience init?(apiThemeSettings: Api.ThemeSettings) {
         switch apiThemeSettings {
-            case let .themeSettings(_, baseTheme, accentColor, messageTopColor, messageBottomColor, wallpaper):
-                var messageColors: (UInt32, UInt32)?
-                if let messageTopColor = messageTopColor, let messageBottomColor = messageBottomColor {
-                    messageColors = (UInt32(bitPattern: messageTopColor), UInt32(bitPattern: messageBottomColor))
-                }
-                self.init(baseTheme: TelegramBaseTheme(apiBaseTheme: baseTheme), accentColor: UInt32(bitPattern: accentColor), messageColors: messageColors, wallpaper: wallpaper.flatMap(TelegramWallpaper.init(apiWallpaper:)))
+            case let .themeSettings(flags, baseTheme, accentColor, outboxAccentColor, messageColors, wallpaper):
+                self.init(baseTheme: TelegramBaseTheme(apiBaseTheme: baseTheme), accentColor: UInt32(bitPattern: accentColor), outgoingAccentColor: outboxAccentColor.flatMap { UInt32(bitPattern: $0) }, messageColors: messageColors?.map(UInt32.init(bitPattern:)) ?? [], animateMessageColors: (flags & 1 << 2) != 0, wallpaper: wallpaper.flatMap(TelegramWallpaper.init(apiWallpaper:)))
         }
     }
     
     var apiInputThemeSettings: Api.InputThemeSettings {
         var flags: Int32 = 0
-        if let _ = self.messageColors {
+        if !self.messageColors.isEmpty {
             flags |= 1 << 0
+        }
+        
+        if self.animateMessageColors {
+            flags |= 1 << 2
+        }
+        
+        if let _ = self.outgoingAccentColor {
+            flags |= 1 << 3
         }
         
         var inputWallpaper: Api.InputWallPaper?
@@ -70,15 +73,6 @@ extension TelegramThemeSettings {
             flags |= 1 << 1
         }
         
-        var messageTopColor: Int32?
-        var messageBottomColor: Int32?
-        if let color = self.messageColors?.0 {
-            messageTopColor = Int32(bitPattern: color)
-        }
-        if let color = self.messageColors?.1 {
-            messageBottomColor = Int32(bitPattern: color)
-        }
-        
-        return .inputThemeSettings(flags: flags, baseTheme: self.baseTheme.apiBaseTheme, accentColor: Int32(bitPattern: self.accentColor), messageTopColor: messageTopColor, messageBottomColor: messageBottomColor, wallpaper: inputWallpaper, wallpaperSettings: inputWallpaperSettings)
+        return .inputThemeSettings(flags: flags, baseTheme: self.baseTheme.apiBaseTheme, accentColor: Int32(bitPattern: self.accentColor), outboxAccentColor: self.outgoingAccentColor.flatMap { Int32(bitPattern: $0) }, messageColors: self.messageColors.isEmpty ? nil : self.messageColors.map(Int32.init(bitPattern:)), wallpaper: inputWallpaper, wallpaperSettings: inputWallpaperSettings)
     }
 }

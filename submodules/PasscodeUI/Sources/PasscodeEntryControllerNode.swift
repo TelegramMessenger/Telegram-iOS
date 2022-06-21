@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import LocalAuth
@@ -19,7 +18,7 @@ private let subtitleFont = Font.regular(15.0)
 private let buttonFont = Font.regular(17.0)
 
 final class PasscodeEntryControllerNode: ASDisplayNode {
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private var presentationData: PresentationData
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -54,7 +53,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     var checkPasscode: ((String) -> Void)?
     var requestBiometrics: (() -> Void)?
     
-    init(accountManager: AccountManager, presentationData: PresentationData, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, modalPresentation: Bool) {
+    init(accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, modalPresentation: Bool) {
         self.accountManager = accountManager
         self.presentationData = presentationData
         self.theme = theme
@@ -79,6 +78,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.keyboardNode = PasscodeEntryKeyboardNode()
         self.cancelButtonNode = HighlightableButtonNode()
         self.deleteButtonNode = HighlightableButtonNode()
+        self.deleteButtonNode.hitTestSlop = UIEdgeInsets(top: -10.0, left: -16.0, bottom: -10.0, right: -16.0)
         self.biometricButtonNode = HighlightableButtonNode()
         self.effectView = UIVisualEffectView(effect: nil)
             
@@ -95,7 +95,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.inputFieldNode.append(character)
                 if let gradientNode = strongSelf.backgroundCustomNode as? GradientBackgroundNode {
-                    gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring))
+                    gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), extendAnimation: false, backwards: false, completion: {})
                 }
             }
         }
@@ -103,7 +103,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             if let strongSelf = self {
                 let _ = strongSelf.inputFieldNode.delete()
                 if let gradientNode = strongSelf.backgroundCustomNode as? GradientBackgroundNode {
-                    gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), backwards: true)
+                    gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), extendAnimation: false, backwards: true, completion: {})
                 }
             }
         }
@@ -168,7 +168,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.hapticFeedback.tap()
         let result = self.inputFieldNode.delete()
         if result, let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
-            gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), backwards: true)
+            gradientNode.animateEvent(transition: .animated(duration: 0.55, curve: .spring), extendAnimation: false, backwards: true, completion: {})
         }
     }
     
@@ -208,7 +208,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 let baseColor: UIColor
                 let lightness = color.lightness
                 if lightness < 0.1 || lightness > 0.9 {
-                    baseColor = self.theme.chat.message.outgoing.bubble.withoutWallpaper.fill
+                    baseColor = self.theme.chat.message.outgoing.bubble.withoutWallpaper.fill[0]
                 } else{
                     baseColor = color
                 }
@@ -229,8 +229,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                     color4 = baseColor.withMultiplied(hue: 1.034, saturation: 0.583, brightness: 1.043)
                 }
                 self.background = CustomPasscodeBackground(size: size, colors: [color1, color2, color3, color4], inverted: false)
-            case let .gradient(_, colors, settings):
-                self.background = CustomPasscodeBackground(size: size, colors: colors.compactMap { UIColor(rgb: $0) }, inverted: (settings.intensity ?? 0) < 0)
+            case let .gradient(gradient):
+                self.background = CustomPasscodeBackground(size: size, colors: gradient.colors.compactMap { UIColor(rgb: $0) }, inverted: (gradient.settings.intensity ?? 0) < 0)
             case .image, .file:
                 if let image = chatControllerBackgroundImage(theme: self.theme, wallpaper: self.wallpaper, mediaBox: self.accountManager.mediaBox, composed: false, knockoutMode: false) {
                     self.background = ImageBasedPasscodeBackground(image: image, size: size)
@@ -338,7 +338,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
                 gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring), extendAnimation: true)
+                gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring), extendAnimation: true, backwards: false, completion: {})
             }
         }
         self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .none)
@@ -356,12 +356,16 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
             gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            gradientNode.animateEvent(transition: .animated(duration: 0.35, curve: .spring))
+            gradientNode.animateEvent(transition: .animated(duration: 0.35, curve: .spring), extendAnimation: false, backwards: false, completion: {})
             self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         if !iconFrame.isEmpty {
             self.iconNode.animateIn(fromScale: 0.416)
             self.iconNode.layer.animatePosition(from: iconFrame.center.offsetBy(dx: 6.0, dy: 6.0), to: self.iconNode.layer.position, duration: 0.45)
+            
+            Queue.mainQueue().after(0.45) {
+                self.hapticFeedback.impact(.medium)
+            }
         }
         
         self.subtitleNode.isHidden = true
@@ -382,7 +386,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
             
             if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
-                gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring))
+                gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring), extendAnimation: false, backwards: false, completion: {})
             }
             self.inputFieldNode.animateIn()
             self.keyboardNode.animateIn()
@@ -397,6 +401,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             
             Queue.mainQueue().after(1.5, {
                 self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .crossFade)
+                if let validLayout = self.validLayout {
+                    self.containerLayoutUpdated(validLayout, navigationBarHeight: 0.0, transition: .animated(duration: 0.5, curve: .easeInOut))
+                }
             })
             
             completion()
@@ -422,7 +429,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.hapticFeedback.error()
         
         if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
-            gradientNode.animateEvent(transition: .animated(duration: 1.5, curve: .spring), extendAnimation: true, backwards: true)
+            gradientNode.animateEvent(transition: .animated(duration: 1.5, curve: .spring), extendAnimation: true, backwards: true, completion: {})
         }
     }
     
@@ -437,7 +444,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         if let backgroundCustomNode = self.backgroundCustomNode {
             transition.updateFrame(node: backgroundCustomNode, frame: bounds)
             if let gradientBackgroundNode = backgroundCustomNode as? GradientBackgroundNode {
-                gradientBackgroundNode.updateLayout(size: bounds.size, transition: transition)
+                gradientBackgroundNode.updateLayout(size: bounds.size, transition: transition, extendAnimation: false, backwards: false, completion: {})
             }
         }
         transition.updateFrame(view: self.effectView, frame: bounds)
@@ -467,6 +474,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         if layout.size.width == 320.0 || (isLandscape && keyboardHidden) {
             self.iconNode.alpha = 0.0
+        } else {
+            self.iconNode.alpha = 1.0
         }
                 
         let passcodeLayout = PasscodeLayout(layout: layout, modalPresentation: self.modalPresentation)

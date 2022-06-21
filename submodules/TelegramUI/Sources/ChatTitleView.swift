@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
@@ -131,7 +130,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     if !peerView.peerIsContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
                                         segments = [.text(0, NSAttributedString(string: formatPhoneNumber(phone), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     } else {
-                                        segments = [.text(0, NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                                        segments = [.text(0, NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     }
                                 }
                                 if peer.isFake {
@@ -170,18 +169,22 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 commentsPart = commentsPart.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,."))
                             }
                             
-                            let rawTextAndRanges: (String, [(Int, NSRange)])
+                            let rawTextAndRanges: PresentationStrings.FormattedString
                             switch type {
                             case .comments:
                                 rawTextAndRanges = self.strings.Conversation_TitleCommentsFormat("\(count)", commentsPart)
                             case .replies:
                                 rawTextAndRanges = self.strings.Conversation_TitleRepliesFormat("\(count)", commentsPart)
                             }
-                            
-                            let (rawText, ranges) = rawTextAndRanges
+
+                            let rawText = rawTextAndRanges.string
+
                             var textIndex = 0
                             var latestIndex = 0
-                            for (index, range) in ranges {
+                            for indexAndRange in rawTextAndRanges.ranges {
+                                let index = indexAndRange.index
+                                let range = indexAndRange.range
+
                                 var lowerSegmentIndex = range.lowerBound
                                 if index != 0 {
                                     lowerSegmentIndex = min(lowerSegmentIndex, latestIndex)
@@ -338,12 +341,16 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             stringValue = strings.Activity_RecordingVideoMessage
                         case .uploadingInstantVideo:
                             stringValue = strings.Activity_UploadingVideoMessage
-                        case .speakingInGroupCall:
+                        case .choosingSticker:
+                            stringValue = strings.Activity_ChoosingSticker
+                        case let .seeingEmojiInteraction(emoticon):
+                            stringValue = strings.Activity_EnjoyingAnimations(emoticon).string
+                        case .speakingInGroupCall, .interactingWithEmoji:
                             stringValue = ""
                     }
                 } else {
                     for (peer, _) in inputActivities {
-                        let title = peer.compactDisplayTitle
+                        let title = EnginePeer(peer).compactDisplayTitle
                         if !title.isEmpty {
                             if first {
                                 first = false
@@ -367,8 +374,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         state = .uploading(string, color)
                     case .playingGame:
                         state = .playingGame(string, color)
-                    case .speakingInGroupCall:
+                    case .speakingInGroupCall, .interactingWithEmoji:
                         state = .typingText(string, color)
+                    case .choosingSticker:
+                        state = .choosingSticker(string, color)
+                    case .seeingEmojiInteraction:
+                        state = .choosingSticker(string, color)
                 }
             } else {
                 if let titleContent = self.titleContent {
@@ -400,11 +411,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                         let userPresence: TelegramUserPresence
                                         if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence {
                                             userPresence = presence
-                                            self.presenceManager?.reset(presence: presence)
+                                            self.presenceManager?.reset(presence: EnginePeer.Presence(presence))
                                         } else {
                                             userPresence = TelegramUserPresence(status: .none, lastActivity: 0)
                                         }
-                                        let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, dateTimeFormat: self.dateTimeFormat, presence: userPresence, relativeTo: Int32(timestamp))
+                                        let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, dateTimeFormat: self.dateTimeFormat, presence: EnginePeer.Presence(userPresence), relativeTo: Int32(timestamp))
                                         let attributedString = NSAttributedString(string: string, font: subtitleFont, textColor: activity ? titleTheme.rootController.navigationBar.accentTextColor : titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(attributedString, activity ? .online : .lastSeenTime)
                                     } else {
@@ -417,7 +428,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                                         for participant in participants.participants {
                                             if let presence = peerView.peerPresences[participant.peerId] as? TelegramUserPresence {
-                                                let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
+                                                let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(presence), relativeTo: Int32(timestamp))
                                                 switch relativeStatus {
                                                 case .online:
                                                     onlineCount += 1
@@ -732,5 +743,34 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             return self.button.view
         }
         return super.hitTest(point, with: event)
+    }
+
+    final class SnapshotState {
+        fileprivate let snapshotView: UIView
+
+        fileprivate init(snapshotView: UIView) {
+            self.snapshotView = snapshotView
+        }
+    }
+
+    func prepareSnapshotState() -> SnapshotState {
+        let snapshotView = self.snapshotView(afterScreenUpdates: false)!
+        return SnapshotState(
+            snapshotView: snapshotView
+        )
+    }
+
+    func animateFromSnapshot(_ snapshotState: SnapshotState) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.layer.animatePosition(from: CGPoint(x: 0.0, y: 20.0), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
+
+        snapshotState.snapshotView.frame = self.frame
+        self.superview?.insertSubview(snapshotState.snapshotView, belowSubview: self)
+
+        let snapshotView = snapshotState.snapshotView
+        snapshotState.snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView?.removeFromSuperview()
+        })
+        snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -20.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
     }
 }

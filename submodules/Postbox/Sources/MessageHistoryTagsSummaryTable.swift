@@ -82,10 +82,10 @@ class MessageHistoryTagsSummaryTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 4 + 8 + 4)
     
-    init(valueBox: ValueBox, table: ValueBoxTable, invalidateTable: InvalidatedMessageHistoryTagsSummaryTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, invalidateTable: InvalidatedMessageHistoryTagsSummaryTable) {
         self.invalidateTable = invalidateTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(key: MessageHistoryTagsSummaryKey, sharedKey: ValueBoxKey = ValueBoxKey(length: 4 + 8 + 4)) -> ValueBoxKey {
@@ -116,9 +116,9 @@ class MessageHistoryTagsSummaryTable: Table {
         }
     }
     
-    func addMessage(key: MessageHistoryTagsSummaryKey, id: MessageId.Id, updatedSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
+    func addMessage(key: MessageHistoryTagsSummaryKey, id: MessageId.Id, isNewlyAdded: Bool, updatedSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         if let current = self.get(key) {
-            if !current.range.contains(id) {
+            if !isNewlyAdded || !current.range.contains(id) {
                 self.set(key, summary: current.withAddedCount(1), updatedSummaries: &updatedSummaries)
                 if current.range.maxId == 0 {
                     self.invalidateTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: key.peerId, namespace: key.namespace, tagMask: key.tag), operations: &invalidateSummaries)
@@ -133,7 +133,7 @@ class MessageHistoryTagsSummaryTable: Table {
     func removeMessage(key: MessageHistoryTagsSummaryKey, id: MessageId.Id, updatedSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         if let current = self.get(key) {
             if current.count == 0 {
-                self.invalidateTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: key.peerId, namespace: key.namespace, tagMask: key.tag), operations: &invalidateSummaries)
+                //self.invalidateTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: key.peerId, namespace: key.namespace, tagMask: key.tag), operations: &invalidateSummaries)
             } else {
                 self.set(key, summary: current.withAddedCount(-1), updatedSummaries: &updatedSummaries)
             }
@@ -171,6 +171,10 @@ class MessageHistoryTagsSummaryTable: Table {
                 }
             }
             self.updatedKeys.removeAll()
+        }
+
+        if !self.useCaches {
+            self.cachedSummaries.removeAll()
         }
     }
 }

@@ -1,7 +1,6 @@
 import Foundation
 import Intents
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import BuildConfig
@@ -23,9 +22,7 @@ private func setupSharedLogger(rootPath: String, path: String) {
     }
 }
 
-private let accountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInputState: { interfaceState, inputState -> PeerChatInterfaceState? in
-    return interfaceState
-}, fetchResource: { account, resource, ranges, _ in
+private let accountAuxiliaryMethods = AccountAuxiliaryMethods(fetchResource: { account, resource, ranges, _ in
     return nil
 }, fetchResourceMediaReferenceHash: { resource in
     return .single(nil)
@@ -37,10 +34,10 @@ private struct ApplicationSettings {
     let logging: LoggingSettings
 }
 
-private func applicationSettings(accountManager: AccountManager) -> Signal<ApplicationSettings, NoError> {
+private func applicationSettings(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<ApplicationSettings, NoError> {
     return accountManager.transaction { transaction -> ApplicationSettings in
         let loggingSettings: LoggingSettings
-        if let value = transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings {
+        if let value = transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) {
             loggingSettings = value
         } else {
             loggingSettings = LoggingSettings.defaultSettings
@@ -82,7 +79,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     private let searchDisposable = MetaDisposable()
     
     private var rootPath: String?
-    private var accountManager: AccountManager?
+    private var accountManager: AccountManager<TelegramAccountManagerTypes>?
     private var encryptionParameters: ValueBoxEncryptionParameters?
     private var appGroupUrl: URL?
     
@@ -124,7 +121,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
         initializeAccountManagement()
-        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
+        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
         self.accountManager = accountManager
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
@@ -137,25 +134,22 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             var result: [(AccountRecordId, Int, PeerId, Bool)] = []
             for record in view.records {
                 let isLoggedOut = record.attributes.contains(where: { attribute in
-                    return attribute is LoggedOutAccountAttribute
-                })
-                if isLoggedOut {
-                    continue
-                }
-                /*let isTestingEnvironment = record.attributes.contains(where: { attribute in
-                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                    if case .loggedOut = attribute {
                         return true
                     } else {
                         return false
                     }
-                })*/
+                })
+                if isLoggedOut {
+                    continue
+                }
                 var backupData: AccountBackupData?
                 var sortIndex: Int32 = 0
                 for attribute in record.attributes {
-                    if let attribute = attribute as? AccountSortOrderAttribute {
-                        sortIndex = attribute.order
-                    } else if let attribute = attribute as? AccountBackupDataAttribute {
-                        backupData = attribute.data
+                    if case let .sortOrder(sortOrder) = attribute {
+                        sortIndex = sortOrder.order
+                    } else if case let .backupData(backupDataValue) = attribute {
+                        backupData = backupDataValue.data
                     }
                 }
                 if let backupData = backupData {
@@ -178,7 +172,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         if let accountCache = accountCache {
             account = .single(accountCache)
         } else {
-            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
+            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
             |> mapToSignal { account -> Signal<Account?, NoError> in
                 if let account = account {
                     switch account {
@@ -897,12 +891,16 @@ private final class WidgetIntentHandler {
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         self.encryptionParameters = encryptionParameters
         
-        let view = AccountManager.getCurrentRecords(basePath: rootPath + "/accounts-metadata")
+        let view = AccountManager<TelegramAccountManagerTypes>.getCurrentRecords(basePath: rootPath + "/accounts-metadata")
         
         var result: [(AccountRecordId, Int, PeerId, Bool)] = []
         for record in view.records {
             let isLoggedOut = record.attributes.contains(where: { attribute in
-                return attribute is LoggedOutAccountAttribute
+                if case .loggedOut = attribute {
+                    return true
+                } else {
+                    return false
+                }
             })
             if isLoggedOut {
                 continue
@@ -910,10 +908,10 @@ private final class WidgetIntentHandler {
             var backupData: AccountBackupData?
             var sortIndex: Int32 = 0
             for attribute in record.attributes {
-                if let attribute = attribute as? AccountSortOrderAttribute {
-                    sortIndex = attribute.order
-                } else if let attribute = attribute as? AccountBackupDataAttribute {
-                    backupData = attribute.data
+                if case let .sortOrder(sortOrder) = attribute {
+                    sortIndex = sortOrder.order
+                } else if case let .backupData(backupDataValue) = attribute {
+                    backupData = backupDataValue.data
                 }
             }
             if let backupData = backupData {
@@ -945,7 +943,7 @@ private final class WidgetIntentHandler {
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
             
-            let presentationData = WidgetPresentationData.getForExtension()
+            //let presentationData = WidgetPresentationData.getForExtension()
             
             let error = NSError(domain: "Locked", code: 1, userInfo: [
                 NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
@@ -1319,7 +1317,7 @@ private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId
                     }
                 }
             } else if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
-                let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.uniqueId, representationId: "intents.png", keepDuration: .shortLived)
+                let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "intents.png", keepDuration: .shortLived)
                 if let _ = fileSize(cachedPath) {
                     do {
                         let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)

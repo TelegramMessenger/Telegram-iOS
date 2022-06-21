@@ -24,8 +24,11 @@ public final class AnimationNode : ASDisplayNode {
         return self.animationView()?.isAnimationPlaying ?? false
     }
     
+    private var currentParams: (String?, [String: UIColor]?)?
+    
     public init(animation: String? = nil, colors: [String: UIColor]? = nil, scale: CGFloat = 1.0) {
         self.scale = scale
+        self.currentParams = (animation, colors)
         
         super.init()
         
@@ -80,11 +83,23 @@ public final class AnimationNode : ASDisplayNode {
         })
     }
     
+    public func makeCopy(colors: [String: UIColor]? = nil, progress: CGFloat? = nil) -> AnimationNode? {
+        guard let (animation, currentColors) = self.currentParams else {
+            return nil
+        }
+        let animationNode = AnimationNode(animation: animation, colors: colors ?? currentColors, scale: 1.0)
+        animationNode.animationView()?.play(fromProgress: progress ?? (self.animationView()?.animationProgress ?? 0.0), toProgress: 1.0, withCompletion: { [weak animationNode] _ in
+            animationNode?.completion?()
+        })
+        return animationNode
+    }
+    
     public func seekToEnd() {
         self.animationView()?.animationProgress = 1.0
     }
     
     public func setAnimation(name: String, colors: [String: UIColor]? = nil) {
+        self.currentParams = (name, colors)
         if let url = getAppBundle().url(forResource: name, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
             self.didPlay = false
             self.animationView()?.sceneModel = composition

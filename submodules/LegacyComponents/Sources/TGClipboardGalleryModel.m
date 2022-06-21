@@ -79,7 +79,7 @@
             };
         }
         
-        _interfaceView = [[TGMediaPickerGalleryInterfaceView alloc] initWithContext:_context focusItem:focusItem selectionContext:selectionContext editingContext:editingContext hasSelectionPanel:hasSelectionPanel hasCameraButton:false recipientName:recipientName];
+        _interfaceView = [[TGMediaPickerGalleryInterfaceView alloc] initWithContext:_context focusItem:focusItem selectionContext:selectionContext editingContext:editingContext stickersContext:stickersContext hasSelectionPanel:hasSelectionPanel hasCameraButton:false recipientName:recipientName];
         _interfaceView.hasCaptions = hasCaptions;
         _interfaceView.hasTimer = hasTimer;
         [_interfaceView setEditorTabPressed:^(TGPhotoEditorTab tab)
@@ -100,7 +100,7 @@
             
             [strongSelf setCurrentItemWithIndex:index];
         };
-        _interfaceView.captionSet = ^(id<TGModernGalleryItem> item, NSString *caption, NSArray *entities)
+        _interfaceView.captionSet = ^(id<TGModernGalleryItem> item, NSAttributedString *caption)
         {
             __strong TGClipboardGalleryModel *strongSelf = weakSelf;
             if (strongSelf == nil || strongSelf.saveItemCaption == nil)
@@ -108,7 +108,7 @@
             
             __strong TGModernGalleryController *controller = strongSelf.controller;
             if ([controller.currentItem conformsToProtocol:@protocol(TGModernGalleryEditableItem)])
-                strongSelf.saveItemCaption(((id<TGModernGalleryEditableItem>)item).editableMediaItem, caption, entities);
+                strongSelf.saveItemCaption(((id<TGModernGalleryEditableItem>)item).editableMediaItem, caption);
         };
         _interfaceView.timerRequested = ^
         {
@@ -169,12 +169,6 @@
         };
     }
     return self;
-}
-
-- (void)setSuggestionContext:(TGSuggestionContext *)suggestionContext
-{
-    _suggestionContext = suggestionContext;
-    [_interfaceView setSuggestionContext:suggestionContext];
 }
 
 - (NSInteger)selectionCount
@@ -305,7 +299,7 @@
     
     PGPhotoEditorValues *editorValues = (PGPhotoEditorValues *)[item.editingContext adjustmentsForItem:item.editableMediaItem];
     
-    NSString *caption = [item.editingContext captionForItem:item.editableMediaItem];
+    NSAttributedString *caption = [item.editingContext captionForItem:item.editableMediaItem];
     
     CGRect refFrame = CGRectZero;
     UIView *editorReferenceView = [self referenceViewForItem:item frame:&refFrame];
@@ -326,7 +320,6 @@
     controller.editingContext = _editingContext;
     controller.stickersContext = _stickersContext;
     self.editorController = controller;
-    controller.suggestionContext = self.suggestionContext;
     controller.willFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, id temporaryRep, bool hasChanges)
     {
         __strong TGClipboardGalleryModel *strongSelf = weakSelf;
@@ -370,14 +363,14 @@
             strongSelf.didFinishRenderingFullSizeImage(item.editableMediaItem, image);
     };
     
-    controller.captionSet = ^(NSString *caption, NSArray *entities)
+    controller.captionSet = ^(NSAttributedString *caption)
     {
         __strong TGClipboardGalleryModel *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
         if (strongSelf.saveItemCaption != nil)
-            strongSelf.saveItemCaption(item.editableMediaItem, caption, entities);
+            strongSelf.saveItemCaption(item.editableMediaItem, caption);
     };
     
     controller.requestToolbarsHidden = ^(bool hidden, bool animated)

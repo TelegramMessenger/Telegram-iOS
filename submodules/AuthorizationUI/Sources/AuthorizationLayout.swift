@@ -144,7 +144,8 @@ public func layoutAuthorizationItems(bounds: CGRect, items: [AuthorizationLayout
     }
     
     var verticalOrigin: CGFloat = bounds.minY + floor((bounds.size.height - totalHeight) / 2.0)
-    for item in solvedItems {
+    for i in 0 ..< solvedItems.count {
+        let item = solvedItems[i]
         verticalOrigin += item.spacingBefore!
         transition.updateFrame(node: item.item.node, frame: CGRect(origin: CGPoint(x: floor((bounds.size.width - item.item.size.width) / 2.0), y: verticalOrigin), size: item.item.size))
         verticalOrigin += item.item.size.height

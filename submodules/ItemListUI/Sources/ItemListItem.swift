@@ -120,11 +120,15 @@ public func itemListNeighborsPlainInsets(_ neighbors: ItemListNeighbors) -> UIEd
     return insets
 }
 
-public func itemListNeighborsGroupedInsets(_ neighbors: ItemListNeighbors) -> UIEdgeInsets {
+public func itemListNeighborsGroupedInsets(_ neighbors: ItemListNeighbors, _ params: ListViewItemLayoutParams) -> UIEdgeInsets {
     let topInset: CGFloat
     switch neighbors.top {
     case .none:
-        topInset = UIScreenPixel + 35.0
+        if itemListHasRoundedBlockLayout(params) {
+            topInset = UIScreenPixel + 24.0
+        } else {
+            topInset = UIScreenPixel + 35.0
+        }
     case .sameSection:
         topInset = 0.0
     case let .otherSection(otherInset):
@@ -148,18 +152,20 @@ public func itemListNeighborsGroupedInsets(_ neighbors: ItemListNeighbors) -> UI
 }
 
 public func itemListHasRoundedBlockLayout(_ params: ListViewItemLayoutParams) -> Bool {
-    return params.width > 480.0
+    return params.width >= 375.0
 }
 
 public final class ItemListPresentationData: Equatable {
     public let theme: PresentationTheme
     public let fontSize: PresentationFontSize
     public let strings: PresentationStrings
+    public var currentDate: String?
     
     public init(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings) {
         self.theme = theme
         self.fontSize = fontSize
         self.strings = strings
+        self.currentDate = nil
     }
     
     public static func ==(lhs: ItemListPresentationData, rhs: ItemListPresentationData) -> Bool {
@@ -222,6 +228,11 @@ public extension PresentationFontSize {
 
 public extension ItemListPresentationData {
     convenience init(_ presentationData: PresentationData) {
-        self.init(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings)
+        self.init(
+            theme: presentationData.theme,
+            fontSize: presentationData.listsFontSize,
+            strings: presentationData.strings
+        )
+        self.currentDate = presentationData.currentDate
     }
 }

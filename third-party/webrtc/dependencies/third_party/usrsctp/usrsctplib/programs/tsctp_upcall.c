@@ -105,11 +105,29 @@ struct tsctp_meta {
 static void
 gettimeofday(struct timeval *tv, void *ignore)
 {
-	struct timeb tb;
+	FILETIME filetime;
+	ULARGE_INTEGER ularge;
 
-	ftime(&tb);
-	tv->tv_sec = (long)tb.time;
-	tv->tv_usec = tb.millitm * 1000;
+	GetSystemTimeAsFileTime(&filetime);
+	ularge.LowPart = filetime.dwLowDateTime;
+	ularge.HighPart = filetime.dwHighDateTime;
+	/* Change base from Jan 1 1601 00:00:00 to Jan 1 1970 00:00:00 */
+#if defined(__MINGW32__)
+	ularge.QuadPart -= 116444736000000000ULL;
+#else
+	ularge.QuadPart -= 116444736000000000UI64;
+#endif
+	/*
+	 * ularge.QuadPart is now the number of 100-nanosecond intervals
+	 * since Jan 1 1970 00:00:00.
+	 */
+#if defined(__MINGW32__)
+	tv->tv_sec = (long)(ularge.QuadPart / 10000000ULL);
+	tv->tv_usec = (long)((ularge.QuadPart % 10000000ULL) / 10ULL);
+#else
+	tv->tv_sec = (long)(ularge.QuadPart / 10000000UI64);
+	tv->tv_usec = (long)((ularge.QuadPart % 10000000UI64) / 10UI64);
+#endif
 }
 #endif
 
@@ -151,7 +169,9 @@ static const char *bytes2human(uint64_t bytes)
 		}
 	}
 
-	snprintf(output, sizeof(output), "%.02lf %s", human_size, suffix[i]);
+	if (snprintf(output, sizeof(output), "%.02lf %s", human_size, suffix[i]) < 0) {
+		output[0] = '\0';
+	}
 	return output;
 }
 
@@ -188,7 +208,7 @@ handle_accept(struct socket *upcall_socket, void *upcall_data, int upcall_flags)
 	meta_accepted->par_role = meta_listening->par_role;
 	meta_accepted->par_stats_human = meta_listening->par_stats_human;
 	meta_accepted->buffer = malloc(BUFFERSIZE);
-	
+
 	if (!meta_accepted->buffer) {
 		printf("malloc() failed!\n");
 		exit(EXIT_FAILURE);
@@ -237,13 +257,13 @@ handle_upcall(struct socket *upcall_socket, void *upcall_data, int upcall_flags)
 					snp = (union sctp_notification *)tsctp_meta->buffer;
 					if (snp->sn_header.sn_type == SCTP_PEER_ADDR_CHANGE) {
 						spc = &snp->sn_paddr_change;
-						printf("SCTP_PEER_ADDR_CHANGE: state=%d, error=%d\n",spc->spc_state, spc->spc_error);
+						printf("SCTP_PEER_ADDR_CHANGE: state=%u, error=%u\n",spc->spc_state, spc->spc_error);
 					}
 				}
 			} else {
 				if (par_very_verbose) {
 					if (infotype == SCTP_RECVV_RCVINFO) {
-						printf("Message received - %zd bytes - %s - sid %u - tsn %u %s\n",				
+						printf("Message received - %zd bytes - %s - sid %u - tsn %u %s\n",
 							n,
 							(rcvinfo->rcv_flags & SCTP_UNORDERED) ? "unordered" : "ordered",
 							rcvinfo->rcv_sid,
@@ -314,7 +334,7 @@ handle_upcall(struct socket *upcall_socket, void *upcall_data, int upcall_flags)
 			snd_info.snd_flags |= SCTP_UNORDERED;
 		}
 
-		while ((n = usrsctp_sendv(upcall_socket, tsctp_meta->buffer, tsctp_meta->par_message_length, NULL, 0, &snd_info, (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0)) > 0) {
+		while (usrsctp_sendv(upcall_socket, tsctp_meta->buffer, tsctp_meta->par_message_length, NULL, 0, &snd_info, (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0) > 0) {
 			if (tsctp_meta->stat_messages == 0) {
 				gettimeofday(&tsctp_meta->stat_start, NULL);
 			}

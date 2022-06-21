@@ -2,18 +2,17 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
-import SyncCore
 
-public func updateLoggingSettings(accountManager: AccountManager, _ f: @escaping (LoggingSettings) -> LoggingSettings) -> Signal<Void, NoError> {
+public func updateLoggingSettings(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (LoggingSettings) -> LoggingSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         var updated: LoggingSettings?
         transaction.updateSharedData(SharedDataKeys.loggingSettings, { current in
-            if let current = current as? LoggingSettings {
+            if let current = current?.get(LoggingSettings.self) {
                 updated = f(current)
-                return updated
+                return PreferencesEntry(updated)
             } else {
                 updated = f(LoggingSettings.defaultSettings)
-                return updated
+                return PreferencesEntry(updated)
             }
         })
         

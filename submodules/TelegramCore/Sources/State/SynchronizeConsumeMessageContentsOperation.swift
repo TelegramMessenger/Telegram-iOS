@@ -1,9 +1,8 @@
 import Postbox
-import SyncCore
 
 func addSynchronizeConsumeMessageContentsOperation(transaction: Transaction, messageIds: [MessageId]) {
     for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(messageIds)) {
-        var updateLocalIndex: Int32?
+        let updateLocalIndex: Int32? = nil
         /*transaction.operationLogEnumerateEntries(peerId: peerId, tag: OperationLogTags.SynchronizeConsumeMessageContents, { entry in
             updateLocalIndex = entry.tagLocalIndex
             return false

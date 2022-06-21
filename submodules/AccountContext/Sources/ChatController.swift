@@ -1,31 +1,35 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
-import SyncCore
 import TextFormat
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import Postbox
 
 public final class ChatMessageItemAssociatedData: Equatable {
     public enum ChannelDiscussionGroupStatus: Equatable {
         case unknown
-        case known(PeerId?)
+        case known(EnginePeer.Id?)
     }
     
     public let automaticDownloadPeerType: MediaAutoDownloadPeerType
     public let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     public let isRecentActions: Bool
     public let subject: ChatControllerSubject?
-    public let contactsPeerIds: Set<PeerId>
+    public let contactsPeerIds: Set<EnginePeer.Id>
     public let channelDiscussionGroup: ChannelDiscussionGroupStatus
     public let animatedEmojiStickers: [String: [StickerPackItem]]
+    public let additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]]
     public let forcedResourceStatus: FileMediaResourceStatus?
+    public let currentlyPlayingMessageId: EngineMessage.Index?
+    public let isCopyProtectionEnabled: Bool
+    public let availableReactions: AvailableReactions?
+    public let defaultReaction: String?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<PeerId> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: String?) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
@@ -33,7 +37,12 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.contactsPeerIds = contactsPeerIds
         self.channelDiscussionGroup = channelDiscussionGroup
         self.animatedEmojiStickers = animatedEmojiStickers
+        self.additionalAnimatedEmojiStickers = additionalAnimatedEmojiStickers
         self.forcedResourceStatus = forcedResourceStatus
+        self.currentlyPlayingMessageId = currentlyPlayingMessageId
+        self.isCopyProtectionEnabled = isCopyProtectionEnabled
+        self.availableReactions = availableReactions
+        self.defaultReaction = defaultReaction
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -58,7 +67,19 @@ public final class ChatMessageItemAssociatedData: Equatable {
         if lhs.animatedEmojiStickers != rhs.animatedEmojiStickers {
             return false
         }
+        if lhs.additionalAnimatedEmojiStickers != rhs.additionalAnimatedEmojiStickers {
+            return false
+        }
         if lhs.forcedResourceStatus != rhs.forcedResourceStatus {
+            return false
+        }
+        if lhs.currentlyPlayingMessageId != rhs.currentlyPlayingMessageId {
+            return false
+        }
+        if lhs.isCopyProtectionEnabled != rhs.isCopyProtectionEnabled {
+            return false
+        }
+        if lhs.availableReactions != rhs.availableReactions {
             return false
         }
         return true
@@ -78,7 +99,7 @@ public extension ChatMessageItemAssociatedData {
 public enum ChatControllerInteractionLongTapAction {
     case url(String)
     case mention(String)
-    case peerMention(PeerId, String)
+    case peerMention(EnginePeer.Id, String)
     case command(String)
     case hashtag(String)
     case timecode(Double, String)
@@ -109,7 +130,7 @@ public enum ChatHistoryMessageSelection: Equatable {
 
 public enum ChatControllerInitialBotStartBehavior {
     case interactive
-    case automatic(returnToPeerId: PeerId, scheduled: Bool)
+    case automatic(returnToPeerId: EnginePeer.Id, scheduled: Bool)
 }
 
 public struct ChatControllerInitialBotStart {
@@ -122,14 +143,56 @@ public struct ChatControllerInitialBotStart {
     }
 }
 
+public struct ChatControllerInitialAttachBotStart {
+    public let botId: PeerId
+    public let payload: String?
+    
+    public init(botId: PeerId, payload: String?) {
+        self.botId = botId
+        self.payload = payload
+    }
+}
+
 public enum ChatControllerInteractionNavigateToPeer {
     case `default`
     case chat(textInputState: ChatTextInputState?, subject: ChatControllerSubject?, peekData: ChatPeekTimeout?)
     case info
     case withBotStartPayload(ChatControllerInitialBotStart)
+    case withAttachBot(ChatControllerInitialAttachBotStart)
 }
 
-public struct ChatTextInputState: PostboxCoding, Equatable {
+public struct ChatInterfaceForwardOptionsState: Codable, Equatable {
+    public var hideNames: Bool
+    public var hideCaptions: Bool
+    public var unhideNamesOnCaptionChange: Bool
+    
+    public static func ==(lhs: ChatInterfaceForwardOptionsState, rhs: ChatInterfaceForwardOptionsState) -> Bool {
+        return lhs.hideNames == rhs.hideNames && lhs.hideCaptions == rhs.hideCaptions && lhs.unhideNamesOnCaptionChange == rhs.unhideNamesOnCaptionChange
+    }
+    
+    public init(hideNames: Bool, hideCaptions: Bool, unhideNamesOnCaptionChange: Bool) {
+        self.hideNames = hideNames
+        self.hideCaptions = hideCaptions
+        self.unhideNamesOnCaptionChange = unhideNamesOnCaptionChange
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.hideNames = (try? container.decodeIfPresent(Bool.self, forKey: "hn")) ?? false
+        self.hideCaptions = (try? container.decodeIfPresent(Bool.self, forKey: "hc")) ?? false
+        self.unhideNamesOnCaptionChange = false
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.hideNames, forKey: "hn")
+        try container.encode(self.hideCaptions, forKey: "hc")
+    }
+}
+
+public struct ChatTextInputState: Codable, Equatable {
     public let inputText: NSAttributedString
     public let selectionRange: Range<Int>
     
@@ -152,29 +215,40 @@ public struct ChatTextInputState: PostboxCoding, Equatable {
         let length = inputText.length
         self.selectionRange = length ..< length
     }
-    
-    public init(decoder: PostboxDecoder) {
-        self.inputText = ((decoder.decodeObjectForKey("at", decoder: { ChatTextInputStateText(decoder: $0) }) as? ChatTextInputStateText) ?? ChatTextInputStateText()).attributedText()
-        self.selectionRange = Int(decoder.decodeInt32ForKey("as0", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("as1", orElse: 0))
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        self.inputText = ((try? container.decode(ChatTextInputStateText.self, forKey: "at")) ?? ChatTextInputStateText()).attributedText()
+        let rangeFrom = (try? container.decode(Int32.self, forKey: "as0")) ?? 0
+        let rangeTo = (try? container.decode(Int32.self, forKey: "as1")) ?? 0
+        if rangeFrom <= rangeTo {
+            self.selectionRange = Int(rangeFrom) ..< Int(rangeTo)
+        } else {
+            let length = self.inputText.length
+            self.selectionRange = length ..< length
+        }
     }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(ChatTextInputStateText(attributedText: self.inputText), forKey: "at")
-        
-        encoder.encodeInt32(Int32(self.selectionRange.lowerBound), forKey: "as0")
-        encoder.encodeInt32(Int32(self.selectionRange.upperBound), forKey: "as1")
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(ChatTextInputStateText(attributedText: self.inputText), forKey: "at")
+        try container.encode(Int32(self.selectionRange.lowerBound), forKey: "as0")
+        try container.encode(Int32(self.selectionRange.upperBound), forKey: "as1")
     }
 }
 
-public enum ChatTextInputStateTextAttributeType: PostboxCoding, Equatable {
+public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
     case bold
     case italic
     case monospace
-    case textMention(PeerId)
+    case textMention(EnginePeer.Id)
     case textUrl(String)
-    
-    public init(decoder: PostboxDecoder) {
-        switch decoder.decodeInt32ForKey("t", orElse: 0) {
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        switch (try? container.decode(Int32.self, forKey: "t")) ?? 0 {
         case 0:
             self = .bold
         case 1:
@@ -182,69 +256,37 @@ public enum ChatTextInputStateTextAttributeType: PostboxCoding, Equatable {
         case 2:
             self = .monospace
         case 3:
-            self = .textMention(PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0)))
+            let peerId = (try? container.decode(Int64.self, forKey: "peerId")) ?? 0
+            self = .textMention(EnginePeer.Id(peerId))
         case 4:
-            self = .textUrl(decoder.decodeStringForKey("url", orElse: ""))
+            let url = (try? container.decode(String.self, forKey: "url")) ?? ""
+            self = .textUrl(url)
         default:
             assertionFailure()
             self = .bold
         }
     }
-    
-    public func encode(_ encoder: PostboxEncoder) {
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
         switch self {
         case .bold:
-            encoder.encodeInt32(0, forKey: "t")
+            try container.encode(0 as Int32, forKey: "t")
         case .italic:
-            encoder.encodeInt32(1, forKey: "t")
+            try container.encode(1 as Int32, forKey: "t")
         case .monospace:
-            encoder.encodeInt32(2, forKey: "t")
+            try container.encode(2 as Int32, forKey: "t")
         case let .textMention(id):
-            encoder.encodeInt32(3, forKey: "t")
-            encoder.encodeInt64(id.toInt64(), forKey: "peerId")
+            try container.encode(3 as Int32, forKey: "t")
+            try container.encode(id.toInt64(), forKey: "peerId")
         case let .textUrl(url):
-            encoder.encodeInt32(4, forKey: "t")
-            encoder.encodeString(url, forKey: "url")
-        }
-    }
-    
-    public static func ==(lhs: ChatTextInputStateTextAttributeType, rhs: ChatTextInputStateTextAttributeType) -> Bool {
-        switch lhs {
-        case .bold:
-            if case .bold = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .italic:
-            if case .italic = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .monospace:
-            if case .monospace = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .textMention(id):
-            if case .textMention(id) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .textUrl(url):
-            if case .textUrl(url) = rhs {
-                return true
-            } else {
-                return false
-            }
+            try container.encode(4 as Int32, forKey: "t")
+            try container.encode(url, forKey: "url")
         }
     }
 }
 
-public struct ChatTextInputStateTextAttribute: PostboxCoding, Equatable {
+public struct ChatTextInputStateTextAttribute: Codable, Equatable {
     public let type: ChatTextInputStateTextAttributeType
     public let range: Range<Int>
     
@@ -252,16 +294,23 @@ public struct ChatTextInputStateTextAttribute: PostboxCoding, Equatable {
         self.type = type
         self.range = range
     }
-    
-    public init(decoder: PostboxDecoder) {
-        self.type = decoder.decodeObjectForKey("type", decoder: { ChatTextInputStateTextAttributeType(decoder: $0) }) as! ChatTextInputStateTextAttributeType
-        self.range = Int(decoder.decodeInt32ForKey("range0", orElse: 0)) ..< Int(decoder.decodeInt32ForKey("range1", orElse: 0))
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        self.type = try container.decode(ChatTextInputStateTextAttributeType.self, forKey: "type")
+        let rangeFrom = (try? container.decode(Int32.self, forKey: "range0")) ?? 0
+        let rangeTo = (try? container.decode(Int32.self, forKey: "range1")) ?? 0
+
+        self.range = Int(rangeFrom) ..< Int(rangeTo)
     }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.type, forKey: "type")
-        encoder.encodeInt32(Int32(self.range.lowerBound), forKey: "range0")
-        encoder.encodeInt32(Int32(self.range.upperBound), forKey: "range1")
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.type, forKey: "type")
+
+        try container.encode(Int32(self.range.lowerBound), forKey: "range0")
+        try container.encode(Int32(self.range.upperBound), forKey: "range1")
     }
     
     public static func ==(lhs: ChatTextInputStateTextAttribute, rhs: ChatTextInputStateTextAttribute) -> Bool {
@@ -269,7 +318,7 @@ public struct ChatTextInputStateTextAttribute: PostboxCoding, Equatable {
     }
 }
 
-public struct ChatTextInputStateText: PostboxCoding, Equatable {
+public struct ChatTextInputStateText: Codable, Equatable {
     public let text: String
     public let attributes: [ChatTextInputStateTextAttribute]
     
@@ -303,15 +352,17 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
         })
         self.attributes = parsedAttributes
     }
-    
-    public init(decoder: PostboxDecoder) {
-        self.text = decoder.decodeStringForKey("text", orElse: "")
-        self.attributes = decoder.decodeObjectArrayWithDecoderForKey("attributes")
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        self.text = (try? container.decode(String.self, forKey: "text")) ?? ""
+        self.attributes = (try? container.decode([ChatTextInputStateTextAttribute].self, forKey: "attributes")) ?? []
     }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.text, forKey: "text")
-        encoder.encodeObjectArray(self.attributes, forKey: "attributes")
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        try container.encode(self.text, forKey: "text")
+        try container.encode(self.attributes, forKey: "attributes")
     }
     
     static public func ==(lhs: ChatTextInputStateText, rhs: ChatTextInputStateText) -> Bool {
@@ -339,9 +390,54 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
 }
 
 public enum ChatControllerSubject: Equatable {
-    case message(id: MessageId, highlight: Bool, timecode: Double?)
+    public enum MessageSubject: Equatable {
+        case id(MessageId)
+        case timestamp(Int32)
+    }
+
+    public struct ForwardOptions: Equatable {
+        public let hideNames: Bool
+        public let hideCaptions: Bool
+        
+        public init(hideNames: Bool, hideCaptions: Bool) {
+            self.hideNames = hideNames
+            self.hideCaptions = hideCaptions
+        }
+    }
+    
+    case message(id: MessageSubject, highlight: Bool, timecode: Double?)
     case scheduledMessages
-    case pinnedMessages(id: MessageId?)
+    case pinnedMessages(id: EngineMessage.Id?)
+    case forwardedMessages(ids: [EngineMessage.Id], options: Signal<ForwardOptions, NoError>)
+    
+    public static func ==(lhs: ChatControllerSubject, rhs: ChatControllerSubject) -> Bool {
+        switch lhs {
+        case let .message(lhsId, lhsHighlight, lhsTimecode):
+            if case let .message(rhsId, rhsHighlight, rhsTimecode) = rhs, lhsId == rhsId && lhsHighlight == rhsHighlight && lhsTimecode == rhsTimecode {
+                return true
+            } else {
+                return false
+            }
+        case .scheduledMessages:
+            if case .scheduledMessages = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .pinnedMessages(id):
+            if case .pinnedMessages(id) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .forwardedMessages(lhsIds, _):
+            if case let .forwardedMessages(rhsIds, _) = rhs, lhsIds == rhsIds {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 }
 
 public enum ChatControllerPresentationMode: Equatable {
@@ -350,41 +446,13 @@ public enum ChatControllerPresentationMode: Equatable {
     case inline(NavigationController?)
 }
 
-public final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceState {
-    public let timestamp: Int32
-    public let text: NSAttributedString
-    
-    public init(timestamp: Int32, text: NSAttributedString) {
-        self.timestamp = timestamp
-        self.text = text
-    }
-    
-    public init(decoder: PostboxDecoder) {
-        self.timestamp = decoder.decodeInt32ForKey("d", orElse: 0)
-        self.text = ((decoder.decodeObjectForKey("at", decoder: { ChatTextInputStateText(decoder: $0) }) as? ChatTextInputStateText) ?? ChatTextInputStateText()).attributedText()
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.timestamp, forKey: "d")
-        encoder.encodeObject(ChatTextInputStateText(attributedText: self.text), forKey: "at")
-    }
-    
-    public func isEqual(to: PeerChatListEmbeddedInterfaceState) -> Bool {
-        if let to = to as? ChatEmbeddedInterfaceState {
-            return self.timestamp == to.timestamp && self.text.isEqual(to: to.text)
-        } else {
-            return false
-        }
-    }
-}
-
 public enum ChatPresentationInputQueryResult: Equatable {
     case stickers([FoundStickerItem])
     case hashtags([String])
-    case mentions([Peer])
+    case mentions([EnginePeer])
     case commands([PeerCommand])
     case emojis([(String, String)], NSRange)
-    case contextRequestResult(Peer?, ChatContextResultCollection?)
+    case contextRequestResult(EnginePeer?, ChatContextResultCollection?)
     
     public static func ==(lhs: ChatPresentationInputQueryResult, rhs: ChatPresentationInputQueryResult) -> Bool {
         switch lhs {
@@ -402,16 +470,10 @@ public enum ChatPresentationInputQueryResult: Equatable {
             }
         case let .mentions(lhsPeers):
             if case let .mentions(rhsPeers) = rhs {
-                if lhsPeers.count != rhsPeers.count {
+                if lhsPeers != rhsPeers {
                     return false
-                } else {
-                    for i in 0 ..< lhsPeers.count {
-                        if !lhsPeers[i].isEqual(rhsPeers[i]) {
-                            return false
-                        }
-                    }
-                    return true
                 }
+                return true
             } else {
                 return false
             }
@@ -443,14 +505,9 @@ public enum ChatPresentationInputQueryResult: Equatable {
             }
         case let .contextRequestResult(lhsPeer, lhsCollection):
             if case let .contextRequestResult(rhsPeer, rhsCollection) = rhs {
-                if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
-                    if !lhsPeer.isEqual(rhsPeer) {
-                        return false
-                    }
-                } else if (lhsPeer != nil) != (rhsPeer != nil) {
+                if lhsPeer != rhsPeer {
                     return false
                 }
-                
                 if lhsCollection != rhsCollection {
                     return false
                 }
@@ -482,7 +539,7 @@ public protocol ChatController: ViewController {
     var isSendButtonVisible: Bool { get }
 }
 
-public protocol ChatMessagePreviewItemNode: class {
+public protocol ChatMessagePreviewItemNode: AnyObject {
     var forwardInfoReferenceNode: ASDisplayNode? { get }
 }
 
@@ -504,4 +561,8 @@ public struct FileMediaResourceStatus: Equatable {
 public enum FileMediaResourceMediaStatus: Equatable {
     case fetchStatus(MediaResourceStatus)
     case playbackStatus(FileMediaResourcePlaybackStatus)
+}
+
+public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
+    func targetReactionView(value: String) -> UIView?
 }

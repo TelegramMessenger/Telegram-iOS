@@ -2,9 +2,7 @@ import Display
 import UIKit
 import AsyncDisplayKit
 import UIKit
-import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -49,7 +47,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
     
     func item(context: AccountContext, presentationData: PresentationData, interaction: InviteContactsInteraction) -> ListViewItem {
         switch self {
-            case let .option(_, option, theme, _):
+            case let .option(_, option, _, _):
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: option.title, icon: option.icon, header: nil, action: option.action)
             case let .peer(_, id, contact, count, selection, theme, strings, nameSortOrder, nameDisplayOrder):
                 let status: ContactsPeerItemStatus
@@ -58,7 +56,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
                 } else {
                     status = .none
                 }
-                let peer = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: contact.firstName, lastName: contact.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                let peer: EnginePeer = .user(TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: contact.firstName, lastName: contact.lastName, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []))
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: status, enabled: true, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     interaction.toggleContact(id)
                 })
@@ -184,7 +182,7 @@ struct InviteContactsGroupSelectionState: Equatable {
     }
 }
 
-private func inviteContactsEntries(accountPeer: Peer?, sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)]?, selectionState: InviteContactsGroupSelectionState, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: InviteContactsInteraction) -> [InviteContactsEntry] {
+private func inviteContactsEntries(accountPeer: EnginePeer?, sortedContacts: [(DeviceContactStableId, DeviceContactBasicData, Int32)]?, selectionState: InviteContactsGroupSelectionState, theme: PresentationTheme, strings: PresentationStrings, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: InviteContactsInteraction) -> [InviteContactsEntry] {
     var entries: [InviteContactsEntry] = []
         
     entries.append(.option(0, ContactListAdditionalOption(title: strings.Contacts_ShareTelegram, icon: .generic(UIImage(bundleImageName: "Contact List/InviteActionIcon")!), action: {
@@ -294,7 +292,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         var shareImpl: (() -> Void)?
@@ -329,7 +327,6 @@ final class InviteContactsControllerNode: ASDisplayNode {
             }
         })
         
-        let account = self.context.account
         let selectionStateSignal = self.selectionStatePromise.get()
         let transition: Signal<InviteContactsTransition, NoError>
         let presentationDataPromise = self.presentationDataPromise
@@ -343,12 +340,14 @@ final class InviteContactsControllerNode: ASDisplayNode {
             self?.requestShareTelegram?()
         })
         
-        let existingNumbers: Signal<(Set<String>, Set<PeerId>), NoError> = account.postbox.contactPeersView(accountPeerId: nil, includePresences: false)
-        |> map { view -> (Set<String>, Set<PeerId>) in
+        let existingNumbers: Signal<(Set<String>, Set<EnginePeer.Id>), NoError> = context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Contacts.List(includePresences: false)
+        )
+        |> map { view -> (Set<String>, Set<EnginePeer.Id>) in
             var existingNumbers = Set<String>()
-            var existingPeerIds = Set<PeerId>()
+            var existingPeerIds = Set<EnginePeer.Id>()
             for peer in view.peers {
-                if let peer = peer as? TelegramUser, let phone = peer.phone {
+                if case let .user(peer) = peer, let phone = peer.phone {
                     existingNumbers.insert(formatPhoneNumber(phone))
                 }
                 existingPeerIds.insert(peer.id)

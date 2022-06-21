@@ -5,12 +5,14 @@ public struct MessageHistoryHolesViewEntry: Equatable, Hashable {
     public let direction: MessageHistoryViewRelativeHoleDirection
     public let space: MessageHistoryHoleSpace
     public let count: Int
+    public let userId: Int64?
     
-    public init(hole: MessageHistoryViewHole, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count: Int) {
+    public init(hole: MessageHistoryViewHole, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count: Int, userId: Int64?) {
         self.hole = hole
         self.direction = direction
         self.space = space
         self.count = count
+        self.userId = userId
     }
 }
 

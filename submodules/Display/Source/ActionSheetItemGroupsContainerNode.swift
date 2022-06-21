@@ -84,6 +84,9 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard self.isUserInteractionEnabled else {
+            return nil
+        }
         for groupNode in self.groupNodes {
             if groupNode.frame.contains(point) {
                 return groupNode.hitTest(self.convert(point, to: groupNode), with: event)
@@ -108,5 +111,9 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
         groupItems[itemIndex] = item
         
         self.groups[groupIndex] = ActionSheetItemGroup(items: groupItems)
+    }
+    
+    func setItemGroupOverlayNode(groupIndex: Int, node: ActionSheetGroupOverlayNode) {
+        self.groupNodes[groupIndex].setOverlayNode(node)
     }
 }

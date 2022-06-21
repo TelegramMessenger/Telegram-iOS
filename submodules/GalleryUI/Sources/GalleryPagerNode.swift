@@ -109,9 +109,14 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     public var updateControlsVisibility: (Bool) -> Void = { _ in }
     public var updateOrientation: (UIInterfaceOrientation) -> Void = { _ in }
     public var dismiss: () -> Void = { }
-    public var beginCustomDismiss: () -> Void = { }
+    public var beginCustomDismiss: (Bool) -> Void = { _ in }
     public var completeCustomDismiss: () -> Void = { }
     public var baseNavigationController: () -> NavigationController? = { return nil }
+    public var galleryController: () -> ViewController? = { return nil }
+    
+    private var pagingEnabled = true
+    public var pagingEnabledPromise = Promise<Bool>(true)
+    private var pagingEnabledDisposable: Disposable?
     
     public init(pageGap: CGFloat, disableTapNavigation: Bool) {
         self.pageGap = pageGap
@@ -145,6 +150,17 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         
         self.addSubnode(self.leftFadeNode)
         self.addSubnode(self.rightFadeNode)
+        
+        self.pagingEnabledDisposable = (self.pagingEnabledPromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] pagingEnabled  in
+            if let strongSelf = self {
+                strongSelf.pagingEnabled = pagingEnabled
+            }
+        })
+    }
+    
+    deinit {
+        self.pagingEnabledDisposable?.dispose()
     }
     
     public override func didLoad() {
@@ -154,7 +170,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         recognizer.delegate = self
         self.tapRecognizer = recognizer
         recognizer.tapActionAtPoint = { [weak self] point in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, strongSelf.pagingEnabled else {
                 return .fail
             }
             
@@ -167,7 +183,11 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
                 }
             } else if point.x > size.width - edgeWidth(width: size.width) && strongSelf.canGoToNextItem() {
                 if strongSelf.items.count > 1 {
-                    highlightedSide = true
+                    if point.y < 80.0 {
+                        highlightedSide = nil
+                    } else {
+                        highlightedSide = true
+                    }
                 }
             }
             
@@ -175,13 +195,13 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
                 return .fail
             }
             
-            if let result = strongSelf.hitTest(point, with: nil), let node = result.asyncdisplaykit_node as? ASButtonNode {
+            if let result = strongSelf.hitTest(point, with: nil), let _ = result.asyncdisplaykit_node as? ASButtonNode {
                 return .fail
             }
             return .keepWithSingleTap
         }
         recognizer.highlight = { [weak self] point in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, strongSelf.pagingEnabled else {
                 return
             }
             let size = strongSelf.bounds
@@ -480,6 +500,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         node.beginCustomDismiss = self.beginCustomDismiss
         node.completeCustomDismiss = self.completeCustomDismiss
         node.baseNavigationController = self.baseNavigationController
+        node.galleryController = self.galleryController
         node.index = index
         return node
     }
@@ -698,6 +719,12 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         } else {
             self.invalidatedItems = false
             self.centralItemIndexOffsetUpdated(nil)
+        }
+    }
+
+    public func forEachItemNode(_ f: (GalleryItemNode) -> Void) {
+        for itemNode in self.itemNodes {
+            f(itemNode)
         }
     }
 }

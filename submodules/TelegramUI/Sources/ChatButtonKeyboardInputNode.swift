@@ -4,13 +4,18 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import ChatPresentationInterfaceState
 
 private final class ChatButtonKeyboardInputButtonNode: ASButtonNode {
-    var button: ReplyMarkupButton?
+    var button: ReplyMarkupButton? {
+        didSet {
+            self.updateIcon()
+        }
+    }
+    var iconNode: ASImageNode?
     
     private var theme: PresentationTheme?
     
@@ -20,12 +25,52 @@ private final class ChatButtonKeyboardInputButtonNode: ASButtonNode {
         self.updateTheme(theme: theme)
     }
     
+    private func updateIcon() {
+        guard let theme = self.theme else {
+            return
+        }
+        var iconImage: UIImage?
+        if let button = self.button {
+            switch button.action {
+                case .openWebView:
+                    iconImage = PresentationResourcesChat.chatKeyboardActionButtonWebAppIconImage(theme)
+                default:
+                    iconImage = nil
+            }
+        }
+        
+        if iconImage != nil {
+            if self.iconNode == nil {
+                let iconNode = ASImageNode()
+                iconNode.contentMode = .center
+                self.iconNode = iconNode
+                self.addSubnode(iconNode)
+            }
+            self.iconNode?.image = iconImage
+        } else if let iconNode = self.iconNode {
+            iconNode.removeFromSupernode()
+            self.iconNode = nil
+        }
+        
+        self.setNeedsLayout()
+    }
+    
     func updateTheme(theme: PresentationTheme) {
         if theme !== self.theme {
             self.theme = theme
             
             self.setBackgroundImage(PresentationResourcesChat.chatInputButtonPanelButtonImage(theme), for: [])
             self.setBackgroundImage(PresentationResourcesChat.chatInputButtonPanelButtonHighlightedImage(theme), for: [.highlighted])
+            
+            self.updateIcon()
+        }
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        if let iconNode = self.iconNode {
+            iconNode.frame = CGRect(x: self.frame.width - 16.0, y: 4.0, width: 12.0, height: 12.0)
         }
     }
 }
@@ -202,7 +247,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                             peerId = message.id.peerId
                         }
                         if let botPeer = botPeer, let addressName = botPeer.addressName {
-                            self.controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: "@\(addressName) \(query)")), subject: nil, peekData: nil), nil)
+                            self.controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: "@\(addressName) \(query)")), subject: nil, peekData: nil), nil, nil)
                         }
                     }
                 case .payment:
@@ -213,6 +258,10 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     }
                 case let .setupPoll(isQuiz):
                     self.controllerInteraction.openPollCreation(isQuiz)
+                case let .openUserProfile(peerId):
+                    self.controllerInteraction.openPeer(peerId, .info, nil, nil)
+                case let .openWebView(url, simple):
+                    self.controllerInteraction.openWebView(markupButton.title, url, simple, false)
             }
             if dismissIfOnce {
                 if let message = self.message {

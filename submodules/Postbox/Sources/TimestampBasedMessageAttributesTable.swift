@@ -26,10 +26,10 @@ final class TimestampBasedMessageAttributesTable: Table {
     
     private let indexTable: TimestampBasedMessageAttributesIndexTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, indexTable: TimestampBasedMessageAttributesIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, indexTable: TimestampBasedMessageAttributesIndexTable) {
         self.indexTable = indexTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(tag: UInt16, timestamp: Int32, id: MessageId) -> ValueBoxKey {
@@ -82,8 +82,9 @@ final class TimestampBasedMessageAttributesTable: Table {
         if let previousTimestamp = previousTimestamp {
             self.valueBox.remove(self.table, key: self.key(tag: tag, timestamp: previousTimestamp, id: id), secure: false)
             self.indexTable.remove(tag: tag, id: id)
-            operations.append(.remove(TimestampBasedMessageAttributesEntry(tag: tag, timestamp: previousTimestamp, messageId: id)))
         }
+        
+        operations.append(.remove(TimestampBasedMessageAttributesEntry(tag: tag, timestamp: previousTimestamp ?? 0, messageId: id)))
     }
     
     func head(tag: UInt16) -> TimestampBasedMessageAttributesEntry? {

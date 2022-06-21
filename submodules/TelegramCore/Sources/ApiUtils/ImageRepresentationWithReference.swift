@@ -1,5 +1,4 @@
 import Foundation
-import SyncCore
 
 public struct ImageRepresentationWithReference: Equatable {
     public let representation: TelegramMediaImageRepresentation

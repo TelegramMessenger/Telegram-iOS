@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import LegacyComponents
 import AccountContext
@@ -143,19 +142,7 @@ private final class WallpaperPatternItemNode : ListViewItemNode {
     }
     
     func asyncLayout() -> (WallpaperPatternItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
-        let currentItem = self.item
-
         return { [weak self] item, params in
-            var updatedWallpaper = false
-            var updatedSelected = false
-            
-            if currentItem?.wallpaper != item.wallpaper {
-                updatedWallpaper = true
-            }
-            if currentItem?.selected != item.selected {
-                updatedSelected = true
-            }
-            
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 112.0, height: 112.0), insets: UIEdgeInsets())
             return (itemLayout, { animated in
                 if let strongSelf = self {
@@ -213,7 +200,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    var backgroundColors: ([UInt32], Int32?, Int32?)? = nil {
+    var backgroundColors: ([HSBColor], Int32?, Int32?)? = nil {
         didSet {
             var updated = false
             if oldValue?.0 != self.backgroundColors?.0 || oldValue?.1 != self.backgroundColors?.1 {
@@ -309,8 +296,8 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         
         let sliderView = TGPhotoEditorSliderView()
         sliderView.disableSnapToPositions = true
-        sliderView.trackCornerRadius = 1.0
-        sliderView.lineSize = 2.0
+        sliderView.trackCornerRadius = 2.0
+        sliderView.lineSize = 4.0
         sliderView.startValue = 0.0
         sliderView.minimumValue = 0.0
         sliderView.maximumValue = 200.0
@@ -321,7 +308,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         sliderView.value = intensityToSliderValue(50, allowDark: self.allowDark)
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         sliderView.backgroundColor = .clear
-        sliderView.backColor = self.theme.list.disclosureArrowColor
+        sliderView.backColor = self.theme.list.itemSwitchColors.frameColor
         if self.allowDark {
             sliderView.trackColor = self.theme.list.disclosureArrowColor
         } else {
@@ -342,7 +329,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             node.removeFromSupernode()
         }
           
-        let backgroundColors = self.backgroundColors ?? ([0xd6e2ee], nil, nil)
+        let backgroundColors = self.backgroundColors.flatMap { ($0.0.map({ $0.rgb }), $0.1, $0.2) } ?? ([0xd6e2ee], nil, nil)
         let intensity: Int32 = backgroundColors.2.flatMap { value in
             if value < 0 {
                 return -80
@@ -366,7 +353,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             var updatedWallpaper = wallpaper
             if case let .file(file) = updatedWallpaper {
                 let settings = WallpaperSettings(colors: backgroundColors.0, intensity: intensity, rotation: backgroundColors.1)
-                updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: updatedWallpaper.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
+                updatedWallpaper = .file(TelegramWallpaper.File(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: updatedWallpaper.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings))
             }
             
             var selected = false
@@ -405,7 +392,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.backgroundNode.updateColor(color: self.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
             
-        self.sliderView?.backColor = self.theme.list.disclosureArrowColor
+        self.sliderView?.backColor = self.theme.list.itemSwitchColors.frameColor
         if self.allowDark {
             self.sliderView?.trackColor = self.theme.list.disclosureArrowColor
         } else {
@@ -433,8 +420,9 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         let wallpaper: TelegramWallpaper?
 
         switch initialWallpaper {
-        case let .file(id, accessHash, isCreator, isDefault, isPattern, isDark, slug, file, _):
-            wallpaper = .file(id: id, accessHash: accessHash, isCreator: isCreator, isDefault: isDefault, isPattern: isPattern, isDark: isDark, slug: slug, file: file, settings: self.wallpapers[0].settings ?? WallpaperSettings())
+        case var .file(file):
+            file.settings = self.wallpapers[0].settings ?? WallpaperSettings()
+            wallpaper = .file(file)
         default:
             wallpaper = self.wallpapers.first
         }
@@ -504,9 +492,9 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         transition.updateFrame(node: self.scrollNode, frame: scrollViewFrame)
         
         let labelSize = self.labelNode.updateLayout(self.bounds.size)
-        var combinedHeight = labelSize.height + 34.0
+        let combinedHeight = labelSize.height + 34.0
         
-        var originY: CGFloat = scrollViewFrame.maxY + floor((size.height - scrollViewFrame.maxY - combinedHeight) / 2.0)
+        let originY: CGFloat = scrollViewFrame.maxY + floor((size.height - scrollViewFrame.maxY - combinedHeight) / 2.0)
         transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: 14.0, y: originY), size: labelSize))
         
         self.sliderView?.frame = CGRect(origin: CGPoint(x: 15.0, y: originY + 8.0), size: CGSize(width: size.width - 15.0 * 2.0, height: 44.0))

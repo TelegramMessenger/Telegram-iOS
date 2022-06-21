@@ -7,7 +7,7 @@ final class MutableBasicPeerView: MutablePostboxView {
     fileprivate var isContact: Bool
     fileprivate var groupId: PeerGroupId?
     
-    init(postbox: Postbox, peerId: PeerId) {
+    init(postbox: PostboxImpl, peerId: PeerId) {
         self.peerId = peerId
         self.peer = postbox.peerTable.get(peerId)
         self.notificationSettings = postbox.peerNotificationSettingsTable.getEffective(peerId)
@@ -15,7 +15,7 @@ final class MutableBasicPeerView: MutablePostboxView {
         self.groupId = postbox.chatListIndexTable.get(peerId: peerId).inclusion.groupId
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         if let peer = transaction.currentUpdatedPeers[self.peerId] {
             self.peer = peer
@@ -41,6 +41,10 @@ final class MutableBasicPeerView: MutablePostboxView {
         }
         
         return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
     }
     
     func immutableView() -> PostboxView {

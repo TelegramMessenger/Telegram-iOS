@@ -10,7 +10,6 @@
 
 #import <LegacyComponents/TGMediaEditingContext.h>
 #import <LegacyComponents/TGMediaSelectionContext.h>
-#import <LegacyComponents/TGSuggestionContext.h>
 
 #import <LegacyComponents/TGMediaAsset.h>
 #import <LegacyComponents/TGMediaAssetFetchResult.h>
@@ -39,7 +38,7 @@
 
 @implementation TGClipboardGalleryMixin
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image images:(NSArray *)images parentController:(TGViewController *)parentController thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer hasSilentPosting:(bool)hasSilentPosting hasSchedule:(bool)hasSchedule reminder:(bool)reminder recipientName:(NSString *)recipientName
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image images:(NSArray *)images parentController:(TGViewController *)parentController thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasCaptions:(bool)hasCaptions hasTimer:(bool)hasTimer hasSilentPosting:(bool)hasSilentPosting hasSchedule:(bool)hasSchedule reminder:(bool)reminder recipientName:(NSString *)recipientName
 {
     self = [super init];
     if (self != nil)
@@ -68,7 +67,6 @@
         TGClipboardGalleryModel *model = [[TGClipboardGalleryModel alloc] initWithContext:_context images:images focusIndex:focusIndex selectionContext:selectionContext editingContext:editingContext stickersContext:stickersContext hasCaptions:hasCaptions hasTimer:hasTimer hasSelectionPanel:false recipientName:recipientName];
         _galleryModel = model;
         model.controller = modernGallery;
-        model.suggestionContext = suggestionContext;
         model.willFinishEditingItem = ^(id<TGMediaEditableItem> editableItem, id<TGMediaEditAdjustments> adjustments, id representation, bool hasChanges)
         {
             __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
@@ -95,9 +93,9 @@
             [editingContext setFullSizeImage:resultImage forItem:editableItem];
         };
         
-        model.saveItemCaption = ^(id<TGMediaEditableItem> editableItem, NSString *caption, NSArray *entities)
+        model.saveItemCaption = ^(id<TGMediaEditableItem> editableItem, NSAttributedString *caption)
         {
-            [editingContext setCaption:caption entities:entities forItem:editableItem];
+            [editingContext setCaption:caption forItem:editableItem];
             
             if (selectionContext != nil && caption.length > 0 && [editableItem conformsToProtocol:@protocol(TGMediaSelectableItem)])
                 [selectionContext setItem:(id<TGMediaSelectableItem>)editableItem selected:true];

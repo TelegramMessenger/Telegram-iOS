@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -118,8 +117,8 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
 
         var colors: [UInt32] = []
         var intensity: CGFloat = 0.5
-        if case let .gradient(_, value, _) = wallpaper {
-            colors = value
+        if case let .gradient(gradient) = wallpaper {
+            colors = gradient.colors
         } else if case let .file(file) = wallpaper {
             colors = file.settings.colors
             intensity = CGFloat(file.settings.intensity ?? 50) / 100.0
@@ -175,7 +174,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
 
         if let gradientNode = self.gradientNode {
             gradientNode.frame = CGRect(origin: CGPoint(), size: size)
-            gradientNode.updateLayout(size: size, transition: .immediate)
+            gradientNode.updateLayout(size: size, transition: .immediate, extendAnimation: false, backwards: false, completion: {})
         }
         
         let progressDiameter: CGFloat = 50.0
@@ -211,7 +210,6 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     let convertedFullRepresentations = [ImageRepresentationWithReference(representation: .init(dimensions: fullDimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource))]
                     
                     let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
-                    var placeholder: UIImage?
                     if wallpaper.isPattern {
                         var patternIntensity: CGFloat = 0.5
                         if !file.settings.colors.isEmpty {
@@ -221,7 +219,6 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                         }
 
                         if patternIntensity < 0.0 {
-                            placeholder = blackColorImage
                             self.imageNode.alpha = 1.0
                             self.arguments = PatternWallpaperArguments(colors: [.clear], rotation: nil, customPatternColor: UIColor(white: 0.0, alpha: 1.0 + patternIntensity))
                         } else {

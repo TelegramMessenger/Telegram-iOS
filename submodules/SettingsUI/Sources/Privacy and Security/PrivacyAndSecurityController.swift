@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramCallsUI
@@ -285,48 +284,48 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! PrivacyAndSecurityControllerArguments
         switch self {
-            case let .privacyHeader(theme, text):
+            case let .privacyHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .blockedPeers(theme, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Blocked")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
+            case let .blockedPeers(_, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Blocked")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openBlockedUsers()
                 })
-            case let .phoneNumberPrivacy(theme, text, value):
+            case let .phoneNumberPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openPhoneNumberPrivacy()
                 })
-            case let .lastSeenPrivacy(theme, text, value):
+            case let .lastSeenPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openLastSeenPrivacy()
                 })
-            case let .profilePhotoPrivacy(theme, text, value):
+            case let .profilePhotoPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openProfilePhotoPrivacy()
                 })
-            case let .forwardPrivacy(theme, text, value):
+            case let .forwardPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openForwardPrivacy()
                 })
-            case let .groupPrivacy(theme, text, value):
+            case let .groupPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openGroupsPrivacy()
                 })
-            case let .selectivePrivacyInfo(theme, text):
+            case let .selectivePrivacyInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .voiceCallPrivacy(theme, text, value):
+            case let .voiceCallPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openVoiceCallPrivacy()
                 })
-            case let .passcode(theme, text, hasFaceId, value):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: hasFaceId ? "Settings/MenuIcons/FaceId" : "Settings/MenuIcons/TouchId")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
+            case let .passcode(_, text, hasFaceId, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: hasFaceId ? "Settings/Menu/FaceId" : "Settings/Menu/TouchId")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openPasscode()
                 })
-            case let .twoStepVerification(theme, text, value, data):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/TwoStepAuth")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
+            case let .twoStepVerification(_, text, value, data):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/TwoStepAuth")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openTwoStepVerification(data)
                 })
-            case let .activeSessions(theme, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Websites")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
+            case let .activeSessions(_, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Websites")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openActiveSessions()
                 })
             case let .autoArchiveHeader(text):
@@ -337,19 +336,19 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 }, tag: PrivacyAndSecurityEntryTag.autoArchive)
             case let .autoArchiveInfo(text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .accountHeader(theme, text):
+            case let .accountHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .accountTimeout(theme, text, value):
+            case let .accountTimeout(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.setupAccountAutoremove()
                 }, tag: PrivacyAndSecurityEntryTag.accountTimeout)
-            case let .accountInfo(theme, text):
+            case let .accountInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .dataSettings(theme, text):
+            case let .dataSettings(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openDataSettings()
                 })
-            case let .dataSettingsInfo(theme, text):
+            case let .dataSettingsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -374,21 +373,21 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
             if enableFor.isEmpty {
                 return strings.PrivacySettings_LastSeenNobody
             } else {
-                return strings.PrivacySettings_LastSeenNobodyPlus("\(countForSelectivePeers(enableFor))").0
+                return strings.PrivacySettings_LastSeenNobodyPlus("\(countForSelectivePeers(enableFor))").string
             }
         case let .enableEveryone(disableFor):
             if disableFor.isEmpty {
                 return strings.PrivacySettings_LastSeenEverybody
             } else {
-                return strings.PrivacySettings_LastSeenEverybodyMinus("\(countForSelectivePeers(disableFor))").0
+                return strings.PrivacySettings_LastSeenEverybodyMinus("\(countForSelectivePeers(disableFor))").string
             }
         case let .enableContacts(enableFor, disableFor):
             if !enableFor.isEmpty && !disableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").0
+                return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").string
             } else if !enableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsPlus("\(countForSelectivePeers(enableFor))").0
+                return strings.PrivacySettings_LastSeenContactsPlus("\(countForSelectivePeers(enableFor))").string
             } else if !disableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsMinus("\(countForSelectivePeers(disableFor))").0
+                return strings.PrivacySettings_LastSeenContactsMinus("\(countForSelectivePeers(disableFor))").string
             } else {
                 return strings.PrivacySettings_LastSeenContacts
             }
@@ -617,8 +616,8 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         let callsSignal = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration]))
         |> take(1)
         |> map { sharedData, view -> (VoiceCallSettings, VoipConfiguration) in
-            let voiceCallSettings: VoiceCallSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
-            let voipConfiguration = view.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
+            let voiceCallSettings: VoiceCallSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) ?? .defaultSettings
+            let voipConfiguration = view.values[PreferencesKeys.voipConfiguration]?.get(VoipConfiguration.self) ?? .defaultValue
             
             return (voiceCallSettings, voipConfiguration)
         }
@@ -727,39 +726,28 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             }
         })
     }, openTwoStepVerification: { data in
-        let intro = false
         if let data = data {
             switch data {
             case .set:
                 break
             case let .notSet(pendingEmail):
                 if pendingEmail == nil {
-                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .intro)
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .intro(.init(
+                        title: presentationData.strings.TwoFactorSetup_Intro_Title,
+                        text: presentationData.strings.TwoFactorSetup_Intro_Text,
+                        actionText: presentationData.strings.TwoFactorSetup_Intro_Action,
+                        doneText: presentationData.strings.TwoFactorSetup_Done_Action
+                    )))
 
                     pushControllerImpl?(controller, true)
                     return
-                } else {
-                    
                 }
             }
         }
-        if intro {
-            var nextImpl: (() -> Void)?
-            let introController = PrivacyIntroController(context: context, mode: .twoStepVerification, proceedAction: {
-                nextImpl?()
-            })
-            nextImpl = { [weak introController] in
-                guard let introController = introController, let navigationController = introController.navigationController as? NavigationController else {
-                    return
-                }
-                let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: intro, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
-                navigationController.replaceController(introController, with: controller, animated: true)
-            }
-            pushControllerImpl?(introController, true)
-        } else {
-            let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: intro, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
-            pushControllerImpl?(controller, true)
-        }
+
+        let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
+        pushControllerImpl?(controller, true)
     }, openActiveSessions: {
         pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: true), true)
     }, toggleArchiveAndMuteNonContacts: { archiveValue in
@@ -832,7 +820,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                     1 * 30 * 24 * 60 * 60,
                     3 * 30 * 24 * 60 * 60,
                     6 * 30 * 24 * 60 * 60,
-                    12 * 30 * 24 * 60 * 60
+                    365 * 24 * 60 * 60
                 ]
                 let timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
                     return ActionSheetButtonItem(title: timeIntervalString(strings: presentationData.strings, value: value), action: {
@@ -868,7 +856,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.engine.peers.recentPeers(), blockedPeersState.get(), webSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()), context.account.postbox.combinedView(keys: [preferencesKey]))
     |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var canAutoarchive = false
-        if let view = preferences.views[preferencesKey] as? PreferencesView, let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration, let data = appConfiguration.data, let hasAutoarchive = data["autoarchive_setting_available"] as? Bool {
+        if let view = preferences.views[preferencesKey] as? PreferencesView, let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self), let data = appConfiguration.data, let hasAutoarchive = data["autoarchive_setting_available"] as? Bool {
             canAutoarchive = hasAutoarchive
         }
         

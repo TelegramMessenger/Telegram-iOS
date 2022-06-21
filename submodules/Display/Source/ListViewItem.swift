@@ -4,7 +4,7 @@ import SwiftSignalKit
 
 public enum ListViewItemUpdateAnimation {
     case None
-    case System(duration: Double)
+    case System(duration: Double, transition: ControlledTransition)
     case Crossfade
     
     public var isAnimated: Bool {
@@ -12,6 +12,26 @@ public enum ListViewItemUpdateAnimation {
             return false
         } else {
             return true
+        }
+    }
+    
+    public var animator: ControlledTransitionAnimator {
+        switch self {
+        case .None:
+            return ControlledTransition.LegacyAnimator(duration: 0.0, curve: .linear)
+        case let .System(_, transition):
+            return transition.animator
+        case .Crossfade:
+            return ControlledTransition.LegacyAnimator(duration: 0.0, curve: .linear)
+        }
+    }
+    
+    public var transition: ContainedViewLayoutTransition {
+        switch self {
+        case .None, .Crossfade:
+            return .immediate
+        case let .System(_, transition):
+            return transition.legacyAnimator.transition
         }
     }
 }
@@ -32,9 +52,11 @@ public struct ListViewItemConfigureNodeFlags: OptionSet {
 
 public struct ListViewItemApply {
     public let isOnScreen: Bool
+    public let timestamp: Double?
     
-    public init(isOnScreen: Bool) {
+    public init(isOnScreen: Bool, timestamp: Double? = nil) {
         self.isOnScreen = isOnScreen
+        self.timestamp = timestamp
     }
 }
 

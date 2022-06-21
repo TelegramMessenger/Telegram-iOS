@@ -102,13 +102,13 @@
     }
 }
 
-+ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSString *)caption entities:(NSArray *)entities withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item paint:(bool)paint recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext snapshots:(NSArray *)snapshots immediate:(bool)immediate appeared:(void (^)(void))appeared completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
++ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSAttributedString *)caption withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item paint:(bool)paint recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext snapshots:(NSArray *)snapshots immediate:(bool)immediate appeared:(void (^)(void))appeared completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     id<LegacyComponentsContext> windowContext = [windowManager context];
     
     TGMediaEditingContext *editingContext = [[TGMediaEditingContext alloc] init];
-    [editingContext setForcedCaption:caption entities:entities];
+    [editingContext setForcedCaption:caption];
     
     TGModernGalleryController *galleryController = [[TGModernGalleryController alloc] initWithContext:windowContext];
     galleryController.adjustsStatusBarVisibility = true;
@@ -129,7 +129,6 @@
     TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:@[galleryItem] focusItem:galleryItem selectionContext:nil editingContext:editingContext hasCaptions:true allowCaptionEntities:true hasTimer:false onlyCrop:false inhibitDocumentCaptions:false hasSelectionPanel:false hasCamera:false recipientName:recipientName];
     model.controller = galleryController;
     model.stickersContext = stickersContext;
-    //model.suggestionContext = self.suggestionContext;
     
     model.willFinishEditingItem = ^(id<TGMediaEditableItem> editableItem, id<TGMediaEditAdjustments> adjustments, id representation, bool hasChanges)
     {
@@ -145,9 +144,9 @@
         [editingContext setImage:resultImage thumbnailImage:thumbnailImage forItem:editableItem synchronous:false];
     };
     
-    model.saveItemCaption = ^(id<TGMediaEditableItem> editableItem, NSString *caption, NSArray *entities)
+    model.saveItemCaption = ^(id<TGMediaEditableItem> editableItem, NSAttributedString *caption)
     {
-        [editingContext setCaption:caption entities:entities forItem:editableItem];
+        [editingContext setCaption:caption forItem:editableItem];
     };
     
     model.interfaceView.hasSwipeGesture = false;

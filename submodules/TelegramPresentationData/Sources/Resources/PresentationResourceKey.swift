@@ -20,9 +20,12 @@ public enum PresentationResourceKey: Int32 {
     case navigationShareIcon
     case navigationSearchIcon
     case navigationCompactSearchIcon
+    case navigationCalendarIcon
     case navigationMoreIcon
+    case navigationMoreCircledIcon
     case navigationAddIcon
     case navigationPlayerCloseButton
+    case navigationQrCodeIcon
     
     case navigationLiveLocationIcon
     
@@ -53,9 +56,17 @@ public enum PresentationResourceKey: Int32 {
     case itemListCloseIconImage
     case itemListMakeVisibleIcon
     case itemListMakeInvisibleIcon
+    case itemListEditThemeIcon
     case itemListCornersTop
     case itemListCornersBottom
     case itemListCornersBoth
+    case itemListKnob
+    case itemListBlockAccentIcon
+    case itemListBlockDestructiveIcon
+    case itemListAddDeviceIcon
+    case itemListResetIcon
+    case itemListImageIcon
+    case itemListCloudIcon
     
     case itemListVoiceCallIcon
     case itemListVideoCallIcon
@@ -136,6 +147,11 @@ public enum PresentationResourceKey: Int32 {
     case chatInputPanelEncircledCloseIconImage
     case chatInputPanelVerticalSeparatorLineImage
     
+    case chatInputPanelForwardIconImage
+    case chatInputPanelReplyIconImage
+    case chatInputPanelEditIconImage
+    case chatInputPanelWebpageIconImage
+    
     case chatMediaInputPanelHighlightedIconImage
     case chatInputMediaPanelSavedStickersIconImage
     case chatInputMediaPanelRecentStickersIconImage
@@ -154,8 +170,11 @@ public enum PresentationResourceKey: Int32 {
     
     case chatInputTextFieldBackgroundImage
     case chatInputTextFieldClearImage
+    case chatInputPanelSendIconImage
     case chatInputPanelSendButtonImage
+    case chatInputPanelApplyIconImage
     case chatInputPanelApplyButtonImage
+    case chatInputPanelScheduleIconImage
     case chatInputPanelScheduleButtonImage
     case chatInputPanelVoiceButtonImage
     case chatInputPanelVideoButtonImage
@@ -193,6 +212,7 @@ public enum PresentationResourceKey: Int32 {
     
     case chatHistoryNavigationButtonImage
     case chatHistoryMentionsButtonImage
+    case chatHistoryReactionsButtonImage
     case chatHistoryNavigationButtonBadgeImage
     
     case chatMessageAttachedContentButtonIncoming
@@ -243,6 +263,18 @@ public enum PresentationResourceKey: Int32 {
     case chatFreeCommentButtonIcon
     case chatFreeNavigateButtonIcon
     case chatFreeShareButtonIcon
+    
+    case chatKeyboardActionButtonMessageIcon
+    case chatKeyboardActionButtonLinkIcon
+    case chatKeyboardActionButtonShareIcon
+    case chatKeyboardActionButtonPhoneIcon
+    case chatKeyboardActionButtonLocationIcon
+    case chatKeyboardActionButtonPaymentIcon
+    case chatKeyboardActionButtonProfileIcon
+    case chatKeyboardActionButtonAddToChatIcon
+    case chatKeyboardActionButtonWebAppIcon
+    
+    case uploadToneIcon
 }
 
 public enum PresentationResourceParameterKey: Hashable {
@@ -256,6 +288,8 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatListBadgeBackgroundActive(CGFloat)
     case chatListBadgeBackgroundInactive(CGFloat)
     case chatListBadgeBackgroundMention(CGFloat)
+    case badgeBackgroundReactions(CGFloat)
+    case badgeBackgroundInactiveReactions(CGFloat)
     case chatListBadgeBackgroundInactiveMention(CGFloat)
     case chatListBadgeBackgroundPinned(CGFloat)
     

@@ -1,8 +1,16 @@
 # Project definition
 project('usrsctplib', 'c',
-    version: '1.0.0',
-    default_options: ['c_std=c99'],
+    version: '0.9.5.0',
+    default_options: [
+        'c_std=c99',
+        'warning_level=2',
+    ],
     meson_version: '>=0.49.0')
+
+# Shared library API and ABI versions
+# Notice: shared library version must be in X.Y.Z format only
+soversion_full = '2.0.0'
+soversion_short = '2'
 
 # Set compiler warning flags
 compiler = meson.get_compiler('c')
@@ -22,8 +30,6 @@ if compiler.get_argument_syntax() == 'msvc'
 else
     compiler_args = compiler.get_supported_arguments([
         '-pedantic',
-        '-Wall',
-        '-Wextra',
         '-Wfloat-equal',
         '-Wshadow',
         '-Wpointer-arith',
@@ -58,41 +64,20 @@ add_project_arguments([
 system = host_machine.system()
 if system in ['linux', 'android']
     add_project_arguments([
-        '-D__Userspace_os_Linux',
         '-D_GNU_SOURCE',
     ], language: 'c')
 elif system == 'freebsd'
-    add_project_arguments([
-        '-D__Userspace_os_FreeBSD',
-        '-U__FreeBSD__',
-    ] + compiler.get_supported_arguments([
-        '-Wno-address-of-packed-member',
-    ]), language: 'c')
+    add_project_arguments(compiler.get_supported_arguments([
+            '-Wno-address-of-packed-member',
+        ]), language: 'c')
 elif system in ['darwin', 'ios']
     add_project_arguments([
-            '-D__Userspace_os_Darwin',
             '-D__APPLE_USE_RFC_2292',
         ] + compiler.get_supported_arguments([
             '-Wno-address-of-packed-member',
             '-Wno-deprecated-declarations',
         ]), language: 'c')
-elif system == 'dragonfly'
-    add_project_arguments([
-        '-D__Userspace_os_DragonFly',
-        '-U__DragonFly__',
-    ], language: 'c')
-elif system == 'netbsd'
-    add_project_arguments([
-        '-D__Userspace_os_NetBSD',
-        '-U__NetBSD__',
-    ], language: 'c')
-elif system == 'openbsd'
-    add_project_arguments([
-        '-D__Userspace_os_OpenBSD',
-        '-U__OpenBSD__',
-    ], language: 'c')
 elif system == 'windows'
-    add_project_arguments('-D__Userspace_os_Windows', language: 'c')
     dependencies += compiler.find_library('ws2_32', required: true)
     dependencies += compiler.find_library('iphlpapi', required: true)
     if compiler.get_id() == 'gcc'
@@ -128,6 +113,11 @@ have_netinet_ip = compiler.has_header('netinet/ip.h')
 have_netinet_ip_icmp = compiler.has_header('netinet/ip_icmp.h')
 if have_sys_types and have_netinet_in and have_netinet_ip and have_netinet_ip_icmp
     add_project_arguments('-DHAVE_NETINET_IP_ICMP_H', language: 'c')
+endif
+
+# Feature: net/route
+if compiler.has_header('net/route.h')
+    add_project_arguments('-DHAVE_NET_ROUTE_H', language: 'c')
 endif
 
 # Feature: stdatomic
@@ -207,8 +197,8 @@ else
         dependencies: dependencies,
         include_directories: include_dirs,
         install: true,
-        version: meson.project_version(),
-        c_args: '-U__APPLE__')
+        version: soversion_full,
+        soversion: soversion_short)
 endif
 
 # Declare dependency

@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import MergeLists
 import AccountContext
@@ -181,32 +180,6 @@ final class ThemeGridSearchInteraction {
 private enum ThemeGridRecentEntryStableId: Hashable {
     case colors
     case query(String)
-    
-    static func ==(lhs: ThemeGridRecentEntryStableId, rhs: ThemeGridRecentEntryStableId) -> Bool {
-        switch lhs {
-            case .colors:
-                if case .colors = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .query(query):
-                if case .query(query) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case .colors:
-                return 0
-            case let .query(query):
-                return query.hashValue
-        }
-    }
 }
 
 private enum ThemeGridRecentEntry: Comparable, Identifiable {
@@ -384,7 +357,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         self.recentListNode = ListView()
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.recentListNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.gridNode = GridNode()
@@ -498,13 +471,9 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                         return .single(nil)
                     }
                     return context.engine.peers.resolvePeerByName(name: name)
-                    |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                        if let peerId = peerId {
-                            return context.account.postbox.loadedPeerWithId(peerId)
-                            |> map { peer -> Peer? in
-                                return peer
-                            }
-                            |> take(1)
+                    |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                        if let peer = peer {
+                            return .single(peer._asPeer())
                         } else {
                             return .single(nil)
                         }
@@ -520,7 +489,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                                     let geoPoint = collection.geoPoint.flatMap { geoPoint -> (Double, Double) in
                                         return (geoPoint.latitude, geoPoint.longitude)
                                     }
-                                    return requestChatContextResults(account: self.context.account, botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(geoPoint), offset: nextOffset)
+                                    return self.context.engine.messages.requestChatContextResults(botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(geoPoint), offset: nextOffset)
                                     |> map { results -> ChatContextResultCollection? in
                                         return results?.results
                                     }
@@ -572,7 +541,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                         
                         return (.complete() |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
                         |> then(
-                            requestContextResults(account: context.account, botId: user.id, query: wallpaperQuery, peerId: context.account.peerId, limit: 16)
+                            requestContextResults(context: context, botId: user.id, query: wallpaperQuery, peerId: context.account.peerId, limit: 16)
                             |> map { results -> ChatContextResultCollection? in
                                 return results?.results
                             }
@@ -712,7 +681,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                             foregroundColor = .white
                             strokeColor = color.displayColor
                         }
-                        tokens = [SearchBarToken(id: 0, icon: UIImage(bundleImageName: "Settings/WallpaperSearchColorIcon"), title: color.localizedString(strings: self.presentationData.strings), style: SearchBarToken.Style(backgroundColor: backgroundColor, foregroundColor: foregroundColor, strokeColor: strokeColor))]
+                        tokens = [SearchBarToken(id: 0, icon: UIImage(bundleImageName: "Settings/WallpaperSearchColorIcon"), title: color.localizedString(strings: self.presentationData.strings), style: SearchBarToken.Style(backgroundColor: backgroundColor, foregroundColor: foregroundColor, strokeColor: strokeColor), permanent: false)]
                         text = query
                         placeholder = self.presentationData.strings.Wallpaper_SearchShort
                 }
@@ -782,7 +751,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                     strongSelf.dimNode.isHidden = displayingResults
                     strongSelf.backgroundColor = strongSelf.presentationData.theme.chatList.backgroundColor
                     
-                    strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.WebSearch_SearchNoResultsDescription(transition.query).0, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
+                    strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.WebSearch_SearchNoResultsDescription(transition.query).string, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
                     
                     let emptyResults = displayingResults && transition.isEmpty
                     strongSelf.emptyResultsTitleNode.isHidden = !emptyResults
@@ -805,14 +774,14 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         let minSpacing: CGFloat = 8.0
         let referenceImageSize: CGSize
         let screenWidth = min(layout.size.width, layout.size.height)
-        if screenWidth >= 375.0 {
+        if screenWidth >= 390.0 {
             referenceImageSize = CGSize(width: 108.0, height: 230.0)
         } else {
             referenceImageSize = CGSize(width: 91.0, height: 161.0)
         }
         let imageCount = Int((layout.size.width - minSpacing * 2.0) / (referenceImageSize.width + minSpacing))
-        let imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((layout.size.width - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
-        let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
+        let imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
+        let spacing = floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
         
         let topInset = navigationBarHeight
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))

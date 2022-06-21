@@ -1,7 +1,7 @@
 #import <NetworkLogging/NetworkLogging.h>
 
 #import <Foundation/Foundation.h>
-#import <MtProtoKit/MtLogging.h>
+#import <MtProtoKit/MTLogging.h>
 
 static void (*bridgingTrace)(NSString *, NSString *);
 void setBridgingTraceFunction(void (*f)(NSString *, NSString *)) {
@@ -13,15 +13,15 @@ void setBridgingShortTraceFunction(void (*f)(NSString *, NSString *)) {
     bridgingShortTrace = f;
 }
 
-static void TGTelegramLoggingFunction(NSString *format, va_list args) {
+static void TGTelegramLoggingFunction(NSString *format) {
     if (bridgingTrace) {
-        bridgingTrace(@"MT", [[NSString alloc] initWithFormat:format arguments:args]);
+        bridgingTrace(@"MT", format);
     }
 }
 
-static void TGTelegramShortLoggingFunction(NSString *format, va_list args) {
+static void TGTelegramShortLoggingFunction(NSString *format) {
     if (bridgingShortTrace) {
-        bridgingShortTrace(@"MT", [[NSString alloc] initWithFormat:format arguments:args]);
+        bridgingShortTrace(@"MT", format);
     }
 }
 

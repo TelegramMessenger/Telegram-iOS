@@ -3,10 +3,10 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import ChatPresentationInterfaceState
 
 enum ChatInputContextPanelPlacement {
     case overPanels

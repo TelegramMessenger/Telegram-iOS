@@ -88,6 +88,11 @@
     return _cachedAVAsset;
 }
 
+- (NSString *)uniformTypeIdentifier
+{
+    return nil;
+}
+
 - (SSignal *)avAsset {
     if (_originalAsset != nil) {
         if (_cachedAVAsset != nil) {
@@ -159,7 +164,7 @@
         return [_originalAsset originalSize];
     }
     
-    AVAssetTrack *track = _cachedAVAsset.tracks.firstObject;
+    AVAssetTrack *track = [_cachedAVAsset tracksWithMediaType:AVMediaTypeVideo].firstObject;
     _cachedSize = CGRectApplyAffineTransform((CGRect){ CGPointZero, track.naturalSize }, track.preferredTransform).size;
     return _cachedSize;
 }

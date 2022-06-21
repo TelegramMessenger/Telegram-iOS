@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Postbox
+import TelegramCore
 
 enum StickerVerificationStatus {
     case loading
@@ -9,10 +10,39 @@ enum StickerVerificationStatus {
 }
 
 public class ImportStickerPack {
+    public enum StickerPackType {
+        case image
+        case animation
+        case video
+        
+        var importType: CreateStickerSetType {
+            switch self {
+                case .image:
+                    return .image
+                case .animation:
+                    return .animation
+                case .video:
+                    return .video
+            }
+        }
+    }
+    
     public class Sticker: Equatable {
         public enum Content {
             case image(Data)
             case animation(Data)
+            case video(Data, String)
+        }
+        
+        var mimeType: String {
+            switch self.content {
+                case .image:
+                    return "image/png"
+                case .animation:
+                    return "application/x-tgsticker"
+                case let .video(_, mimeType):
+                    return mimeType
+            }
         }
         
         public static func == (lhs: ImportStickerPack.Sticker, rhs: ImportStickerPack.Sticker) -> Bool {
@@ -32,9 +62,7 @@ public class ImportStickerPack {
         
         var data: Data {
             switch self.content {
-                case let .image(data):
-                    return data
-                case let .animation(data):
+                case let .image(data), let .animation(data), let .video(data, _):
                     return data
             }
         }
@@ -49,7 +77,7 @@ public class ImportStickerPack {
     }
     
     public let software: String
-    public let isAnimated: Bool
+    public let type: StickerPackType
     public let thumbnail: Sticker?
     public let stickers: [Sticker]
     
@@ -59,19 +87,32 @@ public class ImportStickerPack {
         }
         self.software = json["software"] as? String ?? ""
         let isAnimated = json["isAnimated"] as? Bool ?? false
-        self.isAnimated = isAnimated
+        let isVideo = json["isVideo"] as? Bool ?? false
+        let type: StickerPackType
+        if isAnimated {
+            type = .animation
+        } else if isVideo {
+            type = .video
+        } else {
+            type = .image
+        }
+        self.type = type
         
         func parseSticker(_ sticker: [String: Any]) -> Sticker? {
             if let dataString = sticker["data"] as? String, let mimeType = sticker["mimeType"] as? String, let data = Data(base64Encoded: dataString) {
                 var content: Sticker.Content?
                 switch mimeType.lowercased() {
                     case "image/png":
-                        if !isAnimated {
+                        if case .image = type {
                             content = .image(data)
                         }
                     case "application/x-tgsticker":
-                        if isAnimated {
+                        if case .animation = type {
                             content = .animation(data)
+                        }
+                    case "video/webm", "image/webp", "image/gif":
+                        if case .video = type {
+                            content = .video(data, mimeType)
                         }
                     default:
                         break

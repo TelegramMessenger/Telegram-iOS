@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import MtProtoKit
 import Display
@@ -188,7 +187,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                     convertedType = .play
             }
             let disposable = legacyContext.sharedContext.mediaManager.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
-            }, deactivate: {
+            }, deactivate: { _ in
                 interrupted?()
                 return .complete()
             })
@@ -315,11 +314,5 @@ public func initializeLegacyComponents(application: UIApplication?, currentSizeC
     
     freedomInit()
     
-    TGRemoteImageView.setSharedCache(TGCache())
-    
-    TGImageDataSource.register(LegacyPeerAvatarPlaceholderDataSource(account: {
-        return legacyContext?.account
-    }))
-    ASActor.registerClass(LegacyImageDownloadActor.self)
     LegacyComponentsGlobals.setProvider(LegacyComponentsGlobalsProviderImpl())
 }

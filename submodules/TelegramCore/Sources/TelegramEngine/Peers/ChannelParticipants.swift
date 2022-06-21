@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 public struct RenderedChannelParticipant: Equatable {
     public let participant: ChannelParticipant

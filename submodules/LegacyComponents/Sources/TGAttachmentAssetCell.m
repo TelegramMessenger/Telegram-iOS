@@ -59,8 +59,7 @@
         _gradientView.hidden = true;
         [self addSubview:_gradientView];
         
-        if (iosMajorVersion() >= 11)
-        {
+        if (@available(iOS 11.0, *)) {
             _imageView.accessibilityIgnoresInvertColors = true;
             _gradientView.accessibilityIgnoresInvertColors = true;
         }
@@ -87,8 +86,9 @@
             [_checkButton addTarget:self action:@selector(checkButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             [self addSubview:_checkButton];
             
-            if (iosMajorVersion() >= 11)
+            if (@available(iOS 11.0, *)) {
                 _checkButton.accessibilityIgnoresInvertColors = true;
+            }
         }
         
         if (_itemSelectedDisposable == nil)

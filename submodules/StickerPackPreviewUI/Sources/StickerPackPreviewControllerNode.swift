@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
@@ -75,7 +74,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
-    private let actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?
+    private let actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -91,10 +90,10 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private weak var peekController: PeekController?
     
-    init(context: AccountContext, openShare: (() -> Void)?, openMention: @escaping (String) -> Void, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?) {
+    init(context: AccountContext, presentationData: PresentationData, openShare: (() -> Void)?, openMention: @escaping (String) -> Void, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)?) {
         self.context = context
         self.openShare = openShare
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.actionPerformed = actionPerformed
         
         self.wrappingScrollNode = ASScrollNode()
@@ -386,9 +385,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                     
                     var updatedItems: [StickerPackPreviewGridEntry] = []
                     for item in items {
-                        if let item = item as? StickerPackItem {
-                            updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item))
-                        }
+                        updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item))
                     }
                     
                     if self.currentItems.isEmpty && !updatedItems.isEmpty {
@@ -523,8 +520,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     }
     
     @objc func installActionButtonPressed() {
-        let dismissOnAction = true
-        if let stickerPack = self.stickerPack, let stickerSettings = self.stickerSettings {
+        if let stickerPack = self.stickerPack, let _ = self.stickerSettings {
             switch stickerPack {
                 case let .result(info, items, installed):
                     if installed {
@@ -535,19 +531,11 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                             }
                             strongSelf.actionPerformed?(info, items, .remove(positionInList: positionInList))
                         })
-                        if !dismissOnAction {
-                            self.updateStickerPack(.result(info: info, items: items, installed: false), stickerSettings: stickerSettings)
-                        }
                     } else {
                         let _ = self.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
-                        if !dismissOnAction {
-                            self.updateStickerPack(.result(info: info, items: items, installed: true), stickerSettings: stickerSettings)
-                        }
                         self.actionPerformed?(info, items, .add)
                     }
-                    if dismissOnAction {
-                        self.cancelButtonPressed()
-                    }
+                    self.cancelButtonPressed()
                 default:
                     break
             }

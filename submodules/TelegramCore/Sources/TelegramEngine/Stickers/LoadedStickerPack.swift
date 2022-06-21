@@ -3,8 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
-
 extension StickerPackReference {
     init(_ stickerPackInfo: StickerPackCollectionInfo) {
         self = .id(id: stickerPackInfo.id.id, accessHash: stickerPackInfo.accessHash)
@@ -20,6 +18,8 @@ extension StickerPackReference {
                 return .inputStickerSetAnimatedEmoji
             case let .dice(emoji):
                 return .inputStickerSetDice(emoticon: emoji)
+            case .animatedEmojiAnimations:
+                return .inputStickerSetAnimatedEmojiAnimations
         }
     }
 }
@@ -27,23 +27,25 @@ extension StickerPackReference {
 public enum LoadedStickerPack {
     case fetching
     case none
-    case result(info: StickerPackCollectionInfo, items: [ItemCollectionItem], installed: Bool)
+    case result(info: StickerPackCollectionInfo, items: [StickerPackItem], installed: Bool)
 }
 
-func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> {
-    return network.request(Api.functions.messages.getStickerSet(stickerset: reference.apiInputStickerSet))
+func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [StickerPackItem])?, NoError> {
+    return network.request(Api.functions.messages.getStickerSet(stickerset: reference.apiInputStickerSet, hash: 0))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.messages.StickerSet?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> in
+        |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [StickerPackItem])?, NoError> in
             guard let result = result else {
                 return .single(nil)
             }
             
             let info: StickerPackCollectionInfo
-            var items: [ItemCollectionItem] = []
+            var items: [StickerPackItem] = []
             switch result {
+            case .stickerSetNotModified:
+                return .complete()
             case let .stickerSet(set, packs, documents):
                 let namespace: ItemCollectionId.Namespace
                 switch set {
@@ -84,7 +86,7 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
                 }
             }
             
-            return postbox.transaction { transaction -> (StickerPackCollectionInfo, [ItemCollectionItem])? in
+            return postbox.transaction { transaction -> (StickerPackCollectionInfo, [StickerPackItem])? in
                 if transaction.getItemCollectionInfo(collectionId: info.id) != nil {
                     transaction.replaceItemCollectionItems(collectionId: info.id, items: items)
                 }

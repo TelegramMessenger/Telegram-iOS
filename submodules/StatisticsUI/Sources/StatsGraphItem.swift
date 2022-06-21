@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -160,7 +159,7 @@ class StatsGraphItemNode: ListViewItemNode {
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                     contentSize = CGSize(width: params.width, height: 361.0)
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
                 
             var visibilityHeight = currentVisibilityHeight
@@ -239,6 +238,7 @@ class StatsGraphItemNode: ListViewItemNode {
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
+                                strongSelf.bottomStripeNode.isHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true

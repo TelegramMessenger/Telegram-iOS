@@ -229,22 +229,6 @@ UIImage *TGScaleAndBlurImage(NSData *data, __unused CGSize size, __autoreleasing
     return returnImage;
 }
 
-static void matrixMul(CGFloat *a, CGFloat *b, CGFloat *result)
-{
-	for (int i = 0; i != 4; ++i)
-	{
- 		for (int j = 0; j != 4; ++j)
-		{
-			CGFloat sum = 0;
-			for (int k = 0; k != 4; ++k)
-			{
-				sum += a[i + k * 4] * b[k + j * 4];
-			}
-			result[i + j * 4] = sum;
-		}
-	}
-}
-
 UIImage *TGScaleImageToPixelSize(UIImage *image, CGSize size)
 {
     UIGraphicsBeginImageContextWithOptions(size, true, 1.0f);

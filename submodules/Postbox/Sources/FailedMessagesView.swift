@@ -6,7 +6,7 @@ final class MutableFailedMessageIdsView {
         self.peerId = peerId
         self.ids = Set(ids)
     }
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         let ids = transaction.updatedFailedMessageIds.filter { $0.peerId == self.peerId }
         let updated = ids != self.ids
         self.ids = ids

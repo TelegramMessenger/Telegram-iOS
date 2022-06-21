@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import WebKit
 import TelegramCore
-import SyncCore
 import UniversalMediaPlayer
 
 protocol WebEmbedImplementation {
@@ -14,6 +13,7 @@ protocol WebEmbedImplementation {
     func pause()
     func togglePlayPause()
     func seek(timestamp: Double)
+    func setBaseRate(_ baseRate: Double)
     
     func pageReady()
     func callback(url: URL)
@@ -37,6 +37,8 @@ public enum WebEmbedType {
 
 public func webEmbedType(content: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil) -> WebEmbedType {
     if let (videoId, timestamp) = extractYoutubeVideoIdAndTimestamp(url: content.url) {
+        return .youtube(videoId: videoId, timestamp: forcedTimestamp ?? timestamp)
+    } else if let embedUrl = content.embedUrl, let (videoId, timestamp) = extractYoutubeVideoIdAndTimestamp(url: embedUrl) {
         return .youtube(videoId: videoId, timestamp: forcedTimestamp ?? timestamp)
     } else if let (videoId, timestamp) = extractVimeoVideoIdAndTimestamp(url: content.url) {
         return .vimeo(videoId: videoId, timestamp: forcedTimestamp ?? timestamp)
@@ -170,6 +172,10 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         self.impl.seek(timestamp: timestamp)
     }
     
+    func setBaseRate(_ baseRate: Double) {
+        self.impl.setBaseRate(baseRate)
+    }
+    
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
     }
 
@@ -219,5 +225,8 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         if impl is YoutubeEmbedImplementation {
             self.webView.isUserInteractionEnabled = !hidden
         }
+    }
+
+    func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
     }
 }

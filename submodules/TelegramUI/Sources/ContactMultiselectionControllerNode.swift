@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
@@ -66,13 +65,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     var dismiss: (() -> Void)?
     
     private var presentationData: PresentationData
-    private var presentationDataDisposable: Disposable?
     
-    init(navigationBar: NavigationBar?, context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
+    init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
         self.navigationBar = navigationBar
         
         self.context = context
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
         
         var placeholder: String
@@ -93,7 +90,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             placeholder = self.presentationData.strings.ChatListFilter_AddChatsTitle
             let chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
             chatListNode.accessibilityPageScrolledString = { row, count in
-                return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+                return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
             }
             chatListNode.updateState { state in
                 var state = state
@@ -132,7 +129,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             }
         case let .chats(chatsNode):
             chatsNode.peerSelected = { [weak self] peer, _, _, _ in
-                self?.openPeer?(.peer(peer: peer, isGlobal: false, participantCount: nil))
+                self?.openPeer?(.peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil))
             }
             chatsNode.additionalCategorySelected = { [weak self] id in
                 guard let strongSelf = self else {
@@ -225,28 +222,15 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.tokenListNode.textReturned = { [weak self] in
             self?.complete?()
         }
-        
-        self.presentationDataDisposable = (context.sharedContext.presentationData
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-            if let strongSelf = self {
-                let previousTheme = strongSelf.presentationData.theme
-                let previousStrings = strongSelf.presentationData.strings
-                
-                strongSelf.presentationData = presentationData
-                
-                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                    strongSelf.updateThemeAndStrings()
-                }
-            }
-        })
     }
     
     deinit {
         self.searchResultsReadyDisposable.dispose()
     }
     
-    private func updateThemeAndStrings() {
-        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        self.backgroundColor = presentationData.theme.chatList.backgroundColor
     }
     
     func scrollToTop() {

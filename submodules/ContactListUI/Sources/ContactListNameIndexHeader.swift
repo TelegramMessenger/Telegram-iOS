@@ -5,20 +5,29 @@ import TelegramPresentationData
 import ListSectionHeaderNode
 
 final class ContactListNameIndexHeader: Equatable, ListViewItemHeader {
-    let id: Int64
+    let id: ListViewItemNode.HeaderId
     let theme: PresentationTheme
     let letter: unichar
     let stickDirection: ListViewItemHeaderStickDirection = .top
+    public let stickOverInsets: Bool = true
     
     let height: CGFloat = 29.0
     
     init(theme: PresentationTheme, letter: unichar) {
         self.theme = theme
         self.letter = letter
-        self.id = Int64(letter)
+        self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(letter))
+    }
+
+    func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ContactListNameIndexHeader, self.id == other.id {
+            return true
+        } else {
+            return false
+        }
     }
     
-    func node() -> ListViewItemHeaderNode {
+    func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ContactListNameIndexHeaderNode(theme: self.theme, letter: self.letter)
     }
     

@@ -90,7 +90,7 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
     fileprivate var earlier: MessageIndex?
     fileprivate var later: MessageIndex?
     
-    init(postbox: Postbox, globalTag: GlobalMessageTags, position: MessageIndex, count: Int, groupingPredicate: ((Message, Message) -> Bool)?) {
+    init(postbox: PostboxImpl, globalTag: GlobalMessageTags, position: MessageIndex, count: Int, groupingPredicate: ((Message, Message) -> Bool)?) {
         self.globalTag = globalTag
         self.position = position
         self.count = count
@@ -112,7 +112,7 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
         self.render(postbox: postbox)
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var hasChanges = false
         
         let context = MutableGlobalMessageTagsViewReplayContext()
@@ -201,6 +201,26 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
         }
         
         return hasChanges
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        /*let (entries, lower, upper) = postbox.messageHistoryTable.entriesAround(globalTagMask: globalTag, index: position, count: count)
+
+        self.entries = entries.map { entry -> InternalGlobalMessageTagsEntry in
+            switch entry {
+                case let .message(message):
+                    return .intermediateMessage(message)
+                case let .hole(index):
+                    return .hole(index)
+            }
+        }
+        self.earlier = lower
+        self.later = upper
+
+        self.render(postbox: postbox)
+
+        return true*/
+        return false
     }
     
     private func add(_ entry: InternalGlobalMessageTagsEntry) -> Bool {
@@ -291,7 +311,7 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
         return hasChanges
     }
     
-    private func complete(postbox: Postbox, context: MutableGlobalMessageTagsViewReplayContext) {
+    private func complete(postbox: PostboxImpl, context: MutableGlobalMessageTagsViewReplayContext) {
         if context.removedEntries {
             self.completeWithReset(postbox: postbox)
         } else {
@@ -333,7 +353,7 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
         }
     }
     
-    private func completeWithReset(postbox: Postbox) {
+    private func completeWithReset(postbox: PostboxImpl) {
         var addedEntries: [InternalGlobalMessageTagsEntry] = []
         
         var latestAnchor: MessageIndex?
@@ -453,7 +473,7 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
         }
     }
     
-    private func render(postbox: Postbox) {
+    private func render(postbox: PostboxImpl) {
         for i in 0 ..< self.entries.count {
             if case let .intermediateMessage(message) = self.entries[i] {
                 self.entries[i] = .message(postbox.renderIntermediateMessage(message))

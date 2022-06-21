@@ -23,6 +23,8 @@ public enum ChatTitleActivityNodeState: Equatable {
     case recordingVoice(NSAttributedString, UIColor)
     case recordingVideo(NSAttributedString, UIColor)
     case playingGame(NSAttributedString, UIColor)
+    case choosingSticker(NSAttributedString, UIColor)
+    case interactingWithEmoji(NSAttributedString, UIColor)
     
     func contentNode() -> ChatTitleActivityContentNode? {
         switch self {
@@ -40,6 +42,10 @@ public enum ChatTitleActivityNodeState: Equatable {
                 return ChatRecordingVideoActivityContentNode(text: text, color: color)
             case let .playingGame(text, color):
                 return ChatPlayingActivityContentNode(text: text, color: color)
+            case let .choosingSticker(text, color):
+                return ChatChoosingStickerActivityContentNode(text: text, color: color)
+            case let .interactingWithEmoji(text, _):
+                return ChatTitleActivityContentNode(text: text)
         }
     }
     

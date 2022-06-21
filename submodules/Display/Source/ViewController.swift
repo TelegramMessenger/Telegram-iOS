@@ -19,7 +19,7 @@ private func findCurrentResponder(_ view: UIView) -> UIResponder? {
     }
 }
 
-private func findWindow(_ view: UIView) -> WindowHost? {
+func findWindow(_ view: UIView) -> WindowHost? {
     if let view = view as? WindowHost {
         return view
     } else if let superview = view.superview {
@@ -71,6 +71,13 @@ public enum TabBarItemContextActionType {
     case none
     case always
     case whenActive
+}
+
+public protocol CustomViewControllerNavigationData: AnyObject {
+    func combine(summary: CustomViewControllerNavigationDataSummary?) -> CustomViewControllerNavigationDataSummary?
+}
+
+public protocol CustomViewControllerNavigationDataSummary: AnyObject {
 }
 
 @objc open class ViewController: UIViewController, ContainableController {
@@ -191,7 +198,7 @@ public enum TabBarItemContextActionType {
     
     public let statusBar: StatusBar
     public let navigationBar: NavigationBar?
-    private(set) var toolbar: Toolbar?
+    public private(set) var toolbar: Toolbar?
     
     public var displayNavigationBar = true
     open var navigationBarRequiresEntireLayoutUpdate: Bool {
@@ -208,7 +215,7 @@ public enum TabBarItemContextActionType {
     open func navigationLayout(layout: ContainerViewLayout) -> NavigationLayout {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         var defaultNavigationBarHeight: CGFloat
-        if self._presentedInModal {
+        if self._presentedInModal && layout.orientation == .portrait {
             defaultNavigationBarHeight = 56.0
         } else {
             defaultNavigationBarHeight = 44.0
@@ -273,6 +280,13 @@ public enum TabBarItemContextActionType {
             return nil
         }
     }
+    
+    open var customNavigationData: CustomViewControllerNavigationData? {
+        get {
+            return nil
+        }
+    }
+    open var customNavigationDataSummary: CustomViewControllerNavigationDataSummary?
     
     public internal(set) var isInFocus: Bool = false {
         didSet {
@@ -381,6 +395,8 @@ public enum TabBarItemContextActionType {
         }
         
         self.navigationBarOrigin = navigationBarFrame.origin.y
+
+        let isLandscape = layout.size.width > layout.size.height
         
         if let navigationBar = self.navigationBar {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
@@ -392,10 +408,10 @@ public enum TabBarItemContextActionType {
                 navigationBarFrame.size.height += NavigationBar.defaultSecondaryContentHeight
                 //navigationBarFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
             }
-            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: statusBarHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, transition: transition)
+            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: statusBarHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, isLandscape: isLandscape, transition: transition)
             if !transition.isAnimated {
-                navigationBar.layer.cancelAnimationsRecursive(key: "bounds")
-                navigationBar.layer.cancelAnimationsRecursive(key: "position")
+                navigationBar.layer.removeAnimation(forKey: "bounds")
+                navigationBar.layer.removeAnimation(forKey: "position")
             }
             transition.updateFrame(node: navigationBar, frame: navigationBarFrame)
             navigationBar.setHidden(!self.displayNavigationBar, animated: transition.isAnimated)
@@ -517,8 +533,7 @@ public enum TabBarItemContextActionType {
             }
             navigationController.filterController(self, animated: animated)
         } else {
-            self.presentingViewController?.dismiss(animated: false, completion: nil)
-            assertionFailure()
+            self.presentingViewController?.dismiss(animated: flag, completion: nil)
         }
     }
     
@@ -539,7 +554,7 @@ public enum TabBarItemContextActionType {
         (self.navigationController as? NavigationController)?.pushViewController(controller)
     }
     
-    public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
+    open func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
         if !(controller is StandalonePresentableController), case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation, self.navigationController != nil {
             controller.navigationPresentation = .modal
             self.push(controller)
@@ -567,6 +582,10 @@ public enum TabBarItemContextActionType {
         self.window?.presentInGlobalOverlay(controller)
     }
     
+    public func addGlobalPortalHostView(sourceView: PortalSourceView) {
+        self.window?.addGlobalPortalHostView(sourceView: sourceView)
+    }
+    
     open override func viewWillDisappear(_ animated: Bool) {
         self.activeInputViewCandidate = findCurrentResponder(self.view)
         
@@ -592,7 +611,7 @@ public enum TabBarItemContextActionType {
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.filterController(self, animated: true)
         } else {
-            self.presentingViewController?.dismiss(animated: false, completion: nil)
+            self.presentingViewController?.dismiss(animated: true, completion: nil)
         }
     }
     

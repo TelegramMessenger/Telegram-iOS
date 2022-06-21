@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -276,11 +275,11 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
             } else {
                 sizeText = autodownloadDataSizeString(Int64(size), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             }
-            let text = presentationData.strings.AutoDownloadSettings_UpTo(sizeText).0
+            let text = presentationData.strings.AutoDownloadSettings_UpTo(sizeText).string
             entries.append(.sizeItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat.decimalSeparator, text, size))
             if #available(iOSApplicationExtension 10.3, *), category == .video {
                 entries.append(.sizePreload(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideo, predownload, size > 2 * 1024 * 1024))
-                entries.append(.sizePreloadInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideoInfo(sizeText).0))
+                entries.append(.sizePreloadInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideoInfo(sizeText).string))
             }
         default:
             break
@@ -389,7 +388,7 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
         return context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
         |> take(1)
         |> map { sharedData -> MediaAutoDownloadSettings in
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
                 return value
             } else {
                 return .defaultSettings
@@ -403,14 +402,14 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
         |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var automaticMediaDownloadSettings: MediaAutoDownloadSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
                 automaticMediaDownloadSettings = value
             } else {
                 automaticMediaDownloadSettings = .defaultSettings
             }
             
             var autodownloadSettings: AutodownloadSettings
-            if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
+            if let value = sharedData.entries[SharedDataKeys.autodownloadSettings]?.get(AutodownloadSettings.self) {
                 autodownloadSettings = value
                 automaticMediaDownloadSettings = automaticMediaDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
             } else {

@@ -107,7 +107,7 @@ private final class NavigationControllerNode: ASDisplayNode {
     }
 }
 
-public protocol NavigationControllerDropContentItem: class {
+public protocol NavigationControllerDropContentItem: AnyObject {
 }
 
 public final class NavigationControllerDropContent {
@@ -406,11 +406,18 @@ open class NavigationController: UINavigationController, ContainableController, 
             globalScrollToTopNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: CGSize(width: layout.size.width, height: 1.0))
         }
         
-        var overlayContainerLayout = layout
+        let overlayContainerLayout = layout
         
         if let inCallStatusBar = self.inCallStatusBar {
-            var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(40.0, layout.safeInsets.top))))
-            if layout.deviceMetrics.hasTopNotch {
+            let isLandscape = layout.size.width > layout.size.height
+            var minHeight: CGFloat
+            if case .compact = layout.metrics.widthClass, isLandscape {
+                minHeight = 22.0
+            } else {
+                minHeight = 40.0
+            }
+            var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(minHeight, layout.safeInsets.top))))
+            if layout.deviceMetrics.hasTopNotch && !isLandscape {
                 inCallStatusBarFrame.size.height += 12.0
             }
             if inCallStatusBar.frame.isEmpty {
@@ -841,6 +848,11 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        if self._keepModalDismissProgress {
+            modalStyleOverlayTransitionFactor = 0.0
+            self._keepModalDismissProgress = false
+        }
+        
         topModalDismissProgress = max(topModalDismissProgress, modalStyleOverlayTransitionFactor)
         
         switch layout.metrics.widthClass {
@@ -1262,6 +1274,12 @@ open class NavigationController: UINavigationController, ContainableController, 
         completion()
     }
     
+    public func replaceControllers(controllers: [UIViewController], animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
+        ready?.set(true)
+        self.setViewControllers(controllers, animated: animated)
+        completion()
+    }
+    
     public func replaceAllButRootController(_ controller: ViewController, animated: Bool, animationOptions: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         ready?.set(true)
         var controllers = self.viewControllers
@@ -1316,6 +1334,30 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     open override func setViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
+        for i in 0 ..< viewControllers.count {
+            guard let controller = viewControllers[i] as? ViewController else {
+                continue
+            }
+            if self.viewControllers.contains(where: { $0 === controller }) {
+                continue
+            }
+            if let customNavigationData = controller.customNavigationData {
+                var found = false
+                for previousIndex in (0 ..< self.viewControllers.count).reversed() {
+                    let previousController = self.viewControllers[previousIndex]
+                    
+                    if let previousController = previousController as? ViewController, let previousCustomNavigationDataSummary = previousController.customNavigationDataSummary {
+                        controller.customNavigationDataSummary = customNavigationData.combine(summary: previousCustomNavigationDataSummary)
+                        found = true
+                        break
+                    }
+                }
+                if !found {
+                    controller.customNavigationDataSummary = customNavigationData.combine(summary: nil)
+                }
+            }
+        }
+        
         self._viewControllers = viewControllers.map { controller in
             let controller = controller as! ViewController
             controller.navigation_setNavigationController(self)
@@ -1327,6 +1369,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self._viewControllersPromise.set(self.viewControllers)
     }
     
+    public var _keepModalDismissProgress = false
     public func presentOverlay(controller: ViewController, inGlobal: Bool = false, blockInteraction: Bool = false) {
         let container = NavigationOverlayContainer(controller: controller, blocksInteractionUntilReady: blockInteraction, controllerRemoved: { [weak self] controller in
             guard let strongSelf = self else {
@@ -1354,6 +1397,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
             }
+
             strongSelf.updateContainersNonReentrant(transition: .immediate)
         }, statusBarUpdated: { [weak self] transition in
             guard let strongSelf = self else {

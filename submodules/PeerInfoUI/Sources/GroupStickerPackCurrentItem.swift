@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -183,8 +182,8 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             
             var file: TelegramMediaFile?
             var previousFile: TelegramMediaFile?
-            if let currentItem = currentItem, case let .found(found) = currentItem.content {
-                previousFile = found.topItem?.file
+            if let currentItem = currentItem, case let .found(_, topItem, _) = currentItem.content {
+                previousFile = topItem?.file
             }
             
             switch item.content {
@@ -209,7 +208,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             
             let leftInset: CGFloat = 65.0 + params.leftInset
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: 59.0)
             let separatorHeight = UIScreenPixel
             
@@ -328,7 +327,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.imageNode.setSignal(updatedImageSignal)
                     }
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 59.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     

@@ -3,9 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import AccountContext
 
@@ -16,11 +14,11 @@ public final class GameController: ViewController {
     
     private let context: AccountContext
     private let url: String
-    private let message: Message
+    private let message: EngineMessage?
     
     private var presentationData: PresentationData
     
-    public init(context: AccountContext, url: String, message: Message) {
+    public init(context: AccountContext, url: String, message: EngineMessage?) {
         self.context = context
         self.url = url
         self.message = message
@@ -31,26 +29,30 @@ public final class GameController: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationShareIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.sharePressed))
-        
-        for media in message.media {
-            if let game = media as? TelegramMediaGame {
-                let titleView = GameControllerTitleView(theme: self.presentationData.theme)
-                
-                var botPeer: Peer?
-                inner: for attribute in message.attributes {
-                    if let attribute = attribute as? InlineBotMessageAttribute, let peerId = attribute.peerId {
-                        botPeer = message.peers[peerId]
-                        break inner
+        if let message = message {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationShareIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.sharePressed))
+            
+            for media in message.media {
+                if let game = media as? TelegramMediaGame {
+                    let titleView = GameControllerTitleView(theme: self.presentationData.theme)
+                    
+                    var botPeer: EnginePeer?
+                    inner: for attribute in message.attributes {
+                        if let attribute = attribute as? InlineBotMessageAttribute, let peerId = attribute.peerId {
+                            botPeer = message.peers[peerId].flatMap(EnginePeer.init)
+                            break inner
+                        }
                     }
+                    if botPeer == nil {
+                        botPeer = message.author
+                    }
+                    
+                    titleView.set(title: game.title, subtitle: "@\(botPeer?.addressName ?? "")")
+                    self.navigationItem.titleView = titleView
                 }
-                if botPeer == nil {
-                    botPeer = message.author
-                }
-                
-                titleView.set(title: game.title, subtitle: "@\(botPeer?.addressName ?? "")")
-                self.navigationItem.titleView = titleView
             }
+        } else {
+            self.title = "App"
         }
     }
     

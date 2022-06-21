@@ -3,10 +3,10 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import ChatPresentationInterfaceState
 
 final class ChatFeedNavigationInputPanelNode: ChatInputPanelNode {
     private let button: HighlightableButtonNode

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import AsyncDisplayKit
 import UIKit
@@ -29,7 +28,7 @@ public final class ProxyServerActionSheetController: ActionSheetController {
         self.init(presentationData: presentationData, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, server: server, updatedPresentationData: context.sharedContext.presentationData)
     }
     
-    public init(presentationData: PresentationData, accountManager: AccountManager, postbox: Postbox, network: Network, server: ProxyServerSettings, updatedPresentationData: Signal<PresentationData, NoError>?) {
+    public init(presentationData: PresentationData, accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network, server: ProxyServerSettings, updatedPresentationData: Signal<PresentationData, NoError>?) {
         let sheetTheme = ActionSheetControllerTheme(presentationData: presentationData)
         super.init(theme: sheetTheme)
         
@@ -222,7 +221,7 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
                         statusType = .generic(strongSelf.strings.SocksProxySetup_ProxyStatusChecking)
                     case let .available(rtt):
                         let pingTime = Int(rtt * 1000.0)
-                        statusType = .generic(strongSelf.strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").0)
+                        statusType = .generic(strongSelf.strings.SocksProxySetup_ProxyStatusPing("\(pingTime)").string)
                     case .notAvailable:
                         statusType = .failed(strongSelf.strings.SocksProxySetup_ProxyStatusUnavailable)
                 }
@@ -263,7 +262,7 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
 }
 
 private final class ProxyServerActionItem: ActionSheetItem {
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let postbox: Postbox
     private let network: Network
     private let presentationData: PresentationData
@@ -271,7 +270,7 @@ private final class ProxyServerActionItem: ActionSheetItem {
     private let dismiss: (Bool) -> Void
     private let present: (ViewController, Any?) -> Void
     
-    init(accountManager: AccountManager, postbox: Postbox, network: Network, presentationData: PresentationData, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network, presentationData: PresentationData, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.accountManager = accountManager
         self.postbox = postbox
         self.network = network
@@ -290,7 +289,7 @@ private final class ProxyServerActionItem: ActionSheetItem {
 }
 
 private final class ProxyServerActionItemNode: ActionSheetItemNode {
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let postbox: Postbox
     private let network: Network
     private let presentationData: PresentationData
@@ -306,7 +305,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
     private let disposable = MetaDisposable()
     private var revertSettings: ProxySettings?
     
-    init(accountManager: AccountManager, postbox: Postbox, network: Network, presentationData: PresentationData, theme: ActionSheetControllerTheme, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network, presentationData: PresentationData, theme: ActionSheetControllerTheme, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.accountManager = accountManager
         self.postbox = postbox
         self.network = network
@@ -377,7 +376,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
         let proxyServerSettings = self.server
         let _ = (self.accountManager.transaction { transaction -> ProxySettings in
             var currentSettings: ProxySettings?
-            updateProxySettingsInteractively(transaction: transaction, { settings in
+            let _ = updateProxySettingsInteractively(transaction: transaction, { settings in
                 currentSettings = settings
                 var settings = settings
                 if let index = settings.servers.firstIndex(of: proxyServerSettings) {

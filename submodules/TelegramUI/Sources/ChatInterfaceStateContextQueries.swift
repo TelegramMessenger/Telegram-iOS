@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramUIPreferences
 import LegacyComponents
@@ -12,6 +11,7 @@ import Emoji
 import SearchPeerMembers
 import DeviceLocationManager
 import TelegramNotices
+import ChatPresentationInterfaceState
 
 enum ChatContextQueryError {
     case generic
@@ -103,11 +103,11 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             
             let stickerConfiguration = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
             |> map { preferencesView -> StickersSearchConfiguration in
-                let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+                let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
                 return StickersSearchConfiguration.with(appConfiguration: appConfiguration)
             }
             let stickerSettings = context.sharedContext.accountManager.transaction { transaction -> StickerSettings in
-                let stickerSettings: StickerSettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings) as? StickerSettings) ?? .defaultSettings
+                let stickerSettings: StickerSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings)?.get(StickerSettings.self) ?? .defaultSettings
                 return stickerSettings
             }
 
@@ -149,7 +149,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 signal = .single({ _ in return .hashtags([]) })
             }
             
-            let hashtags: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = recentlyUsedHashtags(postbox: context.account.postbox)
+            let hashtags: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = context.engine.messages.recentlyUsedHashtags()
                 |> map { hashtags -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let normalizedQuery = query.lowercased()
                 var result: [String] = []
@@ -178,7 +178,8 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 signal = .single({ _ in return .mentions([]) })
             }
             
-            let inlineBots: Signal<[(Peer, Double)], NoError> = types.contains(.contextBots) ? context.engine.peers.recentlyUsedInlineBots() : .single([])
+            let inlineBots: Signal<[(EnginePeer, Double)], NoError> = types.contains(.contextBots) ? context.engine.peers.recentlyUsedInlineBots() : .single([])
+            let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
             let participants = combineLatest(inlineBots, searchPeerMembers(context: context, peerId: peer.id, chatLocation: chatLocation, query: query, scope: .mention))
             |> map { inlineBots, peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let filteredInlineBots = inlineBots.sorted(by: { $0.1 > $1.1 }).filter { peer, rating in
@@ -207,11 +208,11 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 }
                 var sortedPeers = filteredInlineBots
                 sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
-                    let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
+                    let result = lhs.indexName.stringRepresentation(lastNameFirst: true).compare(rhs.indexName.stringRepresentation(lastNameFirst: true))
                     return result == .orderedAscending
                 }))
                 sortedPeers = sortedPeers.filter { peer in
-                    return !peer.debugDisplayTitle.isEmpty
+                    return !peer.displayTitle(strings: strings, displayOrder: .firstLast).isEmpty
                 }
                 return { _ in return .mentions(sortedPeers) }
             }
@@ -265,21 +266,10 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             
             let chatPeer = peer
             let contextBot = context.engine.peers.resolvePeerByName(name: addressName)
-            |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                if let peerId = peerId {
-                    return context.account.postbox.loadedPeerWithId(peerId)
-                    |> map { peer -> Peer? in
-                        return peer
-                    }
-                    |> take(1)
-                } else {
-                    return .single(nil)
-                }
-            }
             |> castError(ChatContextQueryError.self)
             |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> in
-                if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                    let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, location: context.sharedContext.locationManager.flatMap { locationManager -> Signal<(Double, Double)?, NoError> in
+                if case let .user(user) = peer, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
+                    let contextResults = context.engine.messages.requestChatContextResults(botId: user.id, peerId: chatPeer.id, query: query, location: context.sharedContext.locationManager.flatMap { locationManager -> Signal<(Double, Double)?, NoError> in
                         return `deferred` {
                             Queue.mainQueue().async {
                                 requestBotLocationStatus(user.id)
@@ -306,7 +296,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     }
                     |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                         return { _ in
-                            return .contextRequestResult(user, results?.results)
+                            return .contextRequestResult(.user(user), results?.results)
                         }
                     }
                     
@@ -319,7 +309,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                                 }
                             }
                         }
-                        return .contextRequestResult(user, passthroughPreviousResult)
+                        return .contextRequestResult(.user(user), passthroughPreviousResult)
                     })
                     
                     let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError>
@@ -400,9 +390,9 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
                         let participants = searchPeerMembers(context: context, peerId: peer.id, chatLocation: chatPresentationInterfaceState.chatLocation, query: query, scope: .memberSuggestion)
                         |> map { peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                             let filteredPeers = peers
-                            var sortedPeers: [Peer] = []
+                            var sortedPeers: [EnginePeer] = []
                             sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
-                                let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
+                                let result = lhs.indexName.stringRepresentation(lastNameFirst: true).compare(rhs.indexName.stringRepresentation(lastNameFirst: true))
                                 return result == .orderedAscending
                             }))
                             return { _ in return .mentions(sortedPeers) }

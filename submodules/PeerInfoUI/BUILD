@@ -6,13 +6,15 @@ swift_library(
     srcs = glob([
 		"Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
         "//submodules/ItemListUI:ItemListUI",
@@ -69,6 +71,10 @@ swift_library(
         "//submodules/ChatListFilterSettingsHeaderItem:ChatListFilterSettingsHeaderItem",
         "//submodules/InviteLinksUI:InviteLinksUI",
         "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
+        "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
     ],
     visibility = [
         "//visibility:public",

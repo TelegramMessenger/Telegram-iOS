@@ -1,6 +1,5 @@
 import Foundation
 import SwiftSignalKit
-import SyncCore
 import TelegramCore
 import TelegramPresentationData
 import TelegramStringFormatting
@@ -39,11 +38,11 @@ public func nearbyVenues(context: AccountContext, latitude: Double, longitude: D
     } |> mapToSignal { searchBotsConfiguration in
         return context.engine.peers.resolvePeerByName(name: searchBotsConfiguration.venueBotUsername ?? "foursquare")
         |> take(1)
-        |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
-            guard let peerId = peerId else {
+        |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
+            guard let peer = peer else {
                 return .single(nil)
             }
-            return requestChatContextResults(account: context.account, botId: peerId, peerId: context.account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
+            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
             |> map { results -> ChatContextResultCollection? in
                 return results?.results
             }
@@ -71,14 +70,17 @@ public func nearbyVenues(context: AccountContext, latitude: Double, longitude: D
     }
 }
 
-func stringForEstimatedDuration(strings: PresentationStrings, eta: Double) -> String? {
-    if eta > 0.0 && eta < 60.0 * 60.0 * 10.0 {
-        let eta = max(eta, 60.0)
-        let minutes = Int32(eta / 60.0) % 60
-        let hours = Int32(eta / 3600.0)
+func stringForEstimatedDuration(strings: PresentationStrings, time: Double, format: (String) -> String) -> String? {
+    if time > 0.0 {
+        let time = max(time, 60.0)
+        let minutes = Int32(time / 60.0) % 60
+        let hours = Int32(time / 3600.0)
+        let days = Int32(time / (3600.0 * 24.0))
         
         let string: String
-        if hours > 1 {
+        if hours >= 24 {
+            string = strings.Map_ETADays(days)
+        } else if hours > 0 {
             if hours == 1 && minutes == 0 {
                 string = strings.Map_ETAHours(1)
             } else {
@@ -87,7 +89,7 @@ func stringForEstimatedDuration(strings: PresentationStrings, eta: Double) -> St
         } else {
             string = strings.Map_ETAMinutes(minutes)
         }
-        return strings.Map_DirectionsDriveEta(string).0
+        return format(string)
     } else {
         return nil
     }
@@ -118,20 +120,32 @@ func throttledUserLocation(_ userLocation: Signal<CLLocation?, NoError>) -> Sign
     }
 }
 
-func driveEta(coordinate: CLLocationCoordinate2D) -> Signal<Double?, NoError> {
+enum ExpectedTravelTime: Equatable {
+    case unknown
+    case calculating
+    case ready(Double)
+}
+
+func getExpectedTravelTime(coordinate: CLLocationCoordinate2D, transportType: MKDirectionsTransportType) -> Signal<ExpectedTravelTime, NoError> {
     return Signal { subscriber in
+        subscriber.putNext(.calculating)
+        
         let destinationPlacemark = MKPlacemark(coordinate: coordinate, addressDictionary: nil)
         let destination = MKMapItem(placemark: destinationPlacemark)
         
         let request = MKDirections.Request()
         request.source = MKMapItem.forCurrentLocation()
         request.destination = destination
-        request.transportType = .automobile
+        request.transportType = transportType
         request.requestsAlternateRoutes = false
         
         let directions = MKDirections(request: request)
         directions.calculateETA { response, error in
-            subscriber.putNext(response?.expectedTravelTime)
+            if let travelTime = response?.expectedTravelTime {
+                subscriber.putNext(.ready(travelTime))
+            } else {
+                subscriber.putNext(.unknown)
+            }
             subscriber.putCompletion()
         }
         return ActionDisposable {

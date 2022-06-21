@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
@@ -42,6 +41,8 @@ final class ThemeGridController: ViewController {
     override var navigationBarRequiresEntireLayoutUpdate: Bool {
         return false
     }
+    
+    private var previousContentOffset: GridNodeVisibleContentOffset?
     
     init(context: AccountContext) {
         self.context = context
@@ -323,8 +324,29 @@ final class ThemeGridController: ViewController {
         }
         
         self.controllerNode.gridNode.visibleContentOffsetChanged = { [weak self] offset in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-                searchContentNode.updateGridVisibleContentOffset(offset)
+            if let strongSelf = self {
+                if let searchContentNode = strongSelf.searchContentNode {
+                    searchContentNode.updateGridVisibleContentOffset(offset)
+                }
+                
+                var previousContentOffsetValue: CGFloat?
+                if let previousContentOffset = strongSelf.previousContentOffset, case let .known(value) = previousContentOffset {
+                    previousContentOffsetValue = value
+                }
+                switch offset {
+                    case let .known(value):
+                        let transition: ContainedViewLayoutTransition
+                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > 30.0 {
+                            transition = .animated(duration: 0.2, curve: .easeInOut)
+                        } else {
+                            transition = .immediate
+                        }
+                        strongSelf.navigationBar?.updateBackgroundAlpha(min(30.0, max(0.0, value - 54.0)) / 30.0, transition: transition)
+                    case .unknown, .none:
+                        strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+                }
+                
+                strongSelf.previousContentOffset = offset
             }
         }
 
@@ -336,6 +358,8 @@ final class ThemeGridController: ViewController {
         
         self._ready.set(self.controllerNode.ready.get())
         
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        
         self.displayNodeDidLoad()
     }
     
@@ -344,13 +368,13 @@ final class ThemeGridController: ViewController {
         for wallpaper in wallpapers {
             var item: String?
             switch wallpaper {
-                case let .file(_, _, _, _, isPattern, _, slug, _, settings):
+                case let .file(file):
                     var options: [String] = []
-                    if isPattern {
-                        if settings.colors.count >= 1 {
-                            options.append("bg_color=\(UIColor(rgb: settings.colors[0]).hexString)")
+                    if file.isPattern {
+                        if file.settings.colors.count >= 1 {
+                            options.append("bg_color=\(UIColor(rgb: file.settings.colors[0]).hexString)")
                         }
-                        if let intensity = settings.intensity {
+                        if let intensity = file.settings.intensity {
                             options.append("intensity=\(intensity)")
                         }
                     }
@@ -359,7 +383,7 @@ final class ThemeGridController: ViewController {
                     if !options.isEmpty {
                         optionsString = "?\(options.joined(separator: "&"))"
                     }
-                    item = slug + optionsString
+                    item = file.slug + optionsString
                 case let .color(color):
                     item = "\(UIColor(rgb: color).hexString)"
                 default:

@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
@@ -95,7 +94,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         self.presentColorPicker = presentColorPicker
         
         self.gridNode = GridNode()
-        self.gridNode.showVerticalScrollIndicator = true
+        self.gridNode.showVerticalScrollIndicator = false
         self.leftOverlayNode = ASDisplayNode()
         self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.rightOverlayNode = ASDisplayNode()
@@ -143,7 +142,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         self.controllerInteraction = interaction
         
         var wallpapers: [TelegramWallpaper] = []
-        wallpapers.append(contentsOf: gradients.map { TelegramWallpaper.gradient(nil, $0, WallpaperSettings()) })
+        wallpapers.append(contentsOf: gradients.map { TelegramWallpaper.gradient(TelegramWallpaper.Gradient(id: nil, colors: $0, settings: WallpaperSettings())) })
         wallpapers.append(contentsOf: colors.map { TelegramWallpaper.color($0) })
         let transition = context.sharedContext.presentationData
         |> map { presentationData -> (ThemeColorsGridEntryTransition, Bool) in
@@ -272,8 +271,8 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
         
         var listInsets = insets
-        if layout.size.width > 480.0 {
-            let inset = max(20.0, floor((layout.size.width - 674.0) / 2.0))
+        if layout.size.width >= 375.0 {
+            let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
             listInsets.left += inset
             listInsets.right += inset
            
@@ -308,8 +307,8 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + buttonInset - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.customColorItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + buttonTopInset), size: colorLayout.contentSize))
     
-        self.leftOverlayNode.frame = CGRect(x: 0.0, y: -buttonOffset, width: listInsets.left, height: buttonTopInset + colorLayout.contentSize.height)
-        self.rightOverlayNode.frame = CGRect(x: layout.size.width - listInsets.right, y: -buttonOffset, width: listInsets.right, height: buttonTopInset + colorLayout.contentSize.height)
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: -buttonOffset, width: listInsets.left, height: buttonTopInset + colorLayout.contentSize.height + UIScreenPixel)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - listInsets.right, y: -buttonOffset, width: listInsets.right, height: buttonTopInset + colorLayout.contentSize.height + UIScreenPixel)
         
         insets.top += spacing + buttonInset
         

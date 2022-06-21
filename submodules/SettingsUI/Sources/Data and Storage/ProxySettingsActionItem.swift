@@ -141,7 +141,7 @@ private final class ProxySettingsActionItemNode: ListViewItemNode {
             
             let separatorHeight = UIScreenPixel
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: 22.0 + titleLayout.size.height)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -206,6 +206,7 @@ private final class ProxySettingsActionItemNode: ListViewItemNode {
                         case .sameSection(false):
                             bottomStripeInset = leftInset + editingOffset
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0

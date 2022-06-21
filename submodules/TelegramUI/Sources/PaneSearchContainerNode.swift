@@ -5,9 +5,9 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
+import ChatPresentationInterfaceState
 
 private let searchBarHeight: CGFloat = 52.0
 

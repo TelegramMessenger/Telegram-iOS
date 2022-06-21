@@ -63,9 +63,9 @@ final class ItemCollectionItemTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 4 + 8 + 4 + 8)
     
-    init(valueBox: ValueBox, table: ValueBoxTable, reverseIndexTable: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, reverseIndexTable: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>) {
         self.reverseIndexTable = reverseIndexTable
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(collectionId: ItemCollectionId, index: ItemCollectionItemIndex) -> ValueBoxKey {

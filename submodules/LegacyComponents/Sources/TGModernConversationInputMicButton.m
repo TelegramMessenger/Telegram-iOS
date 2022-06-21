@@ -869,6 +869,11 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     }
 }
 
+- (void)reset {
+    _targetTranslation = 0.0;
+    [self updateOverlay];
+}
+
 - (void)addMicLevel:(CGFloat)level {
     _inputLevel = level;
     [_decoration updateLevel:level];

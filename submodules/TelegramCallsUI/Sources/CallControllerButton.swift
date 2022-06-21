@@ -46,6 +46,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             case end
             case cancel
             case share
+            case screencast
         }
         
         var appearance: Appearance
@@ -299,6 +300,10 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     })
                 case .share:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallShareButton"), color: imageColor)
+                case .screencast:
+                    if let iconImage = generateTintedImage(image: UIImage(bundleImageName: "Call/ScreenSharePhone"), color: imageColor) {
+                        image = generateScaledImage(image: iconImage, size: iconImage.size.aspectFitted(CGSize(width: 38.0, height: 38.0)))
+                    }
                 }
             
                 if let image = image {
@@ -364,7 +369,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                         fillColor = UIColor(rgb: 0xd92326).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
                     case .green:
                         fillColor = UIColor(rgb: 0x74db58).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
-                    case let .custom(color, alpha):
+                    case let .custom(color, _):
                         fillColor = UIColor(rgb: color).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
                     }
                 }

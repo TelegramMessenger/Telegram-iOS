@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Photos
 import Display
 import MobileCoreServices
@@ -56,6 +55,8 @@ public func fetchMediaData(context: AccountContext, postbox: Postbox, mediaRefer
                     case .Remote:
                         subscriber.putNext(.progress(0.0))
                     case let .Fetching(_, progress):
+                        subscriber.putNext(.progress(progress))
+                    case let .Paused(progress):
                         subscriber.putNext(.progress(progress))
                 }
             })

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -12,6 +11,7 @@ import MergeLists
 import AccountContext
 import StickerPackPreviewUI
 import ContextUI
+import ChatPresentationInterfaceState
 
 final class HorizontalStickersChatContextPanelInteraction {
     var previewedStickerItem: StickerPackItem?

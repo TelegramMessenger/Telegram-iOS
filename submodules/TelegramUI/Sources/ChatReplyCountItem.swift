@@ -64,7 +64,7 @@ class ChatReplyCountItem: ListViewItem {
 class ChatReplyCountItemNode: ListViewItemNode {
     var item: ChatReplyCountItem?
     private let labelNode: TextNode
-    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    private var backgroundNode: WallpaperBubbleBackgroundNode?
     private let backgroundColorNode: ASDisplayNode
     
     private var theme: ChatPresentationThemeData?
@@ -201,7 +201,7 @@ class ChatReplyCountItemNode: ListViewItemNode {
             backgroundFrame.origin.x += rect.minX
             backgroundFrame.origin.y += rect.minY
             
-            backgroundNode.update(rect: backgroundFrame, within: containerSize)
+            backgroundNode.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
         }
     }
 
@@ -211,9 +211,9 @@ class ChatReplyCountItemNode: ListViewItemNode {
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let item = self.item {
-            return item.header
+            return [item.header]
         } else {
             return nil
         }

@@ -1,9 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -21,7 +19,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
         self.addSubnode(self.activityNode)
     }
     
-    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, PeerId, [(Peer, PeerInputActivity)]) -> (CGSize, () -> Void) {
+    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, EnginePeer.Id, [(EnginePeer, PeerInputActivity)]) -> (CGSize, () -> Void) {
         return { [weak self] boundingSize, presentationData, color, peerId, activities in
             let strings = presentationData.strings
             
@@ -60,7 +58,11 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 text = strings.Activity_PlayingGame
                             case .typingText:
                                 text = strings.DialogList_Typing
-                            case .speakingInGroupCall:
+                            case .choosingSticker:
+                                text = strings.Activity_ChoosingSticker
+                            case let .interactingWithEmoji(emoticon, _, _):
+                                text = strings.Activity_TappingInteractiveEmoji(emoticon).string
+                            case .speakingInGroupCall, .seeingEmojiInteraction:
                                 text = ""
                         }
                         let string = NSAttributedString(string: text, font: textFont, textColor: color)
@@ -78,6 +80,12 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 state = .playingGame(string, lightColor)
                             case .speakingInGroupCall:
                                 state = .typingText(string, lightColor)
+                            case .choosingSticker:
+                                state = .choosingSticker(string, lightColor)
+                            case .interactingWithEmoji:
+                                state = .interactingWithEmoji(string, lightColor)
+                            case .seeingEmojiInteraction:
+                                state = .none
                         }
                     } else {
                         let text: String
@@ -85,22 +93,24 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                             let peerTitle = activities[0].0.compactDisplayTitle
                             switch activities[0].1 {
                                 case .uploadingVideo:
-                                    text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).string
                                 case .uploadingInstantVideo:
-                                    text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).string
                                 case .uploadingPhoto:
-                                    text = strings.DialogList_SingleUploadingPhotoSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleUploadingPhotoSuffix(peerTitle).string
                                 case .uploadingFile:
-                                    text = strings.DialogList_SingleUploadingFileSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleUploadingFileSuffix(peerTitle).string
                                 case .recordingVoice:
-                                    text = strings.DialogList_SingleRecordingAudioSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleRecordingAudioSuffix(peerTitle).string
                                 case .recordingInstantVideo:
-                                    text = strings.DialogList_SingleRecordingVideoMessageSuffix(peerTitle).0
+                                    text = strings.DialogList_SingleRecordingVideoMessageSuffix(peerTitle).string
                                 case .playingGame:
-                                    text = strings.DialogList_SinglePlayingGameSuffix(peerTitle).0
+                                    text = strings.DialogList_SinglePlayingGameSuffix(peerTitle).string
                                 case .typingText:
-                                    text = strings.DialogList_SingleTypingSuffix(peerTitle).0
-                                case .speakingInGroupCall:
+                                    text = strings.DialogList_SingleTypingSuffix(peerTitle).string
+                                case .choosingSticker:
+                                    text = strings.DialogList_SingleChoosingStickerSuffix(peerTitle).string
+                                case .speakingInGroupCall, .seeingEmojiInteraction, .interactingWithEmoji:
                                     text = ""
                             }
                         } else {
@@ -121,6 +131,10 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 state = .playingGame(string, lightColor)
                             case .speakingInGroupCall:
                                 state = .typingText(string, lightColor)
+                            case .choosingSticker:
+                                state = .choosingSticker(string, lightColor)
+                            case .seeingEmojiInteraction, .interactingWithEmoji:
+                                state = .none
                         }
                     }
                 } else {
@@ -129,12 +143,12 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                         let peerTitle = activities[0].0.compactDisplayTitle
                         if activities.count == 2 {
                             let secondPeerTitle = activities[1].0.compactDisplayTitle
-                            string = NSAttributedString(string: strings.DialogList_MultipleTypingPair(peerTitle, secondPeerTitle).0, font: textFont, textColor: color)
+                            string = NSAttributedString(string: strings.DialogList_MultipleTypingPair(peerTitle, secondPeerTitle).string, font: textFont, textColor: color)
                         } else {
-                            string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).0).0, font: textFont, textColor: color)
+                            string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).string).string, font: textFont, textColor: color)
                         }
                     } else {
-                        string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).0, font: textFont, textColor: color)
+                        string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).string, font: textFont, textColor: color)
                     }
                     state = .typingText(string, lightColor)
                 }

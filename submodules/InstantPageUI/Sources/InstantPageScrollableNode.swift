@@ -2,12 +2,11 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import Postbox
 import Display
 import TelegramPresentationData
 
-protocol InstantPageScrollableItem: class, InstantPageItem {
+protocol InstantPageScrollableItem: AnyObject, InstantPageItem {
     var contentSize: CGSize { get }
     var horizontalInset: CGFloat { get }
     var isRTL: Bool { get }

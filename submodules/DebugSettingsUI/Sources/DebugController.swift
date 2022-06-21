@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import MtProtoKit
 import MessageUI
 import TelegramPresentationData
@@ -14,6 +13,8 @@ import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import AppBundle
+import ZipArchive
+import WebKit
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -74,12 +75,15 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetHoles(PresentationTheme)
     case reindexUnread(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
+    case resetWebViewCache(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
-    case demoVideoChats(Bool)
     case experimentalCompatibility(Bool)
-    case enableNoiseSuppression(Bool)
+    case enableDebugDataDisplay(Bool)
+    case acceleratedStickers(Bool)
+    case experimentalBackground(Bool)
+    case snow(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case voiceConference
@@ -101,7 +105,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .demoVideoChats, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableNoiseSuppression:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .snow:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -158,26 +162,32 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 20
         case .resetBiometricsData:
             return 21
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 22
-        case .photoPreview:
+        case .optimizeDatabase:
             return 23
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 24
-        case .demoVideoChats:
+        case .knockoutWallpaper:
             return 25
         case .experimentalCompatibility:
             return 26
-        case .enableNoiseSuppression:
+        case .enableDebugDataDisplay:
             return 27
-        case .playerEmbedding:
+        case .acceleratedStickers:
             return 28
-        case .playlistPlayback:
+        case .experimentalBackground:
             return 29
-        case .voiceConference:
+        case .snow:
             return 30
+        case .playerEmbedding:
+            return 31
+        case .playlistPlayback:
+            return 32
+        case .voiceConference:
+            return 33
         case let .preferredVideoCodec(index, _, _, _):
-            return 31 + index
+            return 34 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -208,7 +218,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     } else {
                         UIPasteboard.general.setData(data, forPasteboardType: dataType)
                     }
-                    context.sharedContext.openResolvedUrl(.importStickers, context: context, urlContext: .generic, navigationController: arguments.getNavigationController(), openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { c, a in arguments.presentController(c, a as? ViewControllerPresentationArguments) }, dismissInput: {}, contentContext: nil)
+                    context.sharedContext.openResolvedUrl(.importStickers, context: context, urlContext: .generic, navigationController: arguments.getNavigationController(), forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { c, a in arguments.presentController(c, a as? ViewControllerPresentationArguments) }, dismissInput: {}, contentContext: nil)
                 }
             })
         case .sendLogs:
@@ -217,42 +227,56 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                     let actionSheet = ActionSheetController(presentationData: presentationData)
-                    
+
                     var items: [ActionSheetButtonItem] = []
-                    
+
                     if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
                         items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                            
+
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
                             controller.peerSelected = { [weak controller] peer in
                                 let peerId = peer.id
-                                
+
                                 if let strongController = controller {
                                     strongController.dismiss()
-                                    
+
                                     let lineFeed = "\n".data(using: .utf8)!
-                                    var logData: Data = Data()
+                                    var rawLogData: Data = Data()
                                     for (name, path) in logs {
-                                        if !logData.isEmpty {
-                                            logData.append(lineFeed)
-                                            logData.append(lineFeed)
+                                        if !rawLogData.isEmpty {
+                                            rawLogData.append(lineFeed)
+                                            rawLogData.append(lineFeed)
                                         }
-                                        
-                                        logData.append("------ File: \(name) ------\n".data(using: .utf8)!)
-                                        
+
+                                        rawLogData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+
                                         if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                                            logData.append(data)
+                                            rawLogData.append(data)
                                         }
                                     }
+
+                                    let tempSource = TempBox.shared.tempFile(fileName: "Log.txt")
+                                    let tempZip = TempBox.shared.tempFile(fileName: "destination.zip")
                                     
+                                    let _ = try? rawLogData.write(to: URL(fileURLWithPath: tempSource.path))
+                                    
+                                    SSZipArchive.createZipFile(atPath: tempZip.path, withFilesAtPaths: [tempSource.path])
+
+                                    guard let gzippedData = try? Data(contentsOf: URL(fileURLWithPath: tempZip.path)) else {
+                                        return
+                                    }
+                                    
+                                    TempBox.shared.dispose(tempSource)
+                                    TempBox.shared.dispose(tempZip)
+
                                     let id = Int64.random(in: Int64.min ... Int64.max)
-                                    let fileResource = LocalFileMediaResource(fileId: id, size: logData.count, isSecretRelated: false)
-                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: logData)
-                                    
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: logData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt")])
+                                    let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
+                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
+
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
                                     let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
-                                    
+
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                 }
                             }
@@ -261,7 +285,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     }
                     items.append(ActionSheetButtonItem(title: "Via Email", color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        
+
                         let composeController = MFMailComposeViewController()
                         composeController.mailComposeDelegate = arguments.mailComposeDelegate
                         composeController.setSubject("Telegram Logs")
@@ -272,12 +296,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         }
                         arguments.getRootController()?.present(composeController, animated: true, completion: nil)
                     }))
-                    
+
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
-                        ])])
+                    ])])
                     arguments.presentController(actionSheet, nil)
                 })
             })
@@ -369,42 +393,56 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                     let actionSheet = ActionSheetController(presentationData: presentationData)
-                    
+
                     var items: [ActionSheetButtonItem] = []
-                    
+
                     if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
                         items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                            
+
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
                             controller.peerSelected = { [weak controller] peer in
                                 let peerId = peer.id
-                                
+
                                 if let strongController = controller {
                                     strongController.dismiss()
-                                    
+
                                     let lineFeed = "\n".data(using: .utf8)!
-                                    var logData: Data = Data()
+                                    var rawLogData: Data = Data()
                                     for (name, path) in logs {
-                                        if !logData.isEmpty {
-                                            logData.append(lineFeed)
-                                            logData.append(lineFeed)
+                                        if !rawLogData.isEmpty {
+                                            rawLogData.append(lineFeed)
+                                            rawLogData.append(lineFeed)
                                         }
-                                        
-                                        logData.append("------ File: \(name) ------\n".data(using: .utf8)!)
-                                        
+
+                                        rawLogData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+
                                         if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                                            logData.append(data)
+                                            rawLogData.append(data)
                                         }
                                     }
+
+                                    let tempSource = TempBox.shared.tempFile(fileName: "Log.txt")
+                                    let tempZip = TempBox.shared.tempFile(fileName: "destination.zip")
                                     
+                                    let _ = try? rawLogData.write(to: URL(fileURLWithPath: tempSource.path))
+                                    
+                                    SSZipArchive.createZipFile(atPath: tempZip.path, withFilesAtPaths: [tempSource.path])
+
+                                    guard let gzippedData = try? Data(contentsOf: URL(fileURLWithPath: tempZip.path)) else {
+                                        return
+                                    }
+                                    
+                                    TempBox.shared.dispose(tempSource)
+                                    TempBox.shared.dispose(tempZip)
+
                                     let id = Int64.random(in: Int64.min ... Int64.max)
-                                    let fileResource = LocalFileMediaResource(fileId: id, size: logData.count, isSecretRelated: false)
-                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: logData)
-                                    
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: logData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt")])
+                                    let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
+                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
+
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
                                     let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
-                                    
+
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                 }
                             }
@@ -413,7 +451,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     }
                     items.append(ActionSheetButtonItem(title: "Via Email", color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        
+
                         let composeController = MFMailComposeViewController()
                         composeController.mailComposeDelegate = arguments.mailComposeDelegate
                         composeController.setSubject("Telegram Logs")
@@ -424,39 +462,98 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         }
                         arguments.getRootController()?.present(composeController, animated: true, completion: nil)
                     }))
-                    
+
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
-                        ])])
+                    ])])
                     arguments.presentController(actionSheet, nil)
                 })
             })
         case .sendNotificationLogs:
-            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Notification Logs", label: "", sectionId: self.section, style: .blocks, action: {
-                let _ = (Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/notificationServiceLogs").collectLogs()
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Notification Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
+                let _ = (Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/notification-logs").collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
-                        guard let context = arguments.context else {
-                            return
-                        }
-                        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                        controller.peerSelected = { [weak controller] peer in
-                            let peerId = peer.id
-                            
-                            if let strongController = controller {
-                                strongController.dismiss()
-                                
-                                let messages = logs.map { (name, path) -> EnqueueMessage in
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+
+                    var items: [ActionSheetButtonItem] = []
+
+                    if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
+                        items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+
+                            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+                            controller.peerSelected = { [weak controller] peer in
+                                let peerId = peer.id
+
+                                if let strongController = controller {
+                                    strongController.dismiss()
+
+                                    let lineFeed = "\n".data(using: .utf8)!
+                                    var rawLogData: Data = Data()
+                                    for (name, path) in logs {
+                                        if !rawLogData.isEmpty {
+                                            rawLogData.append(lineFeed)
+                                            rawLogData.append(lineFeed)
+                                        }
+
+                                        rawLogData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+
+                                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                            rawLogData.append(data)
+                                        }
+                                    }
+
+                                    let tempSource = TempBox.shared.tempFile(fileName: "Log.txt")
+                                    let tempZip = TempBox.shared.tempFile(fileName: "destination.zip")
+                                    
+                                    let _ = try? rawLogData.write(to: URL(fileURLWithPath: tempSource.path))
+                                    
+                                    SSZipArchive.createZipFile(atPath: tempZip.path, withFilesAtPaths: [tempSource.path])
+
+                                    guard let gzippedData = try? Data(contentsOf: URL(fileURLWithPath: tempZip.path)) else {
+                                        return
+                                    }
+                                    
+                                    TempBox.shared.dispose(tempSource)
+                                    TempBox.shared.dispose(tempZip)
+
                                     let id = Int64.random(in: Int64.min ... Int64.max)
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                    return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                                    let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
+                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
+
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+
+                                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                 }
-                                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
+                            }
+                            arguments.pushController(controller)
+                        }))
+                    }
+                    items.append(ActionSheetButtonItem(title: "Via Email", color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+
+                        let composeController = MFMailComposeViewController()
+                        composeController.mailComposeDelegate = arguments.mailComposeDelegate
+                        composeController.setSubject("Telegram Logs")
+                        for (name, path) in logs {
+                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
+                                composeController.addAttachmentData(data, mimeType: "application/text", fileName: name)
                             }
                         }
-                        arguments.pushController(controller)
-                    })
+                        arguments.getRootController()?.present(composeController, animated: true, completion: nil)
+                    }))
+
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    arguments.presentController(actionSheet, nil)
+                })
             })
         case .sendCriticalLogs:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Send Critical Logs", label: "", sectionId: self.section, style: .blocks, action: {
@@ -574,10 +671,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 if let context = arguments.context {
                     let _ = (context.account.postbox.transaction { transaction -> Void in
                         transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedPollResults)
-                        unmarkChatListFeaturedFiltersAsSeen(transaction: transaction)
                         
                         transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks)
                     }).start()
+
+                    let _ = context.engine.peers.unmarkChatListFeaturedFiltersAsSeen()
                 }
             })
         case .crash:
@@ -617,7 +715,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         let databasePath = context.account.basePath + "/postbox/db"
                         let _ = try? FileManager.default.removeItem(atPath: databasePath)
                         exit(0)
-                        preconditionFailure()
                     }),
                     ]), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -640,7 +737,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         let databasePath = context.account.basePath + "/postbox"
                         let _ = try? FileManager.default.removeItem(atPath: databasePath)
                         exit(0)
-                        preconditionFailure()
                     }),
                     ]), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -685,6 +781,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
                 }).start()
             })
+        case .resetWebViewCache:
+            return ItemListActionItem(presentationData: presentationData, title: "Clear Web View Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                WKWebsiteDataStore.default().removeData(ofTypes: [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache], modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{ })
+            })
         case .optimizeDatabase:
             return ItemListActionItem(presentationData: presentationData, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -705,9 +805,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Media Preview (Updated)", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.chatListPhotos = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -715,19 +815,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Knockout Wallpaper", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.knockoutWallpaper = value
-                        return settings
-                    })
-                }).start()
-            })
-        case let .demoVideoChats(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Demo Video", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
-                        settings.demoVideoChats = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -735,19 +825,49 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Experimental Compatibility", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.experimentalCompatibility = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
-        case let .enableNoiseSuppression(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Noise Suppression", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .enableDebugDataDisplay(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Debug Data Display", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
-                        settings.enableNoiseSuppression = value
-                        return settings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.enableDebugDataDisplay = value
+                        return PreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .acceleratedStickers(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Accelerated Stickers", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.acceleratedStickers = value
+                        return PreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .experimentalBackground(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Background Experiment", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.experimentalBackground = value
+                        return PreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .snow(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Snow", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.snow = value
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -755,9 +875,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Player Embedding", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.playerEmbedding = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -765,9 +885,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Playlist Playback", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.playlistPlayback = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -781,9 +901,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.preferredVideoCodec = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -791,9 +911,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Video Cropping Optimization", value: !value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.disableVideoAspectScaling = !value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -801,9 +921,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Enable VoIP TCP", value: !value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.enableVoipTcp = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -826,7 +946,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     
 //    entries.append(.testStickerImport(presentationData.theme))
     entries.append(.sendLogs(presentationData.theme))
-    entries.append(.sendOneLog(presentationData.theme))
+    //entries.append(.sendOneLog(presentationData.theme))
     entries.append(.sendShareLogs)
     entries.append(.sendNotificationLogs(presentationData.theme))
     entries.append(.sendCriticalLogs(presentationData.theme))
@@ -856,13 +976,15 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.resetHoles(presentationData.theme))
     if isMainApp {
         entries.append(.reindexUnread(presentationData.theme))
+        entries.append(.resetWebViewCache(presentationData.theme))
     }
     entries.append(.optimizeDatabase(presentationData.theme))
     if isMainApp {
         entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
-        entries.append(.demoVideoChats(experimentalSettings.demoVideoChats))
         entries.append(.experimentalCompatibility(experimentalSettings.experimentalCompatibility))
-        entries.append(.enableNoiseSuppression(experimentalSettings.enableNoiseSuppression))
+        entries.append(.enableDebugDataDisplay(experimentalSettings.enableDebugDataDisplay))
+        entries.append(.acceleratedStickers(experimentalSettings.acceleratedStickers))
+        entries.append(.experimentalBackground(experimentalSettings.experimentalBackground))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }
@@ -929,22 +1051,22 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
     let signal = combineLatest(sharedContext.presentationData, sharedContext.accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])), preferencesSignal)
     |> map { presentationData, sharedData, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let loggingSettings: LoggingSettings
-        if let value = sharedData.entries[SharedDataKeys.loggingSettings] as? LoggingSettings {
+        if let value = sharedData.entries[SharedDataKeys.loggingSettings]?.get(LoggingSettings.self) {
             loggingSettings = value
         } else {
             loggingSettings = LoggingSettings.defaultSettings
         }
         
         let mediaInputSettings: MediaInputSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaInputSettings] as? MediaInputSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaInputSettings]?.get(MediaInputSettings.self) {
             mediaInputSettings = value
         } else {
             mediaInputSettings = MediaInputSettings.defaultSettings
         }
         
-        let experimentalSettings: ExperimentalUISettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
+        let experimentalSettings: ExperimentalUISettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
         
-        let networkSettings: NetworkSettings? = preferences?.values[PreferencesKeys.networkSettings] as? NetworkSettings
+        let networkSettings: NetworkSettings? = preferences?.values[PreferencesKeys.networkSettings]?.get(NetworkSettings.self)
         
         var leftNavigationButton: ItemListNavigationButton?
         if modal {
@@ -977,4 +1099,62 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         return controller?.navigationController as? NavigationController
     }
     return controller
+}
+
+public func triggerDebugSendLogsUI(context: AccountContext, additionalInfo: String = "", pushController: @escaping (ViewController) -> Void) {
+    let _ = (Logger.shared.collectLogs()
+    |> deliverOnMainQueue).start(next: { logs in
+        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+        controller.peerSelected = { [weak controller] peer in
+            let peerId = peer.id
+
+            if let strongController = controller {
+                strongController.dismiss()
+
+                let lineFeed = "\n".data(using: .utf8)!
+                var rawLogData: Data = Data()
+                for (name, path) in logs {
+                    if !rawLogData.isEmpty {
+                        rawLogData.append(lineFeed)
+                        rawLogData.append(lineFeed)
+                    }
+
+                    rawLogData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                        rawLogData.append(data)
+                    }
+                }
+                
+                if !additionalInfo.isEmpty {
+                    rawLogData.append("------ Additional Info ------\n".data(using: .utf8)!)
+                    rawLogData.append("\(additionalInfo)".data(using: .utf8)!)
+                }
+                
+                let tempSource = TempBox.shared.tempFile(fileName: "Log.txt")
+                let tempZip = TempBox.shared.tempFile(fileName: "destination.zip")
+                
+                let _ = try? rawLogData.write(to: URL(fileURLWithPath: tempSource.path))
+                
+                SSZipArchive.createZipFile(atPath: tempZip.path, withFilesAtPaths: [tempSource.path])
+
+                guard let gzippedData = try? Data(contentsOf: URL(fileURLWithPath: tempZip.path)) else {
+                    return
+                }
+                
+                TempBox.shared.dispose(tempSource)
+                TempBox.shared.dispose(tempZip)
+
+                let id = Int64.random(in: Int64.min ... Int64.max)
+                let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
+                context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
+
+                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
+                let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+
+                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+            }
+        }
+        pushController(controller)
+    })
 }

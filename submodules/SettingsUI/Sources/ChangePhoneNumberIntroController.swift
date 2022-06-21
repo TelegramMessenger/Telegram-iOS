@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TextFormat
 import AccountContext
@@ -121,6 +120,8 @@ public final class ChangePhoneNumberIntroController: ViewController {
             self?.proceed()
         }
         self.displayNodeDidLoad()
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
     public override func viewDidAppear(_ animated: Bool) {

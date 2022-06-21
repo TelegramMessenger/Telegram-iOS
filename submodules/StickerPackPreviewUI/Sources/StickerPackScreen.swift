@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AccountContext
 import TelegramPresentationData
@@ -82,7 +81,7 @@ private final class StickerPackContainer: ASDisplayNode {
     private var enqueuedTransactions: [StickerPackPreviewGridTransaction] = []
     
     private var itemsDisposable: Disposable?
-    private(set) var currentStickerPack: (StickerPackCollectionInfo, [ItemCollectionItem], Bool)?
+    private(set) var currentStickerPack: (StickerPackCollectionInfo, [StickerPackItem], Bool)?
     private var didReceiveStickerPackResult = false
     
     private let isReadyValue = Promise<Bool>()
@@ -413,7 +412,7 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         case let .result(info, items, installed):
             if !items.isEmpty && self.currentStickerPack == nil {
-                if let (_, _, _, gridInsets) = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
+                if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
                     scrollToItem = GridNodeScrollToItem(index: 0, position: .top(0.0), transition: .immediate, directionHint: .up, adjustForSection: false)
                 }
             }
@@ -456,9 +455,6 @@ private final class StickerPackContainer: ASDisplayNode {
             updateLayout = true
             
             for item in items {
-                guard let item = item as? StickerPackItem else {
-                    continue
-                }
                 var stableId: Int?
                 inner: for entry in self.currentEntries {
                     if let stickerItem = entry.stickerItem, stickerItem.file.fileId == item.file.fileId {
@@ -1066,10 +1062,10 @@ public enum StickerPackScreenPerformedAction {
     case remove(positionInList: Int)
 }
 
-public func StickerPackScreen(context: AccountContext, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
+public func StickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
     //return StickerPackScreenImpl(context: context, stickerPacks: stickerPacks, selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     
-    let controller = StickerPackPreviewController(context: context, stickerPack: mainStickerPack, mode: mode, parentNavigationController: parentNavigationController, actionPerformed: actionPerformed)
+    let controller = StickerPackPreviewController(context: context, updatedPresentationData: updatedPresentationData, stickerPack: mainStickerPack, mode: mode, parentNavigationController: parentNavigationController, actionPerformed: actionPerformed)
     controller.dismissed = dismissed
     controller.sendSticker = sendSticker
     return controller

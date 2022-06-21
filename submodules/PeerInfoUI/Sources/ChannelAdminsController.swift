@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -44,32 +43,6 @@ private enum ChannelAdminsSection: Int32 {
 private enum ChannelAdminsEntryStableId: Hashable {
     case index(Int32)
     case peer(PeerId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .index(index):
-                return index.hashValue
-            case let .peer(peerId):
-                return peerId.hashValue
-        }
-    }
-    
-    static func ==(lhs: ChannelAdminsEntryStableId, rhs: ChannelAdminsEntryStableId) -> Bool {
-        switch lhs {
-            case let .index(index):
-                if case .index(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .peer(peerId):
-                if case .peer(peerId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private enum ChannelAdminsEntry: ItemListNodeEntry {
@@ -204,13 +177,13 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelAdminsControllerArguments
         switch self {
-            case let .recentActions(theme, text):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
+            case let .recentActions(_, text):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openRecentActions()
                 })
-            case let .adminsHeader(theme, title):
+            case let .adminsHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
-            case let .adminPeerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, participant, editing, enabled, hasAction):
+            case let .adminPeerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, _, participant, editing, enabled, hasAction):
                 let peerText: String
                 var action: (() -> Void)?
                 switch participant.participant {
@@ -222,7 +195,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                                 if peer.id == participant.peer.id {
                                     peerText = strings.Channel_Management_LabelAdministrator
                                 } else {
-                                    peerText = strings.Channel_Management_PromotedBy(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)).0
+                                    peerText = strings.Channel_Management_PromotedBy(EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder)).string
                                 }
                             } else {
                                 peerText = ""
@@ -236,7 +209,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                         arguments.openAdmin(participant.participant)
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: .text(peerText, .secondary), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(participant.peer), presence: nil, text: .text(peerText, .secondary), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removeAdmin(peerId)
@@ -245,7 +218,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: editing, action: {
                     arguments.addAdmin()
                 })
-            case let .adminsInfo(theme, text):
+            case let .adminsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -497,7 +470,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func channelAdminsController(context: AccountContext, peerId initialPeerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
+public func channelAdminsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId initialPeerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
     let statePromise = ValuePromise(ChannelAdminsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelAdminsControllerState())
     let updateState: ((ChannelAdminsControllerState) -> ChannelAdminsControllerState) -> Void = { f in
@@ -520,9 +493,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
     actionsDisposable.add(upgradeDisposable)
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
-    
-    let presentationDataSignal = context.sharedContext.presentationData
-    
+        
     var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
     
     let currentPeerId = ValuePromise<PeerId>(initialPeerId)
@@ -545,7 +516,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
             guard let peer = peer, let user = user else {
                 return
             }
-            presentControllerImpl?(UndoOverlayController(presentationData: context.sharedContext.currentPresentationData.with { $0 }, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(user.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in return false }), nil)
+            presentControllerImpl?(UndoOverlayController(presentationData: context.sharedContext.currentPresentationData.with { $0 }, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(EnginePeer(user).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string), elevatedLayout: false, action: { _ in return false }), nil)
         })
     }
     
@@ -629,13 +600,13 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
                                         }
                                     }
                                     if !canUnban {
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Members_AddAdminErrorBlacklisted, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_Members_AddAdminErrorBlacklisted, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                         return
                                     }
                                 }
                             }
                         }
-                        pushControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
+                        pushControllerImpl?(channelAdminController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
                         }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership))
                     })
                     dismissController = { [weak controller] in
@@ -651,7 +622,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
         let _ = (currentPeerId.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerId in
-            pushControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
+            pushControllerImpl?(channelAdminController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
             }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership))
         })
     })
@@ -727,7 +698,8 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
     
     var previousPeers: [RenderedChannelParticipant]?
     
-    let signal = combineLatest(queue: .mainQueue(), presentationDataSignal, statePromise.get(), peerView.get(), adminsPromise.get() |> deliverOnMainQueue)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(queue: .mainQueue(), presentationData, statePromise.get(), peerView.get(), adminsPromise.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
     |> map { presentationData, state, view, admins -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peerId = view.peerId
@@ -784,7 +756,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
                 }
             }, openPeer: { _, participant in
                 if let participant = participant?.participant, case .member = participant {
-                    pushControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
+                    pushControllerImpl?(channelAdminController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
                         updateState { state in
                             return state.withUpdatedSearchingMembers(false)
                         }
@@ -827,11 +799,9 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
         guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {
             return
         }
-        
-        var replacedSelf = false
+
         rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController, replace: { c in
             if c === controller {
-                replacedSelf = true
                 return channelAdminsController(context: context, peerId: upgradedPeerId, loadCompleted: {
                 })
             } else {

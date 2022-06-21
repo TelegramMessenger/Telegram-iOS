@@ -4,7 +4,6 @@ import AVFoundation
 import MobileCoreServices
 import Postbox
 import TelegramCore
-import SyncCore
 import MediaPlayer
 import TelegramAudio
 import UniversalMediaPlayer
@@ -14,6 +13,7 @@ import AccountContext
 import TelegramUniversalVideoContent
 import DeviceProximity
 import MediaResources
+import PhotoResources
 
 enum SharedMediaPlayerGroup: Int {
     case music = 0
@@ -61,7 +61,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     private let queue = Queue.mainQueue()
     
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let inForeground: Signal<Bool, NoError>
     private let presentationData: Signal<PresentationData, NoError>
     
@@ -189,7 +189,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     public let galleryHiddenMediaManager: GalleryHiddenMediaManager = GalleryHiddenMediaManagerImpl()
     
-    init(accountManager: AccountManager, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>) {
+    init(accountManager: AccountManager<TelegramAccountManagerTypes>, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>) {
         self.accountManager = accountManager
         self.inForeground = inForeground
         self.presentationData = presentationData
@@ -325,7 +325,11 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         |> distinctUntilChanged(isEqual: { $0?.0 === $1?.0 && $0?.1 == $1?.1 })
         |> mapToSignal { value -> Signal<UIImage?, NoError> in
             if let (account, value) = value {
-                return Signal { subscriber in
+                return albumArtThumbnailData(engine: TelegramEngine(account: account), thumbnail: value.fullSizeResource)
+                |> map { data -> UIImage? in
+                    return data.flatMap(UIImage.init(data:))
+                }
+                /*return Signal { subscriber in
                     let fetched = account.postbox.mediaBox.fetchedResource(value.fullSizeResource, parameters: nil).start()
                     let data = account.postbox.mediaBox.resourceData(value.fullSizeResource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false)).start(next: { data in
                         if data.complete, let value = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
@@ -337,7 +341,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                         fetched.dispose()
                         data.dispose()
                     }
-                }
+                }*/
             } else {
                 return .single(nil)
             }
@@ -480,7 +484,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             inputData = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.musicPlaybackSettings])
             |> take(1)
             |> mapToSignal { sharedData -> Signal<(Account, SharedMediaPlaylist, MusicPlaybackSettings, MediaPlaybackStoredState?)?, NoError> in
-                let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.musicPlaybackSettings] as? MusicPlaybackSettings) ?? MusicPlaybackSettings.defaultSettings
+                let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.musicPlaybackSettings]?.get(MusicPlaybackSettings.self) ?? MusicPlaybackSettings.defaultSettings
                 
                 if let location = playlist.location as? PeerMessagesPlaylistLocation, let messageId = location.messageId {
                     return mediaPlaybackStoredState(postbox: account.postbox, messageId: messageId)

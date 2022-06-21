@@ -6,13 +6,15 @@ swift_library(
     srcs = glob([
 		"Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TextFormat:TextFormat",
         "//submodules/AccountContext:AccountContext",
@@ -28,7 +30,16 @@ swift_library(
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/UrlEscaping:UrlEscaping",
-        "//submodules/ManagedAnimationNode:ManagedAnimationNode"
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/ContextUI:ContextUI",
+        "//submodules/SaveToCameraRoll:SaveToCameraRoll",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/ImageContentAnalysis:ImageContentAnalysis",
+        "//submodules/TextSelectionNode:TextSelectionNode",
+        "//submodules/Speak:Speak",
+        "//submodules/UndoUI:UndoUI",
+        "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
+        "//submodules/TranslateUI:TranslateUI",
     ],
     visibility = [
         "//visibility:public",

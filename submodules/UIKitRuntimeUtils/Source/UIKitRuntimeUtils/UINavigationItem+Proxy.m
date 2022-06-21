@@ -16,7 +16,8 @@ static const void *setMultipleRightBarButtonItemsListenerKey = &setMultipleRight
 static const void *setBackBarButtonItemListenerBagKey = &setBackBarButtonItemListenerBagKey;
 static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
 static const void *badgeKey = &badgeKey;
-static const void *userInfoKey = &userInfoKey;
+static const void *animationNameKey = &animationNameKey;
+static const void *animationOffsetKey = &animationOffsetKey;
 
 @implementation UINavigationItem (Proxy)
 
@@ -138,7 +139,7 @@ static const void *userInfoKey = &userInfoKey;
 
 - (void)_ac91f40f_setBackBarButtonItem:(UIBarButtonItem *)backBarButtonItem
 {
-    UIBarButtonItem *previousItem = self.rightBarButtonItem;
+    UIBarButtonItem *previousItem = self.backBarButtonItem;
     
     [self _ac91f40f_setBackBarButtonItem:backBarButtonItem];
     
@@ -402,12 +403,20 @@ NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem *item, UITabBarItemSetBa
     [(NSBag *)[self associatedObjectForKey:setSelectedImageListenerBagKey] removeItem:key];
 }
 
-- (NSObject * _Nullable)userInfo {
-    return [self associatedObjectForKey:userInfoKey];
+- (void)setAnimationName:(NSString *)animationName {
+    [self setAssociatedObject:animationName forKey:animationNameKey];
 }
 
-- (void)setUserInfo:(NSObject * _Nullable)userInfo {
-    [self setAssociatedObject:userInfo forKey:userInfoKey];
+- (NSString *)animationName {
+    return [self associatedObjectForKey:animationNameKey];
+}
+
+- (void)setAnimationOffset:(CGPoint)animationOffset {
+    [self setAssociatedObject:[NSValue valueWithCGPoint:animationOffset] forKey:animationOffsetKey];
+}
+
+- (CGPoint)animationOffset {
+    return ((NSValue *)[self associatedObjectForKey:animationOffsetKey]).CGPointValue;
 }
 
 @end

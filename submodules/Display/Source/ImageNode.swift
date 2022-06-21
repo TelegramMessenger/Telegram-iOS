@@ -127,6 +127,7 @@ public class ImageNode: ASDisplayNode {
     private var first = true
     private let enableEmpty: Bool
     public var enableAnimatedTransition: Bool
+    public var animateFirstTransition = true
     
     private let _contentReady = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -166,7 +167,7 @@ public class ImageNode: ASDisplayNode {
                     if strongSelf.first && next != nil {
                         strongSelf.first = false
                         animate = false
-                        if strongSelf.isNodeLoaded {
+                        if strongSelf.isNodeLoaded && strongSelf.animateFirstTransition {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
                         }
                     }
@@ -209,6 +210,14 @@ public class ImageNode: ASDisplayNode {
         
         self.contents = nil
         self.disposable.set(nil)
+    }
+    
+    public var image: UIImage? {
+        if let contents = self.contents {
+            return UIImage(cgImage: contents as! CGImage)
+        } else {
+            return nil
+        }
     }
 }
 

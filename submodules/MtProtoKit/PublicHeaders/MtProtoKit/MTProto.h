@@ -47,10 +47,13 @@
 @property (nonatomic) bool media;
 @property (nonatomic) bool enforceMedia;
 @property (nonatomic) bool cdn;
+@property (nonatomic) bool allowUnboundEphemeralKeys;
 @property (nonatomic) bool checkForProxyConnectionIssues;
 @property (nonatomic) bool canResetAuthData;
 @property (nonatomic) id requiredAuthToken;
 @property (nonatomic) NSInteger authTokenMasterDatacenterId;
+
+@property (nonatomic, strong) NSString *(^getLogPrefix)();
 
 - (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo requiredAuthToken:(id)requiredAuthToken authTokenMasterDatacenterId:(NSInteger)authTokenMasterDatacenterId;
 

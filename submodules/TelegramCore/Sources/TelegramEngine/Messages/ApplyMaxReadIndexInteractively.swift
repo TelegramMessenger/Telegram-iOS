@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 func _internal_applyMaxReadIndexInteractively(postbox: Postbox, stateManager: AccountStateManager, index: MessageIndex) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
@@ -163,6 +162,16 @@ public func clearPeerUnseenPersonalMessagesInteractively(account: Account, peerI
             return
         }
         account.viewTracker.updateMarkAllMentionsSeen(peerId: peerId)
+    }
+    |> ignoreValues
+}
+
+public func clearPeerUnseenReactionsInteractively(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            return
+        }
+        account.viewTracker.updateMarkAllReactionsSeen(peerId: peerId)
     }
     |> ignoreValues
 }

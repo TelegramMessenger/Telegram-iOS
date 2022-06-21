@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
@@ -106,11 +105,12 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         var dateText: String?
         var typeText: String?
         var buttonText: String?
+        var canShare = true
         switch entry {
             case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _):
-                nameText = peer?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
+                nameText = peer.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
                 if let date = date {
-                    dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date).0
+                    dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date).string
                 }
                 
                 if (!videoRepresentations.isEmpty) {
@@ -119,6 +119,10 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
                 } else {
                     typeText = self.strings.ProfilePhoto_MainPhoto
                     buttonText = self.strings.ProfilePhoto_SetMainPhoto
+                }
+            
+                if let peer = peer {
+                    canShare = !peer.isCopyProtectionEnabled
                 }
             default:
                 break
@@ -151,6 +155,8 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
                 let _ = self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, contentInset: validLayout.5, transition: .immediate)
             }
         }
+        
+        self.actionButton.isHidden = !canShare
         
         switch content {
             case .info:

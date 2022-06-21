@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -12,12 +11,14 @@ import MergeLists
 import AccountContext
 import StickerPackPreviewUI
 import ContextUI
+import ChatPresentationInterfaceState
+import UndoUI
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult
-    
-    var hashValue: Int {
-        return result.id.hashValue
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(result.id.hashValue)
     }
     
     static func ==(lhs: ChatContextResultStableId, rhs: ChatContextResultStableId) -> Bool {
@@ -103,7 +104,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
         self.listView.isHidden = true
         self.listView.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).0
+            return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
@@ -186,13 +187,16 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                         return
                                     }
                                     let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .standalone(media: file)).start()
+                                    
+                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                    strongSelf.interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: strongSelf.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
                                 })))
                             }
                             menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.ShareMenu_Send, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
                                 f(.default)
-                                item.resultSelected(item.result, itemNode, itemNode.bounds)
+                                let _ = item.resultSelected(item.result, itemNode, itemNode.bounds)
                             })))
                             selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: menuItems))
                         }
@@ -234,7 +238,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         let geoPoint = currentProcessedResults.geoPoint.flatMap { geoPoint -> (Double, Double) in
             return (geoPoint.latitude, geoPoint.longitude)
         }
-        self.loadMoreDisposable.set((requestChatContextResults(account: self.context.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
+        self.loadMoreDisposable.set((self.context.engine.messages.requestChatContextResults(botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
         |> map { results -> ChatContextResultCollection? in
             return results?.results
         }

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import Postbox
-import SyncCore
 import TelegramCore
 import Display
 
@@ -91,7 +90,7 @@ private final class SpotlightIndexStorage {
     func update(items: [PeerId: SpotlightIndexStorageItem]) {
         let validPeerIds = Set(items.keys)
         var removePeerIds: [PeerId] = []
-        for (peerId, item) in self.items {
+        for (peerId, _) in self.items {
             if !validPeerIds.contains(peerId) {
                 removePeerIds.append(peerId)
             }
@@ -188,11 +187,13 @@ private func manageableSpotlightContacts(appBasePath: String, accounts: Signal<[
     return accounts
     |> mapToSignal { accounts -> Signal<[[PeerId: SpotlightIndexStorageItem]], NoError> in
         return combineLatest(queue: queue, accounts.map { account -> Signal<[PeerId: SpotlightIndexStorageItem], NoError> in
-            return account.postbox.contactPeersView(accountPeerId: account.peerId, includePresences: false)
-            |> map { view -> [PeerId: SpotlightIndexStorageItem] in
-                var result: [PeerId: SpotlightIndexStorageItem] = [:]
+            return TelegramEngine(account: account).data.subscribe(
+                TelegramEngine.EngineData.Item.Contacts.List(includePresences: false)
+            )
+            |> map { view -> [EnginePeer.Id: SpotlightIndexStorageItem] in
+                var result: [EnginePeer.Id: SpotlightIndexStorageItem] = [:]
                 for peer in view.peers {
-                    if let user = peer as? TelegramUser {
+                    if case let .user(user) = peer {
                         let avatarSourcePath = smallestImageRepresentation(user.photo).flatMap { representation -> String? in
                             let resourcePath = account.postbox.mediaBox.resourcePath(representation.resource)
                             if resourcePath.hasPrefix(appBasePath + "/") {
@@ -209,8 +210,8 @@ private func manageableSpotlightContacts(appBasePath: String, accounts: Signal<[
             |> distinctUntilChanged
         })
     }
-    |> map { accountContacts -> [PeerId: SpotlightIndexStorageItem] in
-        var result: [PeerId: SpotlightIndexStorageItem] = [:]
+    |> map { accountContacts -> [EnginePeer.Id: SpotlightIndexStorageItem] in
+        var result: [EnginePeer.Id: SpotlightIndexStorageItem] = [:]
         for singleAccountContacts in accountContacts {
             for (peerId, contact) in singleAccountContacts {
                 if result[peerId] == nil {
@@ -225,12 +226,12 @@ private func manageableSpotlightContacts(appBasePath: String, accounts: Signal<[
 private final class SpotlightDataContextImpl {
     private let queue: Queue
     private let appBasePath: String
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let indexStorage: SpotlightIndexStorage
     
     private var listDisposable: Disposable?
     
-    init(queue: Queue, appBasePath: String, accountManager: AccountManager, accounts: Signal<[Account], NoError>) {
+    init(queue: Queue, appBasePath: String, accountManager: AccountManager<TelegramAccountManagerTypes>, accounts: Signal<[Account], NoError>) {
         self.queue = queue
         self.appBasePath = appBasePath
         self.accountManager = accountManager
@@ -267,7 +268,7 @@ private final class SpotlightDataContextImpl {
 public final class SpotlightDataContext {
     private let impl: QueueLocalObject<SpotlightDataContextImpl>
     
-    public init(appBasePath: String, accountManager: AccountManager, accounts: Signal<[Account], NoError>) {
+    public init(appBasePath: String, accountManager: AccountManager<TelegramAccountManagerTypes>, accounts: Signal<[Account], NoError>) {
         let queue = Queue()
         self.impl = QueueLocalObject(queue: queue, generate: {
             return SpotlightDataContextImpl(queue: queue, appBasePath: appBasePath, accountManager: accountManager, accounts: accounts)

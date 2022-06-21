@@ -7,19 +7,21 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     copts = [
+        "-warnings-as-errors",
     ],
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/GradientBackground:GradientBackground",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/Postbox:Postbox",
         "//submodules/AccountContext:AccountContext",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/WallpaperResources:WallpaperResources",
         "//submodules/FastBlur:FastBlur",
+        "//submodules/Svg:Svg",
+        "//submodules/GZip:GZip",
+        "//submodules/AppBundle:AppBundle",
     ],
     visibility = [
         "//visibility:public",

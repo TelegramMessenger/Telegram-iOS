@@ -3,13 +3,13 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import LegacyComponents
 import AccountContext
 import ChatInterfaceState
 import AudioBlob
+import ChatPresentationInterfaceState
 
 private let offsetThreshold: CGFloat = 10.0
 private let dismissOffsetThreshold: CGFloat = 70.0
@@ -99,6 +99,8 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
     private let presentController: (ViewController) -> Void
     let container: ChatTextInputMediaRecordingButtonPresenterContainer
     private var presentationController: ChatTextInputMediaRecordingButtonPresenterController?
+    private var timer: SwiftSignalKit.Timer?
+    fileprivate weak var button: ChatTextInputMediaRecordingButton?
     
     init(account: Account, presentController: @escaping (ViewController) -> Void) {
         self.account = account
@@ -112,6 +114,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
             presentationController.presentingViewController?.dismiss(animated: false, completion: {})
             self.presentationController = nil
         }
+        self.timer?.invalidate()
     }
     
     func view() -> UIView! {
@@ -125,6 +128,14 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
     func present() {
         if let keyboardWindow = LegacyComponentsGlobals.provider().applicationKeyboardWindow(), !keyboardWindow.isHidden {
             keyboardWindow.addSubview(self.container)
+            
+            self.timer = SwiftSignalKit.Timer(timeout: 0.05, repeat: true, completion: { [weak self] in
+                if let keyboardWindow = LegacyComponentsGlobals.provider().applicationKeyboardWindow(), !keyboardWindow.isHidden {
+                } else {
+                    self?.present()
+                }
+            }, queue: Queue.mainQueue())
+            self.timer?.start()
         } else {
             var presentNow = false
             if self.presentationController == nil {
@@ -138,10 +149,16 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
             if let presentationController = self.presentationController, presentNow {
                 self.presentController(presentationController)
             }
+            
+            if let timer = self.timer {
+                self.button?.reset()
+                timer.invalidate()
+            }
         }
     }
     
     func dismiss() {
+        self.timer?.invalidate()
         self.container.removeFromSuperview()
         if let presentationController = self.presentationController {
             presentationController.presentingViewController?.dismiss(animated: false, completion: {})
@@ -172,7 +189,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     
     private var recordingOverlay: ChatTextInputAudioRecordingOverlay?
     private var startTouchLocation: CGPoint?
-    private(set) var controlsOffset: CGFloat = 0.0
+    fileprivate var controlsOffset: CGFloat = 0.0
     private(set) var cancelTranslation: CGFloat = 0.0
     
     private var micLevelDisposable: MetaDisposable?
@@ -244,17 +261,23 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    private lazy var micDecoration: (UIView & TGModernConversationInputMicButtonDecoration) = {
-        let blobView = VoiceBlobView(
-            frame: CGRect(origin: CGPoint(), size: CGSize(width: 220.0, height: 220.0)),
-            maxLevel: 4,
-            smallBlobRange: (0.45, 0.55),
-            mediumBlobRange: (0.52, 0.87),
-            bigBlobRange: (0.57, 1.00)
-        )
-        blobView.setColor(self.theme.chat.inputPanel.actionControlFillColor)
-        return blobView
-    }()
+    private var micDecorationValue: VoiceBlobView?
+    private var micDecoration: (UIView & TGModernConversationInputMicButtonDecoration) {
+        if let micDecorationValue = self.micDecorationValue {
+            return micDecorationValue
+        } else {
+            let blobView = VoiceBlobView(
+                frame: CGRect(origin: CGPoint(), size: CGSize(width: 220.0, height: 220.0)),
+                maxLevel: 4,
+                smallBlobRange: (0.45, 0.55),
+                mediumBlobRange: (0.52, 0.87),
+                bigBlobRange: (0.57, 1.00)
+            )
+            blobView.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+            self.micDecorationValue = blobView
+            return blobView
+        }
+    }
     
     private lazy var micLock: (UIView & TGModernConversationInputMicButtonLock) = {
         let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, strings: self.strings)
@@ -342,7 +365,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
         
         self.pallete = legacyInputMicPalette(from: theme)
-        self.micDecoration.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+        self.micDecorationValue?.setColor(self.theme.chat.inputPanel.actionControlFillColor)
         (self.micLock as? LockView)?.updateTheme(theme)
     }
     
@@ -421,6 +444,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     
     func micButtonPresenter() -> TGModernConversationInputMicButtonPresentation! {
         let presenter = ChatTextInputMediaRecordingButtonPresenter(account: self.account!, presentController: self.presentController)
+        presenter.button = self
         self.currentPresenter = presenter.view()
         return presenter
     }

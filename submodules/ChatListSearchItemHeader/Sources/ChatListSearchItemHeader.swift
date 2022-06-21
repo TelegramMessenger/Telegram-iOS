@@ -26,6 +26,9 @@ public enum ChatListSearchItemHeaderType {
     case activeVoiceChats
     case recentCalls
     case orImportIntoAnExistingGroup
+    case subscribers
+    case downloading
+    case recentDownloads
     
     fileprivate func title(strings: PresentationStrings) -> String {
         switch self {
@@ -71,6 +74,12 @@ public enum ChatListSearchItemHeaderType {
                 return strings.CallList_RecentCallsHeader
             case .orImportIntoAnExistingGroup:
                 return strings.ChatList_HeaderImportIntoAnExistingGroup
+            case .subscribers:
+                return strings.Channel_ChannelSubscribersHeader
+            case .downloading:
+                return strings.DownloadList_DownloadingHeader
+            case .recentDownloads:
+                return strings.DownloadList_DownloadedHeader
         }
     }
     
@@ -118,6 +127,12 @@ public enum ChatListSearchItemHeaderType {
                 return .recentCalls
             case .orImportIntoAnExistingGroup:
                 return .orImportIntoAnExistingGroup
+            case .subscribers:
+                return .subscribers
+            case .downloading:
+                return .downloading
+            case .recentDownloads:
+                return .recentDownloads
         }
     }
 }
@@ -148,12 +163,16 @@ private enum ChatListSearchItemHeaderId: Int32 {
     case activeVoiceChats
     case recentCalls
     case orImportIntoAnExistingGroup
+    case subscribers
+    case downloading
+    case recentDownloads
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {
-    public let id: Int64
+    public let id: ListViewItemNode.HeaderId
     public let type: ChatListSearchItemHeaderType
     public let stickDirection: ListViewItemHeaderStickDirection = .top
+    public let stickOverInsets: Bool = true
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let actionTitle: String?
@@ -163,14 +182,22 @@ public final class ChatListSearchItemHeader: ListViewItemHeader {
     
     public init(type: ChatListSearchItemHeaderType, theme: PresentationTheme, strings: PresentationStrings, actionTitle: String? = nil, action: (() -> Void)? = nil) {
         self.type = type
-        self.id = Int64(self.type.id.rawValue)
+        self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(self.type.id.rawValue))
         self.theme = theme
         self.strings = strings
         self.actionTitle = actionTitle
         self.action = action
     }
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ChatListSearchItemHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
-    public func node() -> ListViewItemHeaderNode {
+    public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ChatListSearchItemHeaderNode(type: self.type, theme: self.theme, strings: self.strings, actionTitle: self.actionTitle, action: self.action)
     }
     
@@ -230,6 +257,10 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
         self.validLayout = (size, leftInset, rightInset)
         self.sectionHeaderNode.frame = CGRect(origin: CGPoint(), size: size)
         self.sectionHeaderNode.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+    }
+    
+    override public func animateAdded(duration: Double) {
+        self.layer.animateAlpha(from: 0.0, to: self.alpha, duration: 0.2)
     }
     
     override public func animateRemoved(duration: Double) {

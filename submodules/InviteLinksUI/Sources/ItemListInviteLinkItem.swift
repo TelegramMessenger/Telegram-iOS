@@ -3,27 +3,31 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import ShimmerEffect
+import TelegramCore
 
 func invitationAvailability(_ invite: ExportedInvitation) -> CGFloat {
-    if invite.isRevoked {
-        return 0.0
+    if case let .link(_, _, _, _, isRevoked, _, date, startDate, expireDate, usageLimit, count, _) = invite {
+        if isRevoked {
+            return 0.0
+        }
+        let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+        var availability: CGFloat = 1.0
+        if let expireDate = expireDate {
+            let startDate = startDate ?? date
+            let fraction = CGFloat(expireDate - currentTime) / CGFloat(expireDate - startDate)
+            availability = min(fraction, availability)
+        }
+        if let usageLimit = usageLimit, let count = count {
+            let fraction = 1.0 - (CGFloat(count) / CGFloat(usageLimit))
+            availability = min(fraction, availability)
+        }
+        return max(0.0, min(1.0, availability))
+    } else {
+        return 1.0
     }
-    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-    var availability: CGFloat = 1.0
-    if let expireDate = invite.expireDate {
-        let startDate = invite.startDate ?? invite.date
-        let fraction = CGFloat(expireDate - currentTime) / CGFloat(expireDate - startDate)
-        availability = min(fraction, availability)
-    }
-    if let usageLimit = invite.usageLimit, let count = invite.count {
-        let fraction = 1.0 - (CGFloat(count) / CGFloat(usageLimit))
-        availability = min(fraction, availability)
-    }
-    return max(0.0, min(1.0, availability))
 }
 
 private enum ItemBackgroundColor: Equatable {
@@ -295,12 +299,12 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
             let color: ItemBackgroundColor
             let nextColor: ItemBackgroundColor
             let transitionFraction: CGFloat
-            if let invite = item.invite {
-                if invite.isRevoked {
+            if let invite = item.invite, case let .link(_, _, _, _, isRevoked, _, _, _, expireDate, usageLimit, _, _) = invite {
+                if isRevoked {
                     color = .gray
                     nextColor = .gray
                     transitionFraction = 0.0
-                } else if invite.expireDate == nil && invite.usageLimit == nil {
+                } else if expireDate == nil && usageLimit == nil {
                     color = .blue
                     nextColor = .blue
                     transitionFraction = 0.0
@@ -336,21 +340,39 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                 iconColor = item.presentationData.theme.list.mediaPlaceholderColor
             }
             
-            let inviteLink = item.invite?.link.replacingOccurrences(of: "https://", with: "") ?? ""
+            let inviteLink = item.invite?.link?.replacingOccurrences(of: "https://", with: "") ?? ""
             var titleText = inviteLink
-            
             var subtitleText: String = ""
             var timerValue: TimerNode.Value?
-            if let invite = item.invite {
-                let count = invite.count ?? 0
+            
+            
+            if let invite = item.invite, case let .link(_, title, _, _, _, _, date, startDate, expireDate, usageLimit, count, requestedCount) = invite {
+                if let title = title, !title.isEmpty {
+                    titleText = title
+                }
+                
+                let count = count ?? 0
+                let requestedCount = requestedCount ?? 0
+                
                 if count > 0 {
                     subtitleText = item.presentationData.strings.InviteLink_PeopleJoinedShort(count)
                 } else {
-                    if let usageLimit = invite.usageLimit, count == 0 && !availability.isZero {
+                    if let usageLimit = usageLimit, count == 0 && !availability.isZero {
                         subtitleText = item.presentationData.strings.InviteLink_PeopleCanJoin(usageLimit)
                     } else {
-                        subtitleText = availability.isZero ? item.presentationData.strings.InviteLink_PeopleJoinedShortNoneExpired : item.presentationData.strings.InviteLink_PeopleJoinedShortNone
+                        if availability.isZero {
+                            subtitleText = item.presentationData.strings.InviteLink_PeopleJoinedShortNoneExpired
+                        } else if requestedCount == 0 {
+                            subtitleText = item.presentationData.strings.InviteLink_PeopleJoinedShortNone
+                        }
                     }
+                }
+                
+                if requestedCount > 0 {
+                    if !subtitleText.isEmpty {
+                        subtitleText += ", "
+                    }
+                    subtitleText += item.presentationData.strings.MemberRequests_PeopleRequestedShort(requestedCount)
                 }
                 
                 if invite.isRevoked {
@@ -360,12 +382,12 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                     subtitleText += item.presentationData.strings.InviteLink_Revoked
                 } else {
                     var isExpired = false
-                    if let expireDate = invite.expireDate, currentTime >= expireDate {
+                    if let expireDate = expireDate, currentTime >= expireDate {
                         isExpired = true
                     }
                     var isFull = false
                     
-                    if let usageLimit = invite.usageLimit {
+                    if let usageLimit = usageLimit {
                         if !isExpired {
                             let remaining = usageLimit - count
                             if remaining > 0 && remaining != usageLimit {
@@ -385,19 +407,19 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                             }
                         }
                     }
-                    if let expireDate = invite.expireDate, !isFull {
+                    if let expireDate = expireDate, !isFull {
                         if !isExpired {
                             if !subtitleText.isEmpty {
                                 subtitleText += " • "
                             }
                             let elapsedTime = expireDate - currentTime
                             if elapsedTime >= 86400 {
-                                subtitleText += item.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: item.presentationData.strings, value: elapsedTime)).0
+                                subtitleText += item.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: item.presentationData.strings, value: elapsedTime)).string
                             } else {
-                                subtitleText += item.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).0
+                                subtitleText += item.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).string
                             }
                             if timerValue == nil {
-                                timerValue = .timestamp(creation: invite.startDate ?? invite.date, deadline: expireDate)
+                                timerValue = .timestamp(creation: startDate ?? date, deadline: expireDate)
                             }
                         } else {
                             if !subtitleText.isEmpty {
@@ -440,7 +462,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let contentSize = CGSize(width: params.width, height: max(minHeight, rawHeight))
@@ -542,6 +564,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                             switch neighbors.bottom {
                                 case .sameSection(false):
                                     bottomStripeInset = leftInset
+                                    strongSelf.bottomStripeNode.isHidden = false
                                 default:
                                     bottomStripeInset = 0.0
                                     hasBottomCorners = true

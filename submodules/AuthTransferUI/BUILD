@@ -6,9 +6,11 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
@@ -22,11 +24,13 @@ swift_library(
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
-        "//submodules/Markdown:Markdown",
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/DeviceAccess:DeviceAccess",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/Markdown:Markdown",
+        "//submodules/QrCodeUI:QrCodeUI",
     ],
     visibility = [
         "//visibility:public",

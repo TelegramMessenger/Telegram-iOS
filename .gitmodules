@@ -7,7 +7,7 @@
 url=https://github.com/bazelbuild/rules_apple.git
 [submodule "build-system/bazel-rules/rules_swift"]
 	path = build-system/bazel-rules/rules_swift
-url=https://github.com/ali-fareed/rules_swift.git
+url=https://github.com/bazelbuild/rules_swift.git
 [submodule "build-system/bazel-rules/apple_support"]
 	path = build-system/bazel-rules/apple_support
 	url = https://github.com/bazelbuild/apple_support.git
@@ -26,3 +26,6 @@ url=../tgcalls.git
 [submodule "third-party/webrtc/webrtc"]
 	path = third-party/webrtc/webrtc
 	url = https://github.com/ali-fareed/webrtc.git
+[submodule "third-party/libx264/x264"]
+	path = third-party/libx264/x264
+	url = https://github.com/mirror/x264.git

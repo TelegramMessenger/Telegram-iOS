@@ -107,6 +107,8 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     bool _saveEditedPhotos;
     
     TGMenuSheetPallete *_pallete;
+    
+    bool _savingStartImage;
 }
 @end
 
@@ -246,8 +248,9 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         }
         
         _collectionView = [[TGAttachmentCarouselCollectionView alloc] initWithFrame:CGRectMake(0, 0, self.bounds.size.width, TGAttachmentZoomedPhotoHeight + TGAttachmentEdgeInset * 2) collectionViewLayout:_smallLayout];
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        }
         _collectionView.backgroundColor = [UIColor clearColor];
         _collectionView.dataSource = self;
         _collectionView.delegate = self;
@@ -344,6 +347,15 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     [_assetsDisposable dispose];
     [_selectionChangedDisposable dispose];
     [_itemsSizeChangedDisposable dispose];
+}
+
+- (void)saveStartImage {
+    _savingStartImage = true;
+    __weak TGAttachmentCameraView *weakCameraView = _cameraView;
+    [_cameraView saveStartImage:^{
+        __strong TGAttachmentCameraView *strongCameraView = weakCameraView;
+        [strongCameraView stopPreview];
+    }];
 }
 
 - (UIView *)getItemSnapshot:(NSString *)uniqueId {
@@ -827,7 +839,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     if ([cell isKindOfClass:[TGAttachmentAssetCell class]])
         thumbnailImage = cell.imageView.image;
     
-    TGMediaPickerModernGalleryMixin *mixin = [[TGMediaPickerModernGalleryMixin alloc] initWithContext:_context item:asset fetchResult:_fetchResult parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext suggestionContext:self.suggestionContext hasCaptions:(_allowCaptions && !_forProfilePhoto) allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:_inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:self.asFile itemsLimit:TGAttachmentDisplayedAssetLimit recipientName:self.recipientName hasSilentPosting:self.hasSilentPosting hasSchedule:self.hasSchedule reminder:self.reminder stickersContext:self.stickersContext];
+    TGMediaPickerModernGalleryMixin *mixin = [[TGMediaPickerModernGalleryMixin alloc] initWithContext:_context item:asset fetchResult:_fetchResult parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext hasCaptions:(_allowCaptions && !_forProfilePhoto) allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:_inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:self.asFile itemsLimit:TGAttachmentDisplayedAssetLimit recipientName:self.recipientName hasSilentPosting:self.hasSilentPosting hasSchedule:self.hasSchedule reminder:self.reminder stickersContext:self.stickersContext];
     mixin.presentScheduleController = self.presentScheduleController;
     mixin.presentTimerController = self.presentTimerController;
     __weak TGAttachmentCarouselItemView *weakSelf = self;
@@ -1226,7 +1238,9 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 {
     [super menuView:menuView didDisappearAnimated:animated];
     menuView.tapDismissalAllowed = nil;
-    [_cameraView stopPreview];
+    if (!_savingStartImage) {
+        [_cameraView stopPreview];
+    }
 }
 
 #pragma mark -

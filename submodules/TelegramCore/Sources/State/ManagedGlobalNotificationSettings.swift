@@ -4,18 +4,18 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 public func updateGlobalNotificationSettingsInteractively(postbox: Postbox, _ f: @escaping (GlobalNotificationSettingsSet) -> GlobalNotificationSettingsSet) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
-            if let current = current as? GlobalNotificationSettings {
-                return GlobalNotificationSettings(toBeSynchronized: f(current.effective), remote: current.remote)
+            if let current = current?.get(GlobalNotificationSettings.self) {
+                return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: f(current.effective), remote: current.remote))
             } else {
                 let settings = f(GlobalNotificationSettingsSet.defaultSettings)
-                return GlobalNotificationSettings(toBeSynchronized: settings, remote: settings)
+                return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: settings, remote: settings))
             }
         })
+        transaction.globalNotificationSettingsUpdated()
     }
 }
 
@@ -57,7 +57,7 @@ private enum SynchronizeGlobalSettingsData: Equatable {
 func managedGlobalNotificationSettings(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let data = postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
     |> map { view -> SynchronizeGlobalSettingsData in
-        if let preferences = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+        if let preferences = view.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
             if let settings = preferences.toBeSynchronized {
                 return .push(settings)
             } else {
@@ -78,24 +78,26 @@ func managedGlobalNotificationSettings(postbox: Postbox, network: Network) -> Si
                 |> mapToSignal { settings -> Signal<Void, NoError> in
                     return postbox.transaction { transaction -> Void in
                         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
-                            if let current = current as? GlobalNotificationSettings {
-                                return GlobalNotificationSettings(toBeSynchronized: current.toBeSynchronized, remote: settings)
+                            if let current = current?.get(GlobalNotificationSettings.self) {
+                                return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: current.toBeSynchronized, remote: settings))
                             } else {
-                                return GlobalNotificationSettings(toBeSynchronized: nil, remote: settings)
+                                return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: nil, remote: settings))
                             }
                         })
+                        transaction.globalNotificationSettingsUpdated()
                     }
                 }
             case let .push(settings):
                 return pushedNotificationSettings(network: network, settings: settings)
                     |> then(postbox.transaction { transaction -> Void in
                         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
-                            if let current = current as? GlobalNotificationSettings, current.toBeSynchronized == settings {
-                                return GlobalNotificationSettings(toBeSynchronized: nil, remote: settings)
+                            if let current = current?.get(GlobalNotificationSettings.self), current.toBeSynchronized == settings {
+                                return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: nil, remote: settings))
                             } else {
                                 return current
                             }
                         })
+                        transaction.globalNotificationSettingsUpdated()
                     })
         }
     }
@@ -114,56 +116,77 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
     |> map { chats, users, channels, contactsJoinedMuted in
         let chatsSettings: MessageNotificationSettings
         switch chats {
-            case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
-                let enabled: Bool
-                if muteUntil != nil && muteUntil != 0 {
-                    enabled = false
-                } else {
-                    enabled = true
-                }
-                let displayPreviews: Bool
-                if let showPreviews = showPreviews, case .boolFalse = showPreviews {
-                    displayPreviews = false
-                } else {
-                    displayPreviews = true
-                }
-                chatsSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound))
+        case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound):
+            let sound: Api.NotificationSound?
+            #if os(iOS)
+            sound = iosSound
+            #elseif os(macOS)
+            sound = desktopSound
+            #endif
+            
+            let enabled: Bool
+            if muteUntil != nil && muteUntil != 0 {
+                enabled = false
+            } else {
+                enabled = true
+            }
+            let displayPreviews: Bool
+            if let showPreviews = showPreviews, case .boolFalse = showPreviews {
+                displayPreviews = false
+            } else {
+                displayPreviews = true
+            }
+            chatsSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound ?? .notificationSoundDefault))
         }
         
         let userSettings: MessageNotificationSettings
         switch users {
-            case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
-                let enabled: Bool
-                if muteUntil != nil && muteUntil != 0 {
-                    enabled = false
-                } else {
-                    enabled = true
-                }
-                let displayPreviews: Bool
-                if let showPreviews = showPreviews, case .boolFalse = showPreviews {
-                    displayPreviews = false
-                } else {
-                    displayPreviews = true
-                }
-                userSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound))
+        case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound):
+            let sound: Api.NotificationSound?
+            #if os(iOS)
+            sound = iosSound
+            #elseif os(macOS)
+            sound = desktopSound
+            #endif
+            
+            let enabled: Bool
+            if muteUntil != nil && muteUntil != 0 {
+                enabled = false
+            } else {
+                enabled = true
+            }
+            let displayPreviews: Bool
+            if let showPreviews = showPreviews, case .boolFalse = showPreviews {
+                displayPreviews = false
+            } else {
+                displayPreviews = true
+            }
+            userSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound ?? .notificationSoundDefault))
         }
         
         let channelSettings: MessageNotificationSettings
         switch channels {
-            case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
-                let enabled: Bool
-                if muteUntil != nil && muteUntil != 0 {
-                    enabled = false
-                } else {
-                    enabled = true
-                }
-                let displayPreviews: Bool
-                if let showPreviews = showPreviews, case .boolFalse = showPreviews {
-                    displayPreviews = false
-                } else {
-                    displayPreviews = true
-                }
-                channelSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound))
+        case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound):
+            let sound: Api.NotificationSound?
+            #if os(iOS)
+            sound = iosSound
+            #elseif os(macOS)
+            sound = desktopSound
+            #endif
+            
+            let enabled: Bool
+            if muteUntil != nil && muteUntil != 0 {
+                enabled = false
+            } else {
+                enabled = true
+            }
+            let displayPreviews: Bool
+            if let showPreviews = showPreviews, case .boolFalse = showPreviews {
+                displayPreviews = false
+            } else {
+                displayPreviews = true
+            }
+            channelSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound ?? .notificationSoundDefault))
         }
         
         return GlobalNotificationSettingsSet(privateChats: userSettings, groupChats: chatsSettings, channels: channelSettings, contactsJoined: contactsJoinedMuted == .boolFalse)
@@ -177,7 +200,7 @@ private func apiInputPeerNotifySettings(_ settings: MessageNotificationSettings)
     } else {
         muteUntil = Int32.max
     }
-    let sound: String? = settings.sound.apiSound
+    let sound: Api.NotificationSound? = settings.sound.apiSound
     var flags: Int32 = 0
     flags |= (1 << 0)
     if muteUntil != nil {
@@ -191,10 +214,25 @@ private func apiInputPeerNotifySettings(_ settings: MessageNotificationSettings)
 
 private func pushedNotificationSettings(network: Network, settings: GlobalNotificationSettingsSet) -> Signal<Void, NoError> {
     let pushedChats = network.request(Api.functions.account.updateNotifySettings(peer: Api.InputNotifyPeer.inputNotifyChats, settings: apiInputPeerNotifySettings(settings.groupChats)))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    
     let pushedUsers = network.request(Api.functions.account.updateNotifySettings(peer: Api.InputNotifyPeer.inputNotifyUsers, settings: apiInputPeerNotifySettings(settings.privateChats)))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    
     let pushedChannels = network.request(Api.functions.account.updateNotifySettings(peer: Api.InputNotifyPeer.inputNotifyBroadcasts, settings: apiInputPeerNotifySettings(settings.channels)))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    
     let pushedContactsJoined = network.request(Api.functions.account.setContactSignUpNotification(silent: settings.contactsJoined ? .boolFalse : .boolTrue))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    
     return combineLatest(pushedChats, pushedUsers, pushedChannels, pushedContactsJoined)
-    |> retryRequest
     |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
 }

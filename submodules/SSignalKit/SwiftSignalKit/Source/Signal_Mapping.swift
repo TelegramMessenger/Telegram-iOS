@@ -35,7 +35,7 @@ public func flatMap<T, E, R>(_ f: @escaping (T) -> R) -> (Signal<T?, E>) -> Sign
         return Signal<R?, E> { subscriber in
             return signal.start(next: { next in
                 if let next = next {
-                 subscriber.putNext(f(next))
+                    subscriber.putNext(f(next))
                 } else {
                     subscriber.putNext(nil)
                 }

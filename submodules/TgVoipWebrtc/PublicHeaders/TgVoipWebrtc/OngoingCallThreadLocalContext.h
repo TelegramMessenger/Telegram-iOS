@@ -110,6 +110,63 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 #endif
 @end
 
+@interface GroupCallDisposable : NSObject
+
+- (instancetype _Nonnull)initWithBlock:(dispatch_block_t _Nonnull)block;
+- (void)dispose;
+
+@end
+
+@protocol CallVideoFrameBuffer
+
+@end
+
+@interface CallVideoFrameNativePixelBuffer : NSObject<CallVideoFrameBuffer>
+
+@property (nonatomic, readonly) CVPixelBufferRef _Nonnull pixelBuffer;
+
+@end
+
+@interface CallVideoFrameNV12Buffer : NSObject<CallVideoFrameBuffer>
+
+@property (nonatomic, readonly) int width;
+@property (nonatomic, readonly) int height;
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull y;
+@property (nonatomic, readonly) int strideY;
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull uv;
+@property (nonatomic, readonly) int strideUV;
+
+@end
+
+@interface CallVideoFrameI420Buffer : NSObject<CallVideoFrameBuffer>
+
+@property (nonatomic, readonly) int width;
+@property (nonatomic, readonly) int height;
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull y;
+@property (nonatomic, readonly) int strideY;
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull u;
+@property (nonatomic, readonly) int strideU;
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull v;
+@property (nonatomic, readonly) int strideV;
+
+@end
+
+@interface CallVideoFrameData : NSObject
+
+@property (nonatomic, strong, readonly) id<CallVideoFrameBuffer> _Nonnull buffer;
+@property (nonatomic, readonly) int width;
+@property (nonatomic, readonly) int height;
+@property (nonatomic, readonly) OngoingCallVideoOrientationWebrtc orientation;
+@property (nonatomic, readonly) bool mirrorHorizontally;
+@property (nonatomic, readonly) bool mirrorVertically;
+
+@end
+
 @interface OngoingCallThreadLocalContextVideoCapturer : NSObject
 
 - (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId keepLandscape:(bool)keepLandscape;
@@ -130,6 +187,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 #if TARGET_OS_IOS
 - (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation;
 #endif
+
+- (GroupCallDisposable * _Nonnull)addVideoOutput:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink;
 
 @end
 
@@ -165,6 +224,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)addSignalingData:(NSData * _Nonnull)data;
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
+- (void)addExternalAudioData:(NSData * _Nonnull)data;
+
 @end
 
 typedef struct {
@@ -258,6 +319,23 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
 
 @end
 
+@interface OngoingGroupCallIncomingVideoStats : NSObject
+
+@property (nonatomic, readonly) int receivingQuality;
+@property (nonatomic, readonly) int availableQuality;
+
+- (instancetype _Nonnull)initWithReceivingQuality:(int)receivingQuality availableQuality:(int)availableQuality;
+
+@end
+
+@interface OngoingGroupCallStats : NSObject
+
+@property (nonatomic, strong, readonly) NSDictionary<NSString *, OngoingGroupCallIncomingVideoStats *> * _Nonnull incomingVideoStats;
+
+- (instancetype _Nonnull)initWithIncomingVideoStats:(NSDictionary<NSString *, OngoingGroupCallIncomingVideoStats *> * _Nonnull)incomingVideoStats;
+
+@end
+
 @interface GroupCallThreadLocalContext : NSObject
 
 - (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue
@@ -267,14 +345,18 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
     outputDeviceId:(NSString * _Nonnull)outputDeviceId
     videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer
     requestMediaChannelDescriptions:(id<OngoingGroupCallMediaChannelDescriptionTask> _Nonnull (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull, void (^ _Nonnull)(NSArray<OngoingGroupCallMediaChannelDescription *> * _Nonnull)))requestMediaChannelDescriptions
-    requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart
+    requestCurrentTime:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(void (^ _Nonnull)(int64_t)))requestAudioBroadcastPart
+    requestAudioBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestAudioBroadcastPart
+    requestVideoBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, int32_t, OngoingGroupCallRequestedVideoQuality, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestVideoBroadcastPart
     outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
-    enableNoiseSuppression:(bool)enableNoiseSuppression;
+    enableNoiseSuppression:(bool)enableNoiseSuppression
+    disableAudioInput:(bool)disableAudioInput
+    preferX264:(bool)preferX264;
 
 - (void)stop;
 
-- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled;
+- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled isUnifiedBroadcast:(bool)isUnifiedBroadcast;
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 - (void)setJoinResponsePayload:(NSString * _Nonnull)payload;
@@ -291,8 +373,11 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 - (void)makeIncomingVideoViewWithEndpointId:(NSString * _Nonnull)endpointId requestClone:(bool)requestClone completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable, UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
+- (GroupCallDisposable * _Nonnull)addVideoOutputWithEndpointId:(NSString * _Nonnull)endpointId sink:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink;
 
 - (void)addExternalAudioData:(NSData * _Nonnull)data;
+
+- (void)getStats:(void (^ _Nonnull)(OngoingGroupCallStats * _Nonnull))completion;
 
 @end
 

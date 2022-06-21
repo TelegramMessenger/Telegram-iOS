@@ -254,6 +254,11 @@
 
 + (SSignal *)imageDataForAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)allowNetworkAccess
 {
+    return [self imageDataForAsset:asset allowNetworkAccess:allowNetworkAccess convertToJpeg:true];
+}
+
++ (SSignal *)imageDataForAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)allowNetworkAccess convertToJpeg:(bool)convertToJpeg
+{
     SSignal *(^requestDataSignal)(bool) = ^SSignal *(bool networkAccessAllowed)
     {
         return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
@@ -300,9 +305,8 @@
                     fileName = asset.fileName;
                 }
                 
-                if (iosMajorVersion() >= 10 && [asset.uniformTypeIdentifier rangeOfString:@"heic"].location != NSNotFound)
+                if (convertToJpeg && iosMajorVersion() >= 10 && [asset.uniformTypeIdentifier rangeOfString:@"heic"].location != NSNotFound)
                 {
-//#if !DEBUG
                     CIContext *context = [[CIContext alloc] init];
                     CIImage *image = [[CIImage alloc] initWithData:imageData];
                     NSURL *tmpURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"%x.jpg", (int)arc4random()]]];
@@ -311,14 +315,12 @@
                     {
                         fileUrl = tmpURL;
                         dataUTI = @"public.jpeg";
-                        imageData = [[NSData alloc] initWithContentsOfMappedFile:fileUrl.path];
-                        
+                        imageData = [[NSData alloc] initWithContentsOfFile:fileUrl.path options:NSDataReadingMappedAlways error:nil];
                         NSString *lowcaseString = [fileName lowercaseString];
                         NSRange range = [lowcaseString rangeOfString:@".heic"];
                         if (range.location != NSNotFound)
                             fileName = [fileName stringByReplacingCharactersInRange:range withString:@".JPG"];
                     }
-//#endif
                 }
                 
                 TGMediaAssetImageData *data = [[TGMediaAssetImageData alloc] init];
@@ -455,7 +457,7 @@
             {
                 return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
                 {
-                    AVAssetTrack *track = avAsset.tracks.firstObject;
+                    AVAssetTrack *track = [avAsset tracksWithMediaType:AVMediaTypeVideo].firstObject;
                     if (track == nil)
                     {
                         [subscriber putError:nil];

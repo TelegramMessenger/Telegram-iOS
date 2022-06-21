@@ -1,12 +1,15 @@
 #import <Foundation/Foundation.h>
-#import <LegacyComponents/TGMediaPickerCaptionInputPanel.h>
+#import <UIKit/UIKit.h>
 
-@class TGSuggestionContext;
-@class TGKeyCommandController;
+@protocol TGPhotoPaintStickersContext;
+@protocol TGCaptionPanelView;
 
 @interface TGPhotoCaptionInputMixin : NSObject
 
-@property (nonatomic, readonly) TGMediaPickerCaptionInputPanel *inputPanel;
+@property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
+@property (nonatomic, readonly) UIView *backgroundView;
+@property (nonatomic, readonly) id<TGCaptionPanelView> inputPanel;
+@property (nonatomic, readonly) UIView *inputPanelView;
 @property (nonatomic, readonly) UIView *dismissView;
 
 @property (nonatomic, assign) UIInterfaceOrientation interfaceOrientation;
@@ -14,15 +17,11 @@
 @property (nonatomic, assign) CGFloat contentAreaHeight;
 @property (nonatomic, assign) bool allowEntities;
 
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
-
 @property (nonatomic, copy) UIView *(^panelParentView)(void);
 
 @property (nonatomic, copy) void (^panelFocused)(void);
-@property (nonatomic, copy) void (^finishedWithCaption)(NSString *caption, NSArray *entities);
+@property (nonatomic, copy) void (^finishedWithCaption)(NSAttributedString *caption);
 @property (nonatomic, copy) void (^keyboardHeightChanged)(CGFloat keyboardHeight, NSTimeInterval duration, NSInteger animationCurve);
-
-- (instancetype)initWithKeyCommandController:(TGKeyCommandController *)keyCommandController;
 
 - (void)createInputPanelIfNeeded;
 - (void)beginEditing;
@@ -30,8 +29,8 @@
 
 - (void)destroy;
 
-@property (nonatomic, strong) NSString *caption;
-- (void)setCaption:(NSString *)caption entities:(NSArray *)entities animated:(bool)animated;
+@property (nonatomic, strong) NSAttributedString *caption;
+- (void)setCaption:(NSAttributedString *)caption animated:(bool)animated;
 
 - (void)setCaptionPanelHidden:(bool)hidden animated:(bool)animated;
 

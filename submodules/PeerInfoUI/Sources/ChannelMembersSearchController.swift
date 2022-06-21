@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -35,6 +34,7 @@ public final class ChannelMembersSearchController: ViewController {
     
     private let forceTheme: PresentationTheme?
     private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
     
     private var didPlayPresentationAnimation = false
     
@@ -44,13 +44,13 @@ public final class ChannelMembersSearchController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContext, peerId: PeerId, forceTheme: PresentationTheme? = nil, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, forceTheme: PresentationTheme? = nil, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode
         self.openPeer = openPeer
         self.filters = filters
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.forceTheme = forceTheme
         if let forceTheme = forceTheme {
             self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
@@ -63,6 +63,7 @@ public final class ChannelMembersSearchController: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.title = self.presentationData.strings.Channel_Members_Title
+        
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.scrollToTop = { [weak self] in
@@ -78,10 +79,35 @@ public final class ChannelMembersSearchController: ViewController {
             self?.activateSearch()
         })
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.presentationData = presentationData
+            strongSelf.controllerNode.updatePresentationData(presentationData)
+        })
+        
+        let _ = (context.account.postbox.loadedPeerWithId(peerId)
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
+            if let strongSelf = self {
+                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                    strongSelf.title = strongSelf.presentationData.strings.Channel_Subscribers_Title
+                } else {
+                    strongSelf.title = strongSelf.presentationData.strings.Channel_Members_Title
+                }
+            }
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -111,7 +137,7 @@ public final class ChannelMembersSearchController: ViewController {
             }
         }
         
-        self.controllerNode.listNode.didEndScrolling = { [weak self] in
+        self.controllerNode.listNode.didEndScrolling = { [weak self] _ in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
                 let _ = fixNavigationSearchableListNodeScrolling(strongSelf.controllerNode.listNode, searchNode: searchContentNode)
             }

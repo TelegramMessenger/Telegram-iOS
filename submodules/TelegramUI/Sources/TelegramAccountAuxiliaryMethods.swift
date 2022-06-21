@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import SyncCore
 import Postbox
 import MediaResources
 import PassportUI
@@ -13,15 +12,7 @@ import WallpaperResources
 import AppBundle
 import SwiftSignalKit
 
-public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInputState: { interfaceState, inputState -> PeerChatInterfaceState? in
-    if interfaceState == nil {
-        return ChatInterfaceState().withUpdatedSynchronizeableInputState(inputState)
-    } else if let interfaceState = interfaceState as? ChatInterfaceState {
-        return interfaceState.withUpdatedSynchronizeableInputState(inputState)
-    } else {
-        return interfaceState
-    }
-}, fetchResource: { account, resource, ranges, _ in
+public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(fetchResource: { account, resource, ranges, _ in
     if let resource = resource as? VideoLibraryMediaResource {
         return fetchVideoLibraryMediaResource(account: account, resource: resource)
     } else if let resource = resource as? LocalFileVideoMediaResource {
@@ -30,18 +21,20 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
         return fetchLocalFileGifMediaResource(resource: resource)
     } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {
         return fetchPhotoLibraryResource(localIdentifier: photoLibraryResource.localIdentifier)
-    } else if let resource = resource as? ExternalMusicAlbumArtResource {
-        return fetchExternalMusicAlbumArtResource(account: account, resource: resource)
     } else if let resource = resource as? ICloudFileResource {
         return fetchICloudFileResource(resource: resource)
     } else if let resource = resource as? SecureIdLocalImageResource {
         return fetchSecureIdLocalImageResource(postbox: account.postbox, resource: resource)
-    } else if let resource = resource as? OpenInAppIconResource {
-        return fetchOpenInAppIconResource(resource: resource)
     } else if let resource = resource as? EmojiSpriteResource {
         return fetchEmojiSpriteResource(account: account, resource: resource)
-    } else if let resource = resource as? VenueIconResource {
-        return fetchVenueIconResource(account: account, resource: resource)
+    } else if let resource = resource as? BundleResource {
+        return Signal { subscriber in
+            subscriber.putNext(.reset)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.path), options: .mappedRead) {
+                subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+            }
+            return EmptyDisposable
+        }
     } else if let wallpaperResource = resource as? WallpaperDataResource {
         let builtinWallpapers: [String] = [
             "fqv01SQemVIBAAAApND8LDRUhRU"

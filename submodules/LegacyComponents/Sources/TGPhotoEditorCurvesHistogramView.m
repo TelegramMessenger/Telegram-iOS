@@ -228,4 +228,6 @@
     }]];
 }
 
+@synthesize interactionBegan;
+
 @end

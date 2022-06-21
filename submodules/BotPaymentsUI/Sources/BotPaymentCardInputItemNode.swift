@@ -35,7 +35,7 @@ final class BotPaymentCardInputItemNode: BotPaymentItemNode, STPPaymentCardTextF
         return 0.0
     }
     
-    override func layoutContents(theme: PresentationTheme, width: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func layoutContents(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         if self.theme !== theme {
             self.theme = theme
             
@@ -45,7 +45,7 @@ final class BotPaymentCardInputItemNode: BotPaymentItemNode, STPPaymentCardTextF
             self.cardField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         }
         
-        self.cardField.frame = CGRect(origin: CGPoint(x: 5.0, y: 0.0), size: CGSize(width: width - 10.0, height: 44.0))
+        self.cardField.frame = CGRect(origin: CGPoint(x: 5.0 + sideInset, y: 0.0), size: CGSize(width: width - 10.0 - sideInset * 2.0, height: 44.0))
         
         return 44.0
     }

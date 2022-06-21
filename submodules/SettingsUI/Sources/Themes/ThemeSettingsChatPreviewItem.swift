@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -139,16 +138,16 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         
         return { item, params, neighbors in
             if currentBackgroundNode == nil {
-                currentBackgroundNode = WallpaperBackgroundNode(context: item.context)
+                currentBackgroundNode = createWallpaperBackgroundNode(context: item.context, forChatDisplay: false)
             }
             currentBackgroundNode?.update(wallpaper: item.wallpaper)
-            currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
+            currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.componentTheme, bubbleCorners: item.chatBubbleCorners)
             
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(1))
-            let otherPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(2))
+            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
+            let otherPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(2))
             var items: [ListViewItem] = []
             for messageItem in item.messageItems.reversed() {
                 var peers = SimpleDictionary<PeerId, Peer>()
@@ -161,7 +160,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                 }
                 
                 let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: messageItem.outgoing ? otherPeerId : peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: messageItem.outgoing ? [] : [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: messageItem.outgoing ? TelegramUser(id: otherPeerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []) : nil, text: messageItem.text, attributes: messageItem.reply != nil ? [ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil)] : [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-                items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [message], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode))
+                items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [message], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil, isCentered: false))
             }
             
             var nodes: [ListViewItemNode] = []
@@ -200,7 +199,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
             for node in nodes {
                 contentSize.height += node.frame.size.height
             }
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -226,25 +225,6 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         strongSelf.insertSubnode(currentBackgroundNode, at: 0)
                     }
                     
-                    /*if let updatedBackgroundSignal = updatedBackgroundSignal {
-                        strongSelf.disposable.set((updatedBackgroundSignal
-                        |> deliverOnMainQueue).start(next: { [weak self] image in
-                            if let strongSelf = self, let (image, final) = image, let backgroundNode = strongSelf.backgroundNode {
-                                if final && !strongSelf.finalImage {
-                                    let tempLayer = CALayer()
-                                    tempLayer.frame = backgroundNode.bounds
-                                    tempLayer.contentsGravity = backgroundNode.layer.contentsGravity
-                                    tempLayer.contents = strongSelf.contents
-                                    strongSelf.layer.addSublayer(tempLayer)
-                                    tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
-                                        tempLayer?.removeFromSuperlayer()
-                                    })
-                                }
-                                backgroundNode.image = image
-                                strongSelf.finalImage = final
-                            }
-                        }))
-                    }*/
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
 
@@ -274,6 +254,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         case .sameSection(false):
                             bottomStripeInset = 0.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
@@ -281,13 +262,13 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.componentTheme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     if let backgroundNode = strongSelf.backgroundNode {
                         backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
                         backgroundNode.update(wallpaper: item.wallpaper)
-                        backgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
+                        backgroundNode.updateBubbleTheme(bubbleTheme: item.componentTheme, bubbleCorners: item.chatBubbleCorners)
                         backgroundNode.updateLayout(size: backgroundNode.bounds.size, transition: .immediate)
                     }
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)

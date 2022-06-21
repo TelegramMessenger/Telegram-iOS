@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramUIPreferences
 import AccountContext
@@ -13,6 +12,7 @@ import StickerResources
 import AlertUI
 import PresentationDataUtils
 import UndoUI
+import TelegramPresentationData
 
 public enum StickerPackPreviewControllerMode {
     case `default`
@@ -45,6 +45,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
     
     private let openMentionDisposable = MetaDisposable()
     
+    private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
         
     public var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? {
@@ -66,15 +67,17 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         }
     }
     
-    private let actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?
+    private let actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)?
     
-    public init(context: AccountContext, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
         self.context = context
         self.mode = mode
         self.parentNavigationController = parentNavigationController
         self.actionPerformed = actionPerformed
         
         self.stickerPack = stickerPack
+        
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
         
@@ -84,9 +87,10 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         
         self.stickerPackContents.set(context.engine.stickers.loadedStickerPack(reference: stickerPack, forceActualized: true))
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self, strongSelf.isNodeLoaded {
+                strongSelf.presentationData = presentationData
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
@@ -126,17 +130,15 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 }
             }
         }
-        self.displayNode = StickerPackPreviewControllerNode(context: self.context, openShare: openShareImpl, openMention: { [weak self] mention in
+        self.displayNode = StickerPackPreviewControllerNode(context: self.context, presentationData: self.presentationData, openShare: openShareImpl, openMention: { [weak self] mention in
             guard let strongSelf = self else {
                 return
             }
             
-            let account = strongSelf.context.account
             strongSelf.openMentionDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: mention)
-            |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                if let peerId = peerId {
-                    return account.postbox.loadedPeerWithId(peerId)
-                    |> map(Optional.init)
+            |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                if let peer = peer {
+                    return .single(peer._asPeer())
                 } else {
                     return .single(nil)
                 }
@@ -147,7 +149,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 }
                 if let peer = peer, let parentNavigationController = strongSelf.parentNavigationController {
                     strongSelf.dismiss()
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true))
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), animated: true))
                 }
             }))
         }, actionPerformed: self.actionPerformed)
@@ -176,7 +178,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         self.stickerPackDisposable.set((combineLatest(self.stickerPackContents.get(), self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> take(1))
         |> mapToSignal { next, sharedData -> Signal<(LoadedStickerPack, StickerSettings), NoError> in
             var stickerSettings = StickerSettings.defaultSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
                 stickerSettings = value
             }
             
@@ -205,7 +207,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                     
                     let topItems = items.prefix(16)
                     for item in topItems {
-                        if let item = item as? StickerPackItem, item.file.isAnimatedSticker {
+                        if item.file.isAnimatedSticker {
                             let signal = Signal<Bool, NoError> { subscriber in
                                 let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: FileMediaReference.standalone(media: item.file).resourceReference(item.file.resource)).start()
                                 let data = account.postbox.mediaBox.resourceData(item.file.resource).start()
@@ -289,8 +291,8 @@ public func preloadedStickerPackThumbnail(account: Account, info: StickerPackCol
         let signal = Signal<Bool, NoError> { subscriber in
             let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)).start()
             let dataDisposable: Disposable
-            if info.flags.contains(.isAnimated) {
-                dataDisposable = chatMessageAnimationData(postbox: account.postbox, resource: thumbnail.resource, width: 80, height: 80, synchronousLoad: false).start(next: { data in
+            if info.flags.contains(.isAnimated) || info.flags.contains(.isVideo) {
+                dataDisposable = chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: thumbnail.resource, isVideo: info.flags.contains(.isVideo), width: 80, height: 80, synchronousLoad: false).start(next: { data in
                     if data.complete {
                         subscriber.putNext(true)
                         subscriber.putCompletion()

@@ -9,7 +9,7 @@
 
 @implementation TGClipboardMenu
 
-+ (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context images:(NSArray *)images hasCaption:(bool)hasCaption hasTimer:(bool)hasTimer hasSilentPosting:(bool)hasSilentPosting hasSchedule:(bool)hasSchedule reminder:(bool)reminder recipientName:(NSString *)recipientName suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext presentScheduleController:(void (^)(void(^)(int32_t)))presentScheduleController presentTimerController:(void (^)(void(^)(int32_t)))presentTimerController completed:(void (^)(TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem, bool silentPosting, int32_t scheduleTime))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
++ (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context images:(NSArray *)images allowGrouping:(bool)allowGrouping hasCaption:(bool)hasCaption hasTimer:(bool)hasTimer hasSilentPosting:(bool)hasSilentPosting hasSchedule:(bool)hasSchedule reminder:(bool)reminder recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext presentScheduleController:(void (^)(void(^)(int32_t)))presentScheduleController presentTimerController:(void (^)(void(^)(int32_t)))presentTimerController completed:(void (^)(TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem, bool silentPosting, int32_t scheduleTime))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
 {
     bool centered = false;
     if (sourceRect == nil)
@@ -39,10 +39,9 @@
     
     NSMutableArray *itemViews = [[NSMutableArray alloc] init];
     
-    TGClipboardPreviewItemView *previewItem = [[TGClipboardPreviewItemView alloc] initWithContext:context images:images];
+    TGClipboardPreviewItemView *previewItem = [[TGClipboardPreviewItemView alloc] initWithContext:context images:images allowGrouping:allowGrouping];
     __weak TGClipboardPreviewItemView *weakPreviewItem = previewItem;
     previewItem.stickersContext = stickersContext;
-    previewItem.suggestionContext = suggestionContext;
     previewItem.parentController = parentController;
     previewItem.allowCaptions = hasCaption;
     previewItem.hasTimer = hasTimer;
@@ -109,17 +108,41 @@
 
 }
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator
++ (int64_t)generateGroupedId
+{
+    int64_t value;
+    arc4random_buf(&value, sizeof(int64_t));
+    return value;
+}
+
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *))descriptionGenerator
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     NSMutableArray *selectedItems = [selectionContext.selectedItems mutableCopy];
     if (selectedItems.count == 0 && currentItem != nil)
         [selectedItems addObject:currentItem];
     
+    NSNumber *groupedId;
+    NSInteger i = 0;
+    bool grouping = selectionContext.grouping;
+    
+    bool hasAnyTimers = false;
+    if (editingContext != nil || grouping)
+    {
+        for (UIImage *asset in selectedItems)
+        {
+            if ([editingContext timerForItem:asset] != nil) {
+                hasAnyTimers = true;
+            }
+        }
+    }
+    
+    if (grouping && selectedItems.count > 1)
+        groupedId = @([self generateGroupedId]);
+    
     for (UIImage *asset in selectedItems)
     {
-        NSString *caption = [editingContext captionForItem:asset];
-        NSArray *entities = [editingContext entitiesForItem:asset];
+        NSAttributedString *caption = [editingContext captionForItem:asset];
         id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
         NSNumber *timer = [editingContext timerForItem:asset];
         
@@ -132,7 +155,10 @@
             if (timer != nil)
                 dict[@"timer"] = timer;
             
-            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+            if (groupedId != nil)
+                dict[@"groupedId"] = groupedId;
+            
+            id generatedItem = descriptionGenerator(dict, caption, nil);
             return generatedItem;
         }];
         
@@ -176,12 +202,23 @@
             if (timer != nil)
                 dict[@"timer"] = timer;
             
-            id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+            if (groupedId != nil)
+                dict[@"groupedId"] = groupedId;
+            
+            id generatedItem = descriptionGenerator(dict, caption, nil);
             return generatedItem;
         }] catch:^SSignal *(__unused id error)
         {
             return inlineSignal;
         }]];
+        
+        i++;
+        
+        if (groupedId != nil && i == 10)
+        {
+            i = 0;
+            groupedId = @([self generateGroupedId]);
+        }
     }
     return signals;
 }

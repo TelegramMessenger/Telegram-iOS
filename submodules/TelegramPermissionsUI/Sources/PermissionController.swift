@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import DeviceAccess
 import AccountContext
@@ -228,6 +227,8 @@ public final class PermissionController: ViewController {
     public override func loadDisplayNode() {
         self.displayNode = PermissionControllerNode(context: self.context, splitTest: self.splitTest)
         self.displayNodeDidLoad()
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         
         self.controllerNode.allow = { [weak self] in
             self?.allow?()

@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
-
-import SyncCore
+import TelegramApi
 
 public extension MessageFlags {
     var isSending: Bool {
@@ -239,6 +238,18 @@ public extension Message {
             return false
         }
     }
+    
+    func isCopyProtected() -> Bool {
+        if self.flags.contains(.CopyProtected) {
+            return true
+        } else if let group = self.peers[self.id.peerId] as? TelegramGroup, group.flags.contains(.copyProtectionEnabled) {
+            return true
+        } else if let channel = self.peers[self.id.peerId] as? TelegramChannel, channel.flags.contains(.copyProtectionEnabled) {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 public extension Message {
@@ -292,3 +303,58 @@ public extension Message {
     }
 }
 
+public extension Message {
+    var adAttribute: AdMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? AdMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+}
+public extension Message {
+    var reactionsAttribute: ReactionsMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? ReactionsMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+    var hasReactions: Bool {
+        for attribute in self.attributes {
+            if let attribute = attribute as? ReactionsMessageAttribute {
+                return !attribute.reactions.isEmpty
+            }
+        }
+        for attribute in self.attributes {
+            if let attribute = attribute as? PendingReactionsMessageAttribute {
+                return attribute.value != nil
+            }
+        }
+        return false
+    }
+    
+    var textEntitiesAttribute: TextEntitiesMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+}
+
+public func _internal_parseMediaAttachment(data: Data) -> Media? {
+    guard let object = Api.parse(Buffer(buffer: MemoryBuffer(data: data))) else {
+        return nil
+    }
+    if let photo = object as? Api.Photo {
+        return telegramMediaImageFromApiPhoto(photo)
+    } else if let file = object as? Api.Document {
+        return telegramMediaFileFromApiDocument(file)
+    } else {
+        return nil
+    }
+}

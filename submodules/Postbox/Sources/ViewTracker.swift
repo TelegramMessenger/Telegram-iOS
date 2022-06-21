@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 
-public enum ViewUpdateType {
+public enum ViewUpdateType : Equatable {
     case Initial
     case InitialUnread(MessageIndex)
     case Generic
@@ -15,7 +15,6 @@ final class ViewTracker {
     private var chatListViews = Bag<(MutableChatListView, ValuePipe<(ChatListView, ViewUpdateType)>)>()
     private var messageHistoryViews = Bag<(MutableMessageHistoryView, ValuePipe<(MessageHistoryView, ViewUpdateType)>)>()
     private var contactPeerIdsViews = Bag<(MutableContactPeerIdsView, ValuePipe<ContactPeerIdsView>)>()
-    private var contactPeersViews = Bag<(MutableContactPeersView, ValuePipe<ContactPeersView>)>()
     
     private let messageHistoryHolesView = MutableMessageHistoryHolesView()
     private let messageHistoryHolesViewSubscribers = Bag<ValuePipe<MessageHistoryHolesView>>()
@@ -110,17 +109,6 @@ final class ViewTracker {
     
     func removeContactPeerIdsView(_ index: Bag<(MutableContactPeerIdsView, ValuePipe<ContactPeerIdsView>)>.Index) {
         self.contactPeerIdsViews.remove(index)
-    }
-    
-    func addContactPeersView(_ view: MutableContactPeersView) -> (Bag<(MutableContactPeersView, ValuePipe<ContactPeersView>)>.Index, Signal<ContactPeersView, NoError>) {
-        let record = (view, ValuePipe<ContactPeersView>())
-        let index = self.contactPeersViews.add(record)
-        
-        return (index, record.1.signal())
-    }
-    
-    func removeContactPeersView(_ index: Bag<(MutableContactPeersView, ValuePipe<ContactPeersView>)>.Index) {
-        self.contactPeersViews.remove(index)
     }
     
     func addPeerView(_ view: MutablePeerView) -> (Bag<(MutablePeerView, ValuePipe<PeerView>)>.Index, Signal<PeerView, NoError>) {
@@ -222,7 +210,7 @@ final class ViewTracker {
         self.combinedViews.remove(index)
     }
     
-    func refreshViewsDueToExternalTransaction(postbox: Postbox, fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
+    func refreshViewsDueToExternalTransaction(postbox: PostboxImpl, currentTransaction: Transaction, fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
         var updateTrackedHoles = false
         
         for (mutableView, pipe) in self.messageHistoryViews.copyItems() {
@@ -234,7 +222,7 @@ final class ViewTracker {
         }
         
         for (mutableView, pipe) in self.chatListViews.copyItems() {
-            if mutableView.refreshDueToExternalTransaction(postbox: postbox) {
+            if mutableView.refreshDueToExternalTransaction(postbox: postbox, currentTransaction: currentTransaction) {
                 mutableView.render(postbox: postbox)
                 pipe.putNext((ChatListView(mutableView), .Generic))
             }
@@ -259,7 +247,7 @@ final class ViewTracker {
         }
     }
     
-    func updateViews(postbox: Postbox, transaction: PostboxTransaction) {
+    func updateViews(postbox: PostboxImpl, currentTransaction: Transaction, transaction: PostboxTransaction) {
         var updateTrackedHoles = false
         
         if let currentUpdatedState = transaction.currentUpdatedState {
@@ -337,7 +325,7 @@ final class ViewTracker {
         
         for (mutableView, pipe) in self.chatListViews.copyItems() {
             let context = MutableChatListViewReplayContext()
-            if mutableView.replay(postbox: postbox, operations: transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, updatedPeerPresences: transaction.currentUpdatedPeerPresences, transaction: transaction, context: context) {
+            if mutableView.replay(postbox: postbox, currentTransaction: currentTransaction, operations: transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, updatedPeerPresences: transaction.currentUpdatedPeerPresences, transaction: transaction, context: context) {
                 mutableView.complete(postbox: postbox, context: context)
                 mutableView.render(postbox: postbox)
                 pipe.putNext((ChatListView(mutableView), .Generic))
@@ -369,12 +357,6 @@ final class ViewTracker {
                 if mutableView.replay(updateRemoteTotalCount: transaction.replaceRemoteContactCount, replace: replaceContactPeerIds) {
                     pipe.putNext(ContactPeerIdsView(mutableView))
                 }
-            }
-        }
-        
-        for (mutableView, pipe) in self.contactPeersViews.copyItems() {
-            if mutableView.replay(postbox: postbox, replacePeerIds: transaction.replaceContactPeerIds, updatedPeerPresences: transaction.currentUpdatedPeerPresences) {
-                pipe.putNext(ContactPeersView(mutableView))
             }
         }
         
@@ -446,14 +428,14 @@ final class ViewTracker {
     private func updateTrackedHoles() {
         var firstHolesAndTags = Set<MessageHistoryHolesViewEntry>()
         for (view, _) in self.messageHistoryViews.copyItems() {
-            if let (hole, direction, count) = view.firstHole() {
+            if let (hole, direction, count, userId) = view.firstHole() {
                 let space: MessageHistoryHoleSpace
                 if let tag = view.tag {
                     space = .tag(tag)
                 } else {
                     space = .everywhere
                 }
-                firstHolesAndTags.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, space: space, count: count))
+                firstHolesAndTags.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, space: space, count: count, userId: userId))
             }
         }
         

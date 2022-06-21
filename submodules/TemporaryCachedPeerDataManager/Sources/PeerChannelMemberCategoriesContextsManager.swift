@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramStringFormatting
 
@@ -288,13 +287,10 @@ public final class PeerChannelMemberCategoriesContextsManager {
     
     private func getContext(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, key: PeerChannelMemberContextKey, requestUpdate: Bool, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
         assert(Queue.mainQueue().isCurrent())
-        if let (disposable, control) = self.impl.syncWith({ impl in
+        let (disposable, control) = self.impl.syncWith({ impl in
             return impl.getContext(engine: engine, postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: key, requestUpdate: requestUpdate, updated: updated)
-        }) {
-            return (disposable, control)
-        } else {
-            return (EmptyDisposable, nil)
-        }
+        })
+        return (disposable, control)
     }
     
     public func externallyAdded(peerId: PeerId, participant: RenderedChannelParticipant) {
@@ -495,7 +491,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
                     subscriber.putNext(value)
                 })
             })
-            return disposable ?? EmptyDisposable
+            return disposable
         }
         |> runOn(Queue.mainQueue())
     }
@@ -523,7 +519,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
                         if let presences = (view.views[key] as? PeerPresencesView)?.presences {
                             for (_, presence) in presences {
                                 if let presence = presence as? TelegramUserPresence {
-                                    let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
+                                    let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(presence), relativeTo: Int32(timestamp))
                                     switch relativeStatus {
                                     case .online:
                                         count += 1
@@ -558,7 +554,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
             let disposable = strongSelf.impl.syncWith({ impl -> Disposable in
                 return impl.profileData(postbox: postbox, network: network, peerId: peerId, customData: customData)
             })
-            return disposable ?? EmptyDisposable
+            return disposable
         }
         |> runOn(Queue.mainQueue())
     }
@@ -575,7 +571,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
                     subscriber.putNext(value)
                 })
             })
-            return disposable ?? EmptyDisposable
+            return disposable
         }
         |> runOn(Queue.mainQueue())
     }

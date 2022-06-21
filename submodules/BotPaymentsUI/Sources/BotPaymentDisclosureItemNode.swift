@@ -90,7 +90,7 @@ class BotPaymentDisclosureItemNode: BotPaymentItemNode {
         }
     }
     
-    override func layoutContents(theme: PresentationTheme, width: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func layoutContents(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         if self.theme !== theme {
             self.theme = theme
             self.highlightedBackgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor
@@ -102,13 +102,13 @@ class BotPaymentDisclosureItemNode: BotPaymentItemNode {
             }
         }
         
-        self.buttonNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 44.0))
+        self.buttonNode.frame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: width - sideInset * 2.0, height: 44.0))
         transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: 44.0 + UIScreenPixel)))
         
         let leftInset: CGFloat = 16.0
         
-        let titleSize = self.titleNode.measure(CGSize(width: width - leftInset - 70.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleSize))
+        let titleSize = self.titleNode.measure(CGSize(width: width - leftInset - 70.0 - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: 11.0), size: titleSize))
         
         var textInset = leftInset
         if !titleSize.width.isZero {
@@ -116,8 +116,8 @@ class BotPaymentDisclosureItemNode: BotPaymentItemNode {
         }
         textInset = max(measuredInset, textInset)
         
-        let textSize = self.textNode.measure(CGSize(width: width - measuredInset - 8.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: textInset, y: 11.0), size: textSize))
+        let textSize = self.textNode.measure(CGSize(width: width - measuredInset - 8.0 - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: textInset + sideInset, y: 11.0), size: textSize))
         
         return 44.0
     }

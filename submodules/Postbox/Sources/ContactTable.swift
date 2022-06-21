@@ -10,23 +10,15 @@ final class ContactTable: Table {
     private var peerIdsBeforeModification: Set<PeerId>?
     private var peerIds: Set<PeerId>?
     
-    init(valueBox: ValueBox, table: ValueBoxTable, peerNameIndexTable: PeerNameIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, peerNameIndexTable: PeerNameIndexTable) {
         self.peerNameIndexTable = peerNameIndexTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ id: PeerId, sharedKey: ValueBoxKey = ValueBoxKey(length: 8)) -> ValueBoxKey {
         sharedKey.setInt64(0, value: id.toInt64())
         return sharedKey
-    }
-    
-    private func lowerBound() -> ValueBoxKey {
-        return self.key(PeerId(0))
-    }
-    
-    private func upperBound() -> ValueBoxKey {
-        return self.key(PeerId.max)
     }
     
     func isContact(peerId: PeerId) -> Bool {
@@ -38,10 +30,10 @@ final class ContactTable: Table {
             return peerIds
         } else {
             var peerIds = Set<PeerId>()
-            self.valueBox.range(self.table, start: self.lowerBound(), end: self.upperBound(), keys: { key in
+            self.valueBox.scan(self.table, keys: { key in
                 peerIds.insert(PeerId(key.getInt64(0)))
                 return true
-            }, limit: 0)
+            })
             self.peerIds = peerIds
             return peerIds
         }
@@ -97,6 +89,10 @@ final class ContactTable: Table {
             }
             
             self.peerIdsBeforeModification = nil
+        }
+
+        if !self.useCaches {
+            self.peerIds = nil
         }
     }
 }

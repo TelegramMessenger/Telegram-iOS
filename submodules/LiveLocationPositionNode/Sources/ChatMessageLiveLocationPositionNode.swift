@@ -3,8 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
-import Postbox
 import TelegramPresentationData
 import AvatarNode
 import LocationResources
@@ -78,7 +76,7 @@ private func generateHeadingArrowImage() -> UIImage? {
 
 public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
     public enum Mode {
-        case liveLocation(peer: Peer, active: Bool, latitude: Double, longitude: Double, heading: Int32?)
+        case liveLocation(peer: EnginePeer, active: Bool, latitude: Double, longitude: Double, heading: Int32?)
         case location(TelegramMediaMap?)
     }
     
@@ -219,10 +217,10 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                     
                     if let updatedVenueType = updatedVenueType {
                         strongSelf.venueType = updatedVenueType
-                        strongSelf.iconNode.setSignal(venueIcon(postbox: context.account.postbox, type: updatedVenueType, background: false))
+                        strongSelf.iconNode.setSignal(venueIcon(engine: context.engine, type: updatedVenueType, background: false))
                     }
                     
-                    let arguments = VenueIconArguments(defaultForegroundColor: theme.chat.inputPanel.actionControlForegroundColor)
+                    let arguments = VenueIconArguments(defaultBackgroundColor: theme.chat.inputPanel.actionControlFillColor, defaultForegroundColor: theme.chat.inputPanel.actionControlForegroundColor)
                     let iconSize = CGSize(width: 44.0, height: 44.0)
                     let apply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), custom: arguments))
                     apply()

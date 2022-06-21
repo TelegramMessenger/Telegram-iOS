@@ -281,7 +281,7 @@ class VoiceChatActionItemNode: ListViewItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         return nil
     }
 }

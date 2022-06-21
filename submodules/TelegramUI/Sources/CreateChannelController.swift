@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import LegacyComponents
 import ItemListUI
@@ -148,7 +147,7 @@ private enum CreateChannelEntry: ItemListNodeEntry {
         let arguments = arguments as! CreateChannelArguments
         switch self {
             case let .channelInfo(_, _, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer.flatMap(EnginePeer.init), presence: nil, memberCount: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, editingNameCompleted: {
                     arguments.focusOnDescription()
@@ -197,7 +196,7 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     
     let groupInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: nil)
     
-    let peer = TelegramGroup(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator(rank: nil), membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
+    let peer = TelegramGroup(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator(rank: nil), membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
     
     entries.append(.channelInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, groupInfoState, state.avatar))
     
@@ -273,7 +272,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                     return $0.avatar
                 }
                 if let _ = updatingAvatar {
-                    let _ = updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
+                    let _ = context.engine.peers.updatePeerPhoto(peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     }).start()
                 }
@@ -329,7 +328,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                     let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
-                    uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: resource))
+                    uploadedAvatar.set(context.engine.peers.uploadedPeerPhoto(resource: resource))
                     uploadedVideoAvatar = nil
                     updateState { current in
                         var current = current
@@ -363,22 +362,22 @@ public func createChannelController(context: AccountContext) -> ViewController {
                                 return nil
                             }
                         }
-                        let uploadInterface = LegacyLiveUploadInterface(account: context.account)
+                        let uploadInterface = LegacyLiveUploadInterface(context: context)
                         let signal: SSignal
                         if let asset = asset as? AVAsset {
                             signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
                         } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
                             let durationSignal: SSignal = SSignal(generator: { subscriber in
                                 let disposable = (entityRenderer.duration()).start(next: { duration in
-                                    subscriber?.putNext(duration)
-                                    subscriber?.putCompletion()
+                                    subscriber.putNext(duration)
+                                    subscriber.putCompletion()
                                 })
                                 
                                 return SBlockDisposable(block: {
                                     disposable.dispose()
                                 })
                             })
-                            signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                            signal = durationSignal.map(toSignal: { duration -> SSignal in
                                 if let duration = duration as? Double {
                                     return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
                                 } else {
@@ -427,7 +426,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                         }
                     }
                     
-                    uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: photoResource))
+                    uploadedAvatar.set(context.engine.peers.uploadedPeerPhoto(resource: photoResource))
                     
                     let promise = Promise<UploadedPeerPhotoData?>()
                     promise.set(signal
@@ -436,7 +435,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                     }
                     |> mapToSignal { resource -> Signal<UploadedPeerPhotoData?, NoError> in
                         if let resource = resource {
-                            return uploadedPeerVideo(postbox: context.account.postbox, network: context.account.network, messageMediaPreuploadManager: context.account.messageMediaPreuploadManager, resource: resource) |> map(Optional.init)
+                            return context.engine.peers.uploadedPeerVideo(resource: resource) |> map(Optional.init)
                         } else {
                             return .single(nil)
                         }
@@ -456,7 +455,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
-                let controller = WebSearchController(context: context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
+                let controller = WebSearchController(context: context, peer: peer.flatMap(EnginePeer.init), chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
                     assetsController?.dismiss()
                     completedChannelPhotoImpl(result)
                 }))

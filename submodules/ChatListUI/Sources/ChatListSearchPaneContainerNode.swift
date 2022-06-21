@@ -4,8 +4,6 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
-import Postbox
-import SyncCore
 import TelegramCore
 import AccountContext
 import ContextUI
@@ -16,12 +14,13 @@ protocol ChatListSearchPaneNode: ASDisplayNode {
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
     func cancelPreviewGestures()
-    func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
+    func transitionNodeForGallery(messageId: EngineMessage.Id, media: EngineMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
     func addToTransitionSurface(view: UIView)
     func updateHiddenMedia()
     func updateSelectedMessages(animated: Bool)
     func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, CGRect, Any)?
-    var searchCurrentMessages: [Message]? { get }
+    func didBecomeFocused()
+    var searchCurrentMessages: [EngineMessage]? { get }
 }
 
 final class ChatListSearchPaneWrapper {
@@ -46,16 +45,46 @@ final class ChatListSearchPaneWrapper {
     }
 }
 
-enum ChatListSearchPaneKey {
+public enum ChatListSearchPaneKey {
     case chats
     case media
+    case downloads
     case links
     case files
     case music
     case voice
 }
 
-let defaultAvailableSearchPanes: [ChatListSearchPaneKey] = [.chats, .media, .links, .files, .music, .voice]
+extension ChatListSearchPaneKey {
+    var filter: ChatListSearchFilter {
+        switch self {
+        case .chats:
+            return .chats
+        case .media:
+            return .media
+        case .downloads:
+            return .downloads
+        case .links:
+            return .links
+        case .files:
+            return .files
+        case .music:
+            return .music
+        case .voice:
+            return .voice
+        }
+    }
+}
+
+func defaultAvailableSearchPanes(hasDownloads: Bool) -> [ChatListSearchPaneKey] {
+    var result: [ChatListSearchPaneKey] = [.chats, .media, .downloads, .links, .files, .music, .voice]
+    
+    if !hasDownloads {
+        result.removeAll(where: { $0 == .downloads })
+    }
+    
+    return result
+}
 
 struct ChatListSearchPaneSpecifier: Equatable {
     var key: ChatListSearchPaneKey
@@ -73,16 +102,17 @@ private final class ChatListSearchPendingPane {
     
     init(
         context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
         interaction: ChatListSearchInteraction,
         navigationController: NavigationController?,
         peersFilter: ChatListNodePeersFilter,
-        groupId: PeerGroupId,
+        groupId: EngineChatList.Group,
         searchQuery: Signal<String?, NoError>,
         searchOptions: Signal<ChatListSearchOptions?, NoError>,
         key: ChatListSearchPaneKey,
         hasBecomeReady: @escaping (ChatListSearchPaneKey) -> Void
     ) {
-        let paneNode = ChatListSearchListPaneNode(context: context, interaction: interaction, key: key, peersFilter: key == .chats ? peersFilter : [], groupId: groupId, searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
+        let paneNode = ChatListSearchListPaneNode(context: context, updatedPresentationData: updatedPresentationData, interaction: interaction, key: key, peersFilter: key == .chats ? peersFilter : [], groupId: groupId, searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
         
         self.pane = ChatListSearchPaneWrapper(key: key, node: paneNode)
         self.disposable = (paneNode.isReady
@@ -100,8 +130,9 @@ private final class ChatListSearchPendingPane {
 
 final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let context: AccountContext
+    private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let peersFilter: ChatListNodePeersFilter
-    private let groupId: PeerGroupId
+    private let groupId: EngineChatList.Group
     private let searchQuery: Signal<String?, NoError>
     private let searchOptions: Signal<ChatListSearchOptions?, NoError>
     private let navigationController: NavigationController?
@@ -135,8 +166,9 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
     
     private var currentAvailablePanes: [ChatListSearchPaneKey]?
     
-    init(context: AccountContext, peersFilter: ChatListNodePeersFilter, groupId: PeerGroupId, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peersFilter: ChatListNodePeersFilter, groupId: EngineChatList.Group, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
         self.context = context
+        self.updatedPresentationData = updatedPresentationData
         self.peersFilter = peersFilter
         self.groupId = groupId
         self.searchQuery = searchQuery
@@ -278,11 +310,11 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         self.currentPane?.node.updateHiddenMedia()
     }
     
-    func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    func transitionNodeForGallery(messageId: EngineMessage.Id, media: EngineMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return self.currentPane?.node.transitionNodeForGallery(messageId: messageId, media: media)
     }
     
-    func updateSelectedMessageIds(_ selectedMessageIds: Set<MessageId>?, animated: Bool) {
+    func updateSelectedMessageIds(_ selectedMessageIds: Set<EngineMessage.Id>?, animated: Bool) {
         for (_, pane) in self.currentPanes {
             pane.node.updateSelectedMessages(animated: animated)
         }
@@ -362,6 +394,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                 var leftScope = false
                 let pane = ChatListSearchPendingPane(
                     context: self.context,
+                    updatedPresentationData: self.updatedPresentationData,
                     interaction: self.interaction!,
                     navigationController: self.navigationController,
                     peersFilter: self.peersFilter,
@@ -473,6 +506,9 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                     })
                 }
                 pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
+                if paneWasAdded && key == self.currentPaneKey {
+                    pane.node.didBecomeFocused()
+                }
             }
         }
         
@@ -494,8 +530,8 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         self.currentPaneUpdated?(self.currentPaneKey, self.transitionFraction, transition)
     }
     
-    func allCurrentMessages() -> [MessageId: Message] {
-        var allMessages: [MessageId: Message] = [:]
+    func allCurrentMessages() -> [EngineMessage.Id: EngineMessage] {
+        var allMessages: [EngineMessage.Id: EngineMessage] = [:]
         for (_, pane) in self.currentPanes {
             if let messages = pane.node.searchCurrentMessages {
                 for message in messages {

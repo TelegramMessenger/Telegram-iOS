@@ -81,6 +81,7 @@
 - (void)animateOut:(BOOL)toSmallSize;
 - (void)addMicLevel:(CGFloat)level;
 - (void)dismiss;
+- (void)reset;
 
 - (void)updateOverlay;
 

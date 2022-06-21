@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
@@ -120,7 +119,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                             self.imageNode.image = image
                             dimensions = image.size
                         }
-                    case .animation:
+                    case .animation, .video:
                         self.imageNode.isHidden = true
                         
                         if isVerified {
@@ -139,7 +138,11 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                             
                             let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
                             if let resource = stickerItem.resource {
-                                animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                                var isVideo = false
+                                if case .video = stickerItem.content {
+                                    isVideo = true
+                                }
+                                animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
                             }
                             animationNode.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
                         } else {

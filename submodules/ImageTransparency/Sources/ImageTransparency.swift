@@ -29,7 +29,7 @@ private func generateHistogram(cgImage: CGImage) -> ([[vImagePixelCount]], Int)?
     }
     assert(error == kvImageNoError)
     
-    let histogramBins = (0...3).map { _ in
+    let histogramBins: [[vImagePixelCount]] = (0...3).map { _ in
         return [vImagePixelCount](repeating: 0, count: 256)
     }
     var mutableHistogram: [UnsafeMutablePointer<vImagePixelCount>?] = histogramBins.map {

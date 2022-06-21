@@ -1,8 +1,8 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import AccountContext
+import ChatPresentationInterfaceState
 
 private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult) -> (Int, Bool) {
     switch result {
@@ -86,7 +86,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                     currentPanel.updateResults(results: results.map({ $0.file }), query: query)
                     return currentPanel
                 } else {
-                    let panel = InlineReactionSearchPanel(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize)
+                    let panel = InlineReactionSearchPanel(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, peerId: chatPresentationInterfaceState.renderedPeer?.peerId)
                     panel.controllerInteraction = controllerInteraction
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(results: results.map({ $0.file }), query: query)

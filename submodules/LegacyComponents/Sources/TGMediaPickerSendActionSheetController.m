@@ -83,6 +83,8 @@
 }
 
 - (void)buttonPressed {
+    _buttonView.enabled = false;
+    
     if (self.pressed != nil)
         self.pressed();
 }
@@ -188,8 +190,8 @@
     }
     
     TGMediaAssetsPallete *pallete = nil;
-    if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
-        pallete = [[LegacyComponentsGlobals provider] mediaAssetsPallete];
+    if ([_context respondsToSelector:@selector(mediaAssetsPallete)])
+        pallete = [_context mediaAssetsPallete];
     
     UIImage *doneImage = pallete != nil ? pallete.sendIconImage : TGComponentsImageNamed(@"PhotoPickerSendIcon");
     
@@ -310,6 +312,8 @@
 }
 
 - (void)sendPressed {
+    _sendButton.enabled = false;
+    
     [self animateOut:false];
     
     if (self.send != nil)

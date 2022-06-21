@@ -4,12 +4,12 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
+import UndoUI
 
 enum SelectivePrivacySettingsKind {
     case presence
@@ -51,8 +51,9 @@ private final class SelectivePrivacySettingsControllerArguments {
     let updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?
     let updateCallIntegrationEnabled: ((Bool) -> Void)?
     let updatePhoneDiscovery: ((Bool) -> Void)?
+    let copyPhoneLink: ((String) -> Void)?
     
-    init(context: AccountContext, updateType: @escaping (SelectivePrivacySettingType) -> Void, openSelective: @escaping (SelectivePrivacySettingsPeerTarget, Bool) -> Void, updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?, updateCallIntegrationEnabled: ((Bool) -> Void)?, updatePhoneDiscovery: ((Bool) -> Void)?) {
+    init(context: AccountContext, updateType: @escaping (SelectivePrivacySettingType) -> Void, openSelective: @escaping (SelectivePrivacySettingsPeerTarget, Bool) -> Void, updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?, updateCallIntegrationEnabled: ((Bool) -> Void)?, updatePhoneDiscovery: ((Bool) -> Void)?, copyPhoneLink: ((String) -> Void)?) {
         self.context = context
         self.updateType = updateType
         self.openSelective = openSelective
@@ -60,6 +61,7 @@ private final class SelectivePrivacySettingsControllerArguments {
         self.updateCallP2PMode = updateCallP2PMode
         self.updateCallIntegrationEnabled = updateCallIntegrationEnabled
         self.updatePhoneDiscovery = updatePhoneDiscovery
+        self.copyPhoneLink = copyPhoneLink
     }
 }
 
@@ -92,7 +94,7 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case everybody(PresentationTheme, String, Bool)
     case contacts(PresentationTheme, String, Bool)
     case nobody(PresentationTheme, String, Bool)
-    case settingInfo(PresentationTheme, String)
+    case settingInfo(PresentationTheme, String, String)
     case exceptionsHeader(PresentationTheme, String)
     case disableFor(PresentationTheme, String, String)
     case enableFor(PresentationTheme, String, String)
@@ -110,7 +112,7 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case phoneDiscoveryHeader(PresentationTheme, String)
     case phoneDiscoveryEverybody(PresentationTheme, String, Bool)
     case phoneDiscoveryMyContacts(PresentationTheme, String, Bool)
-    case phoneDiscoveryInfo(PresentationTheme, String)
+    case phoneDiscoveryInfo(PresentationTheme, String, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -230,8 +232,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .settingInfo(lhsTheme, lhsText):
-                if case let .settingInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .settingInfo(lhsTheme, lhsText, lhsLink):
+                if case let .settingInfo(rhsTheme, rhsText, rhsLink) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsLink == rhsLink {
                     return true
                 } else {
                     return false
@@ -332,8 +334,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .phoneDiscoveryInfo(lhsTheme, lhsText):
-                if case let .phoneDiscoveryInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .phoneDiscoveryInfo(lhsTheme, lhsText, lhsLink):
+                if case let .phoneDiscoveryInfo(rhsTheme, rhsText, rhsLink) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsLink == rhsLink {
                     return true
                 } else {
                     return false
@@ -348,82 +350,86 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! SelectivePrivacySettingsControllerArguments
         switch self {
-            case let .forwardsPreviewHeader(theme, text):
+            case let .forwardsPreviewHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
             case let .forwardsPreview(theme, wallpaper, fontSize, chatBubbleCorners, strings, dateTimeFormat, nameDisplayOrder, peerName, linkEnabled, tooltipText):
                 return ForwardPrivacyChatPreviewItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, peerName: peerName, linkEnabled: linkEnabled, tooltipText: tooltipText)
-            case let .settingHeader(theme, text):
+            case let .settingHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
-            case let .everybody(theme, text, value):
+            case let .everybody(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateType(.everybody)
                 })
-            case let .contacts(theme, text, value):
+            case let .contacts(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateType(.contacts)
                 })
-            case let .nobody(theme, text, value):
+            case let .nobody(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateType(.nobody)
                 })
-            case let .settingInfo(theme, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .exceptionsHeader(theme, text):
+            case let .settingInfo(_, text, link):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
+                    arguments.copyPhoneLink?(link)
+                })
+            case let .exceptionsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .disableFor(theme, title, value):
+            case let .disableFor(_, title, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openSelective(.main, false)
                 })
-            case let .enableFor(theme, title, value):
+            case let .enableFor(_, title, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openSelective(.main, true)
                 })
-            case let .peersInfo(theme, text):
+            case let .peersInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .callsP2PHeader(theme, text):
+            case let .callsP2PHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .callsP2PAlways(theme, text, value):
+            case let .callsP2PAlways(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateCallP2PMode?(.everybody)
                 })
-            case let .callsP2PContacts(theme, text, value):
+            case let .callsP2PContacts(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateCallP2PMode?(.contacts)
                 })
-            case let .callsP2PNever(theme, text, value):
+            case let .callsP2PNever(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateCallP2PMode?(.nobody)
                 })
-            case let .callsP2PInfo(theme, text):
+            case let .callsP2PInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .callsP2PDisableFor(theme, title, value):
+            case let .callsP2PDisableFor(_, title, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openSelective(.callP2P, false)
                 })
-            case let .callsP2PEnableFor(theme, title, value):
+            case let .callsP2PEnableFor(_, title, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openSelective(.callP2P, true)
                 })
-            case let .callsP2PPeersInfo(theme, text):
+            case let .callsP2PPeersInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .callsIntegrationEnabled(theme, text, value):
+            case let .callsIntegrationEnabled(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateCallIntegrationEnabled?(value)
                 })
-            case let .callsIntegrationInfo(theme, text):
+            case let .callsIntegrationInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .phoneDiscoveryHeader(theme, text):
+            case let .phoneDiscoveryHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .phoneDiscoveryEverybody(theme, text, value):
+            case let .phoneDiscoveryEverybody(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updatePhoneDiscovery?(true)
                 })
-            case let .phoneDiscoveryMyContacts(theme, text, value):
+            case let .phoneDiscoveryMyContacts(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updatePhoneDiscovery?(false)
                 })
-            case let .phoneDiscoveryInfo(theme, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+            case let .phoneDiscoveryInfo(_, text, link):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
+                    arguments.copyPhoneLink?(link)
+                })
         }
     }
 }
@@ -532,7 +538,7 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
     }
 }
 
-private func selectivePrivacySettingsControllerEntries(presentationData: PresentationData, kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState, peerName: String) -> [SelectivePrivacySettingsEntry] {
+private func selectivePrivacySettingsControllerEntries(presentationData: PresentationData, kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState, peerName: String, phoneNumber: String) -> [SelectivePrivacySettingsEntry] {
     var entries: [SelectivePrivacySettingsEntry] = []
     
     let settingTitle: String
@@ -570,7 +576,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             if state.setting == .nobody {
                 settingInfoText = nil
             } else {
-                settingInfoText = presentationData.strings.PrivacyPhoneNumberSettings_CustomHelp
+                settingInfoText = presentationData.strings.PrivacyPhoneNumberSettings_CustomPublicLink("+\(phoneNumber)").string
             }
             disableForText = presentationData.strings.PrivacyLastSeenSettings_NeverShareWith
             enableForText = presentationData.strings.PrivacyLastSeenSettings_AlwaysShareWith
@@ -604,15 +610,16 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         case .groupInvitations, .profilePhoto:
             break
     }
+    let phoneLink = "https://t.me/+\(phoneNumber)"
     if let settingInfoText = settingInfoText {
-        entries.append(.settingInfo(presentationData.theme, settingInfoText))
+        entries.append(.settingInfo(presentationData.theme, settingInfoText, phoneLink))
     }
     
     if case .phoneNumber = kind, state.setting == .nobody {
         entries.append(.phoneDiscoveryHeader(presentationData.theme, presentationData.strings.PrivacyPhoneNumberSettings_DiscoveryHeader))
         entries.append(.phoneDiscoveryEverybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.phoneDiscoveryEnabled != false))
         entries.append(.phoneDiscoveryMyContacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.phoneDiscoveryEnabled == false))
-        entries.append(.phoneDiscoveryInfo(presentationData.theme, state.phoneDiscoveryEnabled != false ? presentationData.strings.PrivacyPhoneNumberSettings_CustomHelp : presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp))
+        entries.append(.phoneDiscoveryInfo(presentationData.theme, state.phoneDiscoveryEnabled != false ? presentationData.strings.PrivacyPhoneNumberSettings_CustomPublicLink("+\(phoneNumber)").string : presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp, phoneLink))
     }
     
     entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))
@@ -695,13 +702,11 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
     let updateState: ((SelectivePrivacySettingsControllerState) -> SelectivePrivacySettingsControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
-    
-    var dismissImpl: (() -> Void)?
+
     var pushControllerImpl: ((ViewController, Bool) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
-    let updateSettingsDisposable = MetaDisposable()
     
     let addPeerDisposable = MetaDisposable()
     actionsDisposable.add(addPeerDisposable)
@@ -805,7 +810,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                     controller?.dismiss()
                     
                     updateState { state in
-                        var state = state
+                        let state = state
                         if enable {
                             switch target {
                                 case .main:
@@ -933,6 +938,11 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         updateState { state in
             return state.withUpdatedPhoneDiscoveryEnabled(value)
         }
+    }, copyPhoneLink: { link in
+        UIPasteboard.general.string = link
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     })
     
     let peer = context.account.postbox.transaction { transaction -> Peer? in
@@ -941,8 +951,8 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peer) |> deliverOnMainQueue
     |> map { presentationData, state, peer -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        
-        let peerName = peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        let peerName = peer.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        let phoneNumber = (peer as? TelegramUser)?.phone ?? ""
         
         let title: String
         switch kind {
@@ -960,7 +970,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                 title = presentationData.strings.Privacy_PhoneNumber
         }
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state, peerName: peerName ?? ""), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state, peerName: peerName ?? "", phoneNumber: phoneNumber), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
@@ -1080,9 +1090,6 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
-    }
-    dismissImpl = { [weak controller] in
-        let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
     }
     
     return controller

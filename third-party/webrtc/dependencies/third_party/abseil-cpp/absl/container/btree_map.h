@@ -185,7 +185,7 @@ class btree_map
   // template <typename K> size_type erase(const K& key):
   //
   //   Erases the element with the matching key, if it exists, returning the
-  //   number of elements erased.
+  //   number of elements erased (0 or 1).
   using Base::erase;
 
   // btree_map::insert()
@@ -325,6 +325,11 @@ class btree_map
   //   does not contain an element with a matching key, this function returns an
   //   empty node handle.
   //
+  // NOTE: when compiled in an earlier version of C++ than C++17,
+  // `node_type::key()` returns a const reference to the key instead of a
+  // mutable reference. We cannot safely return a mutable reference without
+  // std::launder (which is not available before C++17).
+  //
   // NOTE: In this context, `node_type` refers to the C++17 concept of a
   // move-only type that owns and provides access to the elements in associative
   // containers (https://en.cppreference.com/w/cpp/container/node_handle).
@@ -361,8 +366,8 @@ class btree_map
   // Determines whether an element comparing equal to the given `key` exists
   // within the `btree_map`, returning `true` if so or `false` otherwise.
   //
-  // Supports heterogeneous lookup, provided that the map is provided a
-  // compatible heterogeneous comparator.
+  // Supports heterogeneous lookup, provided that the map has a compatible
+  // heterogeneous comparator.
   using Base::contains;
 
   // btree_map::count()
@@ -373,15 +378,14 @@ class btree_map
   // the `btree_map`. Note that this function will return either `1` or `0`
   // since duplicate elements are not allowed within a `btree_map`.
   //
-  // Supports heterogeneous lookup, provided that the map is provided a
-  // compatible heterogeneous comparator.
+  // Supports heterogeneous lookup, provided that the map has a compatible
+  // heterogeneous comparator.
   using Base::count;
 
   // btree_map::equal_range()
   //
-  // Returns a closed range [first, last], defined by a `std::pair` of two
-  // iterators, containing all elements with the passed key in the
-  // `btree_map`.
+  // Returns a half-open range [first, last), defined by a `std::pair` of two
+  // iterators, containing all elements with the passed key in the `btree_map`.
   using Base::equal_range;
 
   // btree_map::find()
@@ -391,9 +395,33 @@ class btree_map
   //
   // Finds an element with the passed `key` within the `btree_map`.
   //
-  // Supports heterogeneous lookup, provided that the map is provided a
-  // compatible heterogeneous comparator.
+  // Supports heterogeneous lookup, provided that the map has a compatible
+  // heterogeneous comparator.
   using Base::find;
+
+  // btree_map::lower_bound()
+  //
+  // template <typename K> iterator lower_bound(const K& key):
+  // template <typename K> const_iterator lower_bound(const K& key) const:
+  //
+  // Finds the first element with a key that is not less than `key` within the
+  // `btree_map`.
+  //
+  // Supports heterogeneous lookup, provided that the map has a compatible
+  // heterogeneous comparator.
+  using Base::lower_bound;
+
+  // btree_map::upper_bound()
+  //
+  // template <typename K> iterator upper_bound(const K& key):
+  // template <typename K> const_iterator upper_bound(const K& key) const:
+  //
+  // Finds the first element with a key that is greater than `key` within the
+  // `btree_map`.
+  //
+  // Supports heterogeneous lookup, provided that the map has a compatible
+  // heterogeneous comparator.
+  using Base::upper_bound;
 
   // btree_map::operator[]()
   //
@@ -652,6 +680,11 @@ class btree_multimap
   //   does not contain an element with a matching key, this function returns an
   //   empty node handle.
   //
+  // NOTE: when compiled in an earlier version of C++ than C++17,
+  // `node_type::key()` returns a const reference to the key instead of a
+  // mutable reference. We cannot safely return a mutable reference without
+  // std::launder (which is not available before C++17).
+  //
   // NOTE: In this context, `node_type` refers to the C++17 concept of a
   // move-only type that owns and provides access to the elements in associative
   // containers (https://en.cppreference.com/w/cpp/container/node_handle).
@@ -682,8 +715,8 @@ class btree_multimap
   // Determines whether an element comparing equal to the given `key` exists
   // within the `btree_multimap`, returning `true` if so or `false` otherwise.
   //
-  // Supports heterogeneous lookup, provided that the map is provided a
-  // compatible heterogeneous comparator.
+  // Supports heterogeneous lookup, provided that the map has a compatible
+  // heterogeneous comparator.
   using Base::contains;
 
   // btree_multimap::count()
@@ -693,13 +726,13 @@ class btree_multimap
   // Returns the number of elements comparing equal to the given `key` within
   // the `btree_multimap`.
   //
-  // Supports heterogeneous lookup, provided that the map is provided a
-  // compatible heterogeneous comparator.
+  // Supports heterogeneous lookup, provided that the map has a compatible
+  // heterogeneous comparator.
   using Base::count;
 
   // btree_multimap::equal_range()
   //
-  // Returns a closed range [first, last], defined by a `std::pair` of two
+  // Returns a half-open range [first, last), defined by a `std::pair` of two
   // iterators, containing all elements with the passed key in the
   // `btree_multimap`.
   using Base::equal_range;
@@ -711,9 +744,33 @@ class btree_multimap
   //
   // Finds an element with the passed `key` within the `btree_multimap`.
   //
-  // Supports heterogeneous lookup, provided that the map is provided a
-  // compatible heterogeneous comparator.
+  // Supports heterogeneous lookup, provided that the map has a compatible
+  // heterogeneous comparator.
   using Base::find;
+
+  // btree_multimap::lower_bound()
+  //
+  // template <typename K> iterator lower_bound(const K& key):
+  // template <typename K> const_iterator lower_bound(const K& key) const:
+  //
+  // Finds the first element with a key that is not less than `key` within the
+  // `btree_multimap`.
+  //
+  // Supports heterogeneous lookup, provided that the map has a compatible
+  // heterogeneous comparator.
+  using Base::lower_bound;
+
+  // btree_multimap::upper_bound()
+  //
+  // template <typename K> iterator upper_bound(const K& key):
+  // template <typename K> const_iterator upper_bound(const K& key) const:
+  //
+  // Finds the first element with a key that is greater than `key` within the
+  // `btree_multimap`.
+  //
+  // Supports heterogeneous lookup, provided that the map has a compatible
+  // heterogeneous comparator.
+  using Base::upper_bound;
 
   // btree_multimap::get_allocator()
   //

@@ -89,11 +89,10 @@ private final class HSBParameter: NSObject {
 }
 
 private final class WallpaperColorKnobNode: ASDisplayNode {
-    var hsb: (CGFloat, CGFloat, CGFloat) = (0.0, 0.0, 1.0) {
+    var color: HSBColor = HSBColor(hue: 0.0, saturation: 0.0, brightness: 1.0) {
         didSet {
-            if self.hsb != oldValue {
-                let color = UIColor(hue: hsb.0, saturation: hsb.1, brightness: hsb.2, alpha: 1.0)
-                self.colorNode.backgroundColor = color
+            if self.color != oldValue {
+                self.colorNode.backgroundColor = self.color.color
             }
         }
     }
@@ -166,6 +165,64 @@ private final class WallpaperColorHueSaturationNode: ASDisplayNode {
         context.setFillColor(UIColor(rgb: 0x000000, alpha: 1.0 - parameters.value).cgColor)
         context.fill(bounds)
     }
+    
+    var tap: ((CGPoint) -> Void)?
+    var panBegan: ((CGPoint) -> Void)?
+    var panChanged: ((CGPoint, Bool) -> Void)?
+    
+    var initialTouchLocation: CGPoint?
+    var touchMoved = false
+    var previousTouchLocation: CGPoint?
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        
+        if let touchLocation = touches.first?.location(in: self.view) {
+            self.touchMoved = false
+            self.initialTouchLocation = touchLocation
+            self.previousTouchLocation = nil
+        }
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesMoved(touches, with: event)
+
+        if let touchLocation = touches.first?.location(in: self.view), let initialLocation = self.initialTouchLocation {
+            let dX = touchLocation.x - initialLocation.x
+            let dY = touchLocation.y - initialLocation.y
+            if !self.touchMoved && dX * dX + dY * dY > 3.0 {
+                self.touchMoved = true
+                self.panBegan?(touchLocation)
+                self.previousTouchLocation = touchLocation
+            } else if let previousTouchLocation = self.previousTouchLocation  {
+                let dX = touchLocation.x - previousTouchLocation.x
+                let dY = touchLocation.y - previousTouchLocation.y
+                let translation = CGPoint(x: dX, y: dY)
+            
+                self.panChanged?(translation, false)
+                self.previousTouchLocation = touchLocation
+            }
+        }
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
+        
+        if self.touchMoved {
+            if let touchLocation = touches.first?.location(in: self.view), let previousTouchLocation = self.previousTouchLocation {
+                let dX = touchLocation.x - previousTouchLocation.x
+                let dY = touchLocation.y - previousTouchLocation.y
+                let translation = CGPoint(x: dX, y: dY)
+            
+                self.panChanged?(translation, true)
+            }
+        } else if let touchLocation = self.initialTouchLocation {
+            self.tap?(touchLocation)
+        }
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
+    }
 }
 
 private final class WallpaperColorBrightnessNode: ASDisplayNode {
@@ -209,6 +266,54 @@ private final class WallpaperColorBrightnessNode: ASDisplayNode {
     }
 }
 
+struct HSBColor: Equatable {
+    static func == (lhs: HSBColor, rhs: HSBColor) -> Bool {
+        return lhs.values.h == rhs.values.h && lhs.values.s == rhs.values.s && lhs.values.b == rhs.values.b
+    }
+    
+    let values: (h: CGFloat, s: CGFloat, b: CGFloat)
+    let backingColor: UIColor
+    
+    var hue: CGFloat {
+        return self.values.h
+    }
+    
+    var saturation: CGFloat {
+        return self.values.s
+    }
+    
+    var brightness: CGFloat {
+        return self.values.b
+    }
+    
+    var rgb: UInt32 {
+        return self.color.argb
+    }
+    
+    init(values: (h: CGFloat, s: CGFloat, b: CGFloat)) {
+        self.values = values
+        self.backingColor = UIColor(hue: values.h, saturation: values.s, brightness: values.b, alpha: 1.0)
+    }
+    
+    init(hue: CGFloat, saturation: CGFloat, brightness: CGFloat) {
+        self.values = (h: hue, s: saturation, b: brightness)
+        self.backingColor = UIColor(hue: self.values.h, saturation: self.values.s, brightness: self.values.b, alpha: 1.0)
+    }
+    
+    init(color: UIColor) {
+        self.values = color.hsb
+        self.backingColor = color
+    }
+    
+    init(rgb: UInt32) {
+        self.init(color: UIColor(rgb: rgb))
+    }
+    
+    var color: UIColor {
+        return self.backingColor
+    }
+}
+
 final class WallpaperColorPickerNode: ASDisplayNode {
     private let brightnessNode: WallpaperColorBrightnessNode
     private let brightnessKnobNode: ASImageNode
@@ -217,21 +322,16 @@ final class WallpaperColorPickerNode: ASDisplayNode {
     
     private var validLayout: CGSize?
     
-    var colorHsb: (CGFloat, CGFloat, CGFloat) = (0.0, 1.0, 1.0)
-    var color: UIColor {
-        get {
-            return UIColor(hue: self.colorHsb.0, saturation: self.colorHsb.1, brightness: self.colorHsb.2, alpha: 1.0)
-        }
-        set {
-            let newHsb = newValue.hsb
-            if newHsb != self.colorHsb {
-                self.colorHsb = newHsb
+    var color: HSBColor = HSBColor(hue: 0.0, saturation: 1.0, brightness: 1.0) {
+        didSet {
+            if self.color != oldValue {
                 self.update()
             }
         }
     }
-    var colorChanged: ((UIColor) -> Void)?
-    var colorChangeEnded: ((UIColor) -> Void)?
+    
+    var colorChanged: ((HSBColor) -> Void)?
+    var colorChangeEnded: ((HSBColor) -> Void)?
     
     init(strings: PresentationStrings) {
         self.brightnessNode = WallpaperColorBrightnessNode()
@@ -253,16 +353,79 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         self.addSubnode(self.colorKnobNode)
         
         self.update()
+                
+        self.colorNode.tap = { [weak self] location in
+            guard let strongSelf = self, let size = strongSelf.validLayout else {
+                return
+            }
+            
+            let colorHeight = size.height - 66.0
+            
+            let newHue = max(0.0, min(1.0, location.x / size.width))
+            let newSaturation = max(0.0, min(1.0, (1.0 - location.y / colorHeight)))
+            strongSelf.color = HSBColor(hue: newHue, saturation: newSaturation, brightness: strongSelf.color.brightness)
+            
+            strongSelf.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
+            
+            strongSelf.update()
+            strongSelf.colorChangeEnded?(strongSelf.color)
+        }
+        
+        self.colorNode.panBegan = { [weak self] location in
+            guard let strongSelf = self, let size = strongSelf.validLayout else {
+                return
+            }
+            
+            let previousColor = strongSelf.color
+            
+            let colorHeight = size.height - 66.0
+
+            let newHue = max(0.0, min(1.0, location.x / size.width))
+            let newSaturation = max(0.0, min(1.0, (1.0 - location.y / colorHeight)))
+            strongSelf.color = HSBColor(hue: newHue, saturation: newSaturation, brightness: strongSelf.color.brightness)
+            
+            strongSelf.updateKnobLayout(size: size, panningColor: true, transition: .immediate)
+            
+            if strongSelf.color != previousColor {
+                strongSelf.colorChanged?(strongSelf.color)
+            }
+        }
+        
+        self.colorNode.panChanged = { [weak self] translation, ended in
+            guard let strongSelf = self, let size = strongSelf.validLayout else {
+                return
+            }
+            
+            let previousColor = strongSelf.color
+            
+            let colorHeight = size.height - 66.0
+            
+            let newHue = max(0.0, min(1.0, strongSelf.color.hue + translation.x / size.width))
+            let newSaturation = max(0.0, min(1.0, strongSelf.color.saturation - translation.y / colorHeight))
+            strongSelf.color = HSBColor(hue: newHue, saturation: newSaturation, brightness: strongSelf.color.brightness)
+            
+            if ended {
+                strongSelf.updateKnobLayout(size: size, panningColor: false, transition: .animated(duration: 0.3, curve: .easeInOut))
+            } else {
+                strongSelf.updateKnobLayout(size: size, panningColor: true, transition: .immediate)
+            }
+                
+            if strongSelf.color != previousColor || ended {
+                strongSelf.update()
+                if ended {
+                    strongSelf.colorChangeEnded?(strongSelf.color)
+                } else {
+                    strongSelf.colorChanged?(strongSelf.color)
+                }
+            }
+        }
     }
     
     override func didLoad() {
         super.didLoad()
         
-        let colorPanRecognizer = UIPanGestureRecognizer(target: self, action: #selector(WallpaperColorPickerNode.colorPan))
-        self.colorNode.view.addGestureRecognizer(colorPanRecognizer)
-        
-        let colorTapRecognizer = UITapGestureRecognizer(target: self, action: #selector(WallpaperColorPickerNode.colorTap))
-        self.colorNode.view.addGestureRecognizer(colorTapRecognizer)
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.view.disablesInteractiveModalDismiss = true
         
         let brightnessPanRecognizer = UIPanGestureRecognizer(target: self, action: #selector(WallpaperColorPickerNode.brightnessPan))
         self.brightnessNode.view.addGestureRecognizer(brightnessPanRecognizer)
@@ -270,16 +433,16 @@ final class WallpaperColorPickerNode: ASDisplayNode {
     
     private func update() {
         self.backgroundColor = .white
-        self.colorNode.value = self.colorHsb.2
-        self.brightnessNode.hsb = self.colorHsb
-        self.colorKnobNode.hsb = self.colorHsb
+        self.colorNode.value = self.color.brightness
+        self.brightnessNode.hsb = self.color.values
+        self.colorKnobNode.color = self.color
     }
     
     private func updateKnobLayout(size: CGSize, panningColor: Bool, transition: ContainedViewLayoutTransition) {
         let knobSize = CGSize(width: 45.0, height: 45.0)
         
         let colorHeight = size.height - 66.0
-        var colorKnobFrame = CGRect(x: floorToScreenPixels(-knobSize.width / 2.0 + size.width * self.colorHsb.0), y: floorToScreenPixels(-knobSize.height / 2.0 + (colorHeight * (1.0 - self.colorHsb.1))), width: knobSize.width, height: knobSize.height)
+        var colorKnobFrame = CGRect(x: floorToScreenPixels(-knobSize.width / 2.0 + size.width * self.color.hue), y: floorToScreenPixels(-knobSize.height / 2.0 + (colorHeight * (1.0 - self.color.saturation))), width: knobSize.width, height: knobSize.height)
         var origin = colorKnobFrame.origin
         if !panningColor {
             origin = CGPoint(x: max(0.0, min(origin.x, size.width - knobSize.width)), y: max(0.0, min(origin.y, colorHeight - knobSize.height)))
@@ -291,7 +454,7 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         
         let inset: CGFloat = 15.0
         let brightnessKnobSize = CGSize(width: 12.0, height: 55.0)
-        let brightnessKnobFrame = CGRect(x: inset - brightnessKnobSize.width / 2.0 + (size.width - inset * 2.0) * (1.0 - self.colorHsb.2), y: size.height - 65.0, width: brightnessKnobSize.width, height: brightnessKnobSize.height)
+        let brightnessKnobFrame = CGRect(x: inset - brightnessKnobSize.width / 2.0 + (size.width - inset * 2.0) * (1.0 - self.color.brightness), y: size.height - 65.0, width: brightnessKnobSize.width, height: brightnessKnobSize.height)
         transition.updateFrame(node: self.brightnessKnobNode, frame: brightnessKnobFrame)
     }
     
@@ -307,72 +470,6 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         self.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
     }
     
-    @objc private func colorTap(_ recognizer: UITapGestureRecognizer) {
-        guard let size = self.validLayout, recognizer.state == .recognized else {
-            return
-        }
-        
-        let colorHeight = size.height - 66.0
-        
-        let location = recognizer.location(in: recognizer.view)
-        let newHue = max(0.0, min(1.0, location.x / size.width))
-        let newSaturation = max(0.0, min(1.0, (1.0 - location.y / colorHeight)))
-        self.colorHsb.0 = newHue
-        self.colorHsb.1 = newSaturation
-        
-        self.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
-        
-        self.update()
-        self.colorChangeEnded?(self.color)
-    }
-    
-    @objc private func colorPan(_ recognizer: UIPanGestureRecognizer) {
-        guard let size = self.validLayout else {
-            return
-        }
-        
-        let previousColor = self.color
-        
-        let colorHeight = size.height - 66.0
-        
-        let location = recognizer.location(in: recognizer.view)
-        let transition = recognizer.translation(in: recognizer.view)
-        if recognizer.state == .began {
-            let newHue = max(0.0, min(1.0, location.x / size.width))
-            let newSaturation = max(0.0, min(1.0, (1.0 - location.y / colorHeight)))
-            self.colorHsb.0 = newHue
-            self.colorHsb.1 = newSaturation
-        } else {
-            let newHue = max(0.0, min(1.0, self.colorHsb.0 + transition.x / size.width))
-            let newSaturation = max(0.0, min(1.0, self.colorHsb.1 - transition.y / (size.height - 66.0)))
-            self.colorHsb.0 = newHue
-            self.colorHsb.1 = newSaturation
-        }
-        
-        var ended = false
-        switch recognizer.state {
-            case .began:
-                self.updateKnobLayout(size: size, panningColor: true, transition: .immediate)
-            case .changed:
-                self.updateKnobLayout(size: size, panningColor: true, transition: .immediate)
-                recognizer.setTranslation(CGPoint(), in: recognizer.view)
-            case .ended:
-                self.updateKnobLayout(size: size, panningColor: false, transition: .animated(duration: 0.3, curve: .easeInOut))
-                ended = true
-            default:
-                break
-        }
-        
-        if self.color != previousColor || ended {
-            self.update()
-            if ended {
-                self.colorChangeEnded?(self.color)
-            } else {
-                self.colorChanged?(self.color)
-            }
-        }
-    }
-    
     @objc private func brightnessPan(_ recognizer: UIPanGestureRecognizer) {
         guard let size = self.validLayout else {
             return
@@ -382,9 +479,9 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         
         let transition = recognizer.translation(in: recognizer.view)
         let brightnessWidth: CGFloat = size.width - 42.0 * 2.0
-        let newValue = max(0.0, min(1.0, self.colorHsb.2 - transition.x / brightnessWidth))
-        self.colorHsb.2 = newValue
-        
+        let newValue = max(0.0, min(1.0, self.color.brightness - transition.x / brightnessWidth))
+        self.color = HSBColor(hue: self.color.hue, saturation: self.color.saturation, brightness: newValue)
+                
         var ended = false
         switch recognizer.state {
             case .changed:

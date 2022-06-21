@@ -2,13 +2,11 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import UserNotifications
 import Intents
 import Postbox
 import PushKit
 import AsyncDisplayKit
-import CloudKit
 import TelegramUIPreferences
 import TelegramPresentationData
 import TelegramCallsUI
@@ -35,6 +33,7 @@ import LightweightAccountData
 import TelegramAudio
 import DebugSettingsUI
 import BackgroundTasks
+import UIKitRuntimeUtils
 
 #if canImport(AppCenter)
 import AppCenter
@@ -100,14 +99,14 @@ private class ApplicationStatusBarHost: StatusBarHost {
     
     func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool) {
         if self.shouldChangeStatusBarStyle?(style) ?? true {
-            self.application.setStatusBarStyle(style, animated: animated)
+            self.application.internalSetStatusBarStyle(style, animated: animated)
         }
     }
     
     var shouldChangeStatusBarStyle: ((UIStatusBarStyle) -> Bool)?
     
     func setStatusBarHidden(_ value: Bool, animated: Bool) {
-        self.application.setStatusBarHidden(value, with: animated ? .fade : .none)
+        self.application.internalSetStatusBarHidden(value, animation: animated ? .fade : .none)
     }
     
     var keyboardWindow: UIWindow? {
@@ -176,7 +175,36 @@ final class SharedApplicationContext {
     }
 }
 
-@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, UNUserNotificationCenterDelegate, UIAlertViewDelegate {
+private struct AccountManagerState {
+    struct NotificationKey {
+        var accountId: AccountRecordId
+        var id: Data
+        var key: Data
+    }
+
+    var notificationKeys: [NotificationKey]
+}
+
+private func extractAccountManagerState(records: AccountRecordsView<TelegramAccountManagerTypes>) -> AccountManagerState {
+    return AccountManagerState(
+        notificationKeys: records.records.compactMap { record -> AccountManagerState.NotificationKey? in
+            for attribute in record.attributes {
+                if case let .backupData(backupData) = attribute {
+                    if let notificationEncryptionKeyId = backupData.data?.notificationEncryptionKeyId, let notificationEncryptionKey = backupData.data?.notificationEncryptionKey {
+                        return AccountManagerState.NotificationKey(
+                            accountId: record.id,
+                            id: notificationEncryptionKeyId,
+                            key: notificationEncryptionKey
+                        )
+                    }
+                }
+            }
+            return nil
+        }
+    )
+}
+
+@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, UNUserNotificationCenterDelegate {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
@@ -193,6 +221,9 @@ final class SharedApplicationContext {
     
     private let sharedContextPromise = Promise<SharedApplicationContext>()
     private let watchCommunicationManagerPromise = Promise<WatchCommunicationManager?>()
+
+    private var accountManager: AccountManager<TelegramAccountManagerTypes>?
+    private var accountManagerState: AccountManagerState?
     
     private var contextValue: AuthorizedApplicationContext?
     private let context = Promise<AuthorizedApplicationContext?>()
@@ -216,6 +247,7 @@ final class SharedApplicationContext {
     private let notificationAuthorizationDisposable = MetaDisposable()
     
     private var replyFromNotificationsDisposables = DisposableSet()
+    private var watchedCallsDisposables = DisposableSet()
     
     private var _notificationTokenPromise: Promise<Data>?
     private let voipTokenPromise = Promise<Data>()
@@ -236,14 +268,6 @@ final class SharedApplicationContext {
     private let idleTimerExtensionSubscribers = Bag<Void>()
     
     private var alertActions: (primary: (() -> Void)?, other: (() -> Void)?)?
-    
-    func alertView(_ alertView: UIAlertView, clickedButtonAt buttonIndex: Int) {
-        if buttonIndex == alertView.firstOtherButtonIndex {
-            self.alertActions?.other?()
-        } else {
-            self.alertActions?.primary?()
-        }
-    }
     
     private let deviceToken = Promise<Data?>(nil)
     
@@ -291,13 +315,13 @@ final class SharedApplicationContext {
                             var peerId: PeerId?
                             if let fromId = payload["from_id"] {
                                 let fromIdValue = fromId as! NSString
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
                             } else if let fromId = payload["chat_id"] {
                                 let fromIdValue = fromId as! NSString
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
                             } else if let fromId = payload["channel_id"] {
                                 let fromIdValue = fromId as! NSString
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
                             }
                             
                             if let msgId = payload["msg_id"] {
@@ -414,16 +438,15 @@ final class SharedApplicationContext {
         }, appData: self.deviceToken.get()
         |> map { token in
             let data = buildConfig.bundleData(withAppToken: token, signatureDict: signatureDict)
-            if let data = data, let jsonString = String(data: data, encoding: .utf8) {
-                //Logger.shared.log("data", "\(jsonString)")
+            if let data = data, let _ = String(data: data, encoding: .utf8) {
             } else {
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider())
+        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil)
         
         guard let appGroupUrl = maybeAppGroupUrl else {
-            UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()
+            self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
             return true
         }
         
@@ -496,16 +519,12 @@ final class SharedApplicationContext {
             UNUserNotificationCenter.current().delegate = self
         }
         
-        telegramUIDeclareEncodables()
-        
         GlobalExperimentalSettings.isAppStoreBuild = buildConfig.isAppStoreBuild
         GlobalExperimentalSettings.enableFeed = false
         
         self.window?.makeKeyAndVisible()
         
         self.hasActiveAudioSession.set(MediaManagerImpl.globalAudioSession.isActive())
-        
-        initializeAccountManagement()
         
         let applicationBindings = TelegramApplicationBindings(isMainApp: true, appBundleId: baseAppBundleId, containerPath: appGroupUrl.path, appSpecificScheme: buildConfig.appSpecificUrlScheme, openUrl: { url in
             var parsedUrl = URL(string: url)
@@ -633,6 +652,8 @@ final class SharedApplicationContext {
                         return .denied
                     case .notDetermined:
                         return .notDetermined
+                    @unknown default:
+                        return .notDetermined
                 }
             } else {
                 return .denied
@@ -645,16 +666,18 @@ final class SharedApplicationContext {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
-                var icons = [PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
-                        PresentationAppIcon(name: "New2", imageName: "New2_180x180"),
-                        PresentationAppIcon(name: "New1", imageName: "New1_180x180"),
-                        PresentationAppIcon(name: "Black", imageName: "BlackIcon"),
-                        PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon"),
-                        PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon"),
-                        PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon"),
-                        PresentationAppIcon(name: "BlackFilled", imageName: "BlackFilledIcon")]
+                var icons = [
+                    PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
+                    PresentationAppIcon(name: "New2", imageName: "New2"),
+                    PresentationAppIcon(name: "New1", imageName: "New1"),
+                    PresentationAppIcon(name: "BlackIcon", imageName: "BlackIcon"),
+                    PresentationAppIcon(name: "BlueClassicIcon", imageName: "BlueClassicIcon"),
+                    PresentationAppIcon(name: "BlackClassicIcon", imageName: "BlackClassicIcon"),
+                    PresentationAppIcon(name: "BlueFilledIcon", imageName: "BlueFilledIcon"),
+                    PresentationAppIcon(name: "BlackFilledIcon", imageName: "BlackFilledIcon")
+                ]
                 if buildConfig.isInternalBuild {
-                    icons.append(PresentationAppIcon(name: "WhiteFilled", imageName: "WhiteFilledIcon"))
+                    icons.append(PresentationAppIcon(name: "WhiteFilledIcon", imageName: "WhiteFilledIcon"))
                 }
                 return icons
             } else {
@@ -682,111 +705,36 @@ final class SharedApplicationContext {
             UIDevice.current.setValue(value, forKey: "orientation")
             UINavigationController.attemptRotationToDeviceOrientation()
         })
+
+        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true)
+        self.accountManager = accountManager
+
+        telegramUIDeclareEncodables()
+        initializeAccountManagement()
         
-        let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false)
-            return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
-            |> deliverOnMainQueue).start(next: { progress in
-                if self.dataImportSplash == nil {
-                    self.dataImportSplash = makeLegacyDataImportSplash(theme: nil, strings: nil)
-                    self.dataImportSplash?.serviceAction = {
-                        self.debugPressed()
-                    }
-                    self.mainWindow.coveringView = self.dataImportSplash
-                }
-                self.dataImportSplash?.progress = (.generic, progress)
-            }, completed: {
-                if let dataImportSplash = self.dataImportSplash {
-                    self.dataImportSplash = nil
-                    if self.mainWindow.coveringView === dataImportSplash {
-                        self.mainWindow.coveringView = nil
-                    }
-                }
-                subscriber.putNext(accountManager)
-                subscriber.putCompletion()
-            })
+        let pushRegistry = PKPushRegistry(queue: .main)
+        if #available(iOS 9.0, *) {
+            pushRegistry.desiredPushTypes = Set([.voIP])
+        }
+        self.pushRegistry = pushRegistry
+        pushRegistry.delegate = self
+
+        self.accountManagerState = extractAccountManagerState(records: accountManager._internalAccountRecordsSync())
+        let _ = (accountManager.accountRecords()
+        |> deliverOnMainQueue).start(next: { view in
+            self.accountManagerState = extractAccountManagerState(records: view)
+        })
+
+        var systemUserInterfaceStyle: WindowUserInterfaceStyle = .light
+        if #available(iOS 13.0, *) {
+            if let traitCollection = window.rootViewController?.traitCollection {
+                systemUserInterfaceStyle = WindowUserInterfaceStyle(style: traitCollection.userInterfaceStyle)
+            }
         }
         
-        #if ENABLE_WALLET
-        let tonKeychain: TonKeychain
-        
-        #if targetEnvironment(simulator)
-        tonKeychain = TonKeychain(encryptionPublicKey: {
-            //return .single(nil)
-            //return .single("1".data(using: .utf8)!)
-            return .single(Data())
-        }, encrypt: { data in
-            return Signal { subscriber in
-                subscriber.putNext(TonKeychainEncryptedData(publicKey: Data(), data: data))
-                subscriber.putCompletion()
-                return EmptyDisposable
-            }
-        }, decrypt: { data in
-            return Signal { subscriber in
-                subscriber.putNext(data.data)
-                subscriber.putCompletion()
-                return EmptyDisposable
-            }
-        })
-        #else
-        tonKeychain = TonKeychain(encryptionPublicKey: {
-            return Signal { subscriber in
-                BuildConfig.getHardwareEncryptionAvailable(withBaseAppBundleId: baseAppBundleId, completion: { value in
-                    subscriber.putNext(value)
-                    subscriber.putCompletion()
-                })
-                return EmptyDisposable
-            }
-        }, encrypt: { data in
-            return Signal { subscriber in
-                BuildConfig.encryptApplicationSecret(data, baseAppBundleId: baseAppBundleId, completion: { result, publicKey in
-                    if let result = result, let publicKey = publicKey {
-                        subscriber.putNext(TonKeychainEncryptedData(publicKey: publicKey, data: result))
-                        subscriber.putCompletion()
-                    } else {
-                        subscriber.putError(.generic)
-                    }
-                })
-                return EmptyDisposable
-            }
-        }, decrypt: { encryptedData in
-            return Signal { subscriber in
-                BuildConfig.decryptApplicationSecret(encryptedData.data, publicKey: encryptedData.publicKey, baseAppBundleId: baseAppBundleId, completion: { result, cancelled in
-                    if let result = result {
-                        subscriber.putNext(result)
-                    } else {
-                        let error: TonKeychainDecryptDataError
-                        if cancelled {
-                            error = .cancelled
-                        } else {
-                            error = .generic
-                        }
-                        subscriber.putError(error)
-                    }
-                    subscriber.putCompletion()
-                })
-                return EmptyDisposable
-            }
-        })
-        #endif
-        #endif
-        
-        let sharedContextSignal = accountManagerSignal
-        |> deliverOnMainQueue
-        |> take(1)
-        |> deliverOnMainQueue
-        |> take(1)
-        |> mapToSignal { accountManager -> Signal<(AccountManager, InitialPresentationDataAndSettings), NoError> in
-            var systemUserInterfaceStyle: WindowUserInterfaceStyle = .light
-            if #available(iOS 13.0, *) {
-                if let traitCollection = window.rootViewController?.traitCollection {
-                    systemUserInterfaceStyle = WindowUserInterfaceStyle(style: traitCollection.userInterfaceStyle)
-                }
-            }
-            return currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle)
-            |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
-                return (accountManager, initialPresentationDataAndSettings)
-            }
+        let sharedContextSignal = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle)
+        |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
+            return (accountManager, initialPresentationDataAndSettings)
         }
         |> deliverOnMainQueue
         |> mapToSignal { accountManager, initialPresentationDataAndSettings -> Signal<(SharedApplicationContext, LoggingSettings), NoError> in
@@ -821,21 +769,12 @@ final class SharedApplicationContext {
                     }
                 }
             })
-
-            /*self.mainWindow.debugAction = {
-                self.mainWindow.debugAction = nil
-                
-                let presentationData = sharedContext.currentPresentationData.with { $0 }
-                let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
-                navigationController.viewControllers = [debugController(sharedContext: sharedContext, context: nil)]
-                self.mainWindow.present(navigationController, on: .root)
-            }*/
             
             presentationDataPromise.set(sharedContext.presentationData)
             
-            let rawAccounts = sharedContext.activeAccounts
-            |> map { _, accounts, _ -> [Account] in
-                return accounts.map({ $0.1 })
+            let rawAccounts = sharedContext.activeAccountContexts
+            |> map { _, contexts, _ -> [Account] in
+                return contexts.map({ $0.1.account })
             }
             let storeQueue = Queue()
             let _ = (
@@ -870,7 +809,7 @@ final class SharedApplicationContext {
                 }
             }
             
-            let notificationManager = SharedNotificationManager(episodeId: self.episodeId, application: application, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccounts |> map { primary, accounts, _ in accounts.map({ ($0.1, $0.1.id == primary?.id) }) }, pollLiveLocationOnce: { accountId in
+            let notificationManager = SharedNotificationManager(episodeId: self.episodeId, application: application, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccountContexts |> map { primary, accounts, _ in accounts.map({ ($0.1.account, $0.1.account.id == primary?.account.id) }) }, pollLiveLocationOnce: { accountId in
                 let _ = (self.context.get()
                 |> filter {
                     return $0 != nil
@@ -889,7 +828,13 @@ final class SharedApplicationContext {
             |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
                 if let context = context, let liveLocationManager = context.context.liveLocationManager {
                     let accountId = context.context.account.id
-                    return liveLocationManager.isPolling
+                    return combineLatest(queue: .mainQueue(),
+                        liveLocationManager.isPolling,
+                        liveLocationManager.hasBackgroundTasks
+                    )
+                    |> map { isPolling, hasBackgroundTasks -> Bool in
+                        return isPolling || hasBackgroundTasks
+                    }
                     |> distinctUntilChanged
                     |> map { value -> AccountRecordId? in
                         if value {
@@ -922,14 +867,14 @@ final class SharedApplicationContext {
                     return .single(nil)
                 }
             }
-            let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in application.beginBackgroundTask(withName: name, expirationHandler: expiration) }, endBackgroundTask: { id in application.endBackgroundTask(id) }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1.map { ($0.0, $0.1) }) }, liveLocationPolling: liveLocationPolling, watchTasks: watchTasks, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: self.hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+            let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in application.beginBackgroundTask(withName: name, expirationHandler: expiration) }, endBackgroundTask: { id in application.endBackgroundTask(id) }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, activeAccounts: sharedContext.activeAccountContexts |> map { ($0.0?.account, $0.1.map { ($0.0, $0.1.account) }) }, liveLocationPolling: liveLocationPolling, watchTasks: watchTasks, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: self.hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
                 return sharedContext.accountUserInterfaceInUse(id)
             })
             let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
             sharedApplicationContext.sharedContext.mediaManager.overlayMediaManager.attachOverlayMediaController(sharedApplicationContext.overlayMediaController)
             
             return accountManager.transaction { transaction -> (SharedApplicationContext, LoggingSettings) in
-                return (sharedApplicationContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
+                return (sharedApplicationContext, transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings)
             }
         }
         self.sharedContextPromise.set(sharedContextSignal
@@ -946,8 +891,8 @@ final class SharedApplicationContext {
         self.context.set(self.sharedContextPromise.get()
         |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext?, NoError> in
-            return sharedApplicationContext.sharedContext.activeAccounts
-            |> map { primary, _, _ -> Account? in
+            return sharedApplicationContext.sharedContext.activeAccountContexts
+            |> map { primary, _, _ -> AccountContext? in
                 return primary
             }
             |> distinctUntilChanged(isEqual: { lhs, rhs in
@@ -956,9 +901,9 @@ final class SharedApplicationContext {
                 }
                 return true
             })
-            |> mapToSignal { account -> Signal<(Account, LimitsConfiguration, CallListSettings, ContentSettings, AppConfiguration)?, NoError> in
+            |> mapToSignal { context -> Signal<(AccountContext, CallListSettings)?, NoError> in
                 return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings? in
-                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings
+                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings)?.get(CallListSettings.self)
                 }
                 |> reduceLeft(value: nil) { current, updated -> CallListSettings? in
                     var result: CallListSettings?
@@ -969,24 +914,18 @@ final class SharedApplicationContext {
                     }
                     return result
                 }
-                |> mapToSignal { callListSettings -> Signal<(Account, LimitsConfiguration, CallListSettings, ContentSettings, AppConfiguration)?, NoError> in
-                    if let account = account {
-                        return account.postbox.transaction { transaction -> (Account, LimitsConfiguration, CallListSettings, ContentSettings, AppConfiguration)? in
-                            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
-                            let contentSettings = getContentSettings(transaction: transaction)
-                            let appConfiguration = getAppConfiguration(transaction: transaction)
-                            return (account, limitsConfiguration, callListSettings ?? CallListSettings.defaultSettings, contentSettings, appConfiguration)
-                        }
+                |> map { callListSettings -> (AccountContext, CallListSettings)? in
+                    if let context = context {
+                        return (context, callListSettings ?? .defaultSettings)
                     } else {
-                        return .single(nil)
+                        return nil
                     }
                 }
             }
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
-                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, contentSettings, appConfiguration in
-                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, limitsConfiguration: limitsConfiguration, contentSettings: contentSettings, appConfiguration: appConfiguration)
-                    return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
+                return accountAndSettings.flatMap { context, callListSettings in
+                    return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context as! AccountContextImpl, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { context in
@@ -1002,8 +941,8 @@ final class SharedApplicationContext {
         self.authContext.set(self.sharedContextPromise.get()
         |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<UnauthorizedApplicationContext?, NoError> in
-            return sharedApplicationContext.sharedContext.activeAccounts
-            |> map { primary, accounts, auth -> (Account?, UnauthorizedAccount, [Account])? in
+            return sharedApplicationContext.sharedContext.activeAccountContexts
+            |> map { primary, accounts, auth -> (AccountContext?, UnauthorizedAccount, [AccountContext])? in
                 if let auth = auth {
                     return (primary, auth, Array(accounts.map({ $0.1 })))
                 } else {
@@ -1018,10 +957,10 @@ final class SharedApplicationContext {
             })
             |> mapToSignal { authAndAccounts -> Signal<(UnauthorizedAccount, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                 if let (primary, auth, accounts) = authAndAccounts {
-                    let phoneNumbers = combineLatest(accounts.map { account -> Signal<(AccountRecordId, String, Bool)?, NoError> in
-                        return account.postbox.transaction { transaction -> (AccountRecordId, String, Bool)? in
-                            if let phone = (transaction.getPeer(account.peerId) as? TelegramUser)?.phone {
-                                return (account.id, phone, account.testingEnvironment)
+                    let phoneNumbers = combineLatest(accounts.map { context -> Signal<(AccountRecordId, String, Bool)?, NoError> in
+                        return context.account.postbox.transaction { transaction -> (AccountRecordId, String, Bool)? in
+                            if let phone = (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone {
+                                return (context.account.id, phone, context.account.testingEnvironment)
                             } else {
                                 return nil
                             }
@@ -1032,7 +971,7 @@ final class SharedApplicationContext {
                         var primaryNumber: (String, AccountRecordId, Bool)?
                         if let primary = primary {
                             for idAndNumber in phoneNumbers {
-                                if let (id, number, testingEnvironment) = idAndNumber, id == primary.id {
+                                if let (id, number, testingEnvironment) = idAndNumber, id == primary.account.id {
                                     primaryNumber = (number, id, testingEnvironment)
                                     break
                                 }
@@ -1046,12 +985,12 @@ final class SharedApplicationContext {
             }
             |> mapToSignal { accountAndOtherAccountPhoneNumbers -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                 return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
-                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings ?? CallListSettings.defaultSettings
+                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings)?.get(CallListSettings.self) ?? CallListSettings.defaultSettings
                     }
                 |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                     if let (account, otherAccountPhoneNumbers) = accountAndOtherAccountPhoneNumbers {
                         return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))? in
-                            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+                            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
                             return (account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers)
                         }
                     } else {
@@ -1194,13 +1133,14 @@ final class SharedApplicationContext {
                 authContextReadyDisposable.set(nil)
             }
         }))
-        
-        self.logoutDisposable.set((self.sharedContextPromise.get()
+
+
+        let logoutDataSignal: Signal<(AccountManager, Set<PeerId>), NoError> = self.sharedContextPromise.get()
         |> take(1)
-        |> mapToSignal { sharedContext -> Signal<(AccountManager, Set<PeerId>), NoError> in
-            return sharedContext.sharedContext.activeAccounts
+        |> mapToSignal { sharedContext -> Signal<(AccountManager<TelegramAccountManagerTypes>, Set<PeerId>), NoError> in
+            return sharedContext.sharedContext.activeAccountContexts
             |> map { _, accounts, _ -> Set<PeerId> in
-                return Set(accounts.map { $0.1.peerId })
+                return Set(accounts.map { $0.1.account.peerId })
             }
             |> reduceLeft(value: Set<PeerId>()) { current, updated, emit in
                 if !current.isEmpty {
@@ -1208,10 +1148,12 @@ final class SharedApplicationContext {
                 }
                 return updated
             }
-            |> map { loggedOutAccountPeerIds -> (AccountManager, Set<PeerId>) in
+            |> map { loggedOutAccountPeerIds -> (AccountManager<TelegramAccountManagerTypes>, Set<PeerId>) in
                 return (sharedContext.sharedContext.accountManager, loggedOutAccountPeerIds)
             }
-        }).start(next: { accountManager, loggedOutAccountPeerIds in
+        }
+
+        self.logoutDisposable.set(logoutDataSignal.start(next: { accountManager, loggedOutAccountPeerIds in
             let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
                 var updated = current
                 for peerId in loggedOutAccountPeerIds {
@@ -1239,24 +1181,7 @@ final class SharedApplicationContext {
             }
         })
         
-        let pushRegistry = PKPushRegistry(queue: .main)
-        if #available(iOS 9.0, *) {
-            pushRegistry.desiredPushTypes = Set([.voIP])
-        }
-        self.pushRegistry = pushRegistry
-        pushRegistry.delegate = self
-        
-        self.badgeDisposable.set((self.context.get()
-        |> mapToSignal { context -> Signal<Int32, NoError> in
-            if let context = context {
-                return context.applicationBadge
-            } else {
-                return .single(0)
-            }
-        }
-        |> deliverOnMainQueue).start(next: { count in
-            UIApplication.shared.applicationIconBadgeNumber = Int(count)
-        }))
+        self.resetBadge()
         
         if #available(iOS 9.1, *) {
             self.quickActionsDisposable.set((self.context.get()
@@ -1266,7 +1191,7 @@ final class SharedApplicationContext {
                     
                     return activeAccountsAndPeers(context: context.context)
                     |> take(1)
-                    |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
+                    |> map { primaryAndAccounts -> (AccountContext, EnginePeer, Int32)? in
                         return primaryAndAccounts.1.first
                     }
                     |> map { accountAndPeer -> String? in
@@ -1302,8 +1227,8 @@ final class SharedApplicationContext {
         
         if let url = launchOptions?[.url] {
             if let url = url as? URL, url.scheme == "tg" || url.scheme == buildConfig.appSpecificUrlScheme {
-                self.openUrlWhenReady(url: url.absoluteString)
-            } else if let url = url as? String, url.lowercased().hasPrefix("tg:") || url.lowercased().hasPrefix("\(buildConfig.appSpecificUrlScheme):") {
+                self.openUrlWhenReady(url: url)
+            } else if let urlString = url as? String, urlString.lowercased().hasPrefix("tg:") || urlString.lowercased().hasPrefix("\(buildConfig.appSpecificUrlScheme):"), let url = URL(string: urlString) {
                 self.openUrlWhenReady(url: url)
             }
         }
@@ -1316,7 +1241,7 @@ final class SharedApplicationContext {
         }
         
         if UIApplication.shared.isStatusBarHidden {
-            UIApplication.shared.setStatusBarHidden(false, with: .none)
+            UIApplication.shared.internalSetStatusBarHidden(false, animation: .none)
         }
         
         /*if #available(iOS 13.0, *) {
@@ -1351,6 +1276,27 @@ final class SharedApplicationContext {
         #endif
         
         return true
+    }
+
+    private func resetBadge() {
+        var resetOnce = true
+        self.badgeDisposable.set((self.context.get()
+        |> mapToSignal { context -> Signal<Int32, NoError> in
+            if let context = context {
+                return context.applicationBadge
+            } else {
+                return .single(0)
+            }
+        }
+        |> deliverOnMainQueue).start(next: { count in
+            if resetOnce {
+                resetOnce = false
+                if count == 0 {
+                    UIApplication.shared.applicationIconBadgeNumber = 1
+                }
+            }
+            UIApplication.shared.applicationIconBadgeNumber = Int(count)
+        }))
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -1433,6 +1379,8 @@ final class SharedApplicationContext {
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
         self.isActivePromise.set(true)
+
+        self.resetBadge()
         
         self.maybeCheckForUpdates()
     }
@@ -1466,15 +1414,15 @@ final class SharedApplicationContext {
         }
         
         Logger.shared.log("App \(self.episodeId)", "remoteNotification: \(redactedPayload)")
-        
+
         if userInfo["p"] == nil {
+            completionHandler(.noData)
             return
         }
         
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            
             sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
                 completionHandler(.newData)
             }, timeout: 29.0)
@@ -1498,9 +1446,29 @@ final class SharedApplicationContext {
         }
     }
     
+    public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
+        Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry didReceiveIncomingPushWith \(payload.dictionaryPayload)")
+        
+        self.pushRegistryImpl(registry, didReceiveIncomingPushWith: payload, for: type, completion: completion)
+    }
+    
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
-        if #available(iOS 9.0, *) {
-            /*guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
+        Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry didReceiveIncomingPushWith \(payload.dictionaryPayload)")
+        
+        self.pushRegistryImpl(registry, didReceiveIncomingPushWith: payload, for: type, completion: {})
+    }
+    
+    private func pushRegistryImpl(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
+        Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry processing push notification")
+        
+        let decryptedPayloadAndAccountId: ([AnyHashable: Any], AccountRecordId)?
+        
+        if let accountIdString = payload.dictionaryPayload["accountId"] as? String, let accountId = Int64(accountIdString) {
+            decryptedPayloadAndAccountId = (payload.dictionaryPayload, AccountRecordId(rawValue: accountId))
+        } else {
+            guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "encryptedPayload is nil")
+                completion()
                 return
             }
             encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
@@ -1508,122 +1476,155 @@ final class SharedApplicationContext {
             while encryptedPayload.count % 4 != 0 {
                 encryptedPayload.append("=")
             }
-            guard let data = Data(base64Encoded: encryptedPayload) else {
+            guard let payloadData = Data(base64Encoded: encryptedPayload) else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode encryptedPayload")
+                completion()
+                return
+            }
+            guard let keyId = notificationPayloadKeyId(data: payloadData) else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't parse payload key id")
+                completion()
+                return
+            }
+            guard let accountManagerState = self.accountManagerState else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "accountManagerState is nil")
+                completion()
+                return
+            }
+
+            var maybeAccountId: AccountRecordId?
+            var maybeNotificationKey: MasterNotificationKey?
+
+            for key in accountManagerState.notificationKeys {
+                if key.id == keyId {
+                    maybeAccountId = key.accountId
+                    maybeNotificationKey = MasterNotificationKey(id: key.id, data: key.key)
+                    break
+                }
+            }
+
+            guard let accountId = maybeAccountId, let notificationKey = maybeNotificationKey else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "accountId or notificationKey is nil")
+                completion()
+                return
+            }
+            guard let decryptedPayload = decryptedNotificationPayload(key: notificationKey, data: payloadData) else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decrypt payload")
+                completion()
+                return
+            }
+            guard let payloadJson = try? JSONSerialization.jsonObject(with: decryptedPayload, options: []) as? [AnyHashable: Any] else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode payload json")
+                completion()
                 return
             }
             
-            let semaphore = DispatchSemaphore(value: 0)
-            var accountAndDecryptedPayload: (Account, Data)?
-            
-            var sharedApplicationContextValue: SharedApplicationContext?
-            
-            let accountsAndKeys = self.sharedContextPromise.get()
-            |> take(1)
-            |> mapToSignal { sharedApplicationContext -> Signal<[(Account, MasterNotificationKey)], NoError> in
-                sharedApplicationContextValue = sharedApplicationContext
-                
-                return sharedApplicationContext.sharedContext.activeAccounts
-                |> take(1)
-                |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
-                    return combineLatest(activeAccounts.accounts.map { account -> Signal<(Account, MasterNotificationKey), NoError> in
-                        return masterNotificationsKey(account: account.1, ignoreDisabled: true)
-                        |> map { key -> (Account, MasterNotificationKey) in
-                            return (account.1, key)
-                        }
-                    })
+            decryptedPayloadAndAccountId = (payloadJson, accountId)
+        }
+        
+        guard let (payloadJson, accountId) = decryptedPayloadAndAccountId else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "decryptedPayloadAndAccountId is nil")
+            completion()
+            return
+        }
+        
+        guard var updateString = payloadJson["updates"] as? String else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "updates is nil")
+            completion()
+            return
+        }
+
+        updateString = updateString.replacingOccurrences(of: "-", with: "+")
+        updateString = updateString.replacingOccurrences(of: "_", with: "/")
+        while updateString.count % 4 != 0 {
+            updateString.append("=")
+        }
+        guard let updateData = Data(base64Encoded: updateString) else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode updateData")
+            completion()
+            return
+        }
+        guard let callUpdate = AccountStateManager.extractIncomingCallUpdate(data: updateData) else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't extract call update")
+            completion()
+            return
+        }
+        guard let callKitIntegration = CallKitIntegration.shared else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is not available")
+            completion()
+            return
+        }
+
+        callKitIntegration.reportIncomingCall(
+            uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId),
+            stableId: callUpdate.callId,
+            handle: "\(callUpdate.peer.id.id._internalGetInt64Value())",
+            isVideo: false,
+            displayTitle: callUpdate.peer.debugDisplayTitle,
+            completion: { error in
+                if let error = error {
+                    if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
+                        Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
+                    } else {
+                        Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
+                        /*Queue.mainQueue().async {
+                            if let strongSelf = self {
+                                strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .hangUp, debugLog: .single(nil))
+                            }
+                        }*/
+                    }
                 }
             }
-            
-            let _ = accountsAndKeys.start(next: { accountsAndKeys in
-                for (account, key) in accountsAndKeys {
-                    if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
-                        accountAndDecryptedPayload = (account, decryptedData)
+        )
+        
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { activeAccounts in
+                var processed = false
+                for (_, context, _) in activeAccounts.accounts {
+                    if context.account.id == accountId {
+                        context.account.stateManager.processIncomingCallUpdate(data: updateData, completion: { _ in
+                        })
+                        
+                        //callUpdate.callId
+                        let disposable = MetaDisposable()
+                        self.watchedCallsDisposables.add(disposable)
+                        
+                        disposable.set((context.account.callSessionManager.callState(internalId: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId))
+                        |> deliverOnMainQueue).start(next: { state in
+                            switch state.state {
+                            case .terminated:
+                                callKitIntegration.dropCall(uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId))
+                            default:
+                                break
+                            }
+                        }))
+                        
+                        processed = true
+                        
                         break
                     }
                 }
-                semaphore.signal()
-            })
-            semaphore.wait()
-            
-            if let sharedApplicationContextValue = sharedApplicationContextValue, let (account, decryptedData) = accountAndDecryptedPayload {
-                if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
-                    if var updateString = decryptedDict["updates"] as? String {
-                        updateString = updateString.replacingOccurrences(of: "-", with: "+")
-                        updateString = updateString.replacingOccurrences(of: "_", with: "/")
-                        while updateString.count % 4 != 0 {
-                            updateString.append("=")
-                        }
-                        if let updateData = Data(base64Encoded: updateString) {
-                            var result: (CallSessionRingingState, CallSession)?
-                            let semaphore = DispatchSemaphore(value: 0)
-                            account.stateManager.processIncomingCallUpdate(data: updateData, completion: { ringingState in
-                                result = ringingState
-                                semaphore.signal()
-                            })
-                            semaphore.wait()
-                            
-                            if let (ringingState, callSession) = result {
-                                (sharedApplicationContextValue.sharedContext.callManager as? PresentationCallManagerImpl)?.injectRingingStateSynchronously(account: account, ringingState: ringingState, callSession: callSession)
-                            }
-                        }
-                    }
-                }
-            }*/
-            let _ = (self.sharedContextPromise.get()
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-                if var encryptedPayload = payload.dictionaryPayload["p"] as? String {
-                    encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
-                    encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
-                    while encryptedPayload.count % 4 != 0 {
-                        encryptedPayload.append("=")
-                    }
-                    if let data = Data(base64Encoded: encryptedPayload) {
-                        let _ = (sharedApplicationContext.sharedContext.activeAccounts
-                        |> take(1)
-                        |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
-                            return combineLatest(activeAccounts.accounts.map { account -> Signal<(Account, MasterNotificationKey), NoError> in
-                                return masterNotificationsKey(account: account.1, ignoreDisabled: true)
-                                |> map { key -> (Account, MasterNotificationKey) in
-                                    return (account.1, key)
-                                }
-                            })
-                        }
-                        |> deliverOnMainQueue).start(next: { accountsAndKeys in
-                            var accountAndDecryptedPayload: (Account, Data)?
-                            for (account, key) in accountsAndKeys {
-                                if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
-                                    accountAndDecryptedPayload = (account, decryptedData)
-                                    break
-                                }
-                            }
-                            
-                            if let (account, decryptedData) = accountAndDecryptedPayload {
-                                if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
-                                    if var updateString = decryptedDict["updates"] as? String {
-                                        updateString = updateString.replacingOccurrences(of: "-", with: "+")
-                                        updateString = updateString.replacingOccurrences(of: "_", with: "/")
-                                        while updateString.count % 4 != 0 {
-                                            updateString.append("=")
-                                        }
-                                        if let updateData = Data(base64Encoded: updateString) {
-                                            account.stateManager.processIncomingCallUpdate(data: updateData, completion: { _ in
-                                            })
-                                        }
-                                    }
-                                }
-                            }
-                        })
-                    }
-                }
-                sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
                 
-                if case PKPushType.voIP = type {
-                    Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
-                    sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
+                if !processed {
+                    callKitIntegration.dropCall(uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId))
                 }
             })
-        }
+            
+            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
+
+            if case PKPushType.voIP = type {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry payload: \(payload.dictionaryPayload)")
+                sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
+            }
+        })
+        
+        Logger.shared.log("App \(self.episodeId) PushRegistry", "Invoking completion handler")
+        
+        completion()
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
@@ -1652,6 +1653,10 @@ final class SharedApplicationContext {
     }
     
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        guard self.openUrlInProgress != url else {
+            return true
+        }
+        
         self.openUrl(url: url)
         return true
     }
@@ -1708,8 +1713,8 @@ final class SharedApplicationContext {
             }
             
             if let startCallContacts = startCallContacts {
-                let startCall: (Int32) -> Void = { userId in
-                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), isVideo: startCallIsVideo)
+                let startCall: (Int64) -> Void = { userId in
+                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), isVideo: startCallIsVideo)
                 }
                 
                 func cleanPhoneNumber(_ text: String) -> String {
@@ -1740,7 +1745,7 @@ final class SharedApplicationContext {
                     var processed = false
                     if let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                         let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                        if let userId = Int32(string) {
+                        if let userId = Int64(string) {
                             startCall(userId)
                             processed = true
                         }
@@ -1748,7 +1753,7 @@ final class SharedApplicationContext {
                     if !processed, let handle = contact.personHandle, let value = handle.value {
                         switch handle.type {
                             case .unknown:
-                                if let userId = Int32(value) {
+                                if let userId = Int64(value) {
                                     startCall(userId)
                                     processed = true
                                 }
@@ -1771,7 +1776,7 @@ final class SharedApplicationContext {
                                         return result
                                     } |> deliverOnMainQueue).start(next: { peerId in
                                         if let peerId = peerId {
-                                            startCall(peerId.id._internalGetInt32Value())
+                                            startCall(peerId.id._internalGetInt64Value())
                                         }
                                     })
                                     processed = true
@@ -1785,8 +1790,8 @@ final class SharedApplicationContext {
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                    if let userId = Int32(string) {
-                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), activateInput: true)
+                    if let userId = Int64(string) {
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), activateInput: true)
                     }
                 }
             }
@@ -1803,38 +1808,38 @@ final class SharedApplicationContext {
                 
                     let signal = self.sharedContextPromise.get()
                     |> take(1)
-                    |> mapToSignal { sharedApplicationContext -> Signal<(AccountRecordId?, [Account?]), NoError> in
-                        return sharedApplicationContext.sharedContext.activeAccounts
+                    |> mapToSignal { sharedApplicationContext -> Signal<(AccountRecordId?, [AccountContext?]), NoError> in
+                        return sharedApplicationContext.sharedContext.activeAccountContexts
                         |> take(1)
-                        |> mapToSignal { primary, accounts, _ -> Signal<(AccountRecordId?, [Account?]), NoError> in
-                            return combineLatest(accounts.map { _, account, _ -> Signal<Account?, NoError> in
-                                return account.postbox.transaction { transaction -> Account? in
+                        |> mapToSignal { primary, contexts, _ -> Signal<(AccountRecordId?, [AccountContext?]), NoError> in
+                            return combineLatest(contexts.map { _, context, _ -> Signal<AccountContext?, NoError> in
+                                return context.account.postbox.transaction { transaction -> AccountContext? in
                                     if transaction.getPeer(peerId) != nil {
-                                        return account
+                                        return context
                                     } else {
                                         return nil
                                     }
                                 }
                             })
-                            |> map { accounts -> (AccountRecordId?, [Account?]) in
-                                return (primary?.id, accounts)
+                            |> map { contexts -> (AccountRecordId?, [AccountContext?]) in
+                                return (primary?.account.id, contexts)
                             }
                         }
                     }
                     let _ = (signal
-                    |> deliverOnMainQueue).start(next: { primary, accounts in
+                    |> deliverOnMainQueue).start(next: { primary, contexts in
                         if let primary = primary {
-                            for account in accounts {
-                                if let account = account, account.id == primary {
+                            for context in contexts {
+                                if let context = context, context.account.id == primary {
                                     self.openChatWhenReady(accountId: nil, peerId: peerId)
                                     return
                                 }
                             }
                         }
                         
-                        for account in accounts {
-                            if let account = account {
-                                self.openChatWhenReady(accountId: account.id, peerId: peerId)
+                        for context in contexts {
+                            if let context = context {
+                                self.openChatWhenReady(accountId: context.account.id, peerId: peerId)
                                 return
                             }
                         }
@@ -1921,6 +1926,7 @@ final class SharedApplicationContext {
     private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {
         let signal = self.sharedContextPromise.get()
         |> take(1)
+        |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
             if let accountId = accountId {
                 sharedApplicationContext.sharedContext.switchToAccount(id: accountId)
@@ -1940,12 +1946,17 @@ final class SharedApplicationContext {
         }))
     }
     
-    private func openUrlWhenReady(url: String) {
+    private var openUrlInProgress: URL?
+    private func openUrlWhenReady(url: URL) {
+        self.openUrlInProgress = url
+        
         self.openUrlWhenReadyDisposable.set((self.authorizedContext()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { context in
-            let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-            context.context.sharedContext.openExternalUrl(context: context.context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: context.rootController, dismissInput: {
+        |> deliverOnMainQueue).start(next: { [weak self] context in
+            context.openUrl(url)
+            
+            Queue.mainQueue().after(1.0, {
+                self?.openUrlInProgress = nil
             })
         }))
     }
@@ -1974,11 +1985,11 @@ final class SharedApplicationContext {
                 |> deliverOnMainQueue
                 |> mapToSignal { sharedContext -> Signal<Void, NoError> in
                     sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0, extendNow: true)
-                    return sharedContext.sharedContext.activeAccounts
-                    |> mapToSignal { _, accounts, _ -> Signal<Account, NoError> in
-                        for account in accounts {
-                            if account.1.id == accountId {
-                                return .single(account.1)
+                    return sharedContext.sharedContext.activeAccountContexts
+                    |> mapToSignal { _, contexts, _ -> Signal<Account, NoError> in
+                        for context in contexts {
+                            if context.1.account.id == accountId {
+                                return .single(context.1.account)
                             }
                         }
                         return .complete()
@@ -2035,7 +2046,7 @@ final class SharedApplicationContext {
     private func registerForNotifications(context: AccountContextImpl, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = (context.sharedContext.accountManager.transaction { transaction -> Bool in
-            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
             return settings.displayNameOnLockscreen
         }
         |> deliverOnMainQueue).start(next: { displayNames in
@@ -2061,7 +2072,7 @@ final class SharedApplicationContext {
                             if result {
                                 Queue.mainQueue().async {
                                     let reply = UNTextInputNotificationAction(identifier: "reply", title: replyString, options: [], textInputButtonTitle: replyString, textInputPlaceholder: messagePlaceholderString)
-                                    
+                                                                        
                                     let unknownMessageCategory: UNNotificationCategory
                                     let replyMessageCategory: UNNotificationCategory
                                     let replyLegacyMessageCategory: UNNotificationCategory
@@ -2156,7 +2167,6 @@ final class SharedApplicationContext {
             let muteMediaMessageCategory = UIMutableUserNotificationCategory()
             muteMediaMessageCategory.identifier = "withMuteMedia"
             
-            let categories = [unknownMessageCategory, replyMessageCategory, replyLegacyMessageCategory, replyLegacyMediaMessageCategory, replyMediaMessageCategory, legacyChannelMessageCategory, muteMessageCategory, muteMediaMessageCategory]
             let settings = UIUserNotificationSettings(types: [.badge, .sound, .alert], categories: [])
             UIApplication.shared.registerUserNotificationSettings(settings)
             UIApplication.shared.registerForRemoteNotifications()
@@ -2190,9 +2200,7 @@ final class SharedApplicationContext {
     
     private func maybeCheckForUpdates() {
         #if targetEnvironment(simulator)
-        return;
-        #endif
-        
+        #else
         guard let buildConfig = self.buildConfig, !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty else {
             return
         }
@@ -2237,6 +2245,7 @@ final class SharedApplicationContext {
                 }))
             }
         }
+        #endif
     }
     
     override var next: UIResponder? {
@@ -2262,7 +2271,7 @@ final class SharedApplicationContext {
     
     private func resetIntentsIfNeeded(context: AccountContextImpl) {
         let _ = (context.sharedContext.accountManager.transaction { transaction in
-            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
+            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings)?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
             if !settings.initiallyReset || settings.account == nil {
                 if #available(iOS 10.0, *) {
                     Queue.mainQueue().async {
@@ -2270,7 +2279,7 @@ final class SharedApplicationContext {
                     }
                 }
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.intentsSettings, { _ in
-                    return IntentsSettings(initiallyReset: true, account: context.account.peerId, contacts: settings.contacts, privateChats: settings.privateChats, savedMessages: settings.savedMessages, groups: settings.groups, onlyShared: settings.onlyShared)
+                    return PreferencesEntry(IntentsSettings(initiallyReset: true, account: context.account.peerId, contacts: settings.contacts, privateChats: settings.privateChats, savedMessages: settings.savedMessages, groups: settings.groups, onlyShared: settings.onlyShared))
                 })
             }
         }).start()
@@ -2288,6 +2297,8 @@ private func notificationPayloadKey(data: Data) -> Data? {
 private func accountIdFromNotification(_ notification: UNNotification, sharedContext: Signal<SharedApplicationContext, NoError>) -> Signal<AccountRecordId?, NoError> {
     if let id = notification.request.content.userInfo["accountId"] as? Int64 {
         return .single(AccountRecordId(rawValue: id))
+    } else if let idString = notification.request.content.userInfo["accountId"] as? String, let id = Int64(idString) {
+        return .single(AccountRecordId(rawValue: id))
     } else {
         var encryptedData: Data?
         if var encryptedPayload = notification.request.content.userInfo["p"] as? String {
@@ -2302,13 +2313,13 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
             return sharedContext
             |> take(1)
             |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
-                return sharedContext.sharedContext.activeAccounts
+                return sharedContext.sharedContext.activeAccountContexts
                 |> take(1)
-                |> mapToSignal { _, accounts, _ -> Signal<AccountRecordId?, NoError> in
-                    let keys = accounts.map { _, account, _ -> Signal<(AccountRecordId, MasterNotificationKey)?, NoError> in
-                        return masterNotificationsKey(account: account, ignoreDisabled: true)
+                |> mapToSignal { _, contexts, _ -> Signal<AccountRecordId?, NoError> in
+                    let keys = contexts.map { _, context, _ -> Signal<(AccountRecordId, MasterNotificationKey)?, NoError> in
+                        return masterNotificationsKey(account: context.account, ignoreDisabled: true)
                         |> map { key in
-                            return (account.id, key)
+                            return (context.account.id, key)
                         }
                     }
                     return combineLatest(keys)
@@ -2326,12 +2337,12 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
             return sharedContext
             |> take(1)
             |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
-                return sharedContext.sharedContext.activeAccounts
+                return sharedContext.sharedContext.activeAccountContexts
                 |> take(1)
-                |> map { _, accounts, _ -> AccountRecordId? in
-                    for (_, account, _) in accounts {
-                        if Int(account.peerId.id._internalGetInt32Value()) == userId {
-                            return account.id
+                |> map { _, contexts, _ -> AccountRecordId? in
+                    for (_, context, _) in contexts {
+                        if Int(context.account.peerId.id._internalGetInt64Value()) == userId {
+                            return context.account.id
                         }
                     }
                     return nil
@@ -2347,21 +2358,23 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
 private func peerIdFromNotification(_ notification: UNNotification) -> PeerId? {
     if let peerId = notification.request.content.userInfo["peerId"] as? Int64 {
         return PeerId(peerId)
+    } else if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerId = Int64(peerIdString) {
+        return PeerId(peerId)
     } else {
         let payload = notification.request.content.userInfo
         var peerId: PeerId?
         if let fromId = payload["from_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
         } else if let fromId = payload["chat_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
         } else if let fromId = payload["channel_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
         } else if let fromId = payload["encryption_id"] {
             let fromIdValue = fromId as! NSString
-            peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(Int32(fromIdValue.intValue)))
+            peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
         }
         return peerId
     }

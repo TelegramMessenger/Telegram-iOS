@@ -15,6 +15,20 @@
 @synthesize sendAsGif = _sendAsGif;
 @synthesize toolValues = _toolValues;
 
++ (instancetype)editorValuesWithOriginalSize:(CGSize)originalSize cropRectangle:(PGRectangle *)cropRectangle cropOrientation:(UIImageOrientation)cropOrientation cropSize:(CGSize)cropSize enhanceDocument:(bool)enhanceDocument paintingData:(TGPaintingData *)paintingData
+{
+    PGPhotoEditorValues *values = [[PGPhotoEditorValues alloc] init];
+    values->_originalSize = originalSize;
+    values->_cropRect = CGRectMake(0.0, 0.0, cropSize.width, cropSize.height);
+    values->_cropSize = cropSize;
+    values->_cropRectangle = cropRectangle;
+    values->_cropOrientation = cropOrientation;
+    values->_enhanceDocument = enhanceDocument;
+    values->_paintingData = paintingData;
+    return values;
+}
+
+
 + (instancetype)editorValuesWithOriginalSize:(CGSize)originalSize cropRect:(CGRect)cropRect cropRotation:(CGFloat)cropRotation cropOrientation:(UIImageOrientation)cropOrientation cropLockedAspectRatio:(CGFloat)cropLockedAspectRatio cropMirrored:(bool)cropMirrored toolValues:(NSDictionary *)toolValues paintingData:(TGPaintingData *)paintingData sendAsGif:(bool)sendAsGif
 {
     PGPhotoEditorValues *values = [[PGPhotoEditorValues alloc] init];
@@ -27,7 +41,6 @@
     values->_toolValues = toolValues;
     values->_paintingData = paintingData;
     values->_sendAsGif = sendAsGif;
-    
     return values;
 }
 
@@ -38,6 +51,9 @@
 
 - (bool)cropAppliedForAvatar:(bool)forAvatar
 {
+    if (_cropRectangle != nil)
+        return true;
+    
     CGRect defaultCropRect = CGRectMake(0, 0, _originalSize.width, _originalSize.height);
     if (forAvatar)
     {
@@ -65,6 +81,9 @@
 
 - (bool)toolsApplied
 {
+    if (_enhanceDocument)
+        return true;
+    
     if (self.toolValues.count > 0)
         return true;
     
@@ -110,6 +129,9 @@
         return false;
     
     if (self.paintingData != values.paintingData && ![self.paintingData isEqual:values.paintingData])
+        return false;
+    
+    if (self.enhanceDocument != values.enhanceDocument)
         return false;
     
     return true;

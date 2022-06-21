@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import TelegramStringFormatting
 import SearchBarNode
@@ -69,7 +68,7 @@ private func loadCountryCodes() -> [Country] {
 private var countryCodes: [Country] = loadCountryCodes()
 private var countryCodesByPrefix: [String: (Country, Country.CountryCode)] = [:]
 
-public func loadServerCountryCodes(accountManager: AccountManager, engine: TelegramEngineUnauthorized, completion: @escaping () -> Void) {
+public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccountManagerTypes>, engine: TelegramEngineUnauthorized, completion: @escaping () -> Void) {
     let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
     |> deliverOnMainQueue).start(next: { countries in
         countryCodes = countries
@@ -93,7 +92,7 @@ public func loadServerCountryCodes(accountManager: AccountManager, engine: Teleg
     })
 }
 
-public func loadServerCountryCodes(accountManager: AccountManager, engine: TelegramEngine, completion: @escaping () -> Void) {
+public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccountManagerTypes>, engine: TelegramEngine, completion: @escaping () -> Void) {
     let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
     |> deliverOnMainQueue).start(next: { countries in
         countryCodes = countries
@@ -144,7 +143,6 @@ private final class AuthorizationSequenceCountrySelectionNavigationContentNode: 
         self.addSubnode(self.searchBar)
         
         self.searchBar.cancel = { [weak self] in
-            //self?.searchBar.deactivate(clear: false)
             self?.cancel()
         }
         
@@ -333,7 +331,9 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.navigationContentNode?.activate()
+        Queue.mainQueue().justDispatch {
+            self.navigationContentNode?.activate()
+        }
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

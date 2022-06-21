@@ -1,11 +1,11 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 import Display
 import Postbox
 import TelegramPresentationData
 import ActivityIndicator
-import RadialStatusNode
 import RadialStatusNode
 
 public enum ShareLoadingState {
@@ -68,7 +68,7 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
         self.contentOffsetUpdated = f
     }
     
-    public func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let nodeHeight: CGFloat = 125.0
         
         let indicatorSize = self.activityIndicator.calculateSizeThatFits(size)

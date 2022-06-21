@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AccountContext
 import SolidRoundedButtonNode
@@ -91,7 +90,7 @@ final class LocationDistancePickerScreen: ViewController {
             self?.dismiss()
         }
         
-        self.controllerNode.update()
+        let _ = self.controllerNode.update()
     }
     
     override public func loadView() {
@@ -394,11 +393,11 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             let distance = self.usesMetricSystem ? "\(formattedValue) \(self.presentationData.strings.Location_ProximityNotification_DistanceKM)" : "\(formattedValue) \(self.presentationData.strings.Location_ProximityNotification_DistanceMI)"
             
-            let shortTitle = self.presentationData.strings.Location_ProximityNotification_Notify(distance).0
+            let shortTitle = self.presentationData.strings.Location_ProximityNotification_Notify(distance).string
             var longTitle: String?
             if let displayTitle = self.compactDisplayTitle, let (layout, _) = self.containerLayout {
-                let title = self.presentationData.strings.Location_ProximityNotification_NotifyLong(displayTitle, distance).0
-                let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+                let title = self.presentationData.strings.Location_ProximityNotification_NotifyLong(displayTitle, distance).string
+                let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
                 
                 self.measureButtonTitleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: .black)
                 let titleSize = self.measureButtonTitleNode.updateLayout(CGSize(width: width * 2.0, height: 50.0))
@@ -408,7 +407,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             self.doneButton.title = longTitle ?? shortTitle
     
-            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Location_ProximityNotification_AlreadyClose(distance).0, font: Font.regular(14.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Location_ProximityNotification_AlreadyClose(distance).string, font: Font.regular(14.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
             if let (layout, navigationBarHeight) = self.containerLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
@@ -464,7 +463,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             pickerView.selectRow(1, inComponent: 1, animated: true)
         }
         self.updateDoneButtonTitle()
-        self.update()
+        let _ = self.update()
     }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
@@ -602,7 +601,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        var hadValidLayout = self.containerLayout != nil
+        let hadValidLayout = self.containerLayout != nil
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.statusBar, .input])
@@ -616,7 +615,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         let pickerHeight: CGFloat = min(216.0, layout.size.height - contentHeight)
         contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + pickerHeight + buttonOffset
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         
         let sideInset = floor((layout.size.width - width) / 2.0)
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))

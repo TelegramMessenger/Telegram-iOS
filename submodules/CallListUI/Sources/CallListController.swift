@@ -2,9 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
@@ -101,6 +99,8 @@ public final class CallListController: TelegramBaseController {
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .none, locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
         
+        self.tabBarItemContextActionType = .always
+        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         if case .tab = self.mode {
@@ -115,6 +115,9 @@ public final class CallListController: TelegramBaseController {
             self.tabBarItem.title = self.presentationData.strings.Calls_TabTitle
             self.tabBarItem.image = icon
             self.tabBarItem.selectedImage = icon
+            if !self.presentationData.reduceMotion {
+                self.tabBarItem.animationName = "TabCalls"
+            }
         }
         
         self.segmentedTitleView.indexUpdated = { [weak self] index in
@@ -165,6 +168,11 @@ public final class CallListController: TelegramBaseController {
         self.segmentedTitleView.index = index
             
         self.tabBarItem.title = self.presentationData.strings.Calls_TabTitle
+        if !self.presentationData.reduceMotion {
+            self.tabBarItem.animationName = "TabCalls"
+        } else {
+            self.tabBarItem.animationName = nil
+        }
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         switch self.mode {
             case .tab:
@@ -206,10 +214,11 @@ public final class CallListController: TelegramBaseController {
             }
         }, openInfo: { [weak self] peerId, messages in
             if let strongSelf = self {
-                let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
-                |> take(1)
+                let _ = (strongSelf.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )
                 |> deliverOnMainQueue).start(next: { peer in
-                    if let strongSelf = self, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .calls(messages: messages), avatarInitiallyExpanded: false, fromChat: false) {
+                    if let strongSelf = self, let peer = peer, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .calls(messages: messages.map({ $0._asMessage() })), avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                     }
                 })
@@ -263,6 +272,12 @@ public final class CallListController: TelegramBaseController {
                 }
             }
         })
+        
+        if case .navigation = self.mode {
+            self.controllerNode.navigationBar = self.navigationBar
+            self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        }
+        
         self.controllerNode.startNewCall = { [weak self] in
             self?.beginCallImpl()
         }
@@ -359,7 +374,7 @@ public final class CallListController: TelegramBaseController {
             }
         }
     
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: self, sourceNode: buttonNode.contentNode, keepInPlace: false, blurBackground: false)), items: .single(items), reactionItems: [], gesture: nil)
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: self, sourceNode: buttonNode.contentNode, keepInPlace: false, blurBackground: false)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
         self.presentInGlobalOverlay(contextController)
     }
     
@@ -370,7 +385,7 @@ public final class CallListController: TelegramBaseController {
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak controller, weak self] result in
             controller?.dismissSearch()
-            if let strongSelf = self, let (contactPeers, action) = result, let contactPeer = contactPeers.first,  case let .peer(peer, _, _) = contactPeer {
+            if let strongSelf = self, let (contactPeers, action, _, _, _) = result, let contactPeer = contactPeers.first,  case let .peer(peer, _, _) = contactPeer {
                 strongSelf.call(peer.id, isVideo: action == .videoCall, began: {
                     if let strongSelf = self {
                         let _ = (strongSelf.context.sharedContext.hasOngoingCall.get()
@@ -389,7 +404,9 @@ public final class CallListController: TelegramBaseController {
                 })
             }
         }))
-        (self.navigationController as? NavigationController)?.pushViewController(controller)
+        if let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController {
+            navigationController.pushViewController(controller)
+        }
     }
     
     @objc func editPressed() {
@@ -437,7 +454,7 @@ public final class CallListController: TelegramBaseController {
         }
     }
     
-    private func call(_ peerId: PeerId, isVideo: Bool, began: (() -> Void)? = nil) {
+    private func call(_ peerId: EnginePeer.Id, isVideo: Bool, began: (() -> Void)? = nil) {
         self.peerViewDisposable.set((self.context.account.viewTracker.peerView(peerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] view in
@@ -449,7 +466,7 @@ public final class CallListController: TelegramBaseController {
                 if let cachedUserData = view.cachedData as? CachedUserData, cachedUserData.callsPrivate {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     
-                    strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     return
                 }
                 
@@ -458,5 +475,45 @@ public final class CallListController: TelegramBaseController {
                 })
             }
         }))
+    }
+    
+    override public func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
+        var items: [ContextMenuItem] = []
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Calls_StartNewCall, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] c, f in
+            c.dismiss(completion: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.callPressed()
+            })
+        })))
+        
+        let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(CallListTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
+        self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+    }
+}
+
+private final class CallListTabBarContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = true
+    let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
+    let centerActionsHorizontally: Bool = true
+    
+    private let controller: ViewController
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

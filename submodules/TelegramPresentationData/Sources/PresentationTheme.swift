@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 
 public final class PresentationThemeGradientColors {
@@ -570,6 +569,7 @@ public final class PresentationThemeChatList {
     public let unreadBadgeActiveTextColor: UIColor
     public let unreadBadgeInactiveBackgroundColor: UIColor
     public let unreadBadgeInactiveTextColor: UIColor
+    public let reactionBadgeActiveBackgroundColor: UIColor
     public let pinnedBadgeColor: UIColor
     public let pinnedSearchBarColor: UIColor
     public let regularSearchBarColor: UIColor
@@ -582,7 +582,42 @@ public final class PresentationThemeChatList {
     public let unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors
     public let onlineDotColor: UIColor
     
-    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemSelectedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageHighlightedTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, failedFillColor: UIColor, failedForegroundColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, verifiedIconFillColor: UIColor, verifiedIconForegroundColor: UIColor, secretIconColor: UIColor, pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, onlineDotColor: UIColor) {
+    init(
+        backgroundColor: UIColor,
+        itemSeparatorColor: UIColor,
+        itemBackgroundColor: UIColor,
+        pinnedItemBackgroundColor: UIColor,
+        itemHighlightedBackgroundColor: UIColor,
+        itemSelectedBackgroundColor: UIColor,
+        titleColor: UIColor,
+        secretTitleColor: UIColor,
+        dateTextColor: UIColor,
+        authorNameColor: UIColor,
+        messageTextColor: UIColor,
+        messageHighlightedTextColor: UIColor,
+        messageDraftTextColor: UIColor,
+        checkmarkColor: UIColor,
+        pendingIndicatorColor: UIColor,
+        failedFillColor: UIColor,
+        failedForegroundColor: UIColor,
+        muteIconColor: UIColor,
+        unreadBadgeActiveBackgroundColor: UIColor,
+        unreadBadgeActiveTextColor: UIColor,
+        unreadBadgeInactiveBackgroundColor: UIColor,
+        unreadBadgeInactiveTextColor: UIColor,
+        reactionBadgeActiveBackgroundColor: UIColor,
+        pinnedBadgeColor: UIColor,
+        pinnedSearchBarColor: UIColor,
+        regularSearchBarColor: UIColor,
+        sectionHeaderFillColor: UIColor,
+        sectionHeaderTextColor: UIColor,
+        verifiedIconFillColor: UIColor,
+        verifiedIconForegroundColor: UIColor,
+        secretIconColor: UIColor,
+        pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors,
+        unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors,
+        onlineDotColor: UIColor
+    ) {
         self.backgroundColor = backgroundColor
         self.itemSeparatorColor = itemSeparatorColor
         self.itemBackgroundColor = itemBackgroundColor
@@ -605,6 +640,7 @@ public final class PresentationThemeChatList {
         self.unreadBadgeActiveTextColor = unreadBadgeActiveTextColor
         self.unreadBadgeInactiveBackgroundColor = unreadBadgeInactiveBackgroundColor
         self.unreadBadgeInactiveTextColor = unreadBadgeInactiveTextColor
+        self.reactionBadgeActiveBackgroundColor = reactionBadgeActiveBackgroundColor
         self.pinnedBadgeColor = pinnedBadgeColor
         self.pinnedSearchBarColor = pinnedSearchBarColor
         self.regularSearchBarColor = regularSearchBarColor
@@ -618,8 +654,78 @@ public final class PresentationThemeChatList {
         self.onlineDotColor = onlineDotColor
     }
     
-    public func withUpdated(backgroundColor: UIColor? = nil, itemSeparatorColor: UIColor? = nil, itemBackgroundColor: UIColor? = nil, pinnedItemBackgroundColor: UIColor? = nil, itemHighlightedBackgroundColor: UIColor? = nil, itemSelectedBackgroundColor: UIColor? = nil, titleColor: UIColor? = nil, secretTitleColor: UIColor? = nil, dateTextColor: UIColor? = nil, authorNameColor: UIColor? = nil, messageTextColor: UIColor? = nil, messageHighlightedTextColor: UIColor? = nil, messageDraftTextColor: UIColor? = nil, checkmarkColor: UIColor? = nil, pendingIndicatorColor: UIColor? = nil, failedFillColor: UIColor? = nil, failedForegroundColor: UIColor? = nil, muteIconColor: UIColor? = nil, unreadBadgeActiveBackgroundColor: UIColor? = nil, unreadBadgeActiveTextColor: UIColor? = nil, unreadBadgeInactiveBackgroundColor: UIColor? = nil, unreadBadgeInactiveTextColor: UIColor? = nil, pinnedBadgeColor: UIColor? = nil, pinnedSearchBarColor: UIColor? = nil, regularSearchBarColor: UIColor? = nil, sectionHeaderFillColor: UIColor? = nil, sectionHeaderTextColor: UIColor? = nil, verifiedIconFillColor: UIColor? = nil, verifiedIconForegroundColor: UIColor? = nil, secretIconColor: UIColor? = nil, pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil, unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil, onlineDotColor: UIColor? = nil) -> PresentationThemeChatList {
-        return PresentationThemeChatList(backgroundColor: backgroundColor ?? self.backgroundColor, itemSeparatorColor: itemSeparatorColor ?? self.itemSeparatorColor, itemBackgroundColor: itemBackgroundColor ?? self.itemBackgroundColor, pinnedItemBackgroundColor: pinnedItemBackgroundColor ?? self.pinnedItemBackgroundColor, itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor, itemSelectedBackgroundColor: itemSelectedBackgroundColor ?? self.itemSelectedBackgroundColor, titleColor: titleColor ?? self.titleColor, secretTitleColor: secretTitleColor ?? self.secretTitleColor, dateTextColor: dateTextColor ?? self.dateTextColor, authorNameColor: authorNameColor ?? self.authorNameColor, messageTextColor: messageTextColor ?? self.messageTextColor, messageHighlightedTextColor: messageHighlightedTextColor ?? self.messageHighlightedTextColor, messageDraftTextColor: messageDraftTextColor ?? self.messageDraftTextColor, checkmarkColor: checkmarkColor ?? self.checkmarkColor, pendingIndicatorColor: pendingIndicatorColor ?? self.pendingIndicatorColor, failedFillColor: failedFillColor ?? self.failedFillColor, failedForegroundColor: failedForegroundColor ?? self.failedForegroundColor, muteIconColor: muteIconColor ?? self.muteIconColor, unreadBadgeActiveBackgroundColor: unreadBadgeActiveBackgroundColor ?? self.unreadBadgeActiveBackgroundColor, unreadBadgeActiveTextColor: unreadBadgeActiveTextColor ?? self.unreadBadgeActiveTextColor, unreadBadgeInactiveBackgroundColor: unreadBadgeInactiveBackgroundColor ?? self.unreadBadgeInactiveBackgroundColor, unreadBadgeInactiveTextColor: unreadBadgeInactiveTextColor ?? self.unreadBadgeInactiveTextColor, pinnedBadgeColor: pinnedBadgeColor ?? self.pinnedBadgeColor, pinnedSearchBarColor: pinnedSearchBarColor ?? self.pinnedSearchBarColor, regularSearchBarColor: regularSearchBarColor ?? self.regularSearchBarColor, sectionHeaderFillColor: sectionHeaderFillColor ?? self.sectionHeaderFillColor, sectionHeaderTextColor: sectionHeaderTextColor ?? self.sectionHeaderTextColor, verifiedIconFillColor: verifiedIconFillColor ?? self.verifiedIconFillColor, verifiedIconForegroundColor: verifiedIconForegroundColor ?? self.verifiedIconForegroundColor, secretIconColor: secretIconColor ?? self.secretIconColor, pinnedArchiveAvatarColor: pinnedArchiveAvatarColor ?? self.pinnedArchiveAvatarColor, unpinnedArchiveAvatarColor: unpinnedArchiveAvatarColor ?? self.unpinnedArchiveAvatarColor, onlineDotColor: onlineDotColor ?? self.onlineDotColor)
+    public func withUpdated(
+        backgroundColor: UIColor? = nil,
+        itemSeparatorColor: UIColor? = nil,
+        itemBackgroundColor: UIColor? = nil,
+        pinnedItemBackgroundColor: UIColor? = nil,
+        itemHighlightedBackgroundColor: UIColor? = nil,
+        itemSelectedBackgroundColor: UIColor? = nil,
+        titleColor: UIColor? = nil,
+        secretTitleColor: UIColor? = nil,
+        dateTextColor: UIColor? = nil,
+        authorNameColor: UIColor? = nil,
+        messageTextColor: UIColor? = nil,
+        messageHighlightedTextColor: UIColor? = nil,
+        messageDraftTextColor: UIColor? = nil,
+        checkmarkColor: UIColor? = nil,
+        pendingIndicatorColor: UIColor? = nil,
+        failedFillColor: UIColor? = nil,
+        failedForegroundColor: UIColor? = nil,
+        muteIconColor: UIColor? = nil,
+        unreadBadgeActiveBackgroundColor: UIColor? = nil,
+        unreadBadgeActiveTextColor: UIColor? = nil,
+        unreadBadgeInactiveBackgroundColor: UIColor? = nil,
+        unreadBadgeInactiveTextColor: UIColor? = nil,
+        reactionBadgeActiveBackgroundColor: UIColor? = nil,
+        pinnedBadgeColor: UIColor? = nil,
+        pinnedSearchBarColor: UIColor? = nil,
+        regularSearchBarColor: UIColor? = nil,
+        sectionHeaderFillColor: UIColor? = nil,
+        sectionHeaderTextColor: UIColor? = nil,
+        verifiedIconFillColor: UIColor? = nil,
+        verifiedIconForegroundColor: UIColor? = nil,
+        secretIconColor: UIColor? = nil,
+        pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil,
+        unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil,
+        onlineDotColor: UIColor? = nil
+    ) -> PresentationThemeChatList {
+        return PresentationThemeChatList(
+            backgroundColor: backgroundColor ?? self.backgroundColor,
+            itemSeparatorColor: itemSeparatorColor ?? self.itemSeparatorColor,
+            itemBackgroundColor: itemBackgroundColor ?? self.itemBackgroundColor,
+            pinnedItemBackgroundColor: pinnedItemBackgroundColor ?? self.pinnedItemBackgroundColor,
+            itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor,
+            itemSelectedBackgroundColor: itemSelectedBackgroundColor ?? self.itemSelectedBackgroundColor,
+            titleColor: titleColor ?? self.titleColor,
+            secretTitleColor: secretTitleColor ?? self.secretTitleColor,
+            dateTextColor: dateTextColor ?? self.dateTextColor,
+            authorNameColor: authorNameColor ?? self.authorNameColor,
+            messageTextColor: messageTextColor ?? self.messageTextColor,
+            messageHighlightedTextColor: messageHighlightedTextColor ?? self.messageHighlightedTextColor,
+            messageDraftTextColor: messageDraftTextColor ?? self.messageDraftTextColor,
+            checkmarkColor: checkmarkColor ?? self.checkmarkColor,
+            pendingIndicatorColor: pendingIndicatorColor ?? self.pendingIndicatorColor,
+            failedFillColor: failedFillColor ?? self.failedFillColor,
+            failedForegroundColor: failedForegroundColor ?? self.failedForegroundColor,
+            muteIconColor: muteIconColor ?? self.muteIconColor,
+            unreadBadgeActiveBackgroundColor: unreadBadgeActiveBackgroundColor ?? self.unreadBadgeActiveBackgroundColor,
+            unreadBadgeActiveTextColor: unreadBadgeActiveTextColor ?? self.unreadBadgeActiveTextColor,
+            unreadBadgeInactiveBackgroundColor: unreadBadgeInactiveBackgroundColor ?? self.unreadBadgeInactiveBackgroundColor,
+            unreadBadgeInactiveTextColor: unreadBadgeInactiveTextColor ?? self.unreadBadgeInactiveTextColor,
+            reactionBadgeActiveBackgroundColor: reactionBadgeActiveBackgroundColor ?? self.reactionBadgeActiveBackgroundColor,
+            pinnedBadgeColor: pinnedBadgeColor ?? self.pinnedBadgeColor,
+            pinnedSearchBarColor: pinnedSearchBarColor ?? self.pinnedSearchBarColor,
+            regularSearchBarColor: regularSearchBarColor ?? self.regularSearchBarColor,
+            sectionHeaderFillColor: sectionHeaderFillColor ?? self.sectionHeaderFillColor,
+            sectionHeaderTextColor: sectionHeaderTextColor ?? self.sectionHeaderTextColor,
+            verifiedIconFillColor: verifiedIconFillColor ?? self.verifiedIconFillColor,
+            verifiedIconForegroundColor: verifiedIconForegroundColor ?? self.verifiedIconForegroundColor,
+            secretIconColor: secretIconColor ?? self.secretIconColor,
+            pinnedArchiveAvatarColor: pinnedArchiveAvatarColor ?? self.pinnedArchiveAvatarColor,
+            unpinnedArchiveAvatarColor: unpinnedArchiveAvatarColor ?? self.unpinnedArchiveAvatarColor,
+            onlineDotColor: onlineDotColor ?? self.onlineDotColor
+        )
     }
 }
 
@@ -636,22 +742,54 @@ public struct PresentationThemeBubbleShadow {
 }
 
 public final class PresentationThemeBubbleColorComponents {
-    public let fill: UIColor
-    public let gradientFill: UIColor
+    public let fill: [UIColor]
     public let highlightedFill: UIColor
     public let stroke: UIColor
     public let shadow: PresentationThemeBubbleShadow?
+    public let reactionInactiveBackground: UIColor
+    public let reactionInactiveForeground: UIColor
+    public let reactionActiveBackground: UIColor
+    public let reactionActiveForeground: UIColor
     
-    public init(fill: UIColor, gradientFill: UIColor? = nil, highlightedFill: UIColor, stroke: UIColor, shadow: PresentationThemeBubbleShadow?) {
+    public init(
+        fill: [UIColor],
+        highlightedFill: UIColor,
+        stroke: UIColor,
+        shadow: PresentationThemeBubbleShadow?,
+        reactionInactiveBackground: UIColor,
+        reactionInactiveForeground: UIColor,
+        reactionActiveBackground: UIColor,
+        reactionActiveForeground: UIColor
+    ) {
         self.fill = fill
-        self.gradientFill = gradientFill ?? fill
         self.highlightedFill = highlightedFill
         self.stroke = stroke
         self.shadow = shadow
+        self.reactionInactiveBackground = reactionInactiveBackground
+        self.reactionInactiveForeground = reactionInactiveForeground
+        self.reactionActiveBackground = reactionActiveBackground
+        self.reactionActiveForeground = reactionActiveForeground
     }
     
-    public func withUpdated(fill: UIColor? = nil, gradientFill: UIColor? = nil, highlightedFill: UIColor? = nil, stroke: UIColor? = nil) -> PresentationThemeBubbleColorComponents {
-        return PresentationThemeBubbleColorComponents(fill: fill ?? self.fill, gradientFill: gradientFill ?? self.gradientFill, highlightedFill: highlightedFill ?? self.highlightedFill, stroke: stroke ?? self.stroke, shadow: self.shadow)
+    public func withUpdated(
+        fill: [UIColor]? = nil,
+        highlightedFill: UIColor? = nil,
+        stroke: UIColor? = nil,
+        reactionInactiveBackground: UIColor? = nil,
+        reactionInactiveForeground: UIColor? = nil,
+        reactionActiveBackground: UIColor? = nil,
+        reactionActiveForeground: UIColor? = nil
+    ) -> PresentationThemeBubbleColorComponents {
+        return PresentationThemeBubbleColorComponents(
+            fill: fill ?? self.fill,
+            highlightedFill: highlightedFill ?? self.highlightedFill,
+            stroke: stroke ?? self.stroke,
+            shadow: self.shadow,
+            reactionInactiveBackground: reactionInactiveBackground ?? self.reactionInactiveBackground,
+            reactionInactiveForeground: reactionInactiveForeground ?? self.reactionInactiveForeground,
+            reactionActiveBackground: reactionActiveBackground ?? self.reactionActiveBackground,
+            reactionActiveForeground: reactionActiveForeground ?? self.reactionActiveForeground
+        )
     }
 }
 
@@ -1069,6 +1207,7 @@ public final class PresentationThemeChatHistoryNavigation {
 
 public final class PresentationThemeChat {
     public let defaultWallpaper: TelegramWallpaper
+    public let animateMessageColors: Bool
     public let message: PresentationThemeChatMessage
     public let serviceMessage: PresentationThemeServiceMessage
     public let inputPanel: PresentationThemeChatInputPanel
@@ -1076,8 +1215,9 @@ public final class PresentationThemeChat {
     public let inputButtonPanel: PresentationThemeInputButtonPanel
     public let historyNavigation: PresentationThemeChatHistoryNavigation
     
-    public init(defaultWallpaper: TelegramWallpaper, message: PresentationThemeChatMessage, serviceMessage: PresentationThemeServiceMessage, inputPanel: PresentationThemeChatInputPanel, inputMediaPanel: PresentationThemeInputMediaPanel, inputButtonPanel: PresentationThemeInputButtonPanel, historyNavigation: PresentationThemeChatHistoryNavigation) {
+    public init(defaultWallpaper: TelegramWallpaper, animateMessageColors: Bool, message: PresentationThemeChatMessage, serviceMessage: PresentationThemeServiceMessage, inputPanel: PresentationThemeChatInputPanel, inputMediaPanel: PresentationThemeInputMediaPanel, inputButtonPanel: PresentationThemeInputButtonPanel, historyNavigation: PresentationThemeChatHistoryNavigation) {
         self.defaultWallpaper = defaultWallpaper
+        self.animateMessageColors = animateMessageColors
         self.message = message
         self.serviceMessage = serviceMessage
         self.inputPanel = inputPanel
@@ -1086,8 +1226,8 @@ public final class PresentationThemeChat {
         self.historyNavigation = historyNavigation
     }
     
-    public func withUpdated(defaultWallpaper: TelegramWallpaper? = nil, message: PresentationThemeChatMessage? = nil, serviceMessage: PresentationThemeServiceMessage? = nil, inputPanel: PresentationThemeChatInputPanel? = nil, inputMediaPanel: PresentationThemeInputMediaPanel? = nil, inputButtonPanel: PresentationThemeInputButtonPanel? = nil, historyNavigation: PresentationThemeChatHistoryNavigation? = nil) -> PresentationThemeChat {
-        return PresentationThemeChat(defaultWallpaper: defaultWallpaper ?? self.defaultWallpaper, message: message ?? self.message, serviceMessage: serviceMessage ?? self.serviceMessage, inputPanel: inputPanel ?? self.inputPanel, inputMediaPanel: inputMediaPanel ?? self.inputMediaPanel, inputButtonPanel: inputButtonPanel ?? self.inputButtonPanel, historyNavigation: historyNavigation ?? self.historyNavigation)
+    public func withUpdated(defaultWallpaper: TelegramWallpaper? = nil, animateMessageColors: Bool? = nil, message: PresentationThemeChatMessage? = nil, serviceMessage: PresentationThemeServiceMessage? = nil, inputPanel: PresentationThemeChatInputPanel? = nil, inputMediaPanel: PresentationThemeInputMediaPanel? = nil, inputButtonPanel: PresentationThemeInputButtonPanel? = nil, historyNavigation: PresentationThemeChatHistoryNavigation? = nil) -> PresentationThemeChat {
+        return PresentationThemeChat(defaultWallpaper: defaultWallpaper ?? self.defaultWallpaper, animateMessageColors: animateMessageColors ?? self.animateMessageColors, message: message ?? self.message, serviceMessage: serviceMessage ?? self.serviceMessage, inputPanel: inputPanel ?? self.inputPanel, inputMediaPanel: inputMediaPanel ?? self.inputMediaPanel, inputButtonPanel: inputButtonPanel ?? self.inputButtonPanel, historyNavigation: historyNavigation ?? self.historyNavigation)
     }
 }
 
@@ -1271,10 +1411,16 @@ public final class PresentationTheme: Equatable {
     public let inAppNotification: PresentationThemeInAppNotification
     public let chart: PresentationThemeChart
     public let preview: Bool
+    public var forceSync: Bool = false
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
     public init(name: PresentationThemeName, index: Int64, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, chart: PresentationThemeChart, preview: Bool = false) {
+        var overallDarkAppearance = overallDarkAppearance
+        if [.night, .tinted].contains(referenceTheme.baseTheme) {
+            overallDarkAppearance = true
+        }
+        
         self.name = name
         self.index = index
         self.referenceTheme = referenceTheme
@@ -1325,7 +1471,17 @@ public final class PresentationTheme: Equatable {
         return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdated(defaultWallpaper: defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
     }
     
+    public func withUpdated(referenceTheme: PresentationBuiltinThemeReference) -> PresentationTheme {
+        return PresentationTheme(name: self.name, index: self.index, referenceTheme: referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
+    }
+    
     public func withUpdated(preview: Bool) -> PresentationTheme {
         return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: preview)
+    }
+    
+    public func withInvertedBlocksBackground() -> PresentationTheme {
+        let list = self.list.withUpdated(blocksBackgroundColor: self.list.itemBlocksBackgroundColor, itemBlocksBackgroundColor: self.list.blocksBackgroundColor)
+        
+        return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
     }
 }

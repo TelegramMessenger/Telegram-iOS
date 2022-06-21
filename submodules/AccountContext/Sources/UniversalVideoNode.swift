@@ -4,12 +4,12 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import Display
 import TelegramAudio
 import UniversalMediaPlayer
+import AVFoundation
 
-public protocol UniversalVideoContentNode: class {
+public protocol UniversalVideoContentNode: AnyObject {
     var ready: Signal<Void, NoError> { get }
     var status: Signal<MediaPlayerStatus, NoError> { get }
     var bufferingStatus: Signal<(IndexSet, Int)?, NoError> { get }
@@ -30,6 +30,7 @@ public protocol UniversalVideoContentNode: class {
     func removePlaybackCompleted(_ index: Int)
     func fetchControl(_ control: UniversalVideoNodeFetchControl)
     func notifyPlaybackControlsHidden(_ hidden: Bool)
+    func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool)
 }
 
 public protocol UniversalVideoContent {
@@ -48,7 +49,7 @@ public extension UniversalVideoContent {
     }
 }
 
-public protocol UniversalVideoDecoration: class {
+public protocol UniversalVideoDecoration: AnyObject {
     var backgroundNode: ASDisplayNode? { get }
     var contentContainerNode: ASDisplayNode { get }
     var foregroundNode: ASDisplayNode? { get }
@@ -332,5 +333,37 @@ public final class UniversalVideoNode: ASDisplayNode {
         if case .ended = recognizer.state {
             self.decoration.tap()
         }
+    }
+
+    public func getVideoLayer() -> AVSampleBufferDisplayLayer? {
+        guard let contentNode = self.contentNode else {
+            return nil
+        }
+
+        func findVideoLayer(layer: CALayer) -> AVSampleBufferDisplayLayer? {
+            if let layer = layer as? AVSampleBufferDisplayLayer {
+                return layer
+            }
+
+            if let sublayers = layer.sublayers {
+                for sublayer in sublayers {
+                    if let result = findVideoLayer(layer: sublayer) {
+                        return result
+                    }
+                }
+            }
+
+            return nil
+        }
+
+        return findVideoLayer(layer: contentNode.layer)
+    }
+
+    public func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.setCanPlaybackWithoutHierarchy(canPlaybackWithoutHierarchy)
+            }
+        })
     }
 }

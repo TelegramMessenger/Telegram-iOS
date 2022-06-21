@@ -136,7 +136,7 @@ static NSMutableDictionary *keychains()
                 {
                     uint8_t buf[32];
                     
-                    int result = 0;
+                    __unused int result = 0;
                     result = SecRandomCopyBytes(kSecRandomDefault, 32, buf);
                     _aesKey = [[NSData alloc] initWithBytes:buf length:32];
                     

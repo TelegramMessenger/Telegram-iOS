@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -72,7 +71,7 @@ public final class VoiceChatJoinScreen: ViewController {
         let context = self.context
         let peerId = self.peerId
         let invite = self.invite
-        let signal = updatedCurrentPeerGroupCall(account: context.account, peerId: peerId)
+        let signal = context.engine.calls.updatedCurrentPeerGroupCall(peerId: peerId)
         |> castError(GetCurrentGroupCallError.self)
         |> mapToSignal { call -> Signal<(Peer, GroupCallSummary)?, GetCurrentGroupCallError> in
             if let call = call {
@@ -80,7 +79,7 @@ public final class VoiceChatJoinScreen: ViewController {
                     return transaction.getPeer(peerId)
                 }
                 |> castError(GetCurrentGroupCallError.self)
-                return combineLatest(peer, getCurrentGroupCall(account: context.account, callId: call.id, accessHash: call.accessHash))
+                return combineLatest(peer, context.engine.calls.getCurrentGroupCall(callId: call.id, accessHash: call.accessHash))
                 |> map { peer, call -> (Peer, GroupCallSummary)? in
                     if let peer = peer, let call = call {
                         return (peer, call)
@@ -125,7 +124,7 @@ public final class VoiceChatJoinScreen: ViewController {
             currentGroupCall = .single(nil)
         }
             
-        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData, currentGroupCall).start(next: { [weak self] peerAndCall, availablePeers, cachedData, currentGroupCallIdAndCanUnmute in
+        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData, currentGroupCall).start(next: { [weak self] peerAndCall, availablePeers, cachedData, currentGroupCallIdAndCanUnmute in
             if let strongSelf = self {
                 if let (peer, call) = peerAndCall {
                     if let (currentGroupCall, currentGroupCallId, canUnmute) = currentGroupCallIdAndCanUnmute, call.info.id == currentGroupCallId {
@@ -145,12 +144,12 @@ public final class VoiceChatJoinScreen: ViewController {
                         defaultJoinAsPeerId = cachedData.callJoinPeerId
                     }
                     
-                    let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title, scheduleTimestamp: call.info.scheduleTimestamp, subscribedToScheduled: call.info.subscribedToScheduled)
+                    let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title, scheduleTimestamp: call.info.scheduleTimestamp, subscribedToScheduled: call.info.subscribedToScheduled, isStream: call.info.isStream)
                     if availablePeers.count > 0 && defaultJoinAsPeerId == nil {
                         strongSelf.dismiss()
                         strongSelf.join(activeCall)
                     } else {
-                        strongSelf.controllerNode.setPeer(call: activeCall, peer: peer, title: call.info.title, memberCount: call.info.participantCount)
+                        strongSelf.controllerNode.setPeer(call: activeCall, peer: peer, title: call.info.title, memberCount: call.info.participantCount, isStream: call.info.isStream)
                     }
                 } else {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -361,7 +360,7 @@ public final class VoiceChatJoinScreen: ViewController {
                 if let (layout, navigationBarHeight, bottomGridInset) = self.containerLayout {
                     if let contentNode = contentNode, let previous = previous {
                         contentNode.frame = previous.frame
-                        contentNode.updateLayout(size: previous.bounds.size, bottomInset: bottomGridInset, transition: .immediate)
+                        contentNode.updateLayout(size: previous.bounds.size, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: .immediate)
                         
                         contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                             self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
@@ -444,7 +443,7 @@ public final class VoiceChatJoinScreen: ViewController {
             
             if let contentNode = self.contentNode {
                 transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
-                contentNode.updateLayout(size: gridSize, bottomInset: bottomGridInset, transition: transition)
+                contentNode.updateLayout(size: gridSize, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: transition)
             }
         }
         
@@ -633,7 +632,7 @@ public final class VoiceChatJoinScreen: ViewController {
             }))
         }
         
-        func setPeer(call: CachedChannelData.ActiveCall, peer: Peer, title: String?, memberCount: Int) {
+        func setPeer(call: CachedChannelData.ActiveCall, peer: Peer, title: String?, memberCount: Int, isStream: Bool) {
             self.call = call
             
             let transition = ContainedViewLayoutTransition.animated(duration: 0.22, curve: .easeInOut)
@@ -644,7 +643,7 @@ public final class VoiceChatJoinScreen: ViewController {
             self.actionButtonNode.isEnabled = true
             self.actionButtonNode.setTitle(self.asSpeaker ? self.presentationData.strings.Invitation_JoinVoiceChatAsSpeaker : self.presentationData.strings.Invitation_JoinVoiceChatAsListener, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
             
-            self.transitionToContentNode(VoiceChatPreviewContentNode(context: self.context, peer: peer, title: title, memberCount: memberCount, theme: self.presentationData.theme, strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder))
+            self.transitionToContentNode(VoiceChatPreviewContentNode(context: self.context, peer: peer, title: title, memberCount: memberCount, isStream: isStream, theme: self.presentationData.theme, strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder))
         }
     }
 }
@@ -658,7 +657,7 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
     private let titleNode: ImmediateTextNode
     private let countNode: ImmediateTextNode
     
-    init(context: AccountContext, peer: Peer, title: String?, memberCount: Int, theme: PresentationTheme, strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, peer: Peer, title: String?, memberCount: Int, isStream: Bool, theme: PresentationTheme, strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 4
@@ -670,15 +669,21 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
         super.init()
         
         self.addSubnode(self.avatarNode)
-        self.avatarNode.setPeer(context: context, theme: theme, peer: peer, emptyColor: theme.list.mediaPlaceholderColor)
+        self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), emptyColor: theme.list.mediaPlaceholderColor)
         
         self.addSubnode(self.titleNode)
-        self.titleNode.attributedText = NSAttributedString(string: title ?? peer.displayTitle(strings: strings, displayOrder: displayOrder), font: Font.semibold(16.0), textColor: theme.actionSheet.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: title ?? EnginePeer(peer).displayTitle(strings: strings, displayOrder: displayOrder), font: Font.semibold(16.0), textColor: theme.actionSheet.primaryTextColor)
         
         self.addSubnode(self.countNode)
 
         self.countNode.isHidden = memberCount == 0
-        self.countNode.attributedText = NSAttributedString(string: memberCount == 0 ? "" : strings.VoiceChat_Panel_Members(Int32(memberCount)), font: Font.regular(16.0), textColor: theme.actionSheet.secondaryTextColor)
+        let text: String
+        if isStream {
+            text = memberCount == 0 ? "" : strings.LiveStream_ViewerCount(Int32(memberCount))
+        } else {
+            text = memberCount == 0 ? "" : strings.VoiceChat_Panel_Members(Int32(memberCount))
+        }
+        self.countNode.attributedText = NSAttributedString(string: text, font: Font.regular(16.0), textColor: theme.actionSheet.secondaryTextColor)
     }
     
     func activate() {
@@ -694,7 +699,7 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
         self.contentOffsetUpdated = f
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let sideInset: CGFloat = 16.0
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))
         let countSize = self.countNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))

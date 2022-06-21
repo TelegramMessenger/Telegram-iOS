@@ -125,7 +125,7 @@ private final class CalculatingCacheSizeItemNode: ListViewItemNode {
                     itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
                     contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0 + 24.0)
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -201,6 +201,7 @@ private final class CalculatingCacheSizeItemNode: ListViewItemNode {
                             case .sameSection(false):
                                 bottomStripeInset = 16.0 + params.leftInset
                                 bottomStripeOffset = -separatorHeight
+                                strongSelf.bottomStripeNode.isHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 bottomStripeOffset = 0.0

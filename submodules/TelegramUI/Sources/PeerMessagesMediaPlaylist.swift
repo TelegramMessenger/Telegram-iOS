@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import AccountContext
 import MusicAlbumArtResources
@@ -30,14 +29,6 @@ private enum PeerMessagesMediaPlaylistNavigation {
 
 struct MessageMediaPlaylistItemStableId: Hashable {
     let stableId: UInt32
-    
-    var hashValue: Int {
-        return self.stableId.hashValue
-    }
-    
-    static func ==(lhs: MessageMediaPlaylistItemStableId, rhs: MessageMediaPlaylistItemStableId) -> Bool {
-        return lhs.stableId == rhs.stableId
-    }
 }
 
 private func extractFileMedia(_ message: Message) -> TelegramMediaFile? {
@@ -59,7 +50,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
     let message: Message
     
     init(message: Message) {
-        self.id = PeerMessagesMediaPlaylistItemId(messageId: message.id)
+        self.id = PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index)
         self.message = message
     }
     
@@ -70,7 +61,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
     var playbackData: SharedMediaPlaybackData? {
         if let file = extractFileMedia(self.message) {
             let fileReference = FileMediaReference.message(message: MessageReference(self.message), media: file)
-            let source = SharedMediaPlaybackDataSource.telegramFile(fileReference)
+            let source = SharedMediaPlaybackDataSource.telegramFile(reference: fileReference, isCopyProtected: self.message.isCopyProtected())
             for attribute in file.attributes {
                 switch attribute {
                     case let .Audio(isVoice, _, _, _, _):
@@ -123,7 +114,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                                 albumArt = SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false))
                             }
                             
-                            return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: duration > 60 * 20)
+                            return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: CGFloat(duration) > 10.0 * 60.0)
                         }
                     case let .Video(_, _, flags):
                         if flags.contains(.instantRoundVideo) {
@@ -495,7 +486,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 return .single(nil)
                             }
                             
-                            return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(message.index), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
+                            return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(message.index), ignoreMessagesInTimestampRange: nil, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
                             |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                 if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: message.index, position: .exact) {
                                     return .single((message, aroundMessages))
@@ -568,14 +559,14 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
             case let .index(index):
                 switch self.messagesLocation {
                     case let .messages(chatLocation, tagMask, _):
-                        let inputIndex: Signal<MessageIndex, NoError>
+                        let inputIndex: Signal<MessageIndex?, NoError>
                         let looping = self.looping
                         switch self.order {
                             case .regular, .reversed:
                                 inputIndex = .single(index)
                             case .random:
                                 var playbackStack = self.playbackStack
-                                inputIndex = self.context.account.postbox.transaction { transaction -> MessageIndex in
+                                inputIndex = self.context.account.postbox.transaction { transaction -> MessageIndex? in
                                     if case let .random(previous) = navigation, previous {
                                         let _ = playbackStack.pop()
                                         while true {
@@ -588,12 +579,20 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                             }
                                         }
                                     }
-                                    return transaction.findRandomMessage(peerId: chatLocation.peerId, namespace: Namespaces.Message.Cloud, tag: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
+                                    
+                                    if let peerId = chatLocation.peerId {
+                                        return transaction.findRandomMessage(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
+                                    } else {
+                                        return nil
+                                    }
                                 }
                         }
                         let historySignal = inputIndex
                         |> mapToSignal { inputIndex -> Signal<(Message, [Message])?, NoError> in
-                            return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(inputIndex), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
+                            guard let inputIndex = inputIndex else {
+                                return .single(nil)
+                            }
+                            return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(inputIndex), ignoreMessagesInTimestampRange: nil, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
                             |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                 let position: NavigatedMessageFromViewPosition
                                 switch navigation {
@@ -623,7 +622,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                     } else {
                                         viewIndex = .lowerBound
                                     }
-                                    return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
+                                    return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: viewIndex, ignoreMessagesInTimestampRange: nil, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
                                     |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                         let position: NavigatedMessageFromViewPosition
                                         switch navigation {
@@ -737,12 +736,6 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 }
                                 
                                 if case .all = looping {
-                                    let viewIndex: HistoryViewInputAnchor
-                                    if case .earlier = navigation {
-                                        viewIndex = .upperBound
-                                    } else {
-                                        viewIndex = .lowerBound
-                                    }
                                     return .single((nil, messages.count, false))
                                 } else {
                                     if hasMore {

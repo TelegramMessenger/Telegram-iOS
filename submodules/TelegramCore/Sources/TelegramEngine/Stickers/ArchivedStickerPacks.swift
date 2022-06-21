@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 public enum ArchivedStickerPacksNamespace: Int32 {
     case stickers = 0

@@ -6,6 +6,9 @@ swift_library(
     srcs = glob([
         "Source/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
     	"//submodules/ObjCRuntimeUtils:ObjCRuntimeUtils",
     	"//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",

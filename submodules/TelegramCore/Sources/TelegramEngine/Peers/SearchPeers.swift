@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 public struct FoundPeer: Equatable {
     public let peer: Peer
@@ -45,8 +44,8 @@ func _internal_searchPeers(account: Account, query: String) -> Signal<([FoundPee
                             peers[groupOrChannel.id] = groupOrChannel
                             switch chat {
                                 /*feed*/
-                                case let .channel(channel):
-                                    if let participantsCount = channel.participantsCount {
+                                case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount):
+                                    if let participantsCount = participantsCount {
                                         subscribers[groupOrChannel.id] = participantsCount
                                     }
                                 default:

@@ -51,6 +51,10 @@
 
 - (SSignal *)imageSignalForItem:(NSObject<TGMediaEditableItem> *)item;
 - (SSignal *)imageSignalForItem:(NSObject<TGMediaEditableItem> *)item withUpdates:(bool)withUpdates;
+
+- (SSignal *)thumbnailImageSignalForIdentifier:(NSString *)identifier;
+- (SSignal *)thumbnailImageSignalForIdentifier:(NSString *)identifier withUpdates:(bool)withUpdates synchronous:(bool)synchronous;
+
 - (SSignal *)thumbnailImageSignalForItem:(NSObject<TGMediaEditableItem> *)item;
 - (SSignal *)thumbnailImageSignalForItem:(id<TGMediaEditableItem>)item withUpdates:(bool)withUpdates synchronous:(bool)synchronous;
 - (SSignal *)fastImageSignalForItem:(NSObject<TGMediaEditableItem> *)item withUpdates:(bool)withUpdates;
@@ -62,14 +66,15 @@
 
 - (SSignal *)fullSizeImageUrlForItem:(id<TGMediaEditableItem>)item;
 
-- (NSString *)captionForItem:(NSObject<TGMediaEditableItem> *)item;
-- (NSArray *)entitiesForItem:(NSObject<TGMediaEditableItem> *)item;
+- (NSAttributedString *)captionForItem:(NSObject<TGMediaEditableItem> *)item;
 
 - (SSignal *)captionSignalForItem:(NSObject<TGMediaEditableItem> *)item;
-- (void)setCaption:(NSString *)caption entities:(NSArray *)entities forItem:(NSObject<TGMediaEditableItem> *)item;
+- (void)setCaption:(NSAttributedString *)caption forItem:(NSObject<TGMediaEditableItem> *)item;
 
-- (void)setInitialCaption:(NSString *)caption entities:(NSArray *)entities;
-- (void)setForcedCaption:(NSString *)caption entities:(NSArray *)entities;
+- (bool)isForcedCaption;
+- (SSignal *)forcedCaption;
+- (void)setForcedCaption:(NSAttributedString *)caption;
+- (void)setForcedCaption:(NSAttributedString *)caption skipUpdate:(bool)skipUpdate;
 
 - (NSObject<TGMediaEditAdjustments> *)adjustmentsForItem:(NSObject<TGMediaEditableItem> *)item;
 - (SSignal *)adjustmentsSignalForItem:(NSObject<TGMediaEditableItem> *)item;

@@ -154,12 +154,10 @@ private func getReadStateCount(valueBox: ValueBox, table: ValueBoxTable, peerId:
     if let value = valueBox.get(table, key: key) {
         var count: Int32 = 0
         value.read(&count, offset: 0, length: 4)
-        var stateByNamespace: [MessageId.Namespace: PeerReadState] = [:]
         for _ in 0 ..< count {
             var namespaceId: Int32 = 0
             value.read(&namespaceId, offset: 0, length: 4)
-            
-            let state: PeerReadState
+
             var kind: Int8 = 0
             value.read(&kind, offset: 0, length: 1)
             if kind == 0 {
@@ -207,8 +205,6 @@ private func getReadStateCount(valueBox: ValueBox, table: ValueBoxTable, peerId:
 
 func postboxUpgrade_16to17(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
     let chatListIndexTable = ValueBoxTable(id: 8, keyType: .int64, compactValuesOnCreation: false)
-    let notificationSettingsTable = ValueBoxTable(id: 19, keyType: .int64, compactValuesOnCreation: false)
-    let readStateTable = ValueBoxTable(id: 14, keyType: .int64, compactValuesOnCreation: false)
     let messageHistoryMetadataTable = ValueBoxTable(id: 10, keyType: .binary, compactValuesOnCreation: true)
     
     var includedPeerIds: [PeerId] = []

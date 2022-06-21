@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 private final class ManagedSynchronizeChatInputStateOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]
@@ -127,7 +126,11 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
 }
 
 private func synchronizeChatInputState(transaction: Transaction, postbox: Postbox, network: Network, peerId: PeerId, operation: SynchronizeChatInputStateOperation) -> Signal<Void, NoError> {
-    let inputState = (transaction.getPeerChatInterfaceState(peerId) as? SynchronizeableChatInterfaceState)?.synchronizeableInputState
+    var inputState: SynchronizeableChatInputState?
+    if let peerChatInterfaceState = transaction.getPeerChatInterfaceState(peerId), let data = peerChatInterfaceState.data {
+        inputState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))?.synchronizeableInputState
+    }
+
     if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
         var flags: Int32 = 0
         if let inputState = inputState {

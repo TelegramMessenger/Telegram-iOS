@@ -6,9 +6,13 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
+        "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
     ],
     visibility = [
         "//visibility:public",

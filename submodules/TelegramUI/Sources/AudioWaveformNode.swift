@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import ChatPresentationInterfaceState
 
 private final class AudioWaveformNodeParameters: NSObject {
     let waveform: AudioWaveform?
@@ -90,7 +91,9 @@ final class AudioWaveformNode: ASDisplayNode {
             }
             
             if let waveform = parameters.waveform {
-                waveform.samples.withUnsafeBytes { (samples: UnsafePointer<UInt16>) -> Void in
+                waveform.samples.withUnsafeBytes { rawSamples -> Void in
+                    let samples = rawSamples.baseAddress!.assumingMemoryBound(to: UInt16.self)
+                    
                     let peakHeight: CGFloat = 12.0
                     let maxReadSamples = waveform.samples.count / 2
                     

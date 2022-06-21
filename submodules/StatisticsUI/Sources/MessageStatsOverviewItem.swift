@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -148,7 +147,7 @@ class MessageStatsOverviewItemNode: ListViewItemNode {
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let valueFont = Font.semibold(item.presentationData.fontSize.itemListBaseFontSize)
@@ -237,6 +236,7 @@ class MessageStatsOverviewItemNode: ListViewItemNode {
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
+                                strongSelf.bottomStripeNode.isHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true

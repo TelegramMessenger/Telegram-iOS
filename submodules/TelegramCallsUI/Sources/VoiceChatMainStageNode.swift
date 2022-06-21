@@ -11,7 +11,6 @@ import TelegramAudio
 import AccountContext
 import Postbox
 import TelegramCore
-import SyncCore
 import AppBundle
 import PresentationDataUtils
 import AvatarNode
@@ -96,12 +95,12 @@ private class VoiceChatPinButtonNode: HighlightTrackingButtonNode {
 final class VoiceChatMainStageNode: ASDisplayNode {
     private let context: AccountContext
     private let call: PresentationGroupCall
-    private var currentPeer: (PeerId, String?, Bool, Bool, Bool)?
+    private(set) var currentPeer: (PeerId, String?, Bool, Bool, Bool)?
     private var currentPeerEntry: VoiceChatPeerEntry?
         
     var callState: PresentationGroupCallState?
     
-    private var currentVideoNode: GroupVideoNode?
+    private(set) var currentVideoNode: GroupVideoNode?
         
     private let backgroundNode: ASDisplayNode
     private let topFadeNode: ASDisplayNode
@@ -162,10 +161,18 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         if let image = generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
             context.clear(bounds)
-            
-            let colorsArray = [fadeColor.cgColor, fadeColor.withAlphaComponent(0.0).cgColor] as CFArray
-            var locations: [CGFloat] = [1.0, 0.0]
-            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+
+            let stepCount = 10
+            var colors: [CGColor] = []
+            var locations: [CGFloat] = []
+
+            for i in 0 ... stepCount {
+                let t = CGFloat(i) / CGFloat(stepCount)
+                colors.append(fadeColor.withAlphaComponent(t * t).cgColor)
+                locations.append(t)
+            }
+
+            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colors as CFArray, locations: &locations)!
             context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
         }) {
             self.topFadeNode.backgroundColor = UIColor(patternImage: image)
@@ -182,6 +189,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             let colorsArray = [fadeColor.withAlphaComponent(0.0).cgColor, fadeColor.cgColor] as CFArray
             var locations: [CGFloat] = [1.0, 0.0]
             let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+
             context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
         }) {
             self.bottomGradientNode.backgroundColor = UIColor(patternImage: image)
@@ -629,11 +637,11 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 }
                 
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.speakingAvatarNode.setPeer(context: strongSelf.context, theme: presentationData.theme, peer: peer)
+                    strongSelf.speakingAvatarNode.setPeer(context: strongSelf.context, theme: presentationData.theme, peer: EnginePeer(peer))
                 
                 let bodyAttributes = MarkdownAttributeSet(font: Font.regular(15.0), textColor: .white, additionalAttributes: [:])
                 let boldAttributes = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: .white, additionalAttributes: [:])
-                let attributedText = addAttributesToStringWithRanges(presentationData.strings.VoiceChat_ParticipantIsSpeaking(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)), body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                let attributedText = addAttributesToStringWithRanges(presentationData.strings.VoiceChat_ParticipantIsSpeaking(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 strongSelf.speakingTitleNode.attributedText = attributedText
 
                 strongSelf.speakingContainerNode.alpha = 0.0
@@ -724,8 +732,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         let peer = peerEntry.peer
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         if !arePeersEqual(previousPeerEntry?.peer, peerEntry.peer) {
-            self.backdropAvatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 240.0, height: 240.0), round: false, font: avatarPlaceholderFont(size: 78.0), drawLetters: false, blurred: true))
-            self.avatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true))
+            self.backdropAvatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: EnginePeer(peer), size: CGSize(width: 240.0, height: 240.0), round: false, font: avatarPlaceholderFont(size: 78.0), drawLetters: false, blurred: true))
+            self.avatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: EnginePeer(peer), size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true))
         }
                 
         var gradient: VoiceChatBlobNode.Gradient = .active
@@ -763,7 +771,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
         
         var microphoneColor = UIColor.white
-        var titleAttributedString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: .white)
+        var titleAttributedString = NSAttributedString(string: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: .white)
         if mutedForYou {
             microphoneColor = destructiveColor
             
@@ -1090,7 +1098,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         
         let initialBottomInset = bottomInset
         var bottomInset = bottomInset        
-        let layoutMode: GroupVideoNode.LayoutMode
+        let layoutMode: VideoNodeLayoutMode
         if case .immediate = transition, self.animatingIn {
             layoutMode = .fillOrFitToSquare
             bottomInset = 0.0

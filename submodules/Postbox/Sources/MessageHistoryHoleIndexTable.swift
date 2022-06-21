@@ -11,9 +11,18 @@ enum MessageHistoryIndexHoleOperation {
     case remove(ClosedRange<MessageId.Id>)
 }
 
-public enum MessageHistoryHoleSpace: Equatable, Hashable {
+public enum MessageHistoryHoleSpace: Equatable, Hashable, CustomStringConvertible {
     case everywhere
     case tag(MessageTags)
+    
+    public var description: String {
+        switch self {
+        case .everywhere:
+            return ".everywhere"
+        case let .tag(tags):
+            return ".tag\(tags.rawValue)"
+        }
+    }
 }
 
 private func addOperation(_ operation: MessageHistoryIndexHoleOperation, peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, to operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
@@ -49,11 +58,11 @@ final class MessageHistoryHoleIndexTable: Table {
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
-    init(valueBox: ValueBox, table: ValueBoxTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.seedConfiguration = seedConfiguration
         self.metadataTable = metadataTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(id: MessageId, space: MessageHistoryHoleSpace) -> ValueBoxKey {
@@ -296,7 +305,6 @@ final class MessageHistoryHoleIndexTable: Table {
         }
         let clippedRange = clippedLowerBound ... clippedUpperBound
         
-        var removedIndices = IndexSet()
         var insertedIndices = IndexSet()
         var removeKeys: [Int32] = []
         var insertRanges = IndexSet()
@@ -378,8 +386,8 @@ final class MessageHistoryHoleIndexTable: Table {
     }
     
     private func removeInternal(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>, operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
-        var removedIndices = IndexSet()
-        var insertedIndices = IndexSet()
+        postboxLog("MessageHistoryHoleIndexTable: removeInternal peerId: \(peerId) namespace: \(namespace) space: \(space) range: \(range)")
+        
         var removeKeys: [Int32] = []
         var insertRanges = IndexSet()
         

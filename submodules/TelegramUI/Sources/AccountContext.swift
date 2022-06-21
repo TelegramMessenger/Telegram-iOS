@@ -3,7 +3,6 @@ import SwiftSignalKit
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import DeviceAccess
 import TelegramPresentationData
@@ -17,6 +16,8 @@ import TelegramCallsUI
 import TelegramBaseController
 import AsyncDisplayKit
 import PresentationDataUtils
+import MeshAnimationCache
+import FetchManagerImpl
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -156,8 +157,9 @@ public final class AccountContextImpl: AccountContext {
     private var experimentalUISettingsDisposable: Disposable?
     
     public let cachedGroupCallContexts: AccountGroupCallContextCache
+    public let meshAnimationCache: MeshAnimationCache
     
-    public init(sharedContext: SharedAccountContextImpl, account: Account, /*tonContext: StoredTonContext?, */limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
+    public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
     {
         self.sharedContextImpl = sharedContext
         self.account = account
@@ -166,7 +168,7 @@ public final class AccountContextImpl: AccountContext {
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
         if let locationManager = self.sharedContextImpl.locationManager {
-            self.liveLocationManager = LiveLocationManagerImpl(account: account, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
+            self.liveLocationManager = LiveLocationManagerImpl(engine: self.engine, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
         } else {
             self.liveLocationManager = nil
         }
@@ -188,10 +190,11 @@ public final class AccountContextImpl: AccountContext {
         }
         
         self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
+        self.meshAnimationCache = MeshAnimationCache(mediaBox: account.postbox.mediaBox)
         
         let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])
         |> map { preferences -> LimitsConfiguration in
-            return preferences.values[PreferencesKeys.limitsConfiguration] as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+            return preferences.values[PreferencesKeys.limitsConfiguration]?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
         }
         
         self.currentLimitsConfiguration = Atomic(value: limitsConfiguration)
@@ -238,7 +241,7 @@ public final class AccountContextImpl: AccountContext {
             })
         }
         
-        account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: true, includeReference: sharedContext.immediateExperimentalUISettings.experimentalCompatibility).map { version, supportsVideo -> CallSessionManagerImplementationVersion in
+        account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: true, includeReference: true).map { version, supportsVideo -> CallSessionManagerImplementationVersion in
             CallSessionManagerImplementationVersion(version: version, supportsVideo: supportsVideo)
         })
     }
@@ -275,10 +278,13 @@ public final class AccountContextImpl: AccountContext {
     public func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput {
         switch location {
         case let .peer(peerId):
-            return .peer(peerId)
+            return .peer(peerId: peerId)
         case let .replyThread(data):
             let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
-            return .external(data.messageId.peerId, makeMessageThreadId(data.messageId), context.state)
+            return .thread(peerId: data.messageId.peerId, threadId: makeMessageThreadId(data.messageId), data: context.state)
+        case let .feed(id):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
+            return .feed(id: id, data: context.state)
         }
     }
     
@@ -289,6 +295,34 @@ public final class AccountContextImpl: AccountContext {
         case let .replyThread(data):
             let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
             return context.maxReadOutgoingMessageId
+        case let .feed(id):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
+            return context.maxReadOutgoingMessageId
+        }
+    }
+
+    public func chatLocationUnreadCount(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Int, NoError> {
+        switch location {
+        case let .peer(peerId):
+            let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
+            return self.account.postbox.combinedView(keys: [unreadCountsKey])
+            |> map { views in
+                var unreadCount: Int32 = 0
+
+                if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
+                    if let count = view.count(for: .peer(peerId)) {
+                        unreadCount = count
+                    }
+                }
+
+                return Int(unreadCount)
+            }
+        case let .replyThread(data):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
+            return context.unreadCount
+        case let .feed(id):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
+            return context.unreadCount
         }
     }
     
@@ -299,6 +333,9 @@ public final class AccountContextImpl: AccountContext {
         case let .replyThread(data):
             let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
             context.applyMaxReadIndex(messageIndex: messageIndex)
+        case let .feed(id):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
+            context.applyMaxReadIndex(messageIndex: messageIndex)
         }
     }
     
@@ -306,7 +343,7 @@ public final class AccountContextImpl: AccountContext {
         let _ = self.sharedContext.callManager?.scheduleGroupCall(context: self, peerId: peerId, endCurrentIfAny: true)
     }
     
-    public func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: CachedChannelData.ActiveCall) {
+    public func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription) {
         let callResult = self.sharedContext.callManager?.joinGroupCall(context: self, peerId: peerId, invite: invite, requestJoinAsPeerId: requestJoinAsPeerId, initialCall: activeCall, endCurrentIfAny: false)
         if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
             if currentPeerId == peerId {
@@ -325,14 +362,30 @@ public final class AccountContextImpl: AccountContext {
                     let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
                     if let current = current {
                         if current is TelegramChannel || current is TelegramGroup {
-                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_VoiceChatInProgressTitle, text: presentationData.strings.Call_VoiceChatInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            let title: String
+                            let text: String
+                            if let channel = current as? TelegramChannel, case .broadcast = channel.info {
+                                title = presentationData.strings.Call_LiveStreamInProgressTitle
+                                text = presentationData.strings.Call_LiveStreamInProgressMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                            } else {
+                                title = presentationData.strings.Call_VoiceChatInProgressTitle
+                                text = presentationData.strings.Call_VoiceChatInProgressMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                            }
+
+                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
                                     return
                                 }
                                 let _ = strongSelf.sharedContext.callManager?.joinGroupCall(context: strongSelf, peerId: peer.id, invite: invite, requestJoinAsPeerId: requestJoinAsPeerId, initialCall: activeCall, endCurrentIfAny: true)
                             })]), on: .root)
                         } else {
-                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressVoiceChatMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            let text: String
+                            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                                text = presentationData.strings.Call_CallInProgressLiveStreamMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                            } else {
+                                text = presentationData.strings.Call_CallInProgressVoiceChatMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                            }
+                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -371,7 +424,13 @@ public final class AccountContextImpl: AccountContext {
                     let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
                     if let current = current {
                         if current is TelegramChannel || current is TelegramGroup {
-                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_VoiceChatInProgressTitle, text: presentationData.strings.Call_VoiceChatInProgressCallMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            let text: String
+                            if let channel = current as? TelegramChannel, case .broadcast = channel.info {
+                                text = presentationData.strings.Call_LiveStreamInProgressCallMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                            } else {
+                                text = presentationData.strings.Call_VoiceChatInProgressCallMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                            }
+                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_VoiceChatInProgressTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -379,7 +438,7 @@ public final class AccountContextImpl: AccountContext {
                                 completion()
                             })]), on: .root)
                         } else {
-                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -401,16 +460,27 @@ public final class AccountContextImpl: AccountContext {
 
 private func chatLocationContext(holder: Atomic<ChatLocationContextHolder?>, account: Account, data: ChatReplyThreadMessage) -> ReplyThreadHistoryContext {
     let holder = holder.modify { current in
-        if let current = current as? ChatLocationContextHolderImpl {
+        if let current = current as? ChatLocationReplyContextHolderImpl {
             return current
         } else {
-            return ChatLocationContextHolderImpl(account: account, data: data)
+            return ChatLocationReplyContextHolderImpl(account: account, data: data)
         }
-    } as! ChatLocationContextHolderImpl
+    } as! ChatLocationReplyContextHolderImpl
     return holder.context
 }
 
-private final class ChatLocationContextHolderImpl: ChatLocationContextHolder {
+private func chatLocationContext(holder: Atomic<ChatLocationContextHolder?>, account: Account, feedId: Int32) -> FeedHistoryContext {
+    let holder = holder.modify { current in
+        if let current = current as? ChatLocationFeedContextHolderImpl {
+            return current
+        } else {
+            return ChatLocationFeedContextHolderImpl(account: account, feedId: feedId)
+        }
+    } as! ChatLocationFeedContextHolderImpl
+    return holder.context
+}
+
+private final class ChatLocationReplyContextHolderImpl: ChatLocationContextHolder {
     let context: ReplyThreadHistoryContext
     
     init(account: Account, data: ChatReplyThreadMessage) {
@@ -418,15 +488,23 @@ private final class ChatLocationContextHolderImpl: ChatLocationContextHolder {
     }
 }
 
+private final class ChatLocationFeedContextHolderImpl: ChatLocationContextHolder {
+    let context: FeedHistoryContext
+    
+    init(account: Account, feedId: Int32) {
+        self.context = FeedHistoryContext(account: account, feedId: feedId)
+    }
+}
+
 func getAppConfiguration(transaction: Transaction) -> AppConfiguration {
-    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
     return appConfiguration
 }
 
 func getAppConfiguration(postbox: Postbox) -> Signal<AppConfiguration, NoError> {
     return postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> map { view -> AppConfiguration in
-        let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? AppConfiguration.defaultValue
+        let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
         return appConfiguration
     }
     |> distinctUntilChanged

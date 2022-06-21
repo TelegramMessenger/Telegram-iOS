@@ -4,7 +4,7 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
     let peerIds: Set<PeerId>
     var notificationSettings: [PeerId: PeerNotificationSettings]
     
-    init(postbox: Postbox, peerIds: Set<PeerId>) {
+    init(postbox: PostboxImpl, peerIds: Set<PeerId>) {
         self.peerIds = peerIds
         self.notificationSettings = [:]
         for peerId in peerIds {
@@ -18,7 +18,7 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         if !transaction.currentUpdatedPeerNotificationSettings.isEmpty {
             var updated = false
             for peerId in self.peerIds {
@@ -35,6 +35,44 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
         } else {
             return false
         }
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        /*var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+        for peerId in self.peerIds {
+            var notificationPeerId = peerId
+            if let peer = postbox.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId {
+                notificationPeerId = associatedPeerId
+            }
+            if let settings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId) {
+                notificationSettings[peerId] = settings
+            }
+        }
+
+        var updated = false
+        if self.notificationSettings.count != notificationSettings.count {
+            updated = true
+        } else {
+            for (key, value) in self.notificationSettings {
+                if let other = notificationSettings[key] {
+                    if !other.isEqual(to: value) {
+                        updated = true
+                        break
+                    }
+                } else {
+                    updated = true
+                    break
+                }
+            }
+        }
+
+        if updated {
+            self.notificationSettings = notificationSettings
+            return true
+        } else {
+            return false
+        }*/
+        return false
     }
     
     func immutableView() -> PostboxView {

@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 private enum MessagePreParsingError: Error {
     case invalidChatState

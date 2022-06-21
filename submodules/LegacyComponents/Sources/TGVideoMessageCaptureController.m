@@ -60,7 +60,7 @@ typedef enum
 
 @end
 
-@interface TGVideoMessageCaptureController () <TGVideoCameraPipelineDelegate, TGVideoMessageScrubberDataSource, TGVideoMessageScrubberDelegate>
+@interface TGVideoMessageCaptureController () <TGVideoCameraPipelineDelegate, TGVideoMessageScrubberDataSource, TGVideoMessageScrubberDelegate, UIGestureRecognizerDelegate>
 {
     SQueue *_queue;
     
@@ -96,6 +96,7 @@ typedef enum
     UIView *_separatorView;
     
     UIImageView *_placeholderView;
+    TGVideoMessageShimmerView *_shimmerView;
     
     bool _automaticDismiss;
     NSTimeInterval _startTimestamp;
@@ -300,8 +301,8 @@ typedef enum
     }
     
     CGFloat minSide = MIN(_wrapperView.frame.size.width, _wrapperView.frame.size.height);
-    CGFloat diameter = minSide > 320.0f ? 240.0f : 216.0f;
-    CGFloat shadowSize = minSide > 320.0f ? 21.0f : 19.0f;
+    CGFloat diameter = minSide == 320.0 ? 216.0 : MIN(404.0, minSide - 24.0f);
+    CGFloat shadowSize = 21.0f;
     
     CGFloat circleWrapperViewLength = diameter + shadowSize * 2.0;
     _circleWrapperView = [[UIView alloc] initWithFrame:(CGRect){
@@ -329,20 +330,23 @@ typedef enum
     _placeholderView.image = [TGVideoMessageCaptureController startImage];
     [_circleView addSubview:_placeholderView];
     
-    if (iosMajorVersion() >= 11)
-    {
+    _shimmerView = [[TGVideoMessageShimmerView alloc] initWithFrame:_circleView.bounds];
+    [_shimmerView updateAbsoluteRect:_circleView.bounds containerSize:_circleView.bounds.size];
+    [_circleView addSubview:_shimmerView];
+    
+    if (@available(iOS 11.0, *)) {
         _shadowView.accessibilityIgnoresInvertColors = true;
         _placeholderView.accessibilityIgnoresInvertColors = true;
     }
     
-    CGFloat ringViewLength = minSide > 320.0f ? 260.0f : 234.0f;
+    CGFloat ringViewLength = diameter - 8.0f;
     _ringView = [[TGVideoMessageRingView alloc] initWithFrame:(CGRect){
         .origin.x = (_circleWrapperView.bounds.size.width - ringViewLength) / 2.0f,
         .origin.y = (_circleWrapperView.bounds.size.height - ringViewLength) / 2.0f,
         .size.width = ringViewLength,
         .size.height = ringViewLength
     }];
-    _ringView.accentColor = self.pallete != nil ? self.pallete.buttonColor : TGAccentColor();
+    _ringView.accentColor = [UIColor colorWithWhite:1.0 alpha:0.6];
     [_circleWrapperView addSubview:_ringView];
     
     CGRect controlsFrame = _controlsFrame;
@@ -450,6 +454,10 @@ typedef enum
             gestureRecognizer.scale = 1.0f;
         }
             break;
+        case UIGestureRecognizerStateEnded:
+        case UIGestureRecognizerStateCancelled:
+            [_capturePipeline cancelZoom];
+            break;
         default:
             break;
     }
@@ -478,8 +486,9 @@ typedef enum
     _previewView = [[TGVideoCameraGLView alloc] initWithFrame:_circleView.bounds];
     [_circleView insertSubview:_previewView belowSubview:_placeholderView];
     
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         _previewView.accessibilityIgnoresInvertColors = true;
+    }
     
     [self captureStarted];
 }
@@ -584,6 +593,8 @@ typedef enum
         .x = _wrapperView.frame.size.width / 2.0f,
         .y = _wrapperView.frame.size.height / 2.0f - _controlsView.frame.size.height
     };
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     switch (self.interfaceOrientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
@@ -597,6 +608,7 @@ typedef enum
             targetPosition.y = MAX(_circleWrapperView.bounds.size.height / 2.0f + 40.0f, targetPosition.y);
             break;
     }
+#pragma clang diagnostic pop
     
     if (TGIsPad()) {
         _circleWrapperView.center = targetPosition;
@@ -761,8 +773,6 @@ typedef enum
         }
         [_generator impactOccurred];
     }
-    
-    bool effectiveHasSchedule = true;
     
     TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:_context isDark:self.pallete.isDark sendButtonFrame:[_controlsView convertRect:[_controlsView frameForSendButton] toView:nil] canSendSilently:_canSendSilently canSchedule:_canSchedule reminder:_reminder hasTimer:false];
     __weak TGVideoMessageCaptureController *weakSelf = self;
@@ -1178,9 +1188,11 @@ typedef enum
     [UIView animateWithDuration:0.3 delay:delay options:kNilOptions animations:^
     {
         _placeholderView.alpha = 0.0f;
+        _shimmerView.alpha = 0.0f;
         _switchButton.alpha = 1.0f;
     } completion:^(__unused BOOL finished)
     {
+        _shimmerView.hidden = true;
         _placeholderView.hidden = true;
         _placeholderView.alpha = 1.0f;
     }];
@@ -1202,7 +1214,10 @@ typedef enum
 - (void)configureCamera
 {
     _capturePipeline = [[TGVideoCameraPipeline alloc] initWithDelegate:self position:_preferredPosition callbackQueue:dispatch_get_main_queue() liveUploadInterface:_liveUploadInterface];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     _capturePipeline.orientation = (AVCaptureVideoOrientation)self.interfaceOrientation;
+#pragma clang diagnostic pop
     
     __weak TGVideoMessageCaptureController *weakSelf = self;
     _capturePipeline.micLevel = ^(CGFloat level)
@@ -1537,12 +1552,15 @@ static UIImage *startImage = nil;
     
     if (cropOrientation != NULL)
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
             *cropOrientation = UIImageOrientationUp;
         else if (self.interfaceOrientation == UIInterfaceOrientationLandscapeLeft)
             *cropOrientation = UIImageOrientationRight;
         else if (self.interfaceOrientation == UIInterfaceOrientationLandscapeRight)
             *cropOrientation = UIImageOrientationLeft;
+#pragma clang diagnostic pop
     }
     
     if (cropMirrored != NULL)

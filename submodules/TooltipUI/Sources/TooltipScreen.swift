@@ -4,8 +4,8 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import AppBundle
-import SyncCore
 import TelegramCore
 import TextFormat
 import Postbox
@@ -54,14 +54,17 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private var isArrowInverted: Bool = false
     
+    private let inset: CGFloat
+    
     private var validLayout: ContainerViewLayout?
     
-    init(text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?) {
+    init(account: Account, text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, inset: CGFloat = 13.0, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?) {
         self.tooltipStyle = style
         self.icon = icon
         self.customContentNode = customContentNode
         self.location = location
         self.displayDuration = displayDuration
+        self.inset = inset
         self.shouldDismissOnTouch = shouldDismissOnTouch
         self.requestDismiss = requestDismiss
         self.openActiveTextItem = openActiveTextItem
@@ -196,15 +199,11 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         case .none:
             break
         case .chatListPress:
-            if let path = getAppBundle().path(forResource: "ChatListFoldersTooltip", ofType: "json") {
-                self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                self.animatedStickerNode.automaticallyLoadFirstFrame = true
-            }
+            self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ChatListFoldersTooltip"), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            self.animatedStickerNode.automaticallyLoadFirstFrame = true
         case .info:
-            if let path = getAppBundle().path(forResource: "anim_infotip", ofType: "json") {
-                self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                self.animatedStickerNode.automaticallyLoadFirstFrame = true
-            }
+            self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "anim_infotip"), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            self.animatedStickerNode.automaticallyLoadFirstFrame = true
         }
         
         super.init()
@@ -296,7 +295,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         self.scrollingContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
         
-        let sideInset: CGFloat = 13.0 + layout.safeInsets.left
+        let sideInset: CGFloat = self.inset + layout.safeInsets.left
         let bottomInset: CGFloat = 10.0
         let contentInset: CGFloat = 11.0
         let contentVerticalInset: CGFloat = 11.0
@@ -557,6 +556,7 @@ public final class TooltipScreen: ViewController {
         case gradient(UIColor, UIColor)
     }
     
+    private let account: Account
     public let text: String
     public let textEntities: [MessageTextEntity]
     private let style: TooltipScreen.Style
@@ -564,6 +564,7 @@ public final class TooltipScreen: ViewController {
     private let customContentNode: TooltipCustomContentNode?
     private let location: TooltipScreen.Location
     private let displayDuration: DisplayDuration
+    private let inset: CGFloat
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
     private let openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?
     
@@ -579,7 +580,8 @@ public final class TooltipScreen: ViewController {
     
     private var dismissTimer: Foundation.Timer?
     
-    public init(text: String, textEntities: [MessageTextEntity] = [], style: TooltipScreen.Style = .default, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)? = nil) {
+    public init(account: Account, text: String, textEntities: [MessageTextEntity] = [], style: TooltipScreen.Style = .default, icon: TooltipScreen.Icon?, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, inset: CGFloat = 13.0, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)? = nil) {
+        self.account = account
         self.text = text
         self.textEntities = textEntities
         self.style = style
@@ -587,6 +589,7 @@ public final class TooltipScreen: ViewController {
         self.customContentNode = customContentNode
         self.location = location
         self.displayDuration = displayDuration
+        self.inset = inset
         self.shouldDismissOnTouch = shouldDismissOnTouch
         self.openActiveTextItem = openActiveTextItem
         
@@ -643,7 +646,7 @@ public final class TooltipScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TooltipScreenNode(text: self.text, textEntities: self.textEntities, style: self.style, icon: self.icon, customContentNode: self.customContentNode, location: self.location, displayDuration: self.displayDuration, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
+        self.displayNode = TooltipScreenNode(account: self.account, text: self.text, textEntities: self.textEntities, style: self.style, icon: self.icon, customContentNode: self.customContentNode, location: self.location, displayDuration: self.displayDuration, inset: self.inset, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

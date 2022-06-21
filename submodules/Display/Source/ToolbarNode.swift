@@ -2,8 +2,28 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
+public enum ToolbarActionOption {
+    case left
+    case right
+    case middle
+}
+
+public final class ToolbarTheme {
+    public let barBackgroundColor: UIColor
+    public let barSeparatorColor: UIColor
+    public let barTextColor: UIColor
+    public let barSelectedTextColor: UIColor
+
+    public init(barBackgroundColor: UIColor, barSeparatorColor: UIColor, barTextColor: UIColor, barSelectedTextColor: UIColor) {
+        self.barBackgroundColor = barBackgroundColor
+        self.barSeparatorColor = barSeparatorColor
+        self.barTextColor = barTextColor
+        self.barSelectedTextColor = barSelectedTextColor
+    }
+}
+
 public final class ToolbarNode: ASDisplayNode {
-    private var theme: TabBarControllerTheme
+    private var theme: ToolbarTheme
     private let displaySeparator: Bool
     public var left: () -> Void
     public var right: () -> Void
@@ -18,14 +38,14 @@ public final class ToolbarNode: ASDisplayNode {
     private let middleTitle: ImmediateTextNode
     private let middleButton: HighlightTrackingButtonNode
     
-    public init(theme: TabBarControllerTheme, displaySeparator: Bool = false, left: @escaping () -> Void = {}, right: @escaping () -> Void = {}, middle: @escaping () -> Void = {}) {
+    public init(theme: ToolbarTheme, displaySeparator: Bool = false, left: @escaping () -> Void = {}, right: @escaping () -> Void = {}, middle: @escaping () -> Void = {}) {
         self.theme = theme
         self.displaySeparator = displaySeparator
         self.left = left
         self.right = right
         self.middle = middle
 
-        self.backgroundNode = NavigationBackgroundNode(color: theme.tabBarBackgroundColor)
+        self.backgroundNode = NavigationBackgroundNode(color: theme.barBackgroundColor)
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -100,9 +120,9 @@ public final class ToolbarNode: ASDisplayNode {
         self.middleButton.accessibilityTraits = .button
     }
     
-    public func updateTheme(_ theme: TabBarControllerTheme) {
-        self.separatorNode.backgroundColor = theme.tabBarSeparatorColor
-        self.backgroundNode.updateColor(color: theme.tabBarBackgroundColor, transition: .immediate)
+    public func updateTheme(_ theme: ToolbarTheme) {
+        self.separatorNode.backgroundColor = theme.barSeparatorColor
+        self.backgroundNode.updateColor(color: theme.barBackgroundColor, transition: .immediate)
     }
     
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, bottomInset: CGFloat, toolbar: Toolbar, transition: ContainedViewLayoutTransition) {
@@ -112,13 +132,28 @@ public final class ToolbarNode: ASDisplayNode {
         
         var sideInset: CGFloat = 16.0
         
-        self.leftTitle.attributedText = NSAttributedString(string: toolbar.leftAction?.title ?? "", font: Font.regular(17.0), textColor: (toolbar.leftAction?.isEnabled ?? false) ? self.theme.tabBarSelectedTextColor : self.theme.tabBarTextColor)
+        self.leftTitle.attributedText = NSAttributedString(string: toolbar.leftAction?.title ?? "", font: Font.regular(17.0), textColor: (toolbar.leftAction?.isEnabled ?? false) ? self.theme.barSelectedTextColor : self.theme.barTextColor)
         self.leftButton.accessibilityLabel = toolbar.leftAction?.title
         
-        self.rightTitle.attributedText = NSAttributedString(string: toolbar.rightAction?.title ?? "", font: Font.regular(17.0), textColor: (toolbar.rightAction?.isEnabled ?? false) ? self.theme.tabBarSelectedTextColor : self.theme.tabBarTextColor)
+        self.rightTitle.attributedText = NSAttributedString(string: toolbar.rightAction?.title ?? "", font: Font.regular(17.0), textColor: (toolbar.rightAction?.isEnabled ?? false) ? self.theme.barSelectedTextColor : self.theme.barTextColor)
         self.rightButton.accessibilityLabel = toolbar.rightAction?.title
-        
-        self.middleTitle.attributedText = NSAttributedString(string: toolbar.middleAction?.title ?? "", font: Font.regular(17.0), textColor: (toolbar.middleAction?.isEnabled ?? false) ? self.theme.tabBarSelectedTextColor : self.theme.tabBarTextColor)
+
+        let middleColor: UIColor
+        if let middleAction = toolbar.middleAction {
+            if middleAction.isEnabled {
+                switch middleAction.color {
+                case .accent:
+                    middleColor = self.theme.barSelectedTextColor
+                case let .custom(color):
+                    middleColor = color
+                }
+            } else {
+                middleColor = self.theme.barTextColor
+            }
+        } else {
+            middleColor = self.theme.barTextColor
+        }
+        self.middleTitle.attributedText = NSAttributedString(string: toolbar.middleAction?.title ?? "", font: Font.regular(17.0), textColor: middleColor)
         self.middleButton.accessibilityLabel = toolbar.middleAction?.title
         
         var size = size

@@ -4,13 +4,12 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 func _internal_reportPeer(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId) {
             if let peer = peer as? TelegramSecretChat {
-                return account.network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: peer.accessHash)))
+                return account.network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: Int32(peer.id.id._internalGetInt64Value()), accessHash: peer.accessHash)))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                     return .single(nil)
@@ -84,6 +83,8 @@ public enum ReportReason: Equatable {
     case childAbuse
     case copyright
     case irrelevantLocation
+    case illegalDrugs
+    case personalDetails
     case custom
 }
 
@@ -104,6 +105,10 @@ private extension ReportReason {
                 return .inputReportReasonCopyright
             case .irrelevantLocation:
                 return .inputReportReasonGeoIrrelevant
+            case .illegalDrugs:
+                return .inputReportReasonIllegalDrugs
+            case .personalDetails:
+                return .inputReportReasonPersonalDetails
             case .custom:
                 return .inputReportReasonOther
         }

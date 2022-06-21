@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 
@@ -29,7 +28,7 @@ final class ChatOverlayNavigationBar: ASDisplayNode {
             var title = ""
             if let peerView = self.peerView {
                 if let peer = peerViewMainPeer(peerView) {
-                    title = peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)
+                    title = EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)
                 }
             }
             if self.peerTitle != title {

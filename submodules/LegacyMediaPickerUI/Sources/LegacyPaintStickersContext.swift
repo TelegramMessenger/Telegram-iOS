@@ -2,7 +2,6 @@ import LegacyComponents
 import Display
 import Postbox
 import SwiftSignalKit
-import SyncCore
 import TelegramCore
 import AccountContext
 import AnimatedStickerNode
@@ -27,13 +26,21 @@ private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type:
     let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, bytesPerRow in
         switch type {
             case .yuva:
-                data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                data.withUnsafeBytes { buffer -> Void in
+                    guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                        return
+                    }
                     decodeYUVAToRGBA(bytes, pixelData, Int32(width), Int32(height), Int32(bytesPerRow))
                 }
             case .argb:
-                data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                data.withUnsafeBytes { buffer -> Void in
+                    guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                        return
+                    }
                     memcpy(pixelData, bytes, data.count)
                 }
+            case .dct:
+                break
         }
     })
 
@@ -89,10 +96,10 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
             self.account = account
             self.entity = entity
             self.file = file
-            self.animated = file.isAnimatedSticker
+            self.animated = file.isAnimatedSticker || file.isVideoSticker
             
-            if file.isAnimatedSticker {
-                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource)
+            if file.isAnimatedSticker || file.isVideoSticker {
+                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker)
                 if let source = self.source {
                     let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384, height: 384))
@@ -193,7 +200,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                         }
                         return frame
                     }
-                    if let maybeFrame = maybeFrame, let frame = maybeFrame {
+                    if let frame = maybeFrame {
                         let image = render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type)
                         completion(image)
                         strongSelf.cachedCIImage = image
@@ -409,6 +416,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
 }
 
 public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersContext {
+    public var captionPanelView: (() -> TGCaptionPanelView?)!
     public var presentStickersController: ((((Any?, Bool, UIView?, CGRect) -> Void)?) -> TGPhotoPaintStickersScreen?)!
     
     private let context: AccountContext

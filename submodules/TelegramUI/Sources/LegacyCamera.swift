@@ -3,7 +3,6 @@ import UIKit
 import LegacyComponents
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import AccountContext
@@ -11,7 +10,7 @@ import ShareController
 import LegacyUI
 import LegacyMediaPickerUI
 
-func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: ChatLocation, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, hasSchedule: Bool, photoOnly: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?) {
+func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: ChatLocation, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, attachmentController: ViewController? = nil, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: NSAttributedString, hasSchedule: Bool, photoOnly: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, dismissedWithResult: @escaping () -> Void = {}, finishedTransitionIn: @escaping () -> Void = {}) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
@@ -24,15 +23,19 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     let controller: TGCameraController
     if let cameraView = cameraView, let previewView = cameraView.previewView() {
         controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat, camera: previewView.camera, previewView: previewView, intent: photoOnly ? TGCameraControllerGenericPhotoOnlyIntent : TGCameraControllerGenericIntent)
-        controller.inhibitMultipleCapture = editingMedia
     } else {
-        controller = TGCameraController()
+        controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat)
+    }
+    controller.inhibitMultipleCapture = editingMedia
+    
+    if !initialCaption.string.isEmpty {
+        controller.forcedCaption = initialCaption
     }
     
-    controller.presentScheduleController = { done in
-        presentSchedulePicker { time in
+    controller.presentScheduleController = { _, done in
+        presentSchedulePicker(true, { time in
             done?(time)
-        }
+        })
     }
     controller.presentTimerController = { done in
         presentTimerPicker { time in
@@ -64,6 +67,9 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     }
     
     let paintStickersContext = LegacyPaintStickersContext(context: context)
+    paintStickersContext.captionPanelView = {
+        return getCaptionPanelView()
+    }
     paintStickersContext.presentStickersController = { completion in
         return presentStickers({ file, animated, view, rect in
             let coder = PostboxEncoder()
@@ -79,8 +85,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     controller.allowCaptionEntities = true
     controller.allowGrouping = mediaGrouping
     controller.inhibitDocumentCaptions = false
-    controller.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
-    controller.recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+    controller.recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     if peer.id != context.account.peerId {
         if peer is TelegramUser {
             controller.hasTimer = hasSchedule
@@ -92,8 +97,14 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     
     let screenSize = parentController.view.bounds.size
     var startFrame = CGRect(x: 0, y: screenSize.height, width: screenSize.width, height: screenSize.height)
-    if let cameraView = cameraView, let menuController = menuController {
-        startFrame = menuController.view.convert(cameraView.previewView()!.frame, from: cameraView)
+    if let cameraView = cameraView  {
+        if let attachmentController = attachmentController {
+            startFrame = attachmentController.view.convert(cameraView.previewView()!.frame, from: cameraView)
+        } else if let menuController = menuController {
+            startFrame = menuController.view.convert(cameraView.previewView()!.frame, from: cameraView)
+        } else {
+            startFrame = parentController.view.convert(cameraView.previewView()!.frame, from: cameraView)
+        }
     }
     
     legacyController.bind(controller: controller)
@@ -104,7 +115,9 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
             controller.view.disablesInteractiveTransitionGestureRecognizer = true
         }
     }
-    
+    controller.finishedTransitionIn = {
+        finishedTransitionIn()
+    }
     controller.beginTransitionOut = { [weak controller, weak cameraView] in
         if let controller = controller, let cameraView = cameraView {
             cameraView.willAttachPreviewView()
@@ -124,17 +137,18 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     controller.finishedWithResults = { [weak menuController, weak legacyController] overlayController, selectionContext, editingContext, currentItem, silentPosting, scheduleTime in
         if let selectionContext = selectionContext, let editingContext = editingContext {
             let nativeGenerator = legacyAssetPickerItemGenerator()
-            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedPhotos && !isSecretChat, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, descriptionGenerator: { _1, _2, _3, _4 in
-                nativeGenerator(_1, _2, _3, _4, nil)
+            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedPhotos && !isSecretChat, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, descriptionGenerator: { _1, _2, _3 in
+                nativeGenerator(_1, _2, _3, nil)
             })
             sendMessagesWithSignals(signals, silentPosting, scheduleTime)
         }
         
         menuController?.dismiss(animated: false)
         legacyController?.dismissWithAnimation()
+        dismissedWithResult()
     }
     
-    controller.finishedWithPhoto = { [weak menuController, weak legacyController] overlayController, image, caption, entities, stickers, timer in
+    controller.finishedWithPhoto = { [weak menuController, weak legacyController] overlayController, image, caption, stickers, timer in
         if let image = image {
             let description = NSMutableDictionary()
             description["type"] = "capturedPhoto"
@@ -142,16 +156,17 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
             if let timer = timer {
                 description["timer"] = timer
             }
-            if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil, nil) {
+            if let item = legacyAssetPickerItemGenerator()(description, caption, nil, nil) {
                 sendMessagesWithSignals([SSignal.single(item)], false, 0)
             }
         }
         
         menuController?.dismiss(animated: false)
         legacyController?.dismissWithAnimation()
+        dismissedWithResult()
     }
     
-    controller.finishedWithVideo = { [weak menuController, weak legacyController] overlayController, videoURL, previewImage, duration, dimensions, adjustments, caption, entities, stickers, timer in
+    controller.finishedWithVideo = { [weak menuController, weak legacyController] overlayController, videoURL, previewImage, duration, dimensions, adjustments, caption, stickers, timer in
         if let videoURL = videoURL {
             let description = NSMutableDictionary()
             description["type"] = "video"
@@ -167,12 +182,13 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
             if let timer = timer {
                 description["timer"] = timer
             }
-            if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil, nil) {
+            if let item = legacyAssetPickerItemGenerator()(description, caption, nil, nil) {
                 sendMessagesWithSignals([SSignal.single(item)], false, 0)
             }
         }
         menuController?.dismiss(animated: false)
         legacyController?.dismissWithAnimation()
+        dismissedWithResult()
     }
     
     controller.recognizedQRCode = { code in
@@ -218,14 +234,14 @@ func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: B
         legacyController?.dismiss()
     }
     
-    controller.finishedWithResults = { [weak controller, weak parentController, weak legacyController] overlayController, selectionContext, editingContext, currentItem, _, _ in
+    controller.finishedWithResults = { [weak parentController] overlayController, selectionContext, editingContext, currentItem, _, _ in
         if let selectionContext = selectionContext, let editingContext = editingContext {
             let nativeGenerator = legacyAssetPickerItemGenerator()
-            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: { _1, _2, _3, _4 in
-                nativeGenerator(_1, _2, _3, _4, nil)
+            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: { _1, _2, _3 in
+                nativeGenerator(_1, _2, _3, nil)
             })
             if let parentController = parentController {
-                parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, text, account in
+                parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, text, account, silently in
                     return legacyAssetPickerEnqueueMessages(account: account, signals: signals!)
                     |> `catch` { _ -> Signal<[LegacyAssetPickerEnqueueMessage], NoError> in
                         return .single([])

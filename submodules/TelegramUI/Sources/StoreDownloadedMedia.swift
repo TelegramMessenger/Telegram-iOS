@@ -1,7 +1,6 @@
 import Foundation
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import Postbox
 import Photos
 import TelegramUIPreferences
@@ -150,14 +149,14 @@ private final class DownloadedMediaStoreManagerPrivateImpl {
     private let appSpecificAssetCollectionValue: Promise<PHAssetCollection>
     private let storeSettings = Promise<MediaAutoDownloadSettings>()
     
-    init(queue: Queue, postbox: Postbox, accountManager: AccountManager) {
+    init(queue: Queue, postbox: Postbox, accountManager: AccountManager<TelegramAccountManagerTypes>) {
         self.queue = queue
         self.postbox = postbox
         
         self.appSpecificAssetCollectionValue = Promise(initializeOnFirstAccess: appSpecificAssetCollection())
         self.storeSettings.set(accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
         |> map { sharedData -> MediaAutoDownloadSettings in
-            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
                 return settings
             } else {
                 return .defaultSettings
@@ -200,7 +199,7 @@ final class DownloadedMediaStoreManagerImpl: DownloadedMediaStoreManager {
     private let queue = Queue()
     private let impl: QueueLocalObject<DownloadedMediaStoreManagerPrivateImpl>
     
-    init(postbox: Postbox, accountManager: AccountManager) {
+    init(postbox: Postbox, accountManager: AccountManager<TelegramAccountManagerTypes>) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return DownloadedMediaStoreManagerPrivateImpl(queue: queue, postbox: postbox, accountManager: accountManager)

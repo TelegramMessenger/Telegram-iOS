@@ -6,6 +6,20 @@ build --cxxopt='-std=c++14'
 build --per_file_copt="third-party/webrtc/.*\.cpp$","@-std=c++14"
 build --per_file_copt="third-party/webrtc/.*\.cc$","@-std=c++14"
 build --per_file_copt="third-party/webrtc/.*\.mm$","@-std=c++14"
+build --per_file_copt="submodules/LottieMeshSwift/LottieMeshBinding/Sources/.*\.mm$","@-std=c++14"
+
+build --swiftcopt=-whole-module-optimization
+
+# Uncomment for address sanitizer
+#build --swiftcopt=-sanitize=address
+#build --copt=-fsanitize=address
+#build --cxxopt=-fsanitize=address
+#build --features=asan
+#build --copt='-D_FORTIFY_SOURCE=0'
+#build --copt='-D_FORTIFY_SOURCE=0'
+#build --copt="-Wno-macro-redefined"
+#build --cxxopt="-Wno-macro-redefined"
+#build --linkopt="-fsanitize=address"
 
 build --features=debug_prefix_map_pwd_is_dot
 build --features=swift.cacheable_swiftmodules

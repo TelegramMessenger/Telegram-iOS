@@ -4,7 +4,7 @@ enum OrderedItemListOperation {
     case replace([OrderedItemListEntry])
     case addOrMoveToFirstPosition(OrderedItemListEntry, Int?)
     case remove(MemoryBuffer)
-    case update(MemoryBuffer, OrderedItemListEntryContents)
+    case update(MemoryBuffer, CodableEntry)
 }
 
 private enum OrderedItemListKeyNamespace: UInt8 {
@@ -19,10 +19,10 @@ final class OrderedItemListTable: Table {
     
     private let indexTable: OrderedItemListIndexTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, indexTable: OrderedItemListIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, indexTable: OrderedItemListIndexTable) {
         self.indexTable = indexTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func keyIndexToId(collectionId: Int32, itemIndex: UInt32) -> ValueBoxKey {
@@ -97,7 +97,7 @@ final class OrderedItemListTable: Table {
         }, limit: 0)
         var items: [OrderedItemListEntry] = []
         for id in currentIds {
-            if let contents = self.indexTable.get(collectionId: collectionId, id: id) as? OrderedItemListEntryContents {
+            if let contents = self.indexTable.get(collectionId: collectionId, id: id) {
                 items.append(OrderedItemListEntry(id: id, contents: contents))
             } else {
                 assertionFailure()
@@ -107,15 +107,15 @@ final class OrderedItemListTable: Table {
     }
     
     func getItem(collectionId: Int32, itemId: MemoryBuffer) -> OrderedItemListEntry? {
-        if let contents = self.indexTable.get(collectionId: collectionId, id: itemId) as? OrderedItemListEntryContents {
+        if let contents = self.indexTable.get(collectionId: collectionId, id: itemId) {
             return OrderedItemListEntry(id: itemId, contents: contents)
         } else {
             return nil
         }
     }
     
-    func updateItem(collectionId: Int32, itemId: MemoryBuffer, item: OrderedItemListEntryContents, operations: inout [Int32: [OrderedItemListOperation]]) {
-        if let _ = self.indexTable.get(collectionId: collectionId, id: itemId) as? OrderedItemListEntryContents {
+    func updateItem(collectionId: Int32, itemId: MemoryBuffer, item: CodableEntry, operations: inout [Int32: [OrderedItemListOperation]]) {
+        if let _ = self.indexTable.get(collectionId: collectionId, id: itemId) {
             self.indexTable.set(collectionId: collectionId, id: itemId, content: item)
             if operations[collectionId] == nil {
                 operations[collectionId] = []
@@ -161,14 +161,16 @@ final class OrderedItemListTable: Table {
     }
     
     func addItemOrMoveToFirstPosition(collectionId: Int32, item: OrderedItemListEntry, removeTailIfCountExceeds: Int?, operations: inout [Int32: [OrderedItemListOperation]]) {
-        if let index = self.getIndex(collectionId: collectionId, id: item.id), index == 0 {
-            return
-        }
-        
         if operations[collectionId] == nil {
             operations[collectionId] = [.addOrMoveToFirstPosition(item, removeTailIfCountExceeds)]
         } else {
             operations[collectionId]!.append(.addOrMoveToFirstPosition(item, removeTailIfCountExceeds))
+        }
+        
+        if let index = self.getIndex(collectionId: collectionId, id: item.id), index == 0 {
+            self.indexTable.set(collectionId: collectionId, id: item.id, content: item.contents)
+            
+            return
         }
         
         var orderedIds = self.getItemIds(collectionId: collectionId)
@@ -205,7 +207,7 @@ final class OrderedItemListTable: Table {
     
     func remove(collectionId: Int32, itemId: MemoryBuffer, operations: inout [Int32: [OrderedItemListOperation]]) {
         if let index = self.getIndex(collectionId: collectionId, id: itemId) {
-            var orderedIds = self.getItemIds(collectionId: collectionId)
+            let orderedIds = self.getItemIds(collectionId: collectionId)
             
             if !orderedIds.isEmpty {
                 self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: itemId), secure: false)

@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import TelegramApi
-import SyncCore
 
 public enum ServerProvidedSuggestion: String {
     case autoarchivePopular = "AUTOARCHIVE_POPULAR"
@@ -26,7 +25,7 @@ public func getServerProvidedSuggestions(account: Account) -> Signal<[ServerProv
         guard let view = views.views[key] as? PreferencesView else {
             return []
         }
-        guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+        guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
             return []
         }
         guard let data = appConfiguration.data, let list = data["pending_suggestions"] as? [String] else {

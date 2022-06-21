@@ -3,6 +3,7 @@ import Display
 import TelegramPresentationData
 import SwiftSignalKit
 import TelegramStringFormatting
+import ChatPresentationInterfaceState
 
 private func timeoutValue(strings: PresentationStrings, slowmodeState: ChatSlowmodeState) -> String {
     switch slowmodeState.variant {
@@ -11,7 +12,7 @@ private func timeoutValue(strings: PresentationStrings, slowmodeState: ChatSlowm
     case let .timestamp(untilTimestamp):
         let timestamp = Int32(Date().timeIntervalSince1970)
         let seconds = max(0, untilTimestamp - timestamp)
-        return strings.Chat_SlowmodeTooltip(stringForDuration(seconds)).0
+        return strings.Chat_SlowmodeTooltip(stringForDuration(seconds)).string
     }
 }
 

@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import Postbox
-import SyncCore
 import TelegramCore
 import AccountContext
 import TelegramUIPreferences
@@ -158,6 +157,9 @@ final class VoiceChatTileItemNode: ASDisplayNode {
     private var isExtracted = false
     
     private let audioLevelDisposable = MetaDisposable()
+
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = false
     
     init(context: AccountContext) {
         self.context = context
@@ -202,7 +204,14 @@ final class VoiceChatTileItemNode: ASDisplayNode {
         self.placeholderIconNode.contentMode = .scaleAspectFit
         self.placeholderIconNode.displaysAsynchronously = false
         
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
+
         super.init()
+
+        self.addSubnode(self.hierarchyTrackingNode)
         
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
@@ -236,6 +245,13 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 return
             }
             strongSelf.updateIsExtracted(isExtracted, transition: transition)
+        }
+
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+                strongSelf.highlightNode.isCurrentlyInHierarchy = value
+            }
         }
     }
     
@@ -413,7 +429,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             
             var showPlaceholder = false
             if item.isVideoLimit {
-                self.placeholderTextNode.attributedText = NSAttributedString(string: item.strings.VoiceChat_VideoParticipantsLimitExceeded(String(item.videoLimit)).0, font: Font.semibold(13.0), textColor: .white)
+                self.placeholderTextNode.attributedText = NSAttributedString(string: item.strings.VoiceChat_VideoParticipantsLimitExceeded(String(item.videoLimit)).string, font: Font.semibold(13.0), textColor: .white)
                 self.placeholderIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/VideoUnavailable"), color: .white)
                 showPlaceholder = true
             } else if item.isOwnScreencast {
@@ -635,9 +651,14 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
     private let maskLayer = CALayer()
     
     private let foregroundGradientLayer = CAGradientLayer()
-    
-    private let hierarchyTrackingNode: HierarchyTrackingNode
-    private var isCurrentlyInHierarchy = false
+
+    var isCurrentlyInHierarchy = false {
+        didSet {
+            if self.isCurrentlyInHierarchy != oldValue && self.isCurrentlyInHierarchy {
+                self.updateAnimations()
+            }
+        }
+    }
     
     private var audioLevel: CGFloat = 0.0
     private var presentationAudioLevel: CGFloat = 0.0
@@ -651,27 +672,13 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
         self.foregroundGradientLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
         self.foregroundGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
         
-        var updateInHierarchy: ((Bool) -> Void)?
-        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
-            updateInHierarchy?(value)
-        })
-        
         super.init()
-        
-        updateInHierarchy = { [weak self] value in
-            if let strongSelf = self {
-                strongSelf.isCurrentlyInHierarchy = value
-                strongSelf.updateAnimations()
-            }
-        }
         
         self.displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
             guard let strongSelf = self else { return }
             
             strongSelf.presentationAudioLevel = strongSelf.presentationAudioLevel * 0.9 + strongSelf.audioLevel * 0.1
         }
-        
-        self.addSubnode(self.hierarchyTrackingNode)
     }
     
     override func didLoad() {
@@ -734,8 +741,11 @@ class VoiceChatTileHighlightNode: ASDisplayNode {
             animation.toValue = newValue
             
             CATransaction.setCompletionBlock { [weak self] in
-                if let isCurrentlyInHierarchy = self?.isCurrentlyInHierarchy, isCurrentlyInHierarchy {
-                    self?.setupGradientAnimations()
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.isCurrentlyInHierarchy {
+                    strongSelf.setupGradientAnimations()
                 }
             }
             
@@ -920,7 +930,7 @@ private class VoiceChatTileShimmeringNode: ASDisplayNode {
         self.addSubnode(self.borderNode)
         self.borderNode.addSubnode(self.borderEffectNode)
         
-        self.backgroundNode.setSignal(peerAvatarCompleteImage(account: account, peer: peer, size: CGSize(width: 250.0, height: 250.0), round: false, font: Font.regular(16.0), drawLetters: false, fullSize: false, blurred: true))
+        self.backgroundNode.setSignal(peerAvatarCompleteImage(account: account, peer: EnginePeer(peer), size: CGSize(width: 250.0, height: 250.0), round: false, font: Font.regular(16.0), drawLetters: false, fullSize: false, blurred: true))
     }
     
     public override func didLoad() {

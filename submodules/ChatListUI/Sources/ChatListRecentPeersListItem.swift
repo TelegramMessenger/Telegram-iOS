@@ -1,11 +1,9 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ChatListSearchRecentPeersNode
 import ContextUI
@@ -15,13 +13,13 @@ class ChatListRecentPeersListItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let context: AccountContext
-    let peers: [Peer]
-    let peerSelected: (Peer) -> Void
-    let peerContextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
+    let peers: [EnginePeer]
+    let peerSelected: (EnginePeer) -> Void
+    let peerContextAction: (EnginePeer, ASDisplayNode, ContextGesture?) -> Void
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, context: AccountContext, peers: [Peer], peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, context: AccountContext, peers: [EnginePeer], peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?) -> Void) {
         self.theme = theme
         self.strings = strings
         self.context = context
@@ -154,15 +152,15 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let item = self.item {
-            return item.header
+            return item.header.flatMap { [$0] }
         } else {
             return nil
         }
     }
     
-    func viewAndPeerAtPoint(_ point: CGPoint) -> (UIView, PeerId)? {
+    func viewAndPeerAtPoint(_ point: CGPoint) -> (UIView, EnginePeer.Id)? {
         if let peersNode = self.peersNode {
             let adjustedLocation = self.convert(point, to: peersNode)
             if let result = peersNode.viewAndPeerAtPoint(adjustedLocation) {

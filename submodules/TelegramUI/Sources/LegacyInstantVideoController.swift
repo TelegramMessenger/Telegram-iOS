@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -15,16 +14,7 @@ import ImageCompression
 import LocalMediaResources
 import AppBundle
 import LegacyMediaPickerUI
-
-final class InstantVideoControllerRecordingStatus {
-    let micLevel: Signal<Float, NoError>
-    let duration: Signal<TimeInterval, NoError>
-    
-    init(micLevel: Signal<Float, NoError>, duration: Signal<TimeInterval, NoError>) {
-        self.micLevel = micLevel
-        self.duration = duration
-    }
-}
+import ChatPresentationInterfaceState
 
 final class InstantVideoController: LegacyController, StandalonePresentableController {
     private var captureController: TGVideoMessageCaptureController?
@@ -144,7 +134,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
             legacyController.view.disablesInteractiveTransitionGestureRecognizer = true
             var uploadInterface: LegacyLiveUploadInterface?
             if peerId.namespace != Namespaces.Peer.SecretChat {
-                uploadInterface = LegacyLiveUploadInterface(account: context.account)
+                uploadInterface = LegacyLiveUploadInterface(context: context)
             }
             
             var slowmodeValidUntil: Int32 = 0
@@ -198,7 +188,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                         finalDuration = adjustments.trimEndValue - adjustments.trimStartValue
                     }
                     
-                    let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()))
+                    let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()!))
                     let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
                     resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest)
                 }

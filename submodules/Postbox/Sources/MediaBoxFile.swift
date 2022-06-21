@@ -1,8 +1,7 @@
 import Foundation
 import SwiftSignalKit
-
 import Crc32
-
+import ManagedFile
 
 private final class MediaBoxFileMap {
     fileprivate(set) var sum: Int32
@@ -46,7 +45,9 @@ private final class MediaBoxFileMap {
         
         var data = Data(count: Int(4 + count * 2 * 4))
         let dataCount = data.count
-        if !(data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Bool in
+        if !(data.withUnsafeMutableBytes { rawBytes -> Bool in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
             guard fd.read(bytes, dataCount) == dataCount else {
                 return false
             }
@@ -337,8 +338,6 @@ final class MediaBoxPartialFile {
             } else {
                 assertionFailure()
             }
-        } catch {
-            assertionFailure()
         }
     }
     
@@ -364,7 +363,9 @@ final class MediaBoxPartialFile {
         assert(self.queue.isCurrent())
         
         self.fd.seek(position: Int64(offset))
-        let written = data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Int in
+        let written = data.withUnsafeBytes { rawBytes -> Int in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
             return self.fd.write(bytes.advanced(by: dataRange.lowerBound), count: dataRange.count)
         }
         assert(written == dataRange.count)
@@ -457,7 +458,8 @@ final class MediaBoxPartialFile {
             self.fd.seek(position: Int64(actualRange.lowerBound))
             var data = Data(count: actualRange.count)
             let dataCount = data.count
-            let readBytes = data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Int in
+            let readBytes = data.withUnsafeMutableBytes { rawBytes -> Int in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 return self.fd.read(bytes, dataCount)
             }
             if readBytes == data.count {
@@ -603,7 +605,15 @@ final class MediaBoxPartialFile {
             if let truncationSize = self.fileMap.truncationSize, self.fileMap.sum == truncationSize {
                 status = .Local
             } else {
-                status = .Remote
+                let progress: Float
+                if let truncationSize = self.fileMap.truncationSize, truncationSize != 0 {
+                    progress = Float(self.fileMap.sum) / Float(truncationSize)
+                } else if let size = size {
+                    progress = Float(self.fileMap.sum) / Float(size)
+                } else {
+                    progress = self.fileMap.progress ?? 0.0
+                }
+                status = .Remote(progress: progress)
             }
         } else {
             let progress: Float

@@ -1,10 +1,8 @@
 import Foundation
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
-import SyncCore
 
-private func suggestedUserPresenceStringRefreshTimeout(_ presence: TelegramUserPresence, relativeTo timestamp: Int32, isOnline: Bool?) -> Double {
+private func suggestedUserPresenceStringRefreshTimeout(_ presence: EnginePeer.Presence, relativeTo timestamp: Int32, isOnline: Bool?) -> Double {
     switch presence.status {
     case let .present(statusTimestamp):
         if statusTimestamp >= timestamp {
@@ -30,7 +28,7 @@ private func suggestedUserPresenceStringRefreshTimeout(_ presence: TelegramUserP
         } else {
             return Double.infinity
         }
-    case .none, .lastWeek, .lastMonth:
+    case .longTimeAgo, .lastWeek, .lastMonth:
         return Double.infinity
     }
 }
@@ -47,7 +45,7 @@ public final class PeerPresenceStatusManager {
         self.timer?.invalidate()
     }
     
-    public func reset(presence: TelegramUserPresence, isOnline: Bool? = nil) {
+    public func reset(presence: EnginePeer.Presence, isOnline: Bool? = nil) {
         self.timer?.invalidate()
         self.timer = nil
         

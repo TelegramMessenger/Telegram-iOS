@@ -2,8 +2,6 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
-import Postbox
 import TelegramUIPreferences
 
 import TgVoip
@@ -20,8 +18,19 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
 
 private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection) -> [OngoingCallConnectionDescriptionWebrtc] {
     switch connection {
-    case .reflector:
+    case let .reflector(reflector):
+        #if DEBUG
+        var result: [OngoingCallConnectionDescriptionWebrtc] = []
+        if !reflector.ip.isEmpty {
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+        }
+        if !reflector.ipv6.isEmpty {
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+        }
+        return result
+        #else
         return []
+        #endif
     case let .webRtcReflector(reflector):
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
@@ -253,20 +262,7 @@ private func ongoingDataSavingForTypeWebrtc(_ type: VoiceCallDataSaving) -> Ongo
     }
 }
 
-/*private func ongoingDataSavingForTypeWebrtcCustom(_ type: VoiceCallDataSaving) -> OngoingCallDataSavingWebrtcCustom {
-    switch type {
-        case .never:
-            return .never
-        case .cellular:
-            return .cellular
-        case .always:
-            return .always
-        default:
-            return .never
-    }
-}*/
-
-private protocol OngoingCallThreadLocalContextProtocol: class {
+private protocol OngoingCallThreadLocalContextProtocol: AnyObject {
     func nativeSetNetworkType(_ type: NetworkType)
     func nativeSetIsMuted(_ value: Bool)
     func nativeSetIsLowBatteryLevel(_ value: Bool)
@@ -278,6 +274,7 @@ private protocol OngoingCallThreadLocalContextProtocol: class {
     func nativeDebugInfo() -> String
     func nativeVersion() -> String
     func nativeGetDerivedState() -> Data
+    func addExternalAudioData(data: Data)
 }
 
 private final class OngoingCallThreadLocalContextHolder {
@@ -329,6 +326,9 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
     
     func nativeGetDerivedState() -> Data {
         return self.getDerivedState()
+    }
+
+    func addExternalAudioData(data: Data) {
     }
 }
 
@@ -451,6 +451,27 @@ public final class OngoingCallVideoCapturer {
         }
         self.impl.submitPixelBuffer(pixelBuffer, rotation: videoRotation.orientation)
     }
+
+    public func video() -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
+        let queue = Queue.mainQueue()
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+
+            queue.async {
+                guard let strongSelf = self else {
+                    return
+                }
+                let innerDisposable = strongSelf.impl.addVideoOutput { videoFrameData in
+                    subscriber.putNext(OngoingGroupCallContext.VideoFrameData(frameData: videoFrameData))
+                }
+                disposable.set(ActionDisposable {
+                    innerDisposable.dispose()
+                })
+            }
+
+            return disposable
+        }
+    }
 }
 
 extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProtocol {
@@ -496,6 +517,10 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
     
     func nativeGetDerivedState() -> Data {
         return self.getDerivedState()
+    }
+
+    func addExternalAudioData(data: Data) {
+        self.addExternalAudioData(data)
     }
 }
 
@@ -566,8 +591,6 @@ extension OngoingCallVideoOrientation {
             return .orientation180
         case  .rotation270:
             return .orientation270
-        @unknown default:
-            return .orientation0
         }
     }
 }
@@ -657,8 +680,8 @@ public final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    private let tempLogFile: TempBoxFile
-    private let tempStatsLogFile: TempBoxFile
+    private let tempLogFile: EngineTempBoxFile
+    private let tempStatsLogFile: EngineTempBoxFile
     
     public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
         var result: [(version: String, supportsVideo: Bool)] = [(OngoingCallThreadLocalContext.version(), false)]
@@ -674,15 +697,20 @@ public final class OngoingCallContext {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
+        #if DEBUG
+        let version = "4.1.2"
+        let allowP2P = false
+        #endif
+        
         self.internalId = internalId
         self.account = account
         self.callSessionManager = callSessionManager
         self.logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
         let logPath = self.logPath
-        self.tempLogFile = TempBox.shared.tempFile(fileName: "CallLog.txt")
+        self.tempLogFile = EngineTempBox.shared.tempFile(fileName: "CallLog.txt")
         let tempLogPath = self.tempLogFile.path
         
-        self.tempStatsLogFile = TempBox.shared.tempFile(fileName: "CallStats.json")
+        self.tempStatsLogFile = EngineTempBox.shared.tempFile(fileName: "CallStats.json")
         let tempStatsLogPath = self.tempStatsLogFile.path
         
         let queue = self.queue
@@ -715,6 +743,18 @@ public final class OngoingCallContext {
                         processedConnections.append(connection)
                         filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection))
                     }
+                    
+                    /*#if DEBUG
+                    filteredConnections.removeAll()
+                    filteredConnections.append(OngoingCallConnectionDescriptionWebrtc(
+                        connectionId: 1,
+                        hasStun: true,
+                        hasTurn: true, ip: "178.62.7.192",
+                        port: 1400,
+                        username: "user",
+                        password: "user")
+                    )
+                    #endif*/
                     
                     let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: tempLogPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
@@ -903,9 +943,17 @@ public final class OngoingCallContext {
                 
                 if let callId = callId, !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8) {
                     debugLogValue.set(.single(dataString))
-                    if sendDebugLogs {
-                        let _ = TelegramEngine(account: self.account).calls.saveCallDebugLog(callId: callId, log: dataString).start()
-                    }
+                    let engine = TelegramEngine(account: self.account)
+                    let _ = engine.calls.saveCallDebugLog(callId: callId, log: dataString).start(next: { result in
+                        switch result {
+                        case .sendFullLog:
+                            if !logPath.isEmpty {
+                                let _ = engine.calls.saveCompleteCallDebugLog(callId: callId, logPath: logPath).start()
+                            }
+                        case .done:
+                            break
+                        }
+                    })
                 }
             }
             let derivedState = context.nativeGetDerivedState()
@@ -1004,6 +1052,12 @@ public final class OngoingCallContext {
             } else {
                 completion(nil)
             }
+        }
+    }
+
+    public func addExternalAudioData(data: Data) {
+        self.withContext { context in
+            context.addExternalAudioData(data: data)
         }
     }
 }

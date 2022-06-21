@@ -106,10 +106,7 @@ const CGFloat TGPhotoEditorToolButtonsViewSize = 53;
     for (NSString *title in possibleButtonTitles)
     {
         CGFloat width = 0.0f;
-        if ([title respondsToSelector:@selector(sizeWithAttributes:)])
-            width = CGCeil([title sizeWithAttributes:@{ NSFontAttributeName:TGSystemFontOfSize(17) }].width - 1);
-        else
-            width = CGCeil([title sizeWithFont:TGSystemFontOfSize(17)].width - 1);
+        width = CGCeil([title sizeWithAttributes:@{ NSFontAttributeName:TGSystemFontOfSize(17) }].width - 1);
         
         if (width > maxWidth)
             maxWidth = width;

@@ -1,5 +1,4 @@
 import Foundation
-import SyncCore
 
 extension SecretChatFileReference {
     func resource(key: SecretFileEncryptionKey, decryptedSize: Int32) -> SecretFileMediaResource {

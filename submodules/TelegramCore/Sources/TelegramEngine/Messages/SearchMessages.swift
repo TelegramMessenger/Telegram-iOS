@@ -4,13 +4,13 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 public enum SearchMessagesLocation: Equatable {
     case general(tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
     case group(groupId: PeerGroupId, tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?, topMsgId: MessageId?, minDate: Int32?, maxDate: Int32?)
     case publicForwards(messageId: MessageId, datacenterId: Int?)
+    case sentMedia(tags: MessageTags?)
 }
 
 private struct SearchMessagesPeerState: Equatable {
@@ -338,7 +338,21 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                 |> `catch` { _ -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                     return .single((nil, nil))
                 }
-        }
+            }
+        case let .sentMedia(tags):
+            let filter: Api.MessagesFilter = tags.flatMap { messageFilterForTagMask($0) } ?? .inputMessagesFilterEmpty
+        
+            let peerMessages: Signal<Api.messages.Messages?, NoError>
+            if let completed = state?.main.completed, completed {
+                peerMessages = .single(nil)
+            } else {
+                peerMessages = account.network.request(Api.functions.messages.searchSentMedia(q: query, filter: filter, limit: limit))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                    return .single(nil)
+                }
+            }
+            remoteSearchResult = combineLatest(peerMessages, .single(nil))
     }
     
     return remoteSearchResult
@@ -459,7 +473,6 @@ func _internal_downloadMessage(postbox: Postbox, network: Network, messageId: Me
                 }
             }
             |> `catch` { _ -> Signal<Message?, NoError> in
-                return .single(nil)
             }
         }
     }
@@ -558,7 +571,6 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
         }
     }
     |> `catch` { _ -> Signal<Message?, NoError> in
-        return .single(nil)
     }
 }
 

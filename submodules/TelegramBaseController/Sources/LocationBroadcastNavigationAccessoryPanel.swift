@@ -3,8 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
-import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
@@ -21,7 +19,7 @@ enum LocationBroadcastNavigationAccessoryPanelMode {
 }
 
 final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
-    private let accountPeerId: PeerId
+    private let accountPeerId: EnginePeer.Id
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var nameDisplayOrder: PresentationPersonNameOrder
@@ -39,9 +37,9 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     private let separatorNode: ASDisplayNode
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
-    private var peersAndMode: ([Peer], LocationBroadcastNavigationAccessoryPanelMode, Bool)?
+    private var peersAndMode: ([EnginePeer], LocationBroadcastNavigationAccessoryPanelMode, Bool)?
     
-    init(accountPeerId: PeerId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, tapAction: @escaping () -> Void, close: @escaping () -> Void) {
+    init(accountPeerId: EnginePeer.Id, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, tapAction: @escaping () -> Void, close: @escaping () -> Void) {
         self.accountPeerId = accountPeerId
         self.theme = theme
         self.strings = strings
@@ -119,7 +117,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
                 case .summary:
                     let text: String
                     if peers.count == 1 {
-                        text = self.strings.DialogList_LiveLocationSharingTo(peers[0].displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)).0
+                        text = self.strings.DialogList_LiveLocationSharingTo(peers[0].displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)).string
                     } else {
                         text = self.strings.DialogList_LiveLocationChatsCount(Int32(peers.count))
                     }
@@ -140,7 +138,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
                         }
                         let rawText: String
                         if filteredPeers.count != peers.count {
-                            rawText = self.strings.Conversation_LiveLocationYouAndOther(otherString).0
+                            rawText = self.strings.Conversation_LiveLocationYouAndOther(otherString).string
                         } else {
                             rawText = otherString
                         }
@@ -179,7 +177,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel)))
     }
     
-    func update(peers: [Peer], mode: LocationBroadcastNavigationAccessoryPanelMode, canClose: Bool) {
+    func update(peers: [EnginePeer], mode: LocationBroadcastNavigationAccessoryPanelMode, canClose: Bool) {
         self.peersAndMode = (peers, mode, canClose)
         if let layout = validLayout {
             self.updateLayout(size: layout.0, leftInset: layout.1, rightInset: layout.2, transition: .immediate)

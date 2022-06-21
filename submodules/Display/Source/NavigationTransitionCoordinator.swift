@@ -34,7 +34,7 @@ final class NavigationTransitionCoordinator {
         }
     }
     
-    private let container: ASDisplayNode
+    private let container: NavigationContainer
     private let transition: NavigationTransition
     let isInteractive: Bool
     let topNode: ASDisplayNode
@@ -51,7 +51,7 @@ final class NavigationTransitionCoordinator {
     private var currentCompletion: (() -> Void)?
     private var didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)?
     
-    init(transition: NavigationTransition, isInteractive: Bool, container: ASDisplayNode, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil) {
+    init(transition: NavigationTransition, isInteractive: Bool, container: NavigationContainer, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil) {
         self.transition = transition
         self.isInteractive = isInteractive
         self.container = container
@@ -125,7 +125,11 @@ final class NavigationTransitionCoordinator {
         
         var dimInset: CGFloat = 0.0
         if let bottomNavigationBar = self.bottomNavigationBar , self.inlineNavigationBarTransition {
-            dimInset = bottomNavigationBar.frame.maxY
+            if self.bottomNavigationBar?.isBackgroundVisible == false || self.topNavigationBar?.isBackgroundVisible == false {
+                
+            } else {
+                dimInset = bottomNavigationBar.frame.maxY
+            }
         }
         
         let containerSize = self.container.bounds.size
@@ -143,7 +147,7 @@ final class NavigationTransitionCoordinator {
             }
         })
         canInvokeCompletion = true
-        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: dimInset), size: CGSize(width: max(0.0, topFrame.minX), height: self.container.bounds.size.height - dimInset)))
+        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: dimInset), size: CGSize(width: max(0.0, topFrame.minX + self.container.overflowInset), height: self.container.bounds.size.height - dimInset)))
         transition.updateFrame(node: self.shadowNode, frame: CGRect(origin: CGPoint(x: self.dimNode.frame.maxX - shadowWidth, y: dimInset), size: CGSize(width: shadowWidth, height: containerSize.height - dimInset)))
         transition.updateAlpha(node: self.dimNode, alpha: (1.0 - position) * 0.15)
         transition.updateAlpha(node: self.shadowNode, alpha: (1.0 - position) * 0.9)

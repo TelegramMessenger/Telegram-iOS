@@ -3,8 +3,6 @@ import UIKit
 import LegacyComponents
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
-import Postbox
 import SSignalKit
 import UIKit
 import Display
@@ -13,6 +11,7 @@ import AccountContext
 import PhotoResources
 import LegacyUI
 import LegacyMediaPickerUI
+import Postbox
 
 class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem {
     var isVideo: Bool {
@@ -56,8 +55,8 @@ class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem 
     func thumbnailImageSignal() -> SSignal! {
         return SSignal(generator: { subscriber -> SDisposable? in
             let disposable = self.thumbnailImage.start(next: { image in
-                subscriber?.putNext(image)
-                subscriber?.putCompletion()
+                subscriber.putNext(image)
+                subscriber.putCompletion()
             })
             
             return SBlockDisposable(block: {
@@ -70,17 +69,17 @@ class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem 
         return SSignal { subscriber in
             let imageDisposable = self.originalImage.start(next: { image in
                 if !image.degraded() {
-                    subscriber?.putNext(1.0)
+                    subscriber.putNext(1.0)
                 }
-                subscriber?.putNext(image)
+                subscriber.putNext(image)
                 if !image.degraded() {
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 }
             })
             
             let progressDisposable = (self.progress
             |> deliverOnMainQueue).start(next: { next in
-                subscriber?.putNext(next)
+                subscriber.putNext(next)
             })
             
             return SBlockDisposable {
@@ -97,9 +96,9 @@ class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem 
     func originalImageSignal(_ position: TimeInterval) -> SSignal! {
         return SSignal(generator: { subscriber -> SDisposable? in
             let disposable = self.originalImage.start(next: { image in
-                subscriber?.putNext(image)
+                subscriber.putNext(image)
                 if !image.degraded() {
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 }
             })
             
@@ -150,7 +149,7 @@ private class LegacyWebSearchGalleryItem: TGModernGalleryImageItem, TGModernGall
 }
 
 private class LegacyWebSearchGalleryItemView: TGModernGalleryImageItemView, TGModernGalleryEditableItemView {
-    private let readyForTransition = SVariable()!
+    private let readyForTransition = SVariable()
     
     @objc func setHiddenAsBeingEdited(_ hidden: Bool) {
         self.imageView.isHidden = hidden
@@ -163,7 +162,7 @@ private class LegacyWebSearchGalleryItemView: TGModernGalleryImageItemView, TGMo
     }
     
     override func readyForTransitionIn() -> SSignal! {
-        return self.readyForTransition.signal()!.take(1)
+        return self.readyForTransition.signal().take(1)
     }
     
     override func setItem(_ item: TGModernGalleryItem!, synchronously: Bool) {
@@ -171,7 +170,7 @@ private class LegacyWebSearchGalleryItemView: TGModernGalleryImageItemView, TGMo
             self._setItem(item)
             self.imageSize = TGFitSize(item.editableMediaItem().originalSize!, CGSize(width: 1600, height: 1600))
             
-            let signal = item.editingContext.imageSignal(for: item.editableMediaItem())?.map(toSignal: { result -> SSignal? in
+            let signal = item.editingContext.imageSignal(for: item.editableMediaItem())?.map(toSignal: { result -> SSignal in
                 if let image = result as? UIImage {
                     return SSignal.single(image)
                 } else if result == nil, let mediaItem = item.editableMediaItem() as? LegacyWebSearchItem {
@@ -181,7 +180,7 @@ private class LegacyWebSearchGalleryItemView: TGModernGalleryImageItemView, TGMo
                 }
             })
             
-            self.imageView.setSignal(signal?.deliver(on: SQueue.main())?.afterNext({ [weak self] next in
+            self.imageView.setSignal(signal?.deliver(on: SQueue.main()).afterNext({ [weak self] next in
                 if let strongSelf = self, let image = next as? UIImage {
                     strongSelf.imageSize = image.size
                     strongSelf.reset()
@@ -252,7 +251,7 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
             switch status {
                 case .Local:
                     return 1.0
-                case .Remote:
+                case .Remote, .Paused:
                     return 0.027
                 case let .Fetching(_, progress):
                     return max(progress, 0.1)
@@ -264,7 +263,7 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
             representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
         }
         representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil))
-        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+        let tmpImage = TelegramMediaImage(imageId: EngineMedia.Id(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
         thumbnailSignal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: .standalone(media: tmpImage), autoFetchFullSize: false)
         |> mapToSignal { value -> Signal<UIImage, NoError> in
             let thumbnailData = value._0
@@ -313,11 +312,14 @@ private func galleryItems(account: Account, results: [ChatContextResult], curren
     return (galleryItems, focusItem)
 }
 
-func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, chatLocation: ChatLocation?, presentationData: PresentationData, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?, present: (ViewController, Any?) -> Void) {
+func presentLegacyWebSearchGallery(context: AccountContext, peer: EnginePeer?, chatLocation: ChatLocation?, presentationData: PresentationData, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: (ViewController, Any?) -> Void) {
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
     legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
     
     let paintStickersContext = LegacyPaintStickersContext(context: context)
+    paintStickersContext.captionPanelView = {
+        return getCaptionPanelView()
+    }
     paintStickersContext.presentStickersController = { completion in
         if let presentStickers = presentStickers {
             return presentStickers({ file, animated, view, rect in
@@ -338,9 +340,6 @@ func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, chatLoc
     
     let model = TGMediaPickerGalleryModel(context: legacyController.context, items: items, focus: focusItem, selectionContext: selectionContext, editingContext: editingContext, hasCaptions: false, allowCaptionEntities: true, hasTimer: false, onlyCrop: false, inhibitDocumentCaptions: false, hasSelectionPanel: false, hasCamera: false, recipientName: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))!
     model.stickersContext = paintStickersContext
-    if let peer = peer, let chatLocation = chatLocation {
-        model.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
-    }
     controller.model = model
     model.controller = controller
     model.useGalleryImageAsEditableItemImage = true
@@ -359,9 +358,9 @@ func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, chatLoc
     model.didFinishEditingItem = { item, adjustments, result, thumbnail in
         editingContext.setImage(result, thumbnailImage: thumbnail, for: item, synchronous: true)
     }
-    model.saveItemCaption = { item, caption, entities in
-        editingContext.setCaption(caption, entities: entities, for: item)
-        if let selectionContext = selectionContext, let caption = caption, caption.count > 0, let item = item as? TGMediaSelectableItem {
+    model.saveItemCaption = { item, caption in
+        editingContext.setCaption(caption, for: item)
+        if let selectionContext = selectionContext, let caption = caption, caption.length > 0, let item = item as? TGMediaSelectableItem {
             selectionContext.setItem(item, selected: true)
         }
     }
@@ -466,7 +465,7 @@ public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionCon
                                 }
                             }
                             
-                            return legacyAssetPickerItemGenerator()(dict, nil, nil, nil, nil) as Any
+                            return legacyAssetPickerItemGenerator()(dict, nil, nil, nil) as Any
                         } else {
                             return SSignal.complete()
                         }

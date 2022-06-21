@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import FFMpegBinding
 
 public func preloadVideoResource(postbox: Postbox, resourceReference: MediaResourceReference, duration: Double) -> Signal<Never, NoError> {
@@ -21,7 +20,9 @@ public func preloadVideoResource(postbox: Postbox, resourceReference: MediaResou
             |> deliverOn(queue)
             |> mapToSignal { result -> Signal<Never, MediaFrameSourceSeekError> in
                 let result = result.syncWith({ $0 })
-                if let videoBuffer = result?.buffers.videoBuffer, let impl = source.syncWith({ $0 }) {
+                if let videoBuffer = result.buffers.videoBuffer {
+                    let impl = source.syncWith({ $0 })
+                    
                     return impl.ensureHasFrames(until: min(duration, videoBuffer.duration.seconds))
                     |> ignoreValues
                     |> castError(MediaFrameSourceSeekError.self)

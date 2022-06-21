@@ -1,7 +1,6 @@
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
@@ -37,13 +36,13 @@ private struct GroupsInCommonListEntry: Comparable, Identifiable {
     
     func item(context: AccountContext, presentationData: PresentationData, openPeer: @escaping (Peer) -> Void, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) -> ListViewItem {
         let peer = self.peer
-        return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: self.peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
+        return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: EnginePeer(self.peer), presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
             openPeer(peer)
         }, setPeerIdWithRevealedOptions: { _, _ in
         }, removePeer: { _ in
         }, contextAction: { node, gesture in
             openPeerContextAction(peer, node, gesture)
-        }, hasTopStripe: false, noInsets: true)
+        }, hasTopStripe: false, noInsets: true, noCorners: true)
     }
 }
 
@@ -78,6 +77,23 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     var isReady: Signal<Bool, NoError> {
         return self.ready.get()
     }
+
+    var status: Signal<PeerInfoStatusData?, NoError> {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        return self.groupsInCommonContext.state
+        |> map { state in
+            if let count = state.count {
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_CommonGroupCount(Int32(count)), isActivity: false, key: .groupsInCommon)
+            } else {
+                return nil
+            }
+        }
+    }
+
+    var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    var tabBarOffset: CGFloat {
+        return 0.0
+    }
         
     private var disposable: Disposable?
     
@@ -91,7 +107,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()
@@ -136,7 +152,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         }
     }
     
-    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.currentParams == nil
         self.currentParams = (size, isScrollingLockedAtTop, presentationData)
         
@@ -153,7 +169,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
             }
         }
 
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         self.listNode.scrollEnabled = !isScrollingLockedAtTop
         
@@ -170,7 +186,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
             }
         }
         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, openPeer: { [weak self] peer in
-            self?.chatControllerInteraction.openPeer(peer.id, .default, nil)
+            self?.chatControllerInteraction.openPeer(peer.id, .default, nil, nil)
         }, openPeerContextAction: { [weak self] peer, node, gesture in
             self?.openPeerContextAction(peer, node, gesture)
         })
@@ -180,7 +196,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     }
     
     private func dequeueTransaction() {
-        guard let (layout, _, _) = self.currentParams, let transaction = self.enqueuedTransactions.first else {
+        guard let _ = self.currentParams, let transaction = self.enqueuedTransactions.first else {
             return
         }
         

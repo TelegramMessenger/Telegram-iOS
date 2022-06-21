@@ -68,13 +68,15 @@ public struct GridNodeLayout: Equatable {
     public let scrollIndicatorInsets: UIEdgeInsets?
     public let preloadSize: CGFloat
     public let type: GridNodeLayoutType
+    public let cutout: CGRect?
     
-    public init(size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets? = nil, preloadSize: CGFloat, type: GridNodeLayoutType) {
+    public init(size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets? = nil, preloadSize: CGFloat, type: GridNodeLayoutType, cutout: CGRect? = nil) {
         self.size = size
         self.insets = insets
         self.scrollIndicatorInsets = scrollIndicatorInsets
         self.preloadSize = preloadSize
         self.type = type
+        self.cutout = cutout
     }
 }
 
@@ -206,7 +208,7 @@ private struct WrappedGridItemNode: Hashable {
 }
 
 open class GridNode: GridNodeScroller, UIScrollViewDelegate {
-    private var gridLayout = GridNodeLayout(size: CGSize(), insets: UIEdgeInsets(), preloadSize: 0.0, type: .fixed(itemSize: CGSize(), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil))
+    public private(set) var gridLayout = GridNodeLayout(size: CGSize(), insets: UIEdgeInsets(), preloadSize: 0.0, type: .fixed(itemSize: CGSize(), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil))
     private var firstIndexInSectionOffset: Int = 0
     public private(set) var items: [GridItem] = []
     private var itemNodes: [Int: GridItemNode] = [:]
@@ -242,11 +244,15 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             self.scrollView.indicatorStyle = self.indicatorStyle
         }
     }
-    
+        
     public private(set) var opaqueState: Any?
     
     public override init() {
         super.init()
+        
+        if #available(iOS 11.0, *) {
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+        }
         
         self.scrollView.showsVerticalScrollIndicator = false
         self.scrollView.showsHorizontalScrollIndicator = false
@@ -511,7 +517,6 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                             keepSection = false
                         }
                         
-                    
                         if !previousFillsRow && item.fillsRowWithDynamicHeight != nil {
                             keepSection = false
                         }
@@ -553,6 +558,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                             if nextItemOriginX + itemSize.width > self.gridLayout.size.width - itemInsets.right && remainingWidth > 0.0 {
                                 itemSize.width += remainingWidth
                             }
+                        }
+                        
+                        if let cutout = self.gridLayout.cutout, cutout.intersects(CGRect(origin: nextItemOrigin, size: itemSize)) {
+                            nextItemOrigin.x += cutout.width + itemSpacing
                         }
                         
                         if !incrementedCurrentRow {

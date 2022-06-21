@@ -2,7 +2,6 @@
 
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
-@class TGSuggestionContext;
 
 @protocol TGPhotoPaintStickersContext;
 
@@ -20,7 +19,6 @@
 
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 
 @property (nonatomic, copy) void (^selectionChanged)(NSUInteger);
@@ -29,7 +27,7 @@
 @property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
 @property (nonatomic, copy) void (^presentTimerController)(void (^)(int32_t));
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images allowGrouping:(bool)allowGrouping;
 
 - (void)setCollapsed:(bool)collapsed animated:(bool)animated;
 

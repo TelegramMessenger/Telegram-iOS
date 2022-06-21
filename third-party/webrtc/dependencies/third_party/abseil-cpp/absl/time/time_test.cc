@@ -58,8 +58,7 @@ const char kZoneAbbrRE[] = "[A-Za-z]{3,4}|[-+][0-9]{2}([0-9]{2})?";
 // timespec ts1, ts2;
 // EXPECT_THAT(ts1, TimespecMatcher(ts2));
 MATCHER_P(TimespecMatcher, ts, "") {
-  if (ts.tv_sec == arg.tv_sec && ts.tv_nsec == arg.tv_nsec)
-    return true;
+  if (ts.tv_sec == arg.tv_sec && ts.tv_nsec == arg.tv_nsec) return true;
   *result_listener << "expected: {" << ts.tv_sec << ", " << ts.tv_nsec << "} ";
   *result_listener << "actual: {" << arg.tv_sec << ", " << arg.tv_nsec << "}";
   return false;
@@ -69,8 +68,7 @@ MATCHER_P(TimespecMatcher, ts, "") {
 // timeval tv1, tv2;
 // EXPECT_THAT(tv1, TimevalMatcher(tv2));
 MATCHER_P(TimevalMatcher, tv, "") {
-  if (tv.tv_sec == arg.tv_sec && tv.tv_usec == arg.tv_usec)
-    return true;
+  if (tv.tv_sec == arg.tv_sec && tv.tv_usec == arg.tv_usec) return true;
   *result_listener << "expected: {" << tv.tv_sec << ", " << tv.tv_usec << "} ";
   *result_listener << "actual: {" << arg.tv_sec << ", " << arg.tv_usec << "}";
   return false;
@@ -103,7 +101,7 @@ TEST(Time, ValueSemantics) {
   EXPECT_EQ(a, b);
   EXPECT_EQ(a, c);
   EXPECT_EQ(b, c);
-  b = c;       // Assignment
+  b = c;  // Assignment
   EXPECT_EQ(a, b);
   EXPECT_EQ(a, c);
   EXPECT_EQ(b, c);
@@ -228,6 +226,9 @@ TEST(Time, Infinity) {
   constexpr absl::Time t = absl::UnixEpoch();  // Any finite time.
   static_assert(t < ifuture, "");
   static_assert(t > ipast, "");
+
+  EXPECT_EQ(ifuture, t + absl::InfiniteDuration());
+  EXPECT_EQ(ipast, t - absl::InfiniteDuration());
 }
 
 TEST(Time, FloorConversion) {
@@ -358,19 +359,21 @@ TEST(Time, FloorConversion) {
   const int64_t min_plus_1 = std::numeric_limits<int64_t>::min() + 1;
   EXPECT_EQ(min_plus_1, absl::ToUnixSeconds(absl::FromUnixSeconds(min_plus_1)));
   EXPECT_EQ(std::numeric_limits<int64_t>::min(),
-            absl::ToUnixSeconds(
-                absl::FromUnixSeconds(min_plus_1) - absl::Nanoseconds(1) / 2));
+            absl::ToUnixSeconds(absl::FromUnixSeconds(min_plus_1) -
+                                absl::Nanoseconds(1) / 2));
 
   // Tests flooring near positive infinity.
   EXPECT_EQ(std::numeric_limits<int64_t>::max(),
-            absl::ToUnixSeconds(absl::FromUnixSeconds(
-                std::numeric_limits<int64_t>::max()) + absl::Nanoseconds(1) / 2));
+            absl::ToUnixSeconds(
+                absl::FromUnixSeconds(std::numeric_limits<int64_t>::max()) +
+                absl::Nanoseconds(1) / 2));
   EXPECT_EQ(std::numeric_limits<int64_t>::max(),
             absl::ToUnixSeconds(
                 absl::FromUnixSeconds(std::numeric_limits<int64_t>::max())));
   EXPECT_EQ(std::numeric_limits<int64_t>::max() - 1,
-            absl::ToUnixSeconds(absl::FromUnixSeconds(
-                std::numeric_limits<int64_t>::max()) - absl::Nanoseconds(1) / 2));
+            absl::ToUnixSeconds(
+                absl::FromUnixSeconds(std::numeric_limits<int64_t>::max()) -
+                absl::Nanoseconds(1) / 2));
 }
 
 TEST(Time, RoundtripConversion) {
@@ -1045,15 +1048,15 @@ TEST(Time, ConversionSaturation) {
 
   // Checks how TimeZone::At() saturates on infinities.
   auto ci = utc.At(absl::InfiniteFuture());
-  EXPECT_CIVIL_INFO(ci, std::numeric_limits<int64_t>::max(), 12, 31, 23,
-                            59, 59, 0, false);
+  EXPECT_CIVIL_INFO(ci, std::numeric_limits<int64_t>::max(), 12, 31, 23, 59, 59,
+                    0, false);
   EXPECT_EQ(absl::InfiniteDuration(), ci.subsecond);
   EXPECT_EQ(absl::Weekday::thursday, absl::GetWeekday(ci.cs));
   EXPECT_EQ(365, absl::GetYearDay(ci.cs));
   EXPECT_STREQ("-00", ci.zone_abbr);  // artifact of TimeZone::At()
   ci = utc.At(absl::InfinitePast());
-  EXPECT_CIVIL_INFO(ci, std::numeric_limits<int64_t>::min(), 1, 1, 0, 0,
-                            0, 0, false);
+  EXPECT_CIVIL_INFO(ci, std::numeric_limits<int64_t>::min(), 1, 1, 0, 0, 0, 0,
+                    false);
   EXPECT_EQ(-absl::InfiniteDuration(), ci.subsecond);
   EXPECT_EQ(absl::Weekday::sunday, absl::GetWeekday(ci.cs));
   EXPECT_EQ(1, absl::GetYearDay(ci.cs));
@@ -1067,7 +1070,8 @@ TEST(Time, ConversionSaturation) {
   EXPECT_EQ("292277026596-12-04T15:30:07+00:00",
             absl::FormatTime(absl::RFC3339_full, t, utc));
   EXPECT_EQ(
-      absl::UnixEpoch() + absl::Seconds(std::numeric_limits<int64_t>::max()), t);
+      absl::UnixEpoch() + absl::Seconds(std::numeric_limits<int64_t>::max()),
+      t);
 
   // Checks that we can also get the maximal Time value for a far-east zone.
   const absl::TimeZone plus14 = absl::FixedTimeZone(14 * 60 * 60);
@@ -1075,7 +1079,8 @@ TEST(Time, ConversionSaturation) {
   EXPECT_EQ("292277026596-12-05T05:30:07+14:00",
             absl::FormatTime(absl::RFC3339_full, t, plus14));
   EXPECT_EQ(
-      absl::UnixEpoch() + absl::Seconds(std::numeric_limits<int64_t>::max()), t);
+      absl::UnixEpoch() + absl::Seconds(std::numeric_limits<int64_t>::max()),
+      t);
 
   // One second later should push us to infinity.
   t = absl::FromCivil(absl::CivilSecond(292277026596, 12, 4, 15, 30, 8), utc);
@@ -1089,7 +1094,8 @@ TEST(Time, ConversionSaturation) {
   EXPECT_EQ("-292277022657-01-27T08:29:52+00:00",
             absl::FormatTime(absl::RFC3339_full, t, utc));
   EXPECT_EQ(
-      absl::UnixEpoch() + absl::Seconds(std::numeric_limits<int64_t>::min()), t);
+      absl::UnixEpoch() + absl::Seconds(std::numeric_limits<int64_t>::min()),
+      t);
 
   // Checks that we can also get the minimal Time value for a far-west zone.
   const absl::TimeZone minus12 = absl::FixedTimeZone(-12 * 60 * 60);
@@ -1098,7 +1104,8 @@ TEST(Time, ConversionSaturation) {
   EXPECT_EQ("-292277022657-01-26T20:29:52-12:00",
             absl::FormatTime(absl::RFC3339_full, t, minus12));
   EXPECT_EQ(
-      absl::UnixEpoch() + absl::Seconds(std::numeric_limits<int64_t>::min()), t);
+      absl::UnixEpoch() + absl::Seconds(std::numeric_limits<int64_t>::min()),
+      t);
 
   // One second before should push us to -infinity.
   t = absl::FromCivil(absl::CivilSecond(-292277022657, 1, 27, 8, 29, 51), utc);
@@ -1171,14 +1178,13 @@ TEST(Time, LegacyDateTime) {
   const int kMin = std::numeric_limits<int>::min();
   absl::Time t;
 
-  t = absl::FromDateTime(std::numeric_limits<absl::civil_year_t>::max(),
-                         kMax, kMax, kMax, kMax, kMax, utc);
+  t = absl::FromDateTime(std::numeric_limits<absl::civil_year_t>::max(), kMax,
+                         kMax, kMax, kMax, kMax, utc);
   EXPECT_EQ("infinite-future",
             absl::FormatTime(ymdhms, t, utc));  // no overflow
-  t = absl::FromDateTime(std::numeric_limits<absl::civil_year_t>::min(),
-                         kMin, kMin, kMin, kMin, kMin, utc);
-  EXPECT_EQ("infinite-past",
-            absl::FormatTime(ymdhms, t, utc));  // no overflow
+  t = absl::FromDateTime(std::numeric_limits<absl::civil_year_t>::min(), kMin,
+                         kMin, kMin, kMin, kMin, utc);
+  EXPECT_EQ("infinite-past", absl::FormatTime(ymdhms, t, utc));  // no overflow
 
   // Check normalization.
   EXPECT_TRUE(absl::ConvertDateTime(2013, 10, 32, 8, 30, 0, utc).normalized);
