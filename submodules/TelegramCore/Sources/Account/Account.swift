@@ -1195,6 +1195,12 @@ public class Account {
             self?.restartConfigurationUpdates()
         }
         self.restartConfigurationUpdates()
+        
+        /*#if DEBUG
+        self.managedOperationsDisposable.add(debugFetchAllStickers(account: self).start(completed: {
+            print("debugFetchAllStickers done")
+        }))
+        #endif*/
     }
     
     deinit {
