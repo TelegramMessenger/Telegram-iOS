@@ -35,7 +35,7 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     public enum RestoreState {
-        case succeed
+        case succeed(Bool)
         case failed
     }
     
@@ -61,7 +61,7 @@ public final class InAppPurchaseManager: NSObject {
     private let premiumProductId: String
     
     private var products: [Product] = []
-    private var productsPromise = Promise<[Product]>()
+    private var productsPromise = Promise<[Product]>([])
     private var productRequest: SKProductsRequest?
     
     private let stateQueue = Queue()
@@ -290,16 +290,28 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
         Queue.mainQueue().async {
             if let onRestoreCompletion = self.onRestoreCompletion {
                 Logger.shared.log("InAppPurchaseManager", "Transactions restoration finished")
-                onRestoreCompletion(.succeed)
                 self.onRestoreCompletion = nil
                 
                 if let receiptData = getReceiptData() {
                     self.disposableSet.set(
-                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, restore: true).start(completed: {
+                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, restore: true).start(error: { error in
+                            Queue.mainQueue().async {
+                                if case .serverProvided = error {
+                                    onRestoreCompletion(.succeed(true))
+                                } else {
+                                    onRestoreCompletion(.succeed(false))
+                                }
+                            }
+                        }, completed: {
+                            Queue.mainQueue().async {
+                                onRestoreCompletion(.succeed(false))
+                            }
                             Logger.shared.log("InAppPurchaseManager", "Sent restored receipt")
                         }),
                         forKey: "restore"
                     )
+                } else {
+                    onRestoreCompletion(.succeed(false))
                 }
             }
         }

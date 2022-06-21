@@ -7,6 +7,7 @@ import TelegramApi
 public enum AssignAppStoreTransactionError {
     case generic
     case timeout
+    case serverProvided
 }
 
 func _internal_sendAppStoreReceipt(account: Account, receipt: Data, restore: Bool) -> Signal<Never, AssignAppStoreTransactionError> {
@@ -15,8 +16,12 @@ func _internal_sendAppStoreReceipt(account: Account, receipt: Data, restore: Boo
         flags |= (1 << 0)
     }
     return account.network.request(Api.functions.payments.assignAppStoreTransaction(flags: flags, receipt: Buffer(data: receipt)))
-    |> mapError { _ -> AssignAppStoreTransactionError in
-        return .generic
+    |> mapError { error -> AssignAppStoreTransactionError in
+        if error.errorCode == 406 {
+            return .serverProvided
+        } else {
+            return .generic
+        }
     }
     |> mapToSignal { updates -> Signal<Never, AssignAppStoreTransactionError> in
         account.stateManager.addUpdates(updates)
