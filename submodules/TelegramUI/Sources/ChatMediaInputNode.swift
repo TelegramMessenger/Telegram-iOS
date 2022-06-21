@@ -365,7 +365,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
                 }
             }
             
-            if let cloudPremiumStickers = cloudPremiumStickers {
+            if let cloudPremiumStickers = cloudPremiumStickers, existingStickerIds.isEmpty {
                 for i in 0 ..< cloudPremiumStickers.items.count {
                     if let item = cloudPremiumStickers.items[i].contents.get(RecentMediaItem.self) {
                         let file = item.media
