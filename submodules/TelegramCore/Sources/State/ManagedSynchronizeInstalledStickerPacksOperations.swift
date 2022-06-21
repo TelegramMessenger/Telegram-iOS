@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
-import GZip
 
 private final class ManagedSynchronizeInstalledStickerPacksOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]
@@ -374,7 +373,7 @@ private func synchronizeInstalledStickerPacks(transaction: Transaction, postbox:
     }
 }
 
-#if DEBUG
+/*#if DEBUG
 
 func debugFetchAllStickers(account: Account) -> Signal<Never, NoError> {
     let orderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers]
@@ -427,7 +426,7 @@ func debugFetchAllStickers(account: Account) -> Signal<Never, NoError> {
     }
 }
 
-#endif
+#endif*/
 
 private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, namespace: SynchronizeInstalledStickerPacksOperationNamespace, operation: SynchronizeInstalledStickerPacksOperation) -> Signal<Void, NoError> {
     let collectionNamespace: ItemCollectionId.Namespace
