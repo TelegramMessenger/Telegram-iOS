@@ -132,9 +132,9 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         }
         
         let videoContent = NativeVideoContent(
-            id: .message(1, MediaId(namespace: 0, id: Int64.random(in: 0..<Int64.max))),
+            id: .message(0, MediaId(namespace: 0, id: Int64.random(in: 0..<Int64.max))),
             fileReference: .standalone(media: file),
-            streamVideo: .conservative,
+            streamVideo: .none,
             loopVideo: true,
             enableSound: false,
             fetchAutomatically: true,
@@ -148,6 +148,8 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         (videoNode.decoration as? VideoDecoration)?.updateCorners(ImageCorners(topLeft: .Corner(17.0), topRight: .Corner(17.0), bottomLeft: .Corner(0.0), bottomRight: .Corner(0.0)))
         
         self.offsetContainer.addSubnode(videoNode)
+        
+        videoNode.play()
     }
     
     override func didLoad() {
