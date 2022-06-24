@@ -3,6 +3,7 @@ import UIKit
 import SceneKit
 import Display
 import AppBundle
+import LegacyComponents
 
 final class FasterStarsView: UIView, PhoneDemoDecorationView {
     private let sceneView: SCNView
@@ -55,23 +56,37 @@ final class FasterStarsView: UIView, PhoneDemoDecorationView {
         }
         self.playing = true
         
-        let speedAnimation = CABasicAnimation(keyPath: "speedFactor")
-        speedAnimation.fromValue = 1.0
-        speedAnimation.toValue = 1.8
+        let speedAnimation = POPBasicAnimation()
+        speedAnimation.property = (POPAnimatableProperty.property(withName: "speedFactor", initializer: { property in
+            property?.readBlock = { particleSystem, values in
+                values?.pointee = (particleSystem as! SCNParticleSystem).speedFactor
+            }
+            property?.writeBlock = { particleSystem, values in
+                (particleSystem as! SCNParticleSystem).speedFactor = values!.pointee
+            }
+            property?.threshold = 0.01
+        }) as! POPAnimatableProperty)
+        speedAnimation.fromValue = 1.0 as NSNumber
+        speedAnimation.toValue = 3.0 as NSNumber
+        speedAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         speedAnimation.duration = 0.8
-        speedAnimation.fillMode = .forwards
-        particles.addAnimation(speedAnimation, forKey: "speedFactor")
+        particles.pop_add(speedAnimation, forKey: "speedFactor")
         
-        particles.speedFactor = 3.0
-        
-        let stretchAnimation = CABasicAnimation(keyPath: "stretchFactor")
-        stretchAnimation.fromValue = 0.05
-        stretchAnimation.toValue = 0.3
+        let stretchAnimation = POPBasicAnimation()
+        stretchAnimation.property = (POPAnimatableProperty.property(withName: "stretchFactor", initializer: { property in
+            property?.readBlock = { particleSystem, values in
+                values?.pointee = (particleSystem as! SCNParticleSystem).stretchFactor
+            }
+            property?.writeBlock = { particleSystem, values in
+                (particleSystem as! SCNParticleSystem).stretchFactor = values!.pointee
+            }
+            property?.threshold = 0.01
+        }) as! POPAnimatableProperty)
+        stretchAnimation.fromValue = 0.05 as NSNumber
+        stretchAnimation.toValue = 0.3 as NSNumber
+        stretchAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         stretchAnimation.duration = 0.8
-        stretchAnimation.fillMode = .forwards
-        particles.addAnimation(stretchAnimation, forKey: "stretchFactor")
-        
-        particles.stretchFactor = 0.3
+        particles.pop_add(stretchAnimation, forKey: "stretchFactor")
     }
     
     func resetAnimation() {
@@ -79,24 +94,38 @@ final class FasterStarsView: UIView, PhoneDemoDecorationView {
             return
         }
         self.playing = false
-        
-        let speedAnimation = CABasicAnimation(keyPath: "speedFactor")
-        speedAnimation.fromValue = 3.0
-        speedAnimation.toValue = 1.0
+                
+        let speedAnimation = POPBasicAnimation()
+        speedAnimation.property = (POPAnimatableProperty.property(withName: "speedFactor", initializer: { property in
+            property?.readBlock = { particleSystem, values in
+                values?.pointee = (particleSystem as! SCNParticleSystem).speedFactor
+            }
+            property?.writeBlock = { particleSystem, values in
+                (particleSystem as! SCNParticleSystem).speedFactor = values!.pointee
+            }
+            property?.threshold = 0.01
+        }) as! POPAnimatableProperty)
+        speedAnimation.fromValue = 3.0 as NSNumber
+        speedAnimation.toValue = 1.0 as NSNumber
+        speedAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         speedAnimation.duration = 0.35
-        speedAnimation.fillMode = .forwards
-        particles.addAnimation(speedAnimation, forKey: "speedFactor")
+        particles.pop_add(speedAnimation, forKey: "speedFactor")
         
-        particles.speedFactor = 1.0
-        
-        let stretchAnimation = CABasicAnimation(keyPath: "stretchFactor")
-        stretchAnimation.fromValue = 0.3
-        stretchAnimation.toValue = 0.05
+        let stretchAnimation = POPBasicAnimation()
+        stretchAnimation.property = (POPAnimatableProperty.property(withName: "stretchFactor", initializer: { property in
+            property?.readBlock = { particleSystem, values in
+                values?.pointee = (particleSystem as! SCNParticleSystem).stretchFactor
+            }
+            property?.writeBlock = { particleSystem, values in
+                (particleSystem as! SCNParticleSystem).stretchFactor = values!.pointee
+            }
+            property?.threshold = 0.01
+        }) as! POPAnimatableProperty)
+        stretchAnimation.fromValue = 0.3 as NSNumber
+        stretchAnimation.toValue = 0.05 as NSNumber
+        stretchAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         stretchAnimation.duration = 0.35
-        stretchAnimation.fillMode = .forwards
-        particles.addAnimation(stretchAnimation, forKey: "stretchFactor")
-        
-        particles.stretchFactor = 0.05
+        particles.pop_add(stretchAnimation, forKey: "stretchFactor")
     }
     
     override func layoutSubviews() {
