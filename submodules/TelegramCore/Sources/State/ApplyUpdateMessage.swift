@@ -117,7 +117,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 text = updatedMessage.text
                 forwardInfo = updatedMessage.forwardInfo
             } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities, ttlPeriod) = result {
-                let (mediaValue, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
+                let (mediaValue, _, nonPremium) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
                 if let mediaValue = mediaValue {
                     media = [mediaValue]
                 } else {
@@ -138,6 +138,11 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 updatedAttributes = updatedAttributes.filter({ !($0 is AutoremoveTimeoutMessageAttribute) })
                 if let ttlPeriod = ttlPeriod {
                     updatedAttributes.append(AutoremoveTimeoutMessageAttribute(timeout: ttlPeriod, countdownBeginTime: updatedTimestamp))
+                }
+                
+                updatedAttributes = updatedAttributes.filter({ !($0 is NonPremiumMessageAttribute) })
+                if let nonPremium = nonPremium, nonPremium {
+                    updatedAttributes.append(NonPremiumMessageAttribute())
                 }
                 
                 if Namespaces.Message.allScheduled.contains(message.id.namespace) && updatedId.namespace == Namespaces.Message.Cloud {

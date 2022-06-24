@@ -90,8 +90,8 @@ public extension TelegramEngine {
             return _internal_updateTwoStepVerificationPassword(network: self.account.network, currentPassword: currentPassword, updatedPassword: updatedPassword)
         }
 
-        public func deleteAccount() -> Signal<Never, DeleteAccountError> {
-            return self.account.network.request(Api.functions.account.deleteAccount(reason: "GDPR"))
+        public func deleteAccount(reason: String) -> Signal<Never, DeleteAccountError> {
+            return self.account.network.request(Api.functions.account.deleteAccount(reason: reason))
             |> mapError { _ -> DeleteAccountError in
                 return .generic
             }

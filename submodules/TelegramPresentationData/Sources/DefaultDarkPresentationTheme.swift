@@ -378,6 +378,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         blocksBackgroundColor: UIColor(rgb: 0x000000),
         modalBlocksBackgroundColor: UIColor(rgb: 0x1c1c1d),
         plainBackgroundColor: UIColor(rgb: 0x000000),
+        modalPlainBackgroundColor: UIColor(rgb: 0x1c1c1d),
         itemPrimaryTextColor: UIColor(rgb: 0xffffff),
         itemSecondaryTextColor: UIColor(rgb: 0x98989e),
         itemDisabledTextColor: UIColor(rgb: 0x8f8f8f),

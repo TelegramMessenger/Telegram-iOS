@@ -18,7 +18,7 @@ extension BotInfo {
         switch apiBotInfo {
             case let .botInfo(_, _, description, descriptionPhoto, descriptionDocument, apiCommands, apiMenuButton):
                 let photo: TelegramMediaImage? = descriptionPhoto.flatMap(telegramMediaImageFromApiPhoto)
-                let video: TelegramMediaFile? = descriptionDocument.flatMap { telegramMediaFileFromApiDocument($0, noPremium: false) }
+                let video: TelegramMediaFile? = descriptionDocument.flatMap(telegramMediaFileFromApiDocument)
                 var commands: [BotCommand] = []
                 if let apiCommands = apiCommands {
                     commands = apiCommands.map { command in

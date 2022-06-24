@@ -696,11 +696,17 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 }
                             } else if let attach = attach {
                                 result += "?attach=\(attach)"
-                            } else if let startAttach = startAttach {
-                                if !startAttach.isEmpty {
-                                    result += "?startattach=\(startAttach)"
+                            }
+                            if let startAttach = startAttach {
+                                if attach == nil {
+                                    result += "?"
                                 } else {
-                                    result += "?startattach"
+                                    result += "&"
+                                }
+                                if !startAttach.isEmpty {
+                                    result += "startattach=\(startAttach)"
+                                } else {
+                                    result += "startattach"
                                 }
                                 if let choose = choose {
                                     result += "&choose=\(choose)"
@@ -772,15 +778,17 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     context.inAppPurchaseManager?.restorePurchases(completion: { [weak statusController] result in
                         statusController?.dismiss()
                         
-                        let text: String
+                        let text: String?
                         switch result {
-                            case .succeed:
-                                text = presentationData.strings.Premium_Restore_Success
+                            case let .succeed(serverProvided):
+                                text = serverProvided ? nil : presentationData.strings.Premium_Restore_Success
                             case .failed:
                                 text = presentationData.strings.Premium_Restore_ErrorUnknown
                         }
-                        let alertController = textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                        context.sharedContext.presentGlobalController(alertController, nil)
+                        if let text = text {
+                            let alertController = textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                            context.sharedContext.presentGlobalController(alertController, nil)
+                        }
                     })
                 }
             }

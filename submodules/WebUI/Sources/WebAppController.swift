@@ -162,7 +162,7 @@ public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) ->
     var backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
     var secondaryBackgroundColor = presentationTheme.list.blocksBackgroundColor.rgb
     if presentationTheme.list.blocksBackgroundColor.rgb == presentationTheme.list.plainBackgroundColor.rgb {
-        backgroundColor = presentationTheme.list.modalBlocksBackgroundColor.rgb
+        backgroundColor = presentationTheme.list.modalPlainBackgroundColor.rgb
         secondaryBackgroundColor = presentationTheme.list.plainBackgroundColor.rgb
     }
     return [
@@ -734,7 +734,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             var backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             var secondaryBackgroundColor = self.presentationData.theme.list.blocksBackgroundColor
             if self.presentationData.theme.list.blocksBackgroundColor.rgb == self.presentationData.theme.list.plainBackgroundColor.rgb {
-                backgroundColor = self.presentationData.theme.list.modalBlocksBackgroundColor
+                backgroundColor = self.presentationData.theme.list.modalPlainBackgroundColor
                 secondaryBackgroundColor = self.presentationData.theme.list.plainBackgroundColor
             }
             if let headerColorKey = self.headerColorKey {

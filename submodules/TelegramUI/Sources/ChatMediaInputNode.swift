@@ -295,7 +295,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         
         let filteredTrending = trendingPacks.filter { !installedPacks.contains($0.info.id) }
         if !trendingIsDismissed && !filteredTrending.isEmpty {
-            entries.append(.trendingList(theme: theme, strings: strings, packs: filteredTrending, isPremium: false))
+            entries.append(.trendingList(theme: theme, strings: strings, packs: filteredTrending, isPremium: trendingIsPremium))
         }
         
         if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
@@ -365,7 +365,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
                 }
             }
             
-            if let cloudPremiumStickers = cloudPremiumStickers {
+            if let cloudPremiumStickers = cloudPremiumStickers, existingStickerIds.isEmpty {
                 for i in 0 ..< cloudPremiumStickers.items.count {
                     if let item = cloudPremiumStickers.items[i].contents.get(RecentMediaItem.self) {
                         let file = item.media

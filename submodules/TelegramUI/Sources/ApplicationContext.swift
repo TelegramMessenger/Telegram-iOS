@@ -486,7 +486,7 @@ final class AuthorizedApplicationContext {
                     }
                     let accountId = strongSelf.context.account.id
                     let accountManager = strongSelf.context.sharedContext.accountManager
-                    let _ = (strongSelf.context.engine.auth.deleteAccount()
+                    let _ = (strongSelf.context.engine.auth.deleteAccount(reason: "GDPR")
                     |> deliverOnMainQueue).start(error: { _ in
                         guard let strongSelf = self else {
                             return
