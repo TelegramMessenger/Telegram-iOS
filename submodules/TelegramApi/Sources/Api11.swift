@@ -7,6 +7,7 @@ public extension Api {
         case messageEntityBotCommand(offset: Int32, length: Int32)
         case messageEntityCashtag(offset: Int32, length: Int32)
         case messageEntityCode(offset: Int32, length: Int32)
+        case messageEntityCustomEmoji(offset: Int32, length: Int32, stickerset: Api.InputStickerSet, documentId: Int64)
         case messageEntityEmail(offset: Int32, length: Int32)
         case messageEntityHashtag(offset: Int32, length: Int32)
         case messageEntityItalic(offset: Int32, length: Int32)
@@ -72,6 +73,15 @@ public extension Api {
                     }
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
+                    break
+                case .messageEntityCustomEmoji(let offset, let length, let stickerset, let documentId):
+                    if boxed {
+                        buffer.appendInt32(-727707947)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    stickerset.serialize(buffer, true)
+                    serializeInt64(documentId, buffer: buffer, boxed: false)
                     break
                 case .messageEntityEmail(let offset, let length):
                     if boxed {
@@ -186,6 +196,8 @@ public extension Api {
                 return ("messageEntityCashtag", [("offset", String(describing: offset)), ("length", String(describing: length))])
                 case .messageEntityCode(let offset, let length):
                 return ("messageEntityCode", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                case .messageEntityCustomEmoji(let offset, let length, let stickerset, let documentId):
+                return ("messageEntityCustomEmoji", [("offset", String(describing: offset)), ("length", String(describing: length)), ("stickerset", String(describing: stickerset)), ("documentId", String(describing: documentId))])
                 case .messageEntityEmail(let offset, let length):
                 return ("messageEntityEmail", [("offset", String(describing: offset)), ("length", String(describing: length))])
                 case .messageEntityHashtag(let offset, let length):
@@ -313,6 +325,28 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageEntity.messageEntityCode(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageEntityCustomEmoji(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.InputStickerSet?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.InputStickerSet
+            }
+            var _4: Int64?
+            _4 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageEntity.messageEntityCustomEmoji(offset: _1!, length: _2!, stickerset: _3!, documentId: _4!)
             }
             else {
                 return nil

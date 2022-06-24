@@ -192,7 +192,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     private let context: AccountContext
     private var presentationData: PresentationData
     private weak var controller: FeaturedStickersScreen?
-    private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     private var searchItemContext = StickerPaneSearchGlobalItemContext()
     
     let gridNode: GridNode
@@ -222,7 +222,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     }
     private var didSetReady: Bool = false
     
-    init(context: AccountContext, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
+    init(context: AccountContext, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.controller = controller
@@ -485,9 +485,9 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                     .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode.view, animationNode.bounds)
                                             } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), imageNode, imageNode.bounds)
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), imageNode.view, imageNode.bounds)
                                             }
                                         }
                                         f(.default)
@@ -576,7 +576,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                         menuItems = [
                             .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                 if let strongSelf = self, let peekController = strongSelf.peekController, let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                    let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
+                                    let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode.view, animationNode.bounds)
                                 }
                                 f(.default)
                             })),
@@ -789,7 +789,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
 final class FeaturedStickersScreen: ViewController {
     private let context: AccountContext
     fileprivate let highlightedPackId: ItemCollectionId?
-    private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     
     private var controllerNode: FeaturedStickersScreenNode {
         return self.displayNode as! FeaturedStickersScreenNode
@@ -805,7 +805,7 @@ final class FeaturedStickersScreen: ViewController {
     
     fileprivate var searchNavigationNode: SearchNavigationContentNode?
     
-    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil) {
         self.context = context
         self.highlightedPackId = highlightedPackId
         self.sendSticker = sendSticker
@@ -1034,7 +1034,7 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
             return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
-                interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
+                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
             return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: true, fillsRow: true, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
@@ -1080,7 +1080,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
     private var interaction: StickerPaneSearchInteraction?
     private weak var controller: FeaturedStickersScreen?
-    private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     private let itemContext: StickerPaneSearchGlobalItemContext
     
     private var theme: PresentationTheme
@@ -1115,7 +1115,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
     }
     var isActiveUpdated: (() -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, inputNodeInteraction: ChatMediaInputNodeInteraction, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, itemContext: StickerPaneSearchGlobalItemContext) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, inputNodeInteraction: ChatMediaInputNodeInteraction, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, itemContext: StickerPaneSearchGlobalItemContext) {
         self.context = context
         self.inputNodeInteraction = inputNodeInteraction
         self.controller = controller
@@ -1175,9 +1175,9 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 |> deliverOnMainQueue).start(next: { _ in
                 })
             }
-        }, sendSticker: { [weak self] file, sourceNode, sourceRect in
+        }, sendSticker: { [weak self] file, sourceView, sourceRect in
             if let strongSelf = self {
-                let _ = strongSelf.sendSticker?(file, sourceNode, sourceRect)
+                let _ = strongSelf.sendSticker?(file, sourceView, sourceRect)
             }
         }, getItemIsPreviewed: { item in
             return inputNodeInteraction.previewedStickerPackItem == .pack(item)

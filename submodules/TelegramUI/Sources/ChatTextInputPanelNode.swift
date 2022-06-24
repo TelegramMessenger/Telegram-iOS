@@ -177,7 +177,7 @@ private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPres
     return result
 }
 
-private func calculateTextFieldRealInsets(_ presentationInterfaceState: ChatPresentationInterfaceState) -> UIEdgeInsets {
+private func calculateTextFieldRealInsets(presentationInterfaceState: ChatPresentationInterfaceState, accessoryButtonsWidth: CGFloat) -> UIEdgeInsets {
     let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
     let top: CGFloat
     let bottom: CGFloat
@@ -194,7 +194,11 @@ private func calculateTextFieldRealInsets(_ presentationInterfaceState: ChatPres
         top = 0.0
         bottom = 0.0
     }
-    return UIEdgeInsets(top: 4.5 + top, left: 0.0, bottom: 5.5 + bottom, right: 0.0)
+    
+    var right: CGFloat = 0.0
+    right += accessoryButtonsWidth
+    
+    return UIEdgeInsets(top: 4.5 + top, left: 0.0, bottom: 5.5 + bottom, right: right)
 }
 
 private var currentTextInputBackgroundImage: (UIColor, UIColor, CGFloat, UIImage)?
@@ -240,6 +244,67 @@ enum ChatTextInputPanelPasteData {
     case sticker(UIImage, Bool)
 }
 
+final class CustomEmojiContainerView: UIView {
+    private let emojiViewProvider: (ChatTextInputTextCustomEmojiAttribute) -> UIView?
+    
+    private var emojiLayers: [InlineStickerItemLayer.Key: UIView] = [:]
+    
+    init(emojiViewProvider: @escaping (ChatTextInputTextCustomEmojiAttribute) -> UIView?) {
+        self.emojiViewProvider = emojiViewProvider
+        
+        super.init(frame: CGRect())
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    func update(emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
+        var nextIndexById: [Int64: Int] = [:]
+        
+        var validKeys = Set<InlineStickerItemLayer.Key>()
+        for (rect, emoji) in emojiRects {
+            let index: Int
+            if let nextIndex = nextIndexById[emoji.fileId] {
+                index = nextIndex
+            } else {
+                index = 0
+            }
+            nextIndexById[emoji.fileId] = index + 1
+            
+            let key = InlineStickerItemLayer.Key(id: emoji.fileId, index: index)
+            
+            let view: UIView
+            if let current = self.emojiLayers[key] {
+                view = current
+            } else if let newView = self.emojiViewProvider(emoji) {
+                view = newView
+                self.addSubview(newView)
+                self.emojiLayers[key] = view
+            } else {
+                continue
+            }
+            
+            let size = CGSize(width: 24.0, height: 24.0)
+            
+            view.frame = CGRect(origin: CGPoint(x: floor(rect.midX - size.width / 2.0), y: floor(rect.midY - size.height / 2.0)), size: size)
+            
+            validKeys.insert(key)
+        }
+        
+        var removeKeys: [InlineStickerItemLayer.Key] = []
+        for (key, view) in self.emojiLayers {
+            if !validKeys.contains(key) {
+                removeKeys.append(key)
+                view.removeFromSuperview()
+            }
+        }
+        for key in removeKeys {
+            self.emojiLayers.removeValue(forKey: key)
+        }
+    }
+}
+
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let clippingNode: ASDisplayNode
     var textPlaceholderNode: ImmediateTextNode
@@ -249,6 +314,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let textInputContainer: ASDisplayNode
     var textInputNode: EditableTextNode?
     var dustNode: InvisibleInkDustNode?
+    var customEmojiContainerView: CustomEmojiContainerView?
     
     let textInputBackgroundNode: ASImageNode
     private var transparentTextInputBackgroundImage: UIImage?
@@ -459,7 +525,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var touchDownGestureRecognizer: TouchDownGestureRecognizer?
     
-    private var emojiViewProvider: ((String) -> UIView)?
+    private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
     init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
@@ -667,15 +733,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textInputBackgroundNode.isUserInteractionEnabled = true
         self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
         
-        /*if let presentationContext = presentationContext {
+        if let presentationContext = presentationContext {
             self.emojiViewProvider = { [weak self, weak presentationContext] emoji in
-                guard let strongSelf = self, let presentationContext = presentationContext, let presentationInterfaceState = strongSelf.presentationInterfaceState, let context = strongSelf.context, let file = strongSelf.context?.animatedEmojiStickers[emoji]?.first?.file else {
+                guard let strongSelf = self, let presentationContext = presentationContext, let presentationInterfaceState = strongSelf.presentationInterfaceState, let context = strongSelf.context else {
                     return UIView()
                 }
                 
-                return EmojiTextAttachmentView(context: context, file: file, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12))
+                return EmojiTextAttachmentView(context: context, emoji: emoji, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12))
             }
-        }*/
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -725,25 +791,25 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         textInputNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.textInputNode = textInputNode
         
+        var accessoryButtonsWidth: CGFloat = 0.0
+        var firstButton = true
+        for (_, button) in self.accessoryItemButtons {
+            if firstButton {
+                firstButton = false
+                accessoryButtonsWidth += accessoryButtonInset
+            } else {
+                accessoryButtonsWidth += accessoryButtonSpacing
+            }
+            accessoryButtonsWidth += button.buttonWidth
+        }
+        
         if let presentationInterfaceState = self.presentationInterfaceState {
             refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
-            textInputNode.textContainerInset = calculateTextFieldRealInsets(presentationInterfaceState)
+            textInputNode.textContainerInset = calculateTextFieldRealInsets(presentationInterfaceState: presentationInterfaceState, accessoryButtonsWidth: accessoryButtonsWidth)
         }
         
         if !self.textInputContainer.bounds.size.width.isZero {
             let textInputFrame = self.textInputContainer.frame
-            
-            var accessoryButtonsWidth: CGFloat = 0.0
-            var firstButton = true
-            for (_, button) in self.accessoryItemButtons {
-                if firstButton {
-                    firstButton = false
-                    accessoryButtonsWidth += accessoryButtonInset
-                } else {
-                    accessoryButtonsWidth += accessoryButtonSpacing
-                }
-                accessoryButtonsWidth += button.buttonWidth
-            }
             
             textInputNode.frame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
             textInputNode.view.layoutIfNeeded()
@@ -1647,7 +1713,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
 
         var textInputViewRealInsets = UIEdgeInsets()
         if let presentationInterfaceState = self.presentationInterfaceState {
-            textInputViewRealInsets = calculateTextFieldRealInsets(presentationInterfaceState)
+            textInputViewRealInsets = calculateTextFieldRealInsets(presentationInterfaceState: presentationInterfaceState, accessoryButtonsWidth: accessoryButtonsWidth)
         }
         
         let textInputFrame = CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom)
@@ -1717,7 +1783,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.slowmodePlaceholderNode?.isHidden = true
         }
         
-        var nextButtonTopRight = CGPoint(x: width - rightInset - textFieldInsets.right - accessoryButtonInset, y: minimalHeight - textFieldInsets.bottom - minimalInputHeight)
+        var nextButtonTopRight = CGPoint(x: width - rightInset - textFieldInsets.right - accessoryButtonInset, y: panelHeight - textFieldInsets.bottom - minimalInputHeight)
         for (_, button) in self.accessoryItemButtons.reversed() {
             let buttonSize = CGSize(width: button.buttonWidth, height: minimalInputHeight)
             button.updateLayout(size: buttonSize)
@@ -1900,6 +1966,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
         
         var rects: [CGRect] = []
+        var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
         
         if let attributedText = textInputNode.attributedText {
             let beginning = textInputNode.textView.beginningOfDocument
@@ -1936,6 +2003,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         let endIndex = currentIndex
                         addSpoiler(startIndex: currentStartIndex, endIndex: endIndex)
                     }
+                } else if let value = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
+                    if let start = textInputNode.textView.position(from: beginning, offset: range.location), let end = textInputNode.textView.position(from: start, offset: range.length), let textRange = textInputNode.textView.textRange(from: start, to: end) {
+                        let textRects = textInputNode.textView.selectionRects(for: textRange)
+                        for textRect in textRects {
+                            customEmojiRects.append((textRect.rect, value))
+                            break
+                        }
+                    }
                 }
             })
         }
@@ -1956,6 +2031,28 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         } else if let dustNode = self.dustNode {
             dustNode.removeFromSupernode()
             self.dustNode = nil
+        }
+        
+        if !customEmojiRects.isEmpty {
+            let customEmojiContainerView: CustomEmojiContainerView
+            if let current = self.customEmojiContainerView {
+                customEmojiContainerView = current
+            } else {
+                customEmojiContainerView = CustomEmojiContainerView(emojiViewProvider: { [weak self] emoji in
+                    guard let strongSelf = self, let emojiViewProvider = strongSelf.emojiViewProvider else {
+                        return nil
+                    }
+                    return emojiViewProvider(emoji)
+                })
+                customEmojiContainerView.isUserInteractionEnabled = false
+                textInputNode.textView.addSubview(customEmojiContainerView)
+                self.customEmojiContainerView = customEmojiContainerView
+            }
+            
+            customEmojiContainerView.update(emojiRects: customEmojiRects)
+        } else if let customEmojiContainerView = self.customEmojiContainerView {
+            customEmojiContainerView.removeFromSuperview()
+            self.customEmojiContainerView = nil
         }
     }
     
@@ -2222,7 +2319,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
-        if mediaInputIsActive {
+        if mediaInputIsActive && !"".isEmpty {
             if self.actionButtons.expandMediaInputButton.alpha.isZero {
                 self.actionButtons.expandMediaInputButton.alpha = 1.0
                 if animated {
@@ -2320,9 +2417,23 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
-        self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-            return (.text, state.keyboardButtonsMessage?.id)
-        })
+        guard let interfaceInteraction = self.interfaceInteraction, let presentationInterfaceState = self.presentationInterfaceState else {
+            return
+        }
+        
+        switch presentationInterfaceState.inputMode {
+        case .text:
+            break
+        case .media:
+            break
+        case .inputButtons, .none:
+            if self.textInputNode?.textView.inputView == nil {
+                interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                    return (.text, state.keyboardButtonsMessage?.id)
+                })
+            }
+        }
+        
         self.inputMenu.activate()
     }
     
@@ -2330,9 +2441,20 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.storedInputLanguage = editableTextNode.textInputMode.primaryLanguage
         self.inputMenu.deactivate()
         
-        if let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil {
-            self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { _ in
-                return (.inputButtons, nil)
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            if let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil, presentationInterfaceState.keyboardButtonsMessage != nil {
+                self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { _ in
+                    return (.inputButtons, nil)
+                }
+            } else {
+                switch presentationInterfaceState.inputMode {
+                case .text, .media:
+                    self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { _ in
+                        return (.none, nil)
+                    }
+                default:
+                    break
+                }
             }
         }
     }
@@ -2696,6 +2818,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         self.textInputNode?.becomeFirstResponder()
+    }
+    
+    func backwardsDeleteText() {
+        guard let textInputNode = self.textInputNode else {
+            return
+        }
+        textInputNode.textView.deleteBackward()
     }
     
     @objc func expandButtonPressed() {

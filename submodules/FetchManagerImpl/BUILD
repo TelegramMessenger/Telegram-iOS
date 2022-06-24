@@ -16,6 +16,7 @@ swift_library(
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/AccountContext:AccountContext",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/Utils/RangeSet:RangeSet",
     ],
     visibility = [
         "//visibility:public",

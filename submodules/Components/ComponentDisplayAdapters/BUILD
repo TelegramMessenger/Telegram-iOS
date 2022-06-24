@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "EmojiKeyboard",
-    module_name = "EmojiKeyboard",
+    name = "ComponentDisplayAdapters",
+    module_name = "ComponentDisplayAdapters",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -11,6 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/Display:Display",
+        "//submodules/ComponentFlow:ComponentFlow",
     ],
     visibility = [
         "//visibility:public",

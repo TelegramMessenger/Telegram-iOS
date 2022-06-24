@@ -282,10 +282,12 @@ swift_library(
         "//submodules/TelegramUI/Components/AudioWaveformComponent:AudioWaveformComponent",
         "//submodules/TelegramUI/Components/EditableChatTextNode:EditableChatTextNode",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
-        "//submodules/TelegramUI/Components/EmojiKeyboard:EmojiKeyboard",
+        "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/LottieAnimationCache:LottieAnimationCache",
+        "//submodules/TelegramUI/Components/VideoAnimationCache:VideoAnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
         "//submodules/Media/ConvertOpusToAAC:ConvertOpusToAAC",
         "//submodules/Media/LocalAudioTranscription:LocalAudioTranscription",
     ] + select({

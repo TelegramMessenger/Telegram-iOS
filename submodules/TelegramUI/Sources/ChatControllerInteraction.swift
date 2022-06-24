@@ -73,8 +73,8 @@ public final class ChatControllerInteraction {
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
     let sendCurrentMessage: (Bool) -> Void
     let sendMessage: (String) -> Void
-    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, ASDisplayNode, CGRect) -> Bool
-    let sendGif: (FileMediaReference, ASDisplayNode, CGRect, Bool, Bool) -> Bool
+    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Bool
+    let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
     let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect, Bool) -> Bool
     let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
     let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
@@ -176,8 +176,8 @@ public final class ChatControllerInteraction {
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
         sendCurrentMessage: @escaping (Bool) -> Void,
         sendMessage: @escaping (String) -> Void,
-        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, ASDisplayNode, CGRect) -> Bool,
-        sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect, Bool, Bool) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Bool,
+        sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect, Bool) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,

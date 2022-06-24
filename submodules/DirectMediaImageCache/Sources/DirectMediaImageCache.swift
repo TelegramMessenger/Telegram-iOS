@@ -199,7 +199,7 @@ public final class DirectMediaImageCache {
             ).start()
 
             let dataSignal: Signal<Data?, NoError>
-            if resourceSizeLimit < Int(Int64.max) {
+            if resourceSizeLimit < Int64.max {
                 dataSignal = self.account.postbox.mediaBox.resourceData(resource.resource, size: resourceSizeLimit, in: 0 ..< resourceSizeLimit)
                 |> map { data, _ -> Data? in
                     return data

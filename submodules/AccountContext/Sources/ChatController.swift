@@ -249,6 +249,7 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
     case monospace
     case textMention(EnginePeer.Id)
     case textUrl(String)
+    case customEmoji(stickerPack: StickerPackReference, fileId: Int64)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
@@ -266,6 +267,10 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
         case 4:
             let url = (try? container.decode(String.self, forKey: "url")) ?? ""
             self = .textUrl(url)
+        case 5:
+            let stickerPack = try container.decode(StickerPackReference.self, forKey: "s")
+            let fileId = try container.decode(Int64.self, forKey: "f")
+            self = .customEmoji(stickerPack: stickerPack, fileId: fileId)
         default:
             assertionFailure()
             self = .bold
@@ -287,6 +292,10 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
         case let .textUrl(url):
             try container.encode(4 as Int32, forKey: "t")
             try container.encode(url, forKey: "url")
+        case let .customEmoji(stickerPack, fileId):
+            try container.encode(5 as Int32, forKey: "t")
+            try container.encode(stickerPack, forKey: "s")
+            try container.encode(fileId, forKey: "f")
         }
     }
 }
@@ -352,6 +361,8 @@ public struct ChatTextInputStateText: Codable, Equatable {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .textMention(value.peerId), range: range.location ..< (range.location + range.length)))
                 } else if key == ChatTextInputAttributes.textUrl, let value = value as? ChatTextInputTextUrlAttribute {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .textUrl(value.url), range: range.location ..< (range.location + range.length)))
+                } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: value.stickerPack, fileId: value.fileId), range: range.location ..< (range.location + range.length)))
                 }
             }
         })
@@ -388,6 +399,8 @@ public struct ChatTextInputStateText: Codable, Equatable {
                 result.addAttribute(ChatTextInputAttributes.textMention, value: ChatTextInputTextMentionAttribute(peerId: id), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case let .textUrl(url):
                 result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            case let .customEmoji(stickerPack, fileId):
+                result.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             }
         }
         return result

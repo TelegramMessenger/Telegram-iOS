@@ -272,6 +272,10 @@ private final class VideoStickerFrameSourceCache {
 
 private let useCache = true
 
+public func makeVideoStickerDirectFrameSource(queue: Queue, path: String, width: Int, height: Int, cachePathPrefix: String?) -> AnimatedStickerFrameSource? {
+    return VideoStickerDirectFrameSource(queue: queue, path: path, width: width, height: height, cachePathPrefix: cachePathPrefix)
+}
+
 final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
     private let queue: Queue
     private let path: String

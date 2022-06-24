@@ -85,7 +85,7 @@ private final class StickerPackContainer: ASDisplayNode {
     private let decideNextAction: (StickerPackContainer, StickerPackAction) -> StickerPackNextAction
     private let requestDismiss: () -> Void
     private let presentInGlobalOverlay: (ViewController, Any?) -> Void
-    private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     private let backgroundNode: ASImageNode
     private let gridNode: GridNode
     private let actionAreaBackgroundNode: NavigationBackgroundNode
@@ -129,7 +129,7 @@ private final class StickerPackContainer: ASDisplayNode {
     
     private weak var peekController: PeekController?
     
-    init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPack: StickerPackReference, decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, openMention: @escaping (String) -> Void, controller: StickerPackScreenImpl?) {
+    init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPack: StickerPackReference, decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, openMention: @escaping (String) -> Void, controller: StickerPackScreenImpl?) {
         self.index = index
         self.context = context
         self.controller = controller
@@ -367,9 +367,9 @@ private final class StickerPackContainer: ASDisplayNode {
                                     menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode.view, animationNode.bounds)
                                             } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), imageNode, imageNode.bounds)
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), imageNode.view, imageNode.bounds)
                                             }
                                         }
                                         f(.default)
@@ -964,7 +964,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     private let modalProgressUpdated: (CGFloat, ContainedViewLayoutTransition) -> Void
     private let dismissed: () -> Void
     private let presentInGlobalOverlay: (ViewController, Any?) -> Void
-    private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     private let openMention: (String) -> Void
     
     private let dimNode: ASDisplayNode
@@ -986,7 +986,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     var onReady: () -> Void = {}
     var onError: () -> Void = {}
     
-    init(context: AccountContext, controller: StickerPackScreenImpl, stickerPacks: [StickerPackReference], initialSelectedStickerPackIndex: Int, modalProgressUpdated: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, openMention: @escaping (String) -> Void) {
+    init(context: AccountContext, controller: StickerPackScreenImpl, stickerPacks: [StickerPackReference], initialSelectedStickerPackIndex: Int, modalProgressUpdated: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, openMention: @escaping (String) -> Void) {
         self.context = context
         self.controller = controller
         self.presentationData = controller.presentationData
@@ -1302,7 +1302,7 @@ public final class StickerPackScreenImpl: ViewController {
     private let stickerPacks: [StickerPackReference]
     private let initialSelectedStickerPackIndex: Int
     fileprivate weak var parentNavigationController: NavigationController?
-    private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     
     private var controllerNode: StickerPackScreenNode {
         return self.displayNode as! StickerPackScreenNode
@@ -1320,7 +1320,7 @@ public final class StickerPackScreenImpl: ViewController {
     
     private var alreadyDidAppear: Bool = false
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.stickerPacks = stickerPacks
@@ -1482,7 +1482,7 @@ public enum StickerPackScreenPerformedAction {
     case remove(positionInList: Int)
 }
 
-public func StickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
+public func StickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
     let stickerPacks = [mainStickerPack]
     let controller = StickerPackScreenImpl(context: context, stickerPacks: stickerPacks, selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0, parentNavigationController: parentNavigationController, sendSticker: sendSticker, actionPerformed: actionPerformed)
     controller.dismissed = dismissed
