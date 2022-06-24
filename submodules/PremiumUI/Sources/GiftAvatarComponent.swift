@@ -7,6 +7,9 @@ import SceneKit
 import GZip
 import AppBundle
 import LegacyComponents
+import AvatarNode
+import AccountContext
+import TelegramCore
 
 private let sceneVersion: Int = 3
 
@@ -19,7 +22,7 @@ private func rad2deg(_ number: Float) -> Float {
 }
 
 private func generateParticlesTexture() -> UIImage {
-    return UIImage() 
+    return UIImage()
 }
 
 private func generateFlecksTexture() -> UIImage {
@@ -45,16 +48,20 @@ private func generateDiffuseTexture() -> UIImage {
     })!
 }
 
-class PremiumStarComponent: Component {
+class GiftAvatarComponent: Component {
+    let context: AccountContext
+    let peer: EnginePeer
     let isVisible: Bool
     let hasIdleAnimations: Bool
         
-    init(isVisible: Bool, hasIdleAnimations: Bool) {
+    init(context: AccountContext, peer: EnginePeer, isVisible: Bool, hasIdleAnimations: Bool) {
+        self.context = context
+        self.peer = peer
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
     }
     
-    static func ==(lhs: PremiumStarComponent, rhs: PremiumStarComponent) -> Bool {
+    static func ==(lhs: GiftAvatarComponent, rhs: GiftAvatarComponent) -> Bool {
         return lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
@@ -79,7 +86,8 @@ class PremiumStarComponent: Component {
         var animationColor: UIColor?
         
         private let sceneView: SCNView
-                
+        private let avatarNode: ImageNode
+        
         private var previousInteractionTimestamp: Double = 0.0
         private var timer: SwiftSignalKit.Timer?
         private var hasIdleAnimations = false
@@ -91,9 +99,13 @@ class PremiumStarComponent: Component {
             self.sceneView.isUserInteractionEnabled = false
             self.sceneView.preferredFramesPerSecond = 60
             
+            self.avatarNode = ImageNode()
+            self.avatarNode.displaysAsynchronously = false
+            
             super.init(frame: frame)
             
             self.addSubview(self.sceneView)
+            self.addSubview(self.avatarNode.view)
             
             self.setup()
             
@@ -119,74 +131,7 @@ class PremiumStarComponent: Component {
         
         private var delayTapsTill: Double?
         @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
-                return
-            }
-            
-            let currentTime = CACurrentMediaTime()
-            self.previousInteractionTimestamp = currentTime
-            if let delayTapsTill = self.delayTapsTill, currentTime < delayTapsTill {
-                return
-            }
-            
-            var left: Bool?
-            var top: Bool?
-            if let view = gesture.view {
-                let point = gesture.location(in: view)
-                let horizontalDistanceFromCenter = abs(point.x - view.frame.size.width / 2.0)
-                if horizontalDistanceFromCenter > 60.0 {
-                    return
-                }
-                let verticalDistanceFromCenter = abs(point.y - view.frame.size.height / 2.0)
-                if horizontalDistanceFromCenter > 20.0 {
-                    left = point.x < view.frame.width / 2.0
-                }
-                if verticalDistanceFromCenter > 20.0 {
-                    top = point.y < view.frame.height / 2.0
-                }
-            }
-            
-            if node.animationKeys.contains("tapRotate"), let left = left {
-                self.playAppearanceAnimation(velocity: nil, mirror: left, explode: true)
-                
-                self.hapticFeedback.impact(.medium)
-                return
-            }
-            
-            let initial = node.eulerAngles
-            var yaw: CGFloat = 0.0
-            var pitch: CGFloat = 0.0
-            if let left = left {
-                yaw = left ? -0.6 : 0.6
-            }
-            if let top = top {
-                pitch = top ? -0.3 : 0.3
-            }
-            let target = SCNVector3(pitch, yaw, 0.0)
-                        
-            let animation = CABasicAnimation(keyPath: "eulerAngles")
-            animation.fromValue = NSValue(scnVector3: initial)
-            animation.toValue = NSValue(scnVector3: target)
-            animation.duration = 0.25
-            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            animation.fillMode = .forwards
-            node.addAnimation(animation, forKey: "tapRotate")
-            
-            node.eulerAngles = target
-            
-            Queue.mainQueue().after(0.25) {
-                node.eulerAngles = initial
-                let springAnimation = CASpringAnimation(keyPath: "eulerAngles")
-                springAnimation.fromValue = NSValue(scnVector3: target)
-                springAnimation.toValue = NSValue(scnVector3: SCNVector3(x: 0.0, y: 0.0, z: 0.0))
-                springAnimation.mass = 1.0
-                springAnimation.stiffness = 21.0
-                springAnimation.damping = 5.8
-                springAnimation.duration = springAnimation.settlingDuration * 0.8
-                node.addAnimation(springAnimation, forKey: "tapRotate")
-            }
-            
-            self.hapticFeedback.tap()
+            self.playAppearanceAnimation(velocity: nil, mirror: false, explode: true)
         }
         
         private var previousYaw: Float = 0.0
@@ -242,24 +187,7 @@ class PremiumStarComponent: Component {
         }
         
         private func setup() {
-            let resourceUrl: URL
-            if let url = getAppBundle().url(forResource: "star", withExtension: "scn") {
-                resourceUrl = url
-            } else {
-                let fileName = "star_\(sceneVersion).scn"
-                let tmpUrl = URL(fileURLWithPath: NSTemporaryDirectory() + fileName)
-                if !FileManager.default.fileExists(atPath: tmpUrl.path) {
-                    guard let url = getAppBundle().url(forResource: "star", withExtension: ""),
-                          let compressedData = try? Data(contentsOf: url),
-                          let decompressedData = TGGUnzipData(compressedData, 8 * 1024 * 1024) else {
-                        return
-                    }
-                    try? decompressedData.write(to: tmpUrl)
-                }
-                resourceUrl = tmpUrl
-            }
-            
-            guard let scene = try? SCNScene(url: resourceUrl, options: nil) else {
+            guard let url = getAppBundle().url(forResource: "gift", withExtension: "scn"), let scene = try? SCNScene(url: url, options: nil) else {
                 return
             }
             
@@ -281,66 +209,7 @@ class PremiumStarComponent: Component {
             }
         }
         
-        private func maybeAnimateIn() {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false), let animateFrom = self.animateFrom, var containerView = self.containerView else {
-                return
-            }
-                        
-            containerView = containerView.subviews[2].subviews[1]
-            
-            if let animationColor = self.animationColor {
-                let newNode = node.clone()
-                newNode.geometry = node.geometry?.copy() as? SCNGeometry
-                
-                let colorMaterial = SCNMaterial()
-                colorMaterial.diffuse.contents = animationColor
-                colorMaterial.lightingModel = SCNMaterial.LightingModel.blinn
-                newNode.geometry?.materials = [colorMaterial]
-                node.addChildNode(newNode)
-                
-                newNode.scale = SCNVector3(1.03, 1.03, 1.03)
-                newNode.geometry?.materials.first?.diffuse.contents = animationColor
-                   
-                let animation = CABasicAnimation(keyPath: "opacity")
-                animation.beginTime = CACurrentMediaTime() + 0.1
-                animation.duration = 0.7
-                animation.fromValue = 1.0
-                animation.toValue = 0.0
-                animation.fillMode = .forwards
-                animation.isRemovedOnCompletion = false
-                animation.completion = { [weak newNode] _ in
-                    newNode?.removeFromParentNode()
-                }
-                newNode.addAnimation(animation, forKey: "opacity")
-            }
-            
-            let initialPosition = self.sceneView.center
-            let targetPosition = self.sceneView.superview!.convert(self.sceneView.center, to: containerView)
-            let sourcePosition = animateFrom.superview!.convert(animateFrom.center, to: containerView).offsetBy(dx: 0.0, dy: -20.0)
-            
-            containerView.addSubview(self.sceneView)
-            self.sceneView.center = targetPosition
-            
-            animateFrom.alpha = 0.0
-            self.sceneView.layer.animateScale(from: 0.05, to: 0.5, duration: 1.0, timingFunction: kCAMediaTimingFunctionSpring)
-            self.sceneView.layer.animatePosition(from: sourcePosition, to: targetPosition, duration: 1.0, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
-                self.addSubview(self.sceneView)
-                self.sceneView.center = initialPosition
-            })
-            
-            Queue.mainQueue().after(0.4, {
-                animateFrom.alpha = 1.0
-            })
-            
-            self.animateFrom = nil
-            self.containerView = nil
-        }
-        
         private func onReady() {
-            self.setupGradientAnimation()
-            self.setupShineAnimation()
-            
-            self.maybeAnimateIn()
             self.playAppearanceAnimation(explode: true)
             
             self.previousInteractionTimestamp = CACurrentMediaTime()
@@ -355,52 +224,8 @@ class PremiumStarComponent: Component {
             self.timer?.start()
         }
         
-        private func setupGradientAnimation() {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
-                return
-            }
-            guard let initial = node.geometry?.materials.first?.diffuse.contentsTransform else {
-                return
-            }
-            
-            let animation = CABasicAnimation(keyPath: "contentsTransform")
-            animation.duration = 4.5
-            animation.fromValue = NSValue(scnMatrix4: initial)
-            animation.toValue = NSValue(scnMatrix4: SCNMatrix4Translate(initial, -0.35, 0.35, 0))
-            animation.timingFunction = CAMediaTimingFunction(name: .linear)
-            animation.autoreverses = true
-            animation.repeatCount = .infinity
-            
-            node.geometry?.materials.first?.diffuse.addAnimation(animation, forKey: "gradient")
-        }
-        
-        private func setupShineAnimation() {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
-                return
-            }
-            guard let initial = node.geometry?.materials.first?.emission.contentsTransform else {
-                return
-            }
-            
-            let animation = CABasicAnimation(keyPath: "contentsTransform")
-            animation.fillMode = .forwards
-            animation.fromValue = NSValue(scnMatrix4: initial)
-            animation.toValue = NSValue(scnMatrix4: SCNMatrix4Translate(initial, -1.6, 0.0, 0.0))
-            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            animation.beginTime = 1.1
-            animation.duration = 0.9
-            
-            let group = CAAnimationGroup()
-            group.animations = [animation]
-            group.beginTime = 1.0
-            group.duration = 4.0
-            group.repeatCount = .infinity
-            
-            node.geometry?.materials.first?.emission.addAnimation(group, forKey: "shimmer")
-        }
-        
         private func playAppearanceAnimation(velocity: CGFloat? = nil, smallAngle: Bool = false, mirror: Bool = false, explode: Bool = false) {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
+            guard let scene = self.sceneView.scene else {
                 return
             }
             
@@ -441,43 +266,19 @@ class PremiumStarComponent: Component {
                     }
                 }
             }
-        
-            let from = node.presentation.eulerAngles
-            node.removeAnimation(forKey: "tapRotate")
-            
-            var toValue: Float = smallAngle ? 0.0 : .pi * 2.0
-            if let velocity = velocity, !smallAngle && abs(velocity) > 200 && velocity < 0.0 {
-                toValue *= -1
-            }
-            if mirror {
-                toValue *= -1
-            }
-            let to = SCNVector3(x: 0.0, y: toValue, z: 0.0)
-            let distance = rad2deg(to.y - from.y)
-            
-            guard !distance.isZero else {
-                return
-            }
-            
-            let springAnimation = CASpringAnimation(keyPath: "eulerAngles")
-            springAnimation.fromValue = NSValue(scnVector3: from)
-            springAnimation.toValue = NSValue(scnVector3: to)
-            springAnimation.mass = 1.0
-            springAnimation.stiffness = 21.0
-            springAnimation.damping = 5.8
-            springAnimation.duration = springAnimation.settlingDuration * 0.75
-            springAnimation.initialVelocity = velocity.flatMap { abs($0 / CGFloat(distance)) } ?? 1.7
-            
-            node.addAnimation(springAnimation, forKey: "rotate")
         }
         
-        func update(component: PremiumStarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: GiftAvatarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
             if self.sceneView.superview == self {
                 self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
             }
             
             self.hasIdleAnimations = component.hasIdleAnimations
+            
+            let avatarSize = CGSize(width: 100.0, height: 100.0)
+            self.avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: component.peer, size: avatarSize, font: avatarPlaceholderFont(size: 78.0), fullSize: true))
+            self.avatarNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - avatarSize.width) / 2.0), y: 63.0), size: avatarSize)
             
             return availableSize
         }

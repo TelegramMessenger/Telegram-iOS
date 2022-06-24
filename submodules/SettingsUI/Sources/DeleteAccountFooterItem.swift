@@ -8,45 +8,48 @@ import PresentationDataUtils
 import SolidRoundedButtonNode
 import AppBundle
 
-final class IncreaseLimitFooterItem: ItemListControllerFooterItem {
+final class DeleteAccountFooterItem: ItemListControllerFooterItem {
     let theme: PresentationTheme
     let title: String
-    let colorful: Bool
+    let secondaryTitle: String
     let action: () -> Void
+    let secondaryAction: () -> Void
     
-    init(theme: PresentationTheme, title: String, colorful: Bool, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, secondaryTitle: String, action: @escaping () -> Void, secondaryAction: @escaping () -> Void) {
         self.theme = theme
         self.title = title
-        self.colorful = colorful
+        self.secondaryTitle = secondaryTitle
         self.action = action
+        self.secondaryAction = secondaryAction
     }
     
     func isEqual(to: ItemListControllerFooterItem) -> Bool {
-        if let item = to as? IncreaseLimitFooterItem {
-            return self.theme === item.theme && self.title == item.title && self.colorful == item.colorful
+        if let item = to as? DeleteAccountFooterItem {
+            return self.theme === item.theme && self.title == item.title && self.secondaryTitle == item.secondaryTitle
         } else {
             return false
         }
     }
     
     func node(current: ItemListControllerFooterItemNode?) -> ItemListControllerFooterItemNode {
-        if let current = current as? IncreaseLimitFooterItemNode {
+        if let current = current as? DeleteAccountFooterItemNode {
             current.item = self
             return current
         } else {
-            return IncreaseLimitFooterItemNode(item: self)
+            return DeleteAccountFooterItemNode(item: self)
         }
     }
 }
 
-final class IncreaseLimitFooterItemNode: ItemListControllerFooterItemNode {
+final class DeleteAccountFooterItemNode: ItemListControllerFooterItemNode {
     private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     private let buttonNode: SolidRoundedButtonNode
+    private let secondaryButtonNode: HighlightTrackingButtonNode
     
     private var validLayout: ContainerViewLayout?
     
-    var item: IncreaseLimitFooterItem {
+    var item: DeleteAccountFooterItem {
         didSet {
             self.updateItem()
             if let layout = self.validLayout {
@@ -55,55 +58,47 @@ final class IncreaseLimitFooterItemNode: ItemListControllerFooterItemNode {
         }
     }
     
-    init(item: IncreaseLimitFooterItem) {
+    init(item: DeleteAccountFooterItem) {
         self.item = item
         
         self.backgroundNode = NavigationBackgroundNode(color: item.theme.rootController.tabBar.backgroundColor)
         self.separatorNode = ASDisplayNode()
         
-        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 11.0)
-        self.buttonNode.iconPosition = .right
-        self.buttonNode.icon = UIImage(bundleImageName: "Premium/X2")
+        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 11.0, gloss: true)
+        
+        self.secondaryButtonNode = HighlightTrackingButtonNode()
         
         super.init()
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.buttonNode)
+        self.addSubnode(self.secondaryButtonNode)
+    
+        self.secondaryButtonNode.addTarget(self, action: #selector(self.secondaryButtonPressed), forControlEvents: .touchUpInside)
         
         self.updateItem()
+    }
+
+    @objc private func secondaryButtonPressed() {
+        self.item.secondaryAction()
     }
     
     private func updateItem() {
         self.backgroundNode.updateColor(color: self.item.theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = self.item.theme.rootController.tabBar.separatorColor
         
-        let textColor: UIColor
         let backgroundColor = self.item.theme.list.itemCheckColors.fillColor
-        let backgroundColors: [UIColor]
-        let icon: UIImage?
-        if self.item.colorful {
-            textColor = .white
-            backgroundColors = [
-                UIColor(rgb: 0x0077ff),
-                UIColor(rgb: 0x6b93ff),
-                UIColor(rgb: 0x8878ff),
-                UIColor(rgb: 0xe46ace)
-            ]
-            icon = UIImage(bundleImageName: "Premium/X2")
-        } else {
-            textColor = self.item.theme.list.itemCheckColors.foregroundColor
-            backgroundColors = []
-            icon = nil
-        }
+        let textColor = self.item.theme.list.itemCheckColors.foregroundColor
         
-        self.buttonNode.updateTheme(SolidRoundedButtonTheme(backgroundColor: backgroundColor, backgroundColors: backgroundColors, foregroundColor: textColor), animated: true)
+        self.buttonNode.updateTheme(SolidRoundedButtonTheme(backgroundColor: backgroundColor, foregroundColor: textColor), animated: false)
         self.buttonNode.title = self.item.title
-        self.buttonNode.icon = icon
-        
+                
         self.buttonNode.pressed = { [weak self] in
             self?.item.action()
         }
+        
+        self.secondaryButtonNode.setTitle(self.item.secondaryTitle, with: Font.regular(17.0), with: self.item.theme.list.itemAccentColor, for: .normal)
     }
     
     override func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -117,11 +112,15 @@ final class IncreaseLimitFooterItemNode: ItemListControllerFooterItemNode {
         let buttonInset: CGFloat = 16.0
         let buttonWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - buttonInset * 2.0
         let buttonHeight = self.buttonNode.updateLayout(width: buttonWidth, transition: transition)
-        let inset: CGFloat = 9.0
+        let topInset: CGFloat = 9.0
+        let bottomInset: CGFloat = 23.0
+        let spacing: CGFloat = 23.0
         
         let insets = layout.insets(options: [.input])
         
-        var panelHeight: CGFloat = buttonHeight + inset * 2.0
+        let secondaryButtonSize = self.secondaryButtonNode.measure(CGSize(width: buttonWidth, height: CGFloat.greatestFiniteMagnitude))
+        
+        var panelHeight: CGFloat = buttonHeight + topInset + spacing + secondaryButtonSize.height + bottomInset
         let totalPanelHeight: CGFloat
         if let inputHeight = layout.inputHeight, inputHeight > 0.0 {
             totalPanelHeight = panelHeight + insets.bottom
@@ -131,7 +130,9 @@ final class IncreaseLimitFooterItemNode: ItemListControllerFooterItemNode {
         }
         
         let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - totalPanelHeight), size: CGSize(width: layout.size.width, height: panelHeight))
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: panelFrame.minY + inset), size: CGSize(width: buttonWidth, height: buttonHeight)))
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: panelFrame.minY + topInset), size: CGSize(width: buttonWidth, height: buttonHeight)))
+        
+        transition.updateFrame(node: self.secondaryButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - secondaryButtonSize.width) / 2.0), y: panelFrame.minY + topInset + buttonHeight + spacing), size: secondaryButtonSize))
         
         transition.updateFrame(node: self.backgroundNode, frame: panelFrame)
         self.backgroundNode.update(size: panelFrame.size, transition: transition)

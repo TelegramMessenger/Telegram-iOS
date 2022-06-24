@@ -101,6 +101,7 @@ swift_library(
         "//submodules/ListMessageItem:ListMessageItem",
         "//submodules/PaymentMethodUI:PaymentMethodUI",
         "//submodules/PremiumUI:PremiumUI",
+        "//submodules/InviteLinksUI:InviteLinksUI",
     ],
     visibility = [
         "//visibility:public",
