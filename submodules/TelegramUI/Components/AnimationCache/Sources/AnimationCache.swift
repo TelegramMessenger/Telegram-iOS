@@ -707,7 +707,7 @@ public final class AnimationCacheImpl: AnimationCache {
             
             let fetchQueueCount: Int
             if ProcessInfo.processInfo.activeProcessorCount > 2 {
-                fetchQueueCount = 4
+                fetchQueueCount = 3
             } else {
                 fetchQueueCount = 2
             }
