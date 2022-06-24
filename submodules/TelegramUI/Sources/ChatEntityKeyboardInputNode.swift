@@ -110,7 +110,12 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         let emojiItems: Signal<EmojiPagerContentComponent, NoError> = context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: namespaces, aroundIndex: nil, count: 10000000)
         |> map { view -> EmojiPagerContentComponent in
-            var emojiItems: [EmojiPagerContentComponent.Item] = []
+            struct ItemGroup {
+                var id: AnyHashable
+                var items: [EmojiPagerContentComponent.Item]
+            }
+            var itemGroups: [ItemGroup] = []
+            var itemGroupIndexById: [AnyHashable: Int] = [:]
             
             var emojiCollectionIds = Set<ItemCollectionId>()
             for (id, info, _) in view.collectionInfos {
@@ -125,27 +130,45 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 guard let item = entry.item as? StickerPackItem else {
                     continue
                 }
-                if emojiCollectionIds.contains(entry.index.collectionId) {
-                    let resultItem = EmojiPagerContentComponent.Item(
-                        emoji: "",
-                        file: item.file
-                    )
-                    emojiItems.append(resultItem)
+                if item.file.isAnimatedSticker || item.file.isVideoSticker {
+                    if emojiCollectionIds.contains(entry.index.collectionId) {
+                        let resultItem = EmojiPagerContentComponent.Item(
+                            emoji: "",
+                            file: item.file
+                        )
+                        
+                        let groupId = entry.index.collectionId
+                        if let groupIndex = itemGroupIndexById[groupId] {
+                            itemGroups[groupIndex].items.append(resultItem)
+                        } else {
+                            itemGroupIndexById[groupId] = itemGroups.count
+                            itemGroups.append(ItemGroup(id: groupId, items: [resultItem]))
+                        }
+                    }
                 }
             }
             
-            var itemGroups: [EmojiPagerContentComponent.ItemGroup] = []
-            itemGroups.append(EmojiPagerContentComponent.ItemGroup(
-                id: "all",
-                title: nil,
-                items: emojiItems
-            ))
             return EmojiPagerContentComponent(
                 context: context,
                 animationCache: animationCache,
                 animationRenderer: animationRenderer,
                 inputInteraction: emojiInputInteraction,
-                itemGroups: itemGroups,
+                itemGroups: itemGroups.map { group -> EmojiPagerContentComponent.ItemGroup in
+                    var title: String?
+                    if group.id == AnyHashable("recent") {
+                        //TODO:localize
+                        title = "Recently Used".uppercased()
+                    } else {
+                        for (id, info, _) in view.collectionInfos {
+                            if AnyHashable(id) == group.id, let info = info as? StickerPackCollectionInfo {
+                                title = info.title.uppercased()
+                                break
+                            }
+                        }
+                    }
+                    
+                    return EmojiPagerContentComponent.ItemGroup(id: group.id, title: title, items: group.items)
+                },
                 itemLayoutType: .compact
             )
         }

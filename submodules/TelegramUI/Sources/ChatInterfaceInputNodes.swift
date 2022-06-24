@@ -12,7 +12,7 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
     }
     switch chatPresentationInterfaceState.inputMode {
     case .media:
-        if "".isEmpty {
+        if context.sharedContext.immediateExperimentalUISettings.inlineStickers {
             if let currentNode = currentNode as? ChatEntityKeyboardInputNode {
                 return currentNode
             } else if let inputMediaNode = inputMediaNode {

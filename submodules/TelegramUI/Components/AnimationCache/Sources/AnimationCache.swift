@@ -704,7 +704,15 @@ public final class AnimationCacheImpl: AnimationCache {
         
         init(queue: Queue, basePath: String, allocateTempFile: @escaping () -> String) {
             self.queue = queue
-            self.fetchQueues = (0 ..< 2).map { _ in Queue() }
+            
+            let fetchQueueCount: Int
+            if ProcessInfo.processInfo.activeProcessorCount > 2 {
+                fetchQueueCount = 4
+            } else {
+                fetchQueueCount = 2
+            }
+            
+            self.fetchQueues = (0 ..< fetchQueueCount).map { i in Queue(name: "AnimationCacheImpl-Fetch\(i)", qos: .default) }
             self.basePath = basePath
             self.allocateTempFile = allocateTempFile
         }
