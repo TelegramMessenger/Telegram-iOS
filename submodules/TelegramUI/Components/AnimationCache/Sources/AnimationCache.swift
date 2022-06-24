@@ -748,7 +748,9 @@ public final class AnimationCacheImpl: AnimationCache {
             updateResult(AnimationCacheItemResult(item: nil, isFinal: false))
             
             if beginFetch {
-                guard let writer = AnimationCacheItemWriterImpl(queue: self.fetchQueues[self.nextFetchQueueIndex % self.fetchQueues.count], allocateTempFile: self.allocateTempFile, completion: { [weak self, weak itemContext] result in
+                let fetchQueueIndex = self.nextFetchQueueIndex
+                self.nextFetchQueueIndex += 1
+                guard let writer = AnimationCacheItemWriterImpl(queue: self.fetchQueues[fetchQueueIndex % self.fetchQueues.count], allocateTempFile: self.allocateTempFile, completion: { [weak self, weak itemContext] result in
                     queue.async {
                         guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[sourceId] else {
                             return
