@@ -39,16 +39,17 @@
 
 @implementation ASCustomLayoutManager
 
-- (void)drawGlyphsForGlyphRange:(NSRange)glyphsToShow atPoint:(CGPoint)origin {
-    /*CGGlyph glyph = [self glyphAtIndex:glyphsToShow.location];
-    if (glyph) {
+- (void)showCGGlyphs:(const CGGlyph *)glyphs positions:(const CGPoint *)positions count:(NSUInteger)glyphCount font:(UIFont *)font matrix:(CGAffineTransform)textMatrix attributes:(NSDictionary<NSAttributedStringKey,id> *)attributes inContext:(CGContextRef)graphicsContext {
+    for (NSUInteger i = 0; i < glyphCount; i++) {
+        if (attributes[@"Attribute__CustomEmoji"] != nil) {
+            continue;
+        }
+        
+        [super showCGGlyphs:&glyphs[i] positions:&positions[i] count:1 font:font matrix:textMatrix attributes:attributes inContext:graphicsContext];
     }
-    
-    CGRect bounds = [self boundingRectForGlyphRange:glyphsToShow inTextContainer:[self textContainerForGlyphAtIndex:glyphsToShow.location effectiveRange:nil]];
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetFillColorWithColor(context, [UIColor grayColor].CGColor);
-    CGContextFillRect(context, bounds);*/
-    
+}
+
+- (void)drawGlyphsForGlyphRange:(NSRange)glyphsToShow atPoint:(CGPoint)origin {
     [super drawGlyphsForGlyphRange:glyphsToShow atPoint:origin];
 }
 

@@ -5,23 +5,46 @@ import Display
 import AnimatedStickerNode
 import SwiftSignalKit
 
+private func roundUp(_ numToRound: Int, multiple: Int) -> Int {
+    if multiple == 0 {
+        return numToRound
+    }
+    
+    let remainder = numToRound % multiple
+    if remainder == 0 {
+        return numToRound;
+    }
+    
+    return numToRound + multiple - remainder
+}
+
 public func cacheVideoAnimation(path: String, width: Int, height: Int, writer: AnimationCacheItemWriter) {
-    let queue = Queue()
-    queue.async {
-        guard let frameSource = makeVideoStickerDirectFrameSource(queue: queue, path: path, width: width, height: height, cachePathPrefix: nil) else {
+    writer.queue.async {
+        guard let frameSource = makeVideoStickerDirectFrameSource(queue: writer.queue, path: path, width: roundUp(width, multiple: 16), height: roundUp(height, multiple: 16), cachePathPrefix: nil) else {
             return
         }
         let frameDuration = 1.0 / Double(frameSource.frameRate)
         while true {
+            if writer.isCancelled {
+                break
+            }
             if let frame = frameSource.takeFrame(draw: true) {
-                //AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount, multiplyAlpha: true)
                 if case .argb = frame.type {
-                    let frameWidth = frame.width
-                    let frameHeight = frame.height
                     let bytesPerRow = frame.bytesPerRow
-                    frame.data.withUnsafeBytes { bytes -> Void in
-                        writer.add(bytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), length: bytes.count, width: Int(frameWidth), height: Int(frameHeight), bytesPerRow: Int(bytesPerRow), duration: frameDuration)
-                    }
+                    
+                    writer.add(with: { surface in
+                        frame.data.withUnsafeBytes { bytes -> Void in
+                            let sourceArgb = bytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                            if surface.bytesPerRow == bytesPerRow {
+                                memcpy(surface.argb, sourceArgb, min(surface.length, bytes.count))
+                            } else {
+                                let copyBytesPerRow = min(surface.bytesPerRow, bytesPerRow)
+                                for y in 0 ..< surface.height {
+                                    memcpy(surface.argb.advanced(by: y * surface.bytesPerRow), sourceArgb.advanced(by: y * bytesPerRow), copyBytesPerRow)
+                                }
+                            }
+                        }
+                    }, proposedWidth: frame.width, proposedHeight: frame.height, duration: frameDuration)
                 } else {
                     break
                 }

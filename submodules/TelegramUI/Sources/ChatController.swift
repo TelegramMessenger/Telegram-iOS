@@ -8577,16 +8577,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
             }
         }, insertText: { [weak self] text in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction else {
                 return
             }
             if !strongSelf.chatDisplayNode.isTextInputPanelActive {
                 return
             }
-            guard let textInputPanelNode = strongSelf.chatDisplayNode.textInputPanelNode else {
-                return
+            
+            interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
+                let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
+                
+                let range = textInputState.selectionRange
+                inputText.replaceCharacters(in: NSMakeRange(range.lowerBound, range.count), with: text)
+                
+                let selectionPosition = range.lowerBound + (text.string as NSString).length
+                
+                return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
             }
-            textInputPanelNode.insertText(string: text)
         }, backwardsDeleteText: { [weak self] in
             guard let strongSelf = self else {
                 return

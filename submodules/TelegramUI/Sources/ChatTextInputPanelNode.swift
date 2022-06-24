@@ -244,6 +244,67 @@ enum ChatTextInputPanelPasteData {
     case sticker(UIImage, Bool)
 }
 
+final class CustomEmojiContainerView: UIView {
+    private let emojiViewProvider: (ChatTextInputTextCustomEmojiAttribute) -> UIView?
+    
+    private var emojiLayers: [InlineStickerItemLayer.Key: UIView] = [:]
+    
+    init(emojiViewProvider: @escaping (ChatTextInputTextCustomEmojiAttribute) -> UIView?) {
+        self.emojiViewProvider = emojiViewProvider
+        
+        super.init(frame: CGRect())
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    func update(emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
+        var nextIndexById: [Int64: Int] = [:]
+        
+        var validKeys = Set<InlineStickerItemLayer.Key>()
+        for (rect, emoji) in emojiRects {
+            let index: Int
+            if let nextIndex = nextIndexById[emoji.fileId] {
+                index = nextIndex
+            } else {
+                index = 0
+            }
+            nextIndexById[emoji.fileId] = index + 1
+            
+            let key = InlineStickerItemLayer.Key(id: emoji.fileId, index: index)
+            
+            let view: UIView
+            if let current = self.emojiLayers[key] {
+                view = current
+            } else if let newView = self.emojiViewProvider(emoji) {
+                view = newView
+                self.addSubview(newView)
+                self.emojiLayers[key] = view
+            } else {
+                continue
+            }
+            
+            let size = CGSize(width: 24.0, height: 24.0)
+            
+            view.frame = CGRect(origin: CGPoint(x: floor(rect.midX - size.width / 2.0), y: floor(rect.midY - size.height / 2.0)), size: size)
+            
+            validKeys.insert(key)
+        }
+        
+        var removeKeys: [InlineStickerItemLayer.Key] = []
+        for (key, view) in self.emojiLayers {
+            if !validKeys.contains(key) {
+                removeKeys.append(key)
+                view.removeFromSuperview()
+            }
+        }
+        for key in removeKeys {
+            self.emojiLayers.removeValue(forKey: key)
+        }
+    }
+}
+
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let clippingNode: ASDisplayNode
     var textPlaceholderNode: ImmediateTextNode
@@ -253,6 +314,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let textInputContainer: ASDisplayNode
     var textInputNode: EditableTextNode?
     var dustNode: InvisibleInkDustNode?
+    var customEmojiContainerView: CustomEmojiContainerView?
     
     let textInputBackgroundNode: ASImageNode
     private var transparentTextInputBackgroundImage: UIImage?
@@ -463,7 +525,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var touchDownGestureRecognizer: TouchDownGestureRecognizer?
     
-    private var emojiViewProvider: ((String) -> UIView)?
+    private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
     init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
@@ -673,11 +735,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         if let presentationContext = presentationContext {
             self.emojiViewProvider = { [weak self, weak presentationContext] emoji in
-                guard let strongSelf = self, let presentationContext = presentationContext, let presentationInterfaceState = strongSelf.presentationInterfaceState, let context = strongSelf.context, let file = strongSelf.context?.animatedEmojiStickers[emoji]?.first?.file else {
+                guard let strongSelf = self, let presentationContext = presentationContext, let presentationInterfaceState = strongSelf.presentationInterfaceState, let context = strongSelf.context else {
                     return UIView()
                 }
                 
-                return EmojiTextAttachmentView(context: context, file: file, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12))
+                return EmojiTextAttachmentView(context: context, emoji: emoji, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12))
             }
         }
     }
@@ -1904,6 +1966,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
         
         var rects: [CGRect] = []
+        var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
         
         if let attributedText = textInputNode.attributedText {
             let beginning = textInputNode.textView.beginningOfDocument
@@ -1940,6 +2003,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         let endIndex = currentIndex
                         addSpoiler(startIndex: currentStartIndex, endIndex: endIndex)
                     }
+                } else if let value = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
+                    if let start = textInputNode.textView.position(from: beginning, offset: range.location), let end = textInputNode.textView.position(from: start, offset: range.length), let textRange = textInputNode.textView.textRange(from: start, to: end) {
+                        let textRects = textInputNode.textView.selectionRects(for: textRange)
+                        for textRect in textRects {
+                            customEmojiRects.append((textRect.rect, value))
+                            break
+                        }
+                    }
                 }
             })
         }
@@ -1960,6 +2031,28 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         } else if let dustNode = self.dustNode {
             dustNode.removeFromSupernode()
             self.dustNode = nil
+        }
+        
+        if !customEmojiRects.isEmpty {
+            let customEmojiContainerView: CustomEmojiContainerView
+            if let current = self.customEmojiContainerView {
+                customEmojiContainerView = current
+            } else {
+                customEmojiContainerView = CustomEmojiContainerView(emojiViewProvider: { [weak self] emoji in
+                    guard let strongSelf = self, let emojiViewProvider = strongSelf.emojiViewProvider else {
+                        return nil
+                    }
+                    return emojiViewProvider(emoji)
+                })
+                customEmojiContainerView.isUserInteractionEnabled = false
+                textInputNode.textView.addSubview(customEmojiContainerView)
+                self.customEmojiContainerView = customEmojiContainerView
+            }
+            
+            customEmojiContainerView.update(emojiRects: customEmojiRects)
+        } else if let customEmojiContainerView = self.customEmojiContainerView {
+            customEmojiContainerView.removeFromSuperview()
+            self.customEmojiContainerView = nil
         }
     }
     
@@ -2226,7 +2319,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
-        if mediaInputIsActive {
+        if mediaInputIsActive && !"".isEmpty {
             if self.actionButtons.expandMediaInputButton.alpha.isZero {
                 self.actionButtons.expandMediaInputButton.alpha = 1.0
                 if animated {
@@ -2725,13 +2818,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         self.textInputNode?.becomeFirstResponder()
-    }
-    
-    func insertText(string: String) {
-        guard let textInputNode = self.textInputNode else {
-            return
-        }
-        textInputNode.textView.insertText(string)
     }
     
     func backwardsDeleteText() {

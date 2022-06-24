@@ -47,18 +47,18 @@ private final class CachedChatMessageText {
 }
 
 private final class InlineStickerItem: Hashable {
-    let file: TelegramMediaFile
+    let emoji: ChatTextInputTextCustomEmojiAttribute
     
-    init(file: TelegramMediaFile) {
-        self.file = file
+    init(emoji: ChatTextInputTextCustomEmojiAttribute) {
+        self.emoji = emoji
     }
     
     func hash(into hasher: inout Hasher) {
-        hasher.combine(self.file.fileId)
+        hasher.combine(emoji.fileId)
     }
     
     static func ==(lhs: InlineStickerItem, rhs: InlineStickerItem) -> Bool {
-        if lhs.file.fileId != rhs.file.fileId {
+        if lhs.emoji.fileId != rhs.emoji.fileId {
             return false
         }
         return true
@@ -341,38 +341,26 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
-                /*if let entities = entities {
+                if let entities = entities {
                     let updatedString = NSMutableAttributedString(attributedString: attributedText)
                     
                     for entity in entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound }) {
-                        guard case .AnimatedEmoji = entity.type else {
+                        guard case let .CustomEmoji(stickerPack, fileId) = entity.type else {
                             continue
                         }
                         
                         let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
                         
-                        let substring = updatedString.attributedSubstring(from: range)
+                        let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
+                        var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
+                        updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
+                        updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId))
                         
-                        let emoji = substring.string.basicEmoji.0
-                        
-                        var emojiFile: TelegramMediaFile?
-                        emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
-                        if emojiFile == nil {
-                            emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
-                        }
-                        
-                        if let emojiFile = emojiFile {
-                            let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
-                            var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
-                            updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
-                            updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(file: emojiFile)
-                            
-                            let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}]", attributes: updatedAttributes)
-                            updatedString.replaceCharacters(in: range, with: insertString)
-                        }
+                        let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}\u{00a0}]", attributes: updatedAttributes)
+                        updatedString.replaceCharacters(in: range, with: insertString)
                     }
                     attributedText = updatedString
-                }*/
+                }
                 
                 let cutout: TextNodeCutout? = nil
                 
@@ -558,27 +546,27 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor) {
-        var nextIndexById: [MediaId: Int] = [:]
+        var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
         
         if let textLayout = textLayout {
             for item in textLayout.embeddedItems {
                 if let stickerItem = item.value as? InlineStickerItem {
                     let index: Int
-                    if let currentNext = nextIndexById[stickerItem.file.fileId] {
+                    if let currentNext = nextIndexById[stickerItem.emoji.fileId] {
                         index = currentNext
                     } else {
                         index = 0
                     }
-                    nextIndexById[stickerItem.file.fileId] = index + 1
-                    let id = InlineStickerItemLayer.Key(id: stickerItem.file.fileId, index: index)
+                    nextIndexById[stickerItem.emoji.fileId] = index + 1
+                    let id = InlineStickerItemLayer.Key(id: stickerItem.emoji.fileId, index: index)
                     validIds.append(id)
                     
                     let itemLayer: InlineStickerItemLayer
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: false, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor)
+                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: false, emoji: stickerItem.emoji, cache: cache, renderer: renderer, placeholderColor: placeholderColor)
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         itemLayer.isVisibleForAnimations = self.isVisibleForAnimations

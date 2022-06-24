@@ -40,6 +40,8 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
                 string.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: range)
             case .Spoiler:
                 string.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: range)
+            case let .CustomEmoji(stickerPack, fileId):
+                string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId), range: range)
             default:
                 break
         }

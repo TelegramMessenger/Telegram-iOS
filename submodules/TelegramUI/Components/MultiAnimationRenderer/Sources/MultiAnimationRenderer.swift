@@ -7,6 +7,7 @@ import AnimationCache
 public protocol MultiAnimationRenderer: AnyObject {
     func add(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable
     func loadFirstFrameSynchronously(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize) -> Bool
+    func loadFirstFrame(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable
 }
 
 open class MultiAnimationRenderTarget: SimpleLayer {
@@ -48,43 +49,19 @@ private func convertFrameToImage(frame: AnimationCacheItemFrame) -> UIImage? {
 private final class FrameGroup {
     let image: UIImage
     let size: CGSize
-    let frameRange: Range<Int>
-    let count: Int
-    let skip: Int
+    let timestamp: Double
     
-    init?(item: AnimationCacheItem, baseFrameIndex: Int, count: Int, skip: Int) {
-        if count == 0 {
-            return nil
-        }
-        
-        assert(count % skip == 0)
-        
-        let actualCount = count / skip
-        
-        guard let firstFrame = item.getFrame(index: baseFrameIndex % item.numFrames) else {
+    init?(item: AnimationCacheItem, timestamp: Double) {
+        guard let firstFrame = item.getFrame(at: timestamp) else {
             return nil
         }
         
         switch firstFrame.format {
         case let .rgba(width, height, bytesPerRow):
-            let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height * actualCount)), scale: 1.0, opaque: false, bytesPerRow: bytesPerRow)
-            for i in stride(from: baseFrameIndex, to: baseFrameIndex + count, by: skip) {
-                let frame: AnimationCacheItemFrame
-                if i == baseFrameIndex {
-                    frame = firstFrame
-                } else {
-                    if let nextFrame = item.getFrame(index: i % item.numFrames) {
-                        frame = nextFrame
-                    } else {
-                        return nil
-                    }
-                }
+            let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: false, bytesPerRow: bytesPerRow)
                 
-                let localFrameIndex = (i - baseFrameIndex) / skip
-                
-                frame.data.withUnsafeBytes { bytes -> Void in
-                    memcpy(context.bytes.advanced(by: localFrameIndex * height * bytesPerRow), bytes.baseAddress!.advanced(by: frame.range.lowerBound), height * bytesPerRow)
-                }
+            firstFrame.data.withUnsafeBytes { bytes -> Void in
+                memcpy(context.bytes, bytes.baseAddress!.advanced(by: firstFrame.range.lowerBound), height * bytesPerRow)
             }
             
             guard let image = context.generateImage() else {
@@ -93,21 +70,8 @@ private final class FrameGroup {
             
             self.image = image
             self.size = CGSize(width: CGFloat(width), height: CGFloat(height))
-            self.frameRange = baseFrameIndex ..< (baseFrameIndex + count)
-            self.count = count
-            self.skip = skip
+            self.timestamp = timestamp
         }
-    }
-    
-    func contentsRect(index: Int) -> CGRect? {
-        if !self.frameRange.contains(index) {
-            return nil
-        }
-        let actualCount = self.count / self.skip
-        let localIndex = (index - self.frameRange.lowerBound) / self.skip
-        
-        let itemHeight = 1.0 / CGFloat(actualCount)
-        return CGRect(origin: CGPoint(x: 0.0, y: CGFloat(localIndex) * itemHeight), size: CGSize(width: 1.0, height: itemHeight))
     }
 }
 
@@ -127,9 +91,8 @@ private final class ItemAnimationContext {
     
     private var disposable: Disposable?
     private var displayLink: ConstantDisplayLinkAnimator?
-    private var frameIndex: Int = 0
+    private var timestamp: Double = 0.0
     private var item: AnimationCacheItem?
-    private var frameSkip: Int
     
     private var currentFrameGroup: FrameGroup?
     private var isLoadingFrameGroup: Bool = false
@@ -144,9 +107,8 @@ private final class ItemAnimationContext {
     
     let targets = Bag<Weak<MultiAnimationRenderTarget>>()
     
-    init(cache: AnimationCache, itemId: String, size: CGSize, frameSkip: Int, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable, stateUpdated: @escaping () -> Void) {
+    init(cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable, stateUpdated: @escaping () -> Void) {
         self.cache = cache
-        self.frameSkip = frameSkip
         self.stateUpdated = stateUpdated
         
         self.disposable = cache.get(sourceId: itemId, size: size, fetch: fetch).start(next: { [weak self] result in
@@ -174,14 +136,9 @@ private final class ItemAnimationContext {
     }
     
     func updateAddedTarget(target: MultiAnimationRenderTarget) {
-        if let item = self.item, let currentFrameGroup = self.currentFrameGroup {
-            let currentFrame = self.frameIndex % item.numFrames
-            
-            if let contentsRect = currentFrameGroup.contentsRect(index: currentFrame) {
-                target.updateDisplayPlaceholder(displayPlaceholder: false)
-                target.contents = currentFrameGroup.image.cgImage
-                target.contentsRect = contentsRect
-            }
+        if let currentFrameGroup = self.currentFrameGroup {
+            target.updateDisplayPlaceholder(displayPlaceholder: false)
+            target.contents = currentFrameGroup.image.cgImage
         }
         
         self.updateIsPlaying()
@@ -209,27 +166,26 @@ private final class ItemAnimationContext {
         self.isPlaying = isPlaying
     }
     
-    func animationTick() -> LoadFrameGroupTask? {
-        return self.update(advanceFrame: true)
+    func animationTick(advanceTimestamp: Double) -> LoadFrameGroupTask? {
+        return self.update(advanceTimestamp: advanceTimestamp)
     }
     
-    private func update(advanceFrame: Bool) -> LoadFrameGroupTask? {
+    private func update(advanceTimestamp: Double?) -> LoadFrameGroupTask? {
         guard let item = self.item else {
             return nil
         }
         
-        let currentFrame = self.frameIndex % item.numFrames
+        let timestamp = self.timestamp
+        if let advanceTimestamp = advanceTimestamp {
+            self.timestamp += advanceTimestamp
+        }
         
-        if let currentFrameGroup = self.currentFrameGroup, currentFrameGroup.frameRange.contains(currentFrame) {
+        if let currentFrameGroup = self.currentFrameGroup, currentFrameGroup.timestamp == self.timestamp {
         } else if !self.isLoadingFrameGroup {
-            self.currentFrameGroup = nil
             self.isLoadingFrameGroup = true
-            let frameSkip = self.frameSkip
             
             return LoadFrameGroupTask(task: { [weak self] in
-                let possibleCounts: [Int] = [10, 12, 14, 16, 18, 20]
-                let countIndex = Int.random(in: 0 ..< possibleCounts.count)
-                let currentFrameGroup = FrameGroup(item: item, baseFrameIndex: currentFrame, count: possibleCounts[countIndex], skip: frameSkip)
+                let currentFrameGroup = FrameGroup(item: item, timestamp: timestamp)
                 
                 return {
                     guard let strongSelf = self else {
@@ -241,24 +197,20 @@ private final class ItemAnimationContext {
                     if let currentFrameGroup = currentFrameGroup {
                         strongSelf.currentFrameGroup = currentFrameGroup
                         for target in strongSelf.targets.copyItems() {
-                            target.value?.contents = currentFrameGroup.image.cgImage
+                            if let target = target.value {
+                                target.contents = currentFrameGroup.image.cgImage
+                                target.updateDisplayPlaceholder(displayPlaceholder: false)
+                            }
                         }
-                        
-                        let _ = strongSelf.update(advanceFrame: false)
                     }
                 }
             })
         }
         
-        if advanceFrame {
-            self.frameIndex += self.frameSkip
-        }
-        
-        if let currentFrameGroup = self.currentFrameGroup, let contentsRect = currentFrameGroup.contentsRect(index: currentFrame) {
+        if let _ = self.currentFrameGroup {
             for target in self.targets.copyItems() {
                 if let target = target.value {
                     target.updateDisplayPlaceholder(displayPlaceholder: false)
-                    target.contentsRect = contentsRect
                 }
             }
         }
@@ -269,7 +221,7 @@ private final class ItemAnimationContext {
 
 public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
     private final class GroupContext {
-        private var frameSkip: Int
+        private let firstFrameQueue: Queue
         private let stateUpdated: () -> Void
         
         private var itemContexts: [String: ItemAnimationContext] = [:]
@@ -282,8 +234,8 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             }
         }
         
-        init(frameSkip: Int, stateUpdated: @escaping () -> Void) {
-            self.frameSkip = frameSkip
+        init(firstFrameQueue: Queue, stateUpdated: @escaping () -> Void) {
+            self.firstFrameQueue = firstFrameQueue
             self.stateUpdated = stateUpdated
         }
         
@@ -292,7 +244,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             if let current = self.itemContexts[itemId] {
                 itemContext = current
             } else {
-                itemContext = ItemAnimationContext(cache: cache, itemId: itemId, size: size, frameSkip: self.frameSkip, fetch: fetch, stateUpdated: { [weak self] in
+                itemContext = ItemAnimationContext(cache: cache, itemId: itemId, size: size, fetch: fetch, stateUpdated: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
@@ -339,8 +291,8 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
         
         func loadFirstFrameSynchronously(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize) -> Bool {
-            if let item = cache.getSynchronously(sourceId: itemId, size: size) {
-                guard let frameGroup = FrameGroup(item: item, baseFrameIndex: 0, count: 1, skip: 1) else {
+            if let item = cache.getFirstFrameSynchronously(sourceId: itemId, size: size) {
+                guard let frameGroup = FrameGroup(item: item, timestamp: 0.0) else {
                     return false
                 }
                 
@@ -350,6 +302,33 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             } else {
                 return false
             }
+        }
+        
+        func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable {
+            return cache.getFirstFrame(queue: self.firstFrameQueue, sourceId: itemId, size: size, completion: { [weak target] item in
+                guard let item = item else {
+                    Queue.mainQueue().async {
+                        completion(false)
+                    }
+                    return
+                }
+                
+                let frameGroup = FrameGroup(item: item, timestamp: 0.0)
+                
+                Queue.mainQueue().async {
+                    guard let target = target else {
+                        completion(false)
+                        return
+                    }
+                    if let frameGroup = frameGroup {
+                        target.contents = frameGroup.image.cgImage
+                        
+                        completion(true)
+                    } else {
+                        completion(false)
+                    }
+                }
+            })
         }
         
         private func updateIsPlaying() {
@@ -364,11 +343,11 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             self.isPlaying = isPlaying
         }
         
-        func animationTick() -> [LoadFrameGroupTask] {
+        func animationTick(advanceTimestamp: Double) -> [LoadFrameGroupTask] {
             var tasks: [LoadFrameGroupTask] = []
             for (_, itemContext) in self.itemContexts {
                 if itemContext.isPlaying {
-                    if let task = itemContext.animationTick() {
+                    if let task = itemContext.animationTick(advanceTimestamp: advanceTimestamp) {
                         tasks.append(task)
                     }
                 }
@@ -378,6 +357,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
     }
     
+    private let firstFrameQueue: Queue
     private var groupContexts: [String: GroupContext] = [:]
     private var frameSkip: Int
     private var displayLink: ConstantDisplayLinkAnimator?
@@ -407,6 +387,8 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
     }
     
     public init() {
+        self.firstFrameQueue = Queue(name: "MultiAnimationRenderer-FirstFrame", qos: .userInteractive)
+        
         if !ProcessInfo.processInfo.isLowPowerModeEnabled && ProcessInfo.processInfo.activeProcessorCount > 2 {
             self.frameSkip = 1
         } else {
@@ -419,7 +401,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         if let current = self.groupContexts[groupId] {
             groupContext = current
         } else {
-            groupContext = GroupContext(frameSkip: self.frameSkip, stateUpdated: { [weak self] in
+            groupContext = GroupContext(firstFrameQueue: self.firstFrameQueue, stateUpdated: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -440,7 +422,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         if let current = self.groupContexts[groupId] {
             groupContext = current
         } else {
-            groupContext = GroupContext(frameSkip: self.frameSkip, stateUpdated: { [weak self] in
+            groupContext = GroupContext(firstFrameQueue: self.firstFrameQueue, stateUpdated: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -450,6 +432,23 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
         
         return groupContext.loadFirstFrameSynchronously(target: target, cache: cache, itemId: itemId, size: size)
+    }
+    
+    public func loadFirstFrame(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable {
+        let groupContext: GroupContext
+        if let current = self.groupContexts[groupId] {
+            groupContext = current
+        } else {
+            groupContext = GroupContext(firstFrameQueue: self.firstFrameQueue, stateUpdated: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.updateIsPlaying()
+            })
+            self.groupContexts[groupId] = groupContext
+        }
+        
+        return groupContext.loadFirstFrame(target: target, cache: cache, itemId: itemId, size: size, completion: completion)
     }
     
     private func updateIsPlaying() {
@@ -464,11 +463,20 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         self.isPlaying = isPlaying
     }
     
+    private var previousTimestamp: Double?
+    
     private func animationTick() {
+        let timestamp = CFAbsoluteTimeGetCurrent()
+        if let _ = self.previousTimestamp {
+        }
+        self.previousTimestamp = timestamp
+        
+        let secondsPerFrame = Double(self.frameSkip) / 60.0
+        
         var tasks: [LoadFrameGroupTask] = []
         for (_, groupContext) in self.groupContexts {
             if groupContext.isPlaying {
-                tasks.append(contentsOf: groupContext.animationTick())
+                tasks.append(contentsOf: groupContext.animationTick(advanceTimestamp: secondsPerFrame))
             }
         }
         

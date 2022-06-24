@@ -12,7 +12,7 @@ private let typeHintFileIsLarge: Int32 = 7
 private let typeHintIsValidated: Int32 = 8
 private let typeNoPremium: Int32 = 9
 
-public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
+public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
     case id(id: Int64, accessHash: Int64)
     case name(String)
     case animatedEmoji
@@ -37,6 +37,27 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
         }
     }
     
+    public init(decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        
+        let discriminator = try container.decode(Int32.self, forKey: "r")
+        switch discriminator {
+        case 0:
+            self = .id(id: try container.decode(Int64.self, forKey: "i"), accessHash: try container.decode(Int64.self, forKey: "h"))
+        case 1:
+            self = .name(try container.decode(String.self, forKey: "n"))
+        case 2:
+            self = .animatedEmoji
+        case 3:
+            self = .dice((try? container.decode(String.self, forKey: "e")) ?? "🎲")
+        case 4:
+            self = .animatedEmojiAnimations
+        default:
+            self = .name("")
+            assertionFailure()
+        }
+    }
+    
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
             case let .id(id, accessHash):
@@ -53,6 +74,27 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 encoder.encodeString(emoji, forKey: "e")
             case .animatedEmojiAnimations:
                 encoder.encodeInt32(4, forKey: "r")
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        
+        switch self {
+        case let .id(id, accessHash):
+            try container.encode(0 as Int32, forKey: "r")
+            try container.encode(id, forKey: "i")
+            try container.encode(accessHash, forKey: "h")
+        case let .name(name):
+            try container.encode(1 as Int32, forKey: "r")
+            try container.encode(name, forKey: "n")
+        case .animatedEmoji:
+            try container.encode(2 as Int32, forKey: "r")
+        case let .dice(emoji):
+            try container.encode(3 as Int32, forKey: "r")
+            try container.encode(emoji, forKey: "e")
+        case .animatedEmojiAnimations:
+            try container.encode(4 as Int32, forKey: "r")
         }
     }
     

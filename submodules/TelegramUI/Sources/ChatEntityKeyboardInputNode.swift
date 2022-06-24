@@ -13,6 +13,7 @@ import Postbox
 import TelegramCore
 import ComponentDisplayAdapters
 import SettingsUI
+import TextFormat
 
 final class ChatEntityKeyboardInputNode: ChatInputNode {
     struct InputData: Equatable {
@@ -40,7 +41,24 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 guard let interfaceInteraction = interfaceInteraction else {
                     return
                 }
-                interfaceInteraction.insertText(item.emoji)
+                var text = "."
+                var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                loop: for attribute in item.file.attributes {
+                    switch attribute {
+                    case let .Sticker(displayText, packReference, _):
+                        text = displayText
+                        if let packReference = packReference {
+                            emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: item.file.fileId.id)
+                            break loop
+                        }
+                    default:
+                        break
+                    }
+                }
+                
+                if let emojiAttribute = emojiAttribute {
+                    interfaceInteraction.insertText(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute]))
+                }
             },
             deleteBackwards: { [weak interfaceInteraction] in
                 guard let interfaceInteraction = interfaceInteraction else {
@@ -87,37 +105,33 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         })
         let animationRenderer = MultiAnimationRendererImpl()
         
-        let emojiItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
-            context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false),
-            context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudSavedStickers))
-        )
-        |> map { animatedEmoji, savedStickers -> EmojiPagerContentComponent in
+        let orderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.PremiumStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
+        let namespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
+        
+        let emojiItems: Signal<EmojiPagerContentComponent, NoError> = context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: namespaces, aroundIndex: nil, count: 10000000)
+        |> map { view -> EmojiPagerContentComponent in
             var emojiItems: [EmojiPagerContentComponent.Item] = []
             
-            for item in savedStickers {
-                if let item = item.contents.get(SavedStickerItem.self) {
-                    if item.file.isVideoSticker {
-                        emojiItems.append(EmojiPagerContentComponent.Item(
-                            emoji: "",
-                            file: item.file
-                        ))
+            var emojiCollectionIds = Set<ItemCollectionId>()
+            for (id, info, _) in view.collectionInfos {
+                if let info = info as? StickerPackCollectionInfo {
+                    if info.shortName.lowercased().contains("emoji") {
+                        emojiCollectionIds.insert(id)
                     }
                 }
             }
             
-            switch animatedEmoji {
-            case let .result(_, items, _):
-                for item in items {
-                    if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                        let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
-                        emojiItems.append(EmojiPagerContentComponent.Item(
-                            emoji: strippedEmoji,
-                            file: item.file
-                        ))
-                    }
+            for entry in view.entries {
+                guard let item = entry.item as? StickerPackItem else {
+                    continue
                 }
-            default:
-                break
+                if emojiCollectionIds.contains(entry.index.collectionId) {
+                    let resultItem = EmojiPagerContentComponent.Item(
+                        emoji: "",
+                        file: item.file
+                    )
+                    emojiItems.append(resultItem)
+                }
             }
             
             var itemGroups: [EmojiPagerContentComponent.ItemGroup] = []
@@ -145,8 +159,6 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
         |> distinctUntilChanged
         
-        let orderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.PremiumStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
-        let namespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: namespaces, aroundIndex: nil, count: 10000000),
             hasPremium

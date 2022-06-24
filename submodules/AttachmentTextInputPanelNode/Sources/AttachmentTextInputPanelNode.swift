@@ -242,7 +242,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     
     private var spoilersRevealed = false
     
-    private var emojiViewProvider: ((String) -> UIView)?
+    private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
     private var maxCaptionLength: Int32?
     

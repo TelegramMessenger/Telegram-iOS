@@ -144,7 +144,7 @@ public final class ChatPanelInterfaceInteraction {
     public let displayCopyProtectionTip: (ASDisplayNode, Bool) -> Void
     public let openWebView: (String, String, Bool, Bool) -> Void
     public let updateShowWebView: ((Bool) -> Bool) -> Void
-    public let insertText: (String) -> Void
+    public let insertText: (NSAttributedString) -> Void
     public let backwardsDeleteText: () -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
@@ -240,7 +240,7 @@ public final class ChatPanelInterfaceInteraction {
         displayCopyProtectionTip: @escaping (ASDisplayNode, Bool) -> Void,
         openWebView: @escaping (String, String, Bool, Bool) -> Void,
         updateShowWebView: @escaping ((Bool) -> Bool) -> Void,
-        insertText: @escaping (String) -> Void,
+        insertText: @escaping (NSAttributedString) -> Void,
         backwardsDeleteText: @escaping () -> Void,
         chatController: @escaping () -> ViewController?,
         statuses: ChatPanelInterfaceInteractionStatuses?

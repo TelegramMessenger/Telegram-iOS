@@ -301,6 +301,39 @@ public final class EmojiPagerContentComponent: Component {
                 super.init()
                 
                 if file.isAnimatedSticker || file.isVideoSticker {
+                    let loadAnimation: () -> Void = { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.disposable = renderer.add(groupId: groupId, target: strongSelf, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: { size, writer in
+                            let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
+                            
+                            let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
+                                guard let result = result else {
+                                    return
+                                }
+                                
+                                if file.isVideoSticker {
+                                    cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
+                                } else {
+                                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
+                                        writer.finish()
+                                        return
+                                    }
+                                    cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
+                                }
+                            })
+                            
+                            let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: stickerPackFileReference(file), resource: file.resource).start()
+                            
+                            return ActionDisposable {
+                                dataDisposable.dispose()
+                                fetchDisposable.dispose()
+                            }
+                        })
+                    }
+                    
                     if attemptSynchronousLoad {
                         if !renderer.loadFirstFrameSynchronously(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize) {
                             self.displayPlaceholder = true
@@ -309,34 +342,13 @@ public final class EmojiPagerContentComponent: Component {
                                 self.contents = image.cgImage
                             }
                         }
-                    }
-                    
-                    self.disposable = renderer.add(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: { size, writer in
-                        let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
                         
-                        let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
-                            guard let result = result else {
-                                return
-                            }
-                            
-                            if file.isVideoSticker {
-                                cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
-                            } else {
-                                guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
-                                    writer.finish()
-                                    return
-                                }
-                                cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
-                            }
+                        loadAnimation()
+                    } else {
+                        let _ = renderer.loadFirstFrame(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, completion: { _ in
+                            loadAnimation()
                         })
-                        
-                        let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: stickerPackFileReference(file), resource: file.resource).start()
-                        
-                        return ActionDisposable {
-                            dataDisposable.dispose()
-                            fetchDisposable.dispose()
-                        }
-                    })
+                    }
                 } else if let dimensions = file.dimensions {
                     let isSmall: Bool = false
                     self.disposable = (chatMessageSticker(account: context.account, file: file, small: isSmall, synchronousLoad: attemptSynchronousLoad)).start(next: { [weak self] resultTransform in
@@ -588,7 +600,7 @@ public final class EmojiPagerContentComponent: Component {
                     if let current = self.visibleItemLayers[itemId] {
                         itemLayer = current
                     } else {
-                        itemLayer = ItemLayer(item: item, context: component.context, groupId: "keyboard", attemptSynchronousLoad: attemptSynchronousLoads, file: item.file, cache: component.animationCache, renderer: component.animationRenderer, placeholderColor: theme.chat.inputMediaPanel.stickersBackgroundColor, pointSize: CGSize(width: itemLayout.itemSize, height: itemLayout.itemSize))
+                        itemLayer = ItemLayer(item: item, context: component.context, groupId: "keyboard", attemptSynchronousLoad: attemptSynchronousLoads, file: item.file, cache: component.animationCache, renderer: component.animationRenderer, placeholderColor: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1), pointSize: CGSize(width: itemLayout.itemSize, height: itemLayout.itemSize))
                         self.scrollView.layer.addSublayer(itemLayer)
                         self.visibleItemLayers[itemId] = itemLayer
                     }
