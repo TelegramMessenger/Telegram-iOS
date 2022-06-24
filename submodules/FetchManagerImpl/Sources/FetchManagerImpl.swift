@@ -6,6 +6,7 @@ import Postbox
 import TelegramUIPreferences
 import AccountContext
 import UniversalMediaPlayer
+import RangeSet
 
 public struct FetchManagerLocationEntryId: Hashable {
     public let location: FetchManagerLocation
@@ -41,15 +42,15 @@ private final class FetchManagerLocationEntry {
     var userInitiated: Bool = false
     var storeToDownloadsPeerType: MediaAutoDownloadPeerType?
     let references = Bag<FetchManagerPriority>()
-    let ranges = Bag<IndexSet>()
+    let ranges = Bag<RangeSet<Int64>>()
     var elevatedPriorityReferenceCount: Int32 = 0
     var userInitiatedPriorityIndices: [Int32] = []
     var isPaused: Bool = false
     
-    var combinedRanges: IndexSet {
-        var result = IndexSet()
+    var combinedRanges: RangeSet<Int64> {
+        var result = RangeSet<Int64>()
         if self.userInitiated {
-            result.insert(integersIn: 0 ..< Int(Int64.max))
+            result.insert(contentsOf: 0 ..< Int64.max)
         } else {
             for range in self.ranges.copyItems() {
                 result.formUnion(range)
@@ -77,7 +78,7 @@ private final class FetchManagerLocationEntry {
 
 private final class FetchManagerActiveContext {
     let userInitiated: Bool
-    var ranges = IndexSet()
+    var ranges = RangeSet<Int64>()
     var disposable: Disposable?
     
     init(userInitiated: Bool) {
@@ -224,12 +225,13 @@ private final class FetchManagerCategoryContext {
                     let entryCompleted = self.entryCompleted
                     let storeManager = self.storeManager
                     let parsedRanges: [(Range<Int64>, MediaBoxFetchPriority)]?
-                    if ranges.count == 1 && ranges.min() == 0 && ranges.max() == Int(Int64.max) {
+                    
+                    if ranges == RangeSet<Int64>(0 ..< Int64.max) {
                         parsedRanges = nil
                     } else {
                         var resultRanges: [(Range<Int64>, MediaBoxFetchPriority)] = []
-                        for range in ranges.rangeView {
-                            resultRanges.append((Int64(range.lowerBound) ..< Int64(range.upperBound), .default))
+                        for range in ranges.ranges {
+                            resultRanges.append((range, .default))
                         }
                         parsedRanges = resultRanges
                     }
@@ -312,14 +314,14 @@ private final class FetchManagerCategoryContext {
                 var count = 0
                 var isCompleteRange = false
                 var isVideoPreload = false
-                for range in ranges.rangeView {
+                for range in ranges.ranges {
                     count += 1
-                    if range.lowerBound == 0 && range.upperBound == Int(Int64.max) {
+                    if range.lowerBound == 0 && range.upperBound == Int64.max {
                         isCompleteRange = true
                     }
                 }
                 
-                if count == 2, let range = ranges.rangeView.first, range.lowerBound == 0 && range.upperBound == 2 * 1024 * 1024 {
+                if count == 2, let range = ranges.ranges.first, range.lowerBound == 0 && range.upperBound == 2 * 1024 * 1024 {
                     isVideoPreload = true
                 }
                 
@@ -327,8 +329,8 @@ private final class FetchManagerCategoryContext {
                     parsedRanges = nil
                 } else {
                     var resultRanges: [(Range<Int64>, MediaBoxFetchPriority)] = []
-                    for range in ranges.rangeView {
-                        resultRanges.append((Int64(range.lowerBound) ..< Int64(range.upperBound), .default))
+                    for range in ranges.ranges {
+                        resultRanges.append((range, .default))
                     }
                     parsedRanges = resultRanges
                 }
@@ -709,7 +711,7 @@ public final class FetchManagerImpl: FetchManager {
         }
     }
     
-    public func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, ranges: IndexSet, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, priority: FetchManagerPriority = .userInitiated, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Void, NoError> {
+    public func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, ranges: RangeSet<Int64>, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, priority: FetchManagerPriority = .userInitiated, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Void, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
