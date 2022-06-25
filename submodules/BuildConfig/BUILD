@@ -7,7 +7,6 @@ load(
     "telegram_is_appstore_build",
     "telegram_appstore_id",
     "telegram_app_specific_url_scheme",
-    "telegram_premium_iap_product_id",
 )
 
 objc_library(
@@ -26,7 +25,6 @@ objc_library(
         "-DAPP_CONFIG_IS_APPSTORE_BUILD={}".format(telegram_is_appstore_build),
         "-DAPP_CONFIG_APPSTORE_ID={}".format(telegram_appstore_id),
         "-DAPP_SPECIFIC_URL_SCHEME=\\\"{}\\\"".format(telegram_app_specific_url_scheme),
-        "-DAPP_CONFIG_PREMIUM_IAP_PRODUCT_ID=\\\"{}\\\"".format(telegram_premium_iap_product_id),
     ],
     hdrs = glob([
         "PublicHeaders/**/*.h",

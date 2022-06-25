@@ -3347,6 +3347,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 
                                 if progress == 1.0 {
                                     for itemNode in temporaryPreviousNodes {
+                                        itemNode.visibility = .none
                                         itemNode.removeFromSupernode()
                                         itemNode.extractedBackgroundNode?.removeFromSupernode()
                                     }
@@ -3360,6 +3361,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     } else {
                         animation.completion = { _ in
                             for itemNode in temporaryPreviousNodes {
+                                itemNode.visibility = .none
                                 itemNode.removeFromSupernode()
                                 itemNode.extractedBackgroundNode?.removeFromSupernode()
                             }
@@ -3442,6 +3444,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private func removeItemNodeAtIndex(_ index: Int) {
         let node = self.itemNodes[index]
         self.itemNodes.remove(at: index)
+        node.visibility = .none
         node.removeFromSupernode()
         node.extractedBackgroundNode?.removeFromSupernode()
         node.accessoryItemNode?.removeFromSupernode()

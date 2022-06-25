@@ -90,5 +90,10 @@ public struct PresentationResourcesSettings {
     public static let clearCache = renderIcon(name: "Settings/Menu/ClearCache")
     public static let changePhoneNumber = renderIcon(name: "Settings/Menu/ChangePhoneNumber")
     
+    public static let deleteAddAccount = renderIcon(name: "Settings/Menu/DeleteAddAccount")
+    public static let deleteSetPasscode = renderIcon(name: "Settings/Menu/FaceId")
+    public static let deleteChats = renderIcon(name: "Settings/Menu/DeleteChats")
+    public static let clearSynced = renderIcon(name: "Settings/Menu/ClearSynced")
+    
     public static let websites = renderIcon(name: "Settings/Menu/Websites")
 }

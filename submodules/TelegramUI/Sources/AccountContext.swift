@@ -186,11 +186,8 @@ public final class AccountContextImpl: AccountContext {
             self.prefetchManager = PrefetchManagerImpl(sharedContext: sharedContext, account: account, engine: self.engine, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
-            if let premiumProductId = sharedContext.premiumProductId {
-                self.inAppPurchaseManager = InAppPurchaseManager(engine: self.engine, premiumProductId: premiumProductId)
-            } else {
-                self.inAppPurchaseManager = nil
-            }
+            
+            self.inAppPurchaseManager = InAppPurchaseManager(engine: self.engine)
         } else {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil

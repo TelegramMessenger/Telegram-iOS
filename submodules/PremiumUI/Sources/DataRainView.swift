@@ -14,10 +14,6 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
     
     private var displayLink: CADisplayLink?
 
-//    private var metalLayer: CAMetalLayer {
-//        return self.layer as! CAMetalLayer
-//    }
-
     private let symbolTexture: MTLTexture
     private let randomTexture: MTLTexture
     

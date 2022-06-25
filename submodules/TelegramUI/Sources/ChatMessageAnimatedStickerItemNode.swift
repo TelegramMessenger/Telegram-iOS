@@ -402,11 +402,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    private var visibilityStatus: Bool = false {
+    private var visibilityStatus: Bool? {
         didSet {
             if self.visibilityStatus != oldValue {
                 self.updateVisibility()
-                self.haptic?.enabled = self.visibilityStatus
+                self.haptic?.enabled = self.visibilityStatus == true
             }
         }
     }
@@ -593,28 +593,18 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
         
-        let isPlaying = self.visibilityStatus && !self.forceStopAnimations
-        if let animationNode = self.animationNode as? AnimatedStickerNode {
-            if !isPlaying {
-                for decorationNode in self.additionalAnimationNodes {
-                    if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
-                        decorationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak decorationNode] _ in
-                            if let decorationNode = decorationNode {
-                                transitionNode.remove(decorationNode: decorationNode)
-                            }
-                        })
-                    }
-                }
-                self.additionalAnimationNodes.removeAll()
-
-                if let overlayMeshAnimationNode = self.overlayMeshAnimationNode {
-                    self.overlayMeshAnimationNode = nil
-                    if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
-                        transitionNode.remove(decorationNode: overlayMeshAnimationNode)
-                    }
+        let isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
+        if !isPlaying {
+            self.removeAdditionalAnimations()
+            
+            if let overlayMeshAnimationNode = self.overlayMeshAnimationNode {
+                self.overlayMeshAnimationNode = nil
+                if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
+                    transitionNode.remove(decorationNode: overlayMeshAnimationNode)
                 }
             }
-            
+        }
+        if let animationNode = self.animationNode as? AnimatedStickerNode {
             if self.isPlaying != isPlaying {
                 self.isPlaying = isPlaying
                 
@@ -1721,10 +1711,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
 
             self.additionalAnimationNodes.append(decorationNode)
 
-            additionalAnimationNode.play()
+            additionalAnimationNode.visibility = true
         }
     }
     
+    private func removeAdditionalAnimations() {
+        for decorationNode in self.additionalAnimationNodes {
+            if let additionalAnimationNode = decorationNode.contentView.asyncdisplaykit_node as? AnimatedStickerNode {
+                additionalAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak additionalAnimationNode] _ in
+                    additionalAnimationNode?.visibility = false
+                })
+            }
+        }
+    }
+
     private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {
         switch gesture {
         case .tap:            

@@ -5,20 +5,68 @@ import StoreKit
 import Postbox
 import TelegramCore
 
+private let productIdentifiers = [
+    "org.telegram.telegramPremium.monthly",
+    "org.telegram.telegramPremium.twelveMonths",
+    "org.telegram.telegramPremium.sixMonths",
+    "org.telegram.telegramPremium.threeMonths"
+]
+
 public final class InAppPurchaseManager: NSObject {
-    public final class Product {
+    public final class Product: Equatable {
+        private lazy var numberFormatter: NumberFormatter = {
+            let numberFormatter = NumberFormatter()
+            numberFormatter.numberStyle = .currency
+            numberFormatter.locale = self.skProduct.priceLocale
+            return numberFormatter
+        }()
+        
         let skProduct: SKProduct
         
         init(skProduct: SKProduct) {
             self.skProduct = skProduct
         }
         
-        public var price: String {
-            let numberFormatter = NumberFormatter()
-            numberFormatter.numberStyle = .currency
-            numberFormatter.locale = self.skProduct.priceLocale
-            return numberFormatter.string(from: self.skProduct.price) ?? ""
+        public var id: String {
+            return self.skProduct.productIdentifier
         }
+        
+        public var isSubscription: Bool {
+            if #available(iOS 12.0, *) {
+                return self.skProduct.subscriptionGroupIdentifier != nil
+            } else if #available(iOS 11.2, *) {
+                return self.skProduct.subscriptionPeriod != nil
+            } else {
+                return !self.id.contains(".monthly")
+            }
+        }
+        
+        public var price: String {
+            return self.numberFormatter.string(from: self.skProduct.price) ?? ""
+        }
+        
+        public func pricePerMonth(_ monthsCount: Int) -> String {
+            let price = self.skProduct.price.dividing(by: NSDecimalNumber(value: monthsCount))
+            return self.numberFormatter.string(from: price) ?? ""
+        }
+        
+        public var priceValue: NSDecimalNumber {
+            return self.skProduct.price
+        }
+        
+        public static func ==(lhs: Product, rhs: Product) -> Bool {
+            if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.isSubscription != rhs.isSubscription {
+                return false
+            }
+            if lhs.priceValue != rhs.priceValue {
+                return false
+            }
+            return true
+        }
+        
     }
     
     public enum PurchaseState {
@@ -58,7 +106,6 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     private let engine: TelegramEngine
-    private let premiumProductId: String
     
     private var products: [Product] = []
     private var productsPromise = Promise<[Product]>([])
@@ -71,9 +118,8 @@ public final class InAppPurchaseManager: NSObject {
     
     private let disposableSet = DisposableDict<String>()
     
-    public init(engine: TelegramEngine, premiumProductId: String) {
+    public init(engine: TelegramEngine) {
         self.engine = engine
-        self.premiumProductId = premiumProductId
         
         super.init()
         
@@ -90,11 +136,8 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     private func requestProducts() {
-        guard !self.premiumProductId.isEmpty else {
-            return
-        }
         Logger.shared.log("InAppPurchaseManager", "Requesting products")
-        let productRequest = SKProductsRequest(productIdentifiers: Set([self.premiumProductId]))
+        let productRequest = SKProductsRequest(productIdentifiers: Set(productIdentifiers))
         productRequest.delegate = self
         productRequest.start()
         
