@@ -906,6 +906,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let maximumInputNodeHeight = layout.size.height - max(navigationBarHeight + (titleAccessoryPanelBackgroundHeight ?? 0.0), layout.safeInsets.top) - inputPanelNodeBaseHeight
         
         var dismissedInputNode: ChatInputNode?
+        var dismissedInputNodeInputBackgroundExtension: CGFloat = 0.0
         var dismissedInputNodeExternalTopPanelContainer: UIView?
         var immediatelyLayoutInputNodeAndAnimateAppearance = false
         var inputNodeHeightAndOverflow: (CGFloat, CGFloat)?
@@ -931,6 +932,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 
                 dismissedInputNode = self.inputNode
+                if let inputNode = self.inputNode {
+                    dismissedInputNodeInputBackgroundExtension = inputNode.topBackgroundExtension
+                }
                 dismissedInputNodeExternalTopPanelContainer = self.inputNode?.externalTopPanelContainer
                 self.inputNode = inputNode
                 inputNode.alpha = 1.0
@@ -958,6 +962,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputNodeHeightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: layout.standardInputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelNodeBaseHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: layout.deviceMetrics, isVisible: self.isInFocus)
         } else if let inputNode = self.inputNode {
             dismissedInputNode = inputNode
+            dismissedInputNodeInputBackgroundExtension = inputNode.topBackgroundExtension
             dismissedInputNodeExternalTopPanelContainer = inputNode.externalTopPanelContainer
             self.inputNode = nil
         }
@@ -1407,9 +1412,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var inputPanelBackgroundExtension: CGFloat = 0.0
         if let inputNode = self.inputNode {
             inputPanelBackgroundExtension = inputNode.topBackgroundExtension
+        } else {
+            inputPanelBackgroundExtension = dismissedInputNodeInputBackgroundExtension
         }
-        self.inputPanelBackgroundNode.update(size: CGSize(width: intrinsicInputPanelBackgroundNodeSize.width, height: intrinsicInputPanelBackgroundNodeSize.height + inputPanelBackgroundExtension), transition: transition)
-        transition.updateFrame(node: self.inputPanelBottomBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.inputPanelBackgroundNode.frame.maxY + inputPanelBackgroundExtension), size: CGSize(width: self.inputPanelBackgroundNode.bounds.width, height: UIScreenPixel)))
+        
+        var inputPanelUpdateTransition = transition
+        if immediatelyLayoutInputNodeAndAnimateAppearance {
+            inputPanelUpdateTransition = .immediate
+        }
+        self.inputPanelBackgroundNode.update(size: CGSize(width: intrinsicInputPanelBackgroundNodeSize.width, height: intrinsicInputPanelBackgroundNodeSize.height + inputPanelBackgroundExtension), transition: inputPanelUpdateTransition)
+        inputPanelUpdateTransition.updateFrame(node: self.inputPanelBottomBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.inputPanelBackgroundNode.frame.maxY + inputPanelBackgroundExtension), size: CGSize(width: self.inputPanelBackgroundNode.bounds.width, height: UIScreenPixel)))
         
         transition.updateFrame(node: self.inputPanelBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: CGSize(width: apparentInputBackgroundFrame.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.navigateButtons, frame: apparentNavigateButtonsFrame)
@@ -1485,14 +1497,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 var adjustedForPreviousInputHeightFrame = inputNodeFrame
                 var heightDifference = inputNodeHeight - previousInputHeight
                 if previousInputHeight.isLessThanOrEqualTo(cleanInsets.bottom) {
-                    heightDifference = inputNodeHeight
+                    heightDifference = inputNodeHeight - inputPanelBackgroundExtension
                 }
                 adjustedForPreviousInputHeightFrame.origin.y += heightDifference
                 inputNode.frame = adjustedForPreviousInputHeightFrame
                 transition.updateFrame(node: inputNode, frame: inputNodeFrame)
                 
                 if let externalTopPanelContainer = inputNode.externalTopPanelContainer {
-                    externalTopPanelContainer.frame = CGRect(origin: adjustedForPreviousInputHeightFrame.origin, size: CGSize(width: adjustedForPreviousInputHeightFrame.width, height: 0.0))
+                    externalTopPanelContainer.frame = CGRect(origin: adjustedForPreviousInputHeightFrame.offsetBy(dx: 0.0, dy:  inputPanelBackgroundExtension).origin, size: CGSize(width: adjustedForPreviousInputHeightFrame.width, height: 0.0))
                     transition.updateFrame(view: externalTopPanelContainer, frame: CGRect(origin: inputNodeFrame.origin, size: CGSize(width: inputNodeFrame.width, height: 0.0)))
                 }
             } else {
