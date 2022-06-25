@@ -5,7 +5,7 @@ import sys
 from BuildEnvironment import is_apple_silicon, resolve_executable, call_executable, BuildEnvironmentVersions
 
 def locate_bazel(base_path):
-    build_input_dir = '{base_path}/build-input'.format(base_path)
+    build_input_dir = '{}/build-input'.format(base_path)
     if not os.path.isdir(build_input_dir):
         os.mkdir(build_input_dir)
 
