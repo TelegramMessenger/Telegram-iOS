@@ -37,7 +37,7 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
         }
     }
     
-    public init(decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
         
         let discriminator = try container.decode(Int32.self, forKey: "r")

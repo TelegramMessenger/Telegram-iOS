@@ -1421,7 +1421,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputPanelUpdateTransition = .immediate
         }
         self.inputPanelBackgroundNode.update(size: CGSize(width: intrinsicInputPanelBackgroundNodeSize.width, height: intrinsicInputPanelBackgroundNodeSize.height + inputPanelBackgroundExtension), transition: inputPanelUpdateTransition)
-        inputPanelUpdateTransition.updateFrame(node: self.inputPanelBottomBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.inputPanelBackgroundNode.frame.maxY + inputPanelBackgroundExtension), size: CGSize(width: self.inputPanelBackgroundNode.bounds.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.inputPanelBottomBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.inputPanelBackgroundNode.frame.maxY + inputPanelBackgroundExtension), size: CGSize(width: self.inputPanelBackgroundNode.bounds.width, height: UIScreenPixel)))
         
         transition.updateFrame(node: self.inputPanelBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: CGSize(width: apparentInputBackgroundFrame.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.navigateButtons, frame: apparentNavigateButtonsFrame)
@@ -1496,15 +1496,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if immediatelyLayoutInputNodeAndAnimateAppearance {
                 var adjustedForPreviousInputHeightFrame = inputNodeFrame
                 var heightDifference = inputNodeHeight - previousInputHeight
+                var externalTopPanelContainerOffset: CGFloat = 0.0
                 if previousInputHeight.isLessThanOrEqualTo(cleanInsets.bottom) {
                     heightDifference = inputNodeHeight - inputPanelBackgroundExtension
+                    externalTopPanelContainerOffset = inputPanelBackgroundExtension
                 }
                 adjustedForPreviousInputHeightFrame.origin.y += heightDifference
                 inputNode.frame = adjustedForPreviousInputHeightFrame
                 transition.updateFrame(node: inputNode, frame: inputNodeFrame)
                 
                 if let externalTopPanelContainer = inputNode.externalTopPanelContainer {
-                    externalTopPanelContainer.frame = CGRect(origin: adjustedForPreviousInputHeightFrame.offsetBy(dx: 0.0, dy:  inputPanelBackgroundExtension).origin, size: CGSize(width: adjustedForPreviousInputHeightFrame.width, height: 0.0))
+                    externalTopPanelContainer.frame = CGRect(origin: adjustedForPreviousInputHeightFrame.offsetBy(dx: 0.0, dy:  externalTopPanelContainerOffset).origin, size: CGSize(width: adjustedForPreviousInputHeightFrame.width, height: 0.0))
                     transition.updateFrame(view: externalTopPanelContainer, frame: CGRect(origin: inputNodeFrame.origin, size: CGSize(width: inputNodeFrame.width, height: 0.0)))
                 }
             } else {
