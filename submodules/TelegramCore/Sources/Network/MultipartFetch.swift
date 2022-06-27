@@ -3,18 +3,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
-
-private extension Range where Bound == Int64 {
-    func asIntRange() -> Range<Int> {
-        return Int(self.lowerBound) ..< Int(self.upperBound)
-    }
-}
-
-private extension Range where Bound == Int {
-    func asInt64Range() -> Range<Int64> {
-        return Int64(self.lowerBound) ..< Int64(self.upperBound)
-    }
-}
+import RangeSet
 
 private typealias SignalKitTimer = SwiftSignalKit.Timer
 
@@ -277,7 +266,7 @@ private final class MultipartCdnHashSource {
         |> mapToSignal { clusterResults -> Signal<[Int64: Data], MultipartFetchDownloadError> in
             var result: [Int64: Data] = [:]
 
-            for partOffset in stride(from: offset, to: offset + limit, by: Int(dataHashLength)) {
+            for partOffset in stride(from: offset, to: offset + limit, by: Int64.Stride(dataHashLength)) {
                 var found = false
                 for cluster in clusterResults {
                     if let data = cluster[partOffset] {
@@ -350,6 +339,7 @@ private enum MultipartFetchSource {
                                                         parsedPartHashes[offset] = bytes.makeData()
                                                 }
                                             }
+                                            parsedPartHashes.removeAll()
                                             return .fail(.switchToCdn(id: dcId, token: fileToken.makeData(), key: encryptionKey.makeData(), iv: encryptionIv.makeData(), partHashes: parsedPartHashes))
                                     }
                                 }
@@ -392,7 +382,7 @@ private enum MultipartFetchSource {
                                 let partIvCount = partIv.count
                                 partIv.withUnsafeMutableBytes { rawBytes -> Void in
                                     let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
-                                    var ivOffset: Int64 = (offset / 16).bigEndian
+                                    var ivOffset: Int32 = Int32(clamping: (offset / 16)).bigEndian
                                     memcpy(bytes.advanced(by: partIvCount - 4), &ivOffset, 4)
                                 }
                                 return .single(MTAesCtrDecrypt(bytes.makeData(), key, partIv)!)
@@ -447,7 +437,7 @@ private final class MultipartFetchManager {
     let queue = Queue()
     
     var currentIntervals: [(Range<Int64>, MediaBoxFetchPriority)]?
-    var currentFilledRanges = IndexSet()
+    var currentFilledRanges = RangeSet<Int64>()
     
     var completeSize: Int64?
     var completeSizeReported = false
@@ -616,7 +606,7 @@ private final class MultipartFetchManager {
         for offset in self.fetchedParts.keys.sorted() {
             if let (_, data) = self.fetchedParts[offset] {
                 let partRange = offset ..< (offset + Int64(data.count))
-                removeFromFetchIntervals.insert(integersIn: Int(partRange.lowerBound) ..< Int(partRange.upperBound))
+                removeFromFetchIntervals.formUnion(RangeSet<Int64>(partRange))
                 
                 var hasEarlierFetchingPart = false
                 if isSingleContiguousRange {
@@ -629,7 +619,7 @@ private final class MultipartFetchManager {
                 }
                 
                 if !hasEarlierFetchingPart {
-                    self.currentFilledRanges.insert(integersIn: Int(partRange.lowerBound) ..< Int(partRange.upperBound))
+                    self.currentFilledRanges.formUnion(RangeSet<Int64>(partRange))
                     self.fetchedParts.removeValue(forKey: offset)
                     
                     self.addSpeedRecord(byteCount: Int(partRange.upperBound - partRange.lowerBound))
@@ -640,19 +630,19 @@ private final class MultipartFetchManager {
         }
         
         for (offset, (size, _)) in self.fetchingParts {
-            removeFromFetchIntervals.insert(integersIn: Int(offset) ..< Int(offset + size))
+            removeFromFetchIntervals.formUnion(RangeSet<Int64>(offset ..< (offset + size)))
         }
         
         if let completeSize = self.completeSize {
-            self.currentFilledRanges.insert(integersIn: Int(completeSize) ..< Int.max)
-            removeFromFetchIntervals.insert(integersIn: Int(completeSize) ..< Int.max)
+            self.currentFilledRanges.formUnion(RangeSet<Int64>(completeSize ..< Int64.max))
+            removeFromFetchIntervals.formUnion(RangeSet<Int64>(completeSize ..< Int64.max))
         }
         
         var intervalsToFetch: [(Range<Int64>, MediaBoxFetchPriority)] = []
         for (interval, priority) in currentIntervals {
-            var intervalIndexSet = IndexSet(integersIn: Int(interval.lowerBound) ..< Int(interval.upperBound))
+            var intervalIndexSet = RangeSet<Int64>(interval)
             intervalIndexSet.subtract(removeFromFetchIntervals)
-            for cleanInterval in intervalIndexSet.rangeView {
+            for cleanInterval in intervalIndexSet.ranges {
                 assert(!cleanInterval.isEmpty)
                 intervalsToFetch.append((Int64(cleanInterval.lowerBound) ..< Int64(cleanInterval.upperBound), priority))
             }
@@ -708,16 +698,16 @@ private final class MultipartFetchManager {
                 downloadRange = downloadRange.lowerBound ..< (downloadRange.upperBound - 1)
             }
             
-            var intervalIndexSet = IndexSet(integersIn: intervalsToFetch[currentIntervalIndex].0.asIntRange())
-            intervalIndexSet.remove(integersIn: downloadRange.asIntRange())
+            var intervalIndexSet = RangeSet<Int64>(intervalsToFetch[currentIntervalIndex].0)
+            intervalIndexSet.remove(contentsOf: downloadRange)
             intervalsToFetch.remove(at: currentIntervalIndex)
             var insertIndex = currentIntervalIndex
-            for interval in intervalIndexSet.rangeView {
-                intervalsToFetch.insert((interval.asInt64Range(), priority), at: insertIndex)
+            for interval in intervalIndexSet.ranges {
+                intervalsToFetch.insert((interval, priority), at: insertIndex)
                 insertIndex += 1
             }
             
-            let part = self.source.request(offset: Int64(downloadRange.lowerBound), limit: Int64(downloadRange.count), tag: self.parameters?.tag, resource: self.resource, resourceReference: self.resourceReference, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
+            let part = self.source.request(offset: downloadRange.lowerBound, limit: downloadRange.upperBound - downloadRange.lowerBound, tag: self.parameters?.tag, resource: self.resource, resourceReference: self.resourceReference, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
             |> deliverOn(self.queue)
             let partDisposable = MetaDisposable()
             self.fetchingParts[downloadRange.lowerBound] = (Int64(downloadRange.count), partDisposable)
