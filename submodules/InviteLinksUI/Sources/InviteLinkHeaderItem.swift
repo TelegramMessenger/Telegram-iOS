@@ -113,8 +113,9 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 28.0 + params.leftInset
-            let topInset: CGFloat = 124.0
+            let leftInset: CGFloat = 24.0 + params.leftInset
+            let iconSize = CGSize(width: 140.0, height: 140.0)
+            let topInset: CGFloat = iconSize.height - 4.0
             let spacing: CGFloat = 5.0
             
             let attributedTitle = NSAttributedString(string: item.title ?? "", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
@@ -123,9 +124,9 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
                 return (TelegramTextAttributes.URL, contents)
             }))
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             var contentSize = CGSize(width: params.width, height: topInset + textLayout.size.height)
             if let _ = item.title {
@@ -138,13 +139,12 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     if strongSelf.item == nil {
-                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.animationName), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.animationName), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                         strongSelf.animationNode.visibility = true
                     }
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
                                         
-                    let iconSize = CGSize(width: 128.0, height: 128.0)
                     strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
                     strongSelf.animationNode.updateLayout(size: iconSize)
                     

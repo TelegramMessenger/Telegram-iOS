@@ -482,6 +482,10 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     return entries
 }
 
+class PrivacyAndSecurityControllerImpl: ItemListController {
+
+}
+
 public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, updatedBlockedPeers: ((BlockedPeersContext?) -> Void)? = nil, updatedHasTwoStepAuth: ((Bool) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil, activeSessionsContext: ActiveSessionsContext? = nil, webSessionsContext: WebSessionsContext? = nil, blockedPeersContext: BlockedPeersContext? = nil, hasTwoStepAuth: Bool? = nil) -> ViewController {
     let statePromise = ValuePromise(PrivacyAndSecurityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PrivacyAndSecurityControllerState())
@@ -492,6 +496,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     var pushControllerImpl: ((ViewController, Bool) -> Void)?
     var replaceTopControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
+    var getNavigationControllerImpl: (() -> NavigationController?)?
     
     let actionsDisposable = DisposableSet()
     
@@ -822,12 +827,26 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                     6 * 30 * 24 * 60 * 60,
                     365 * 24 * 60 * 60
                 ]
-                let timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
+                var timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
                     return ActionSheetButtonItem(title: timeIntervalString(strings: presentationData.strings, value: value), action: {
                         dismissAction()
                         timeoutAction(value)
                     })
                 }
+                timeoutItems.append(ActionSheetButtonItem(title: presentationData.strings.PrivacySettings_DeleteAccountNow, color: .destructive, action: {
+                    dismissAction()
+                    
+                    guard let navigationController = getNavigationControllerImpl?() else {
+                        return
+                    }
+                    
+                    let _ = (combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get())
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { hasTwoStepAuth, twoStepAuthData in
+                        let optionsController = deleteAccountOptionsController(context: context, navigationController: navigationController, hasTwoStepAuth: hasTwoStepAuth ?? false, twoStepAuthData: twoStepAuthData)
+                        pushControllerImpl?(optionsController, true)
+                    })
+                }))
                 controller.setItemGroups([
                     ActionSheetItemGroup(items: timeoutItems),
                     ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -886,7 +905,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(context: context, state: signal)
+    let controller = PrivacyAndSecurityControllerImpl(context: context, state: signal)
     pushControllerImpl = { [weak controller] c, animated in
         (controller?.navigationController as? NavigationController)?.pushViewController(c, animated: animated)
     }
@@ -896,7 +915,10 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
-    
+    getNavigationControllerImpl = {  [weak controller] in
+        return (controller?.navigationController as? NavigationController)
+    }
+
     controller.didAppear = { _ in
         updateHasTwoStepAuth()
     }

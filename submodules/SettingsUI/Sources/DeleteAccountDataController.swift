@@ -13,25 +13,47 @@ import AlertUI
 import PresentationDataUtils
 import UrlHandling
 import InviteLinksUI
+import CountrySelectionUI
+import PhoneInputNode
 
 private struct DeleteAccountDataArguments {
     let context: AccountContext
     let openLink: (String) -> Void
+    let selectCountryCode: () -> Void
+    let updatePassword: (String) -> Void
+    let proceed: () -> Void
 }
 
 private enum DeleteAccountDataSection: Int32 {
+    case header
     case main
 }
 
+private enum DeleteAccountEntryTag: Equatable, ItemListItemTag {
+    case password
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? DeleteAccountEntryTag {
+            return self == other
+        } else {
+            return false
+        }
+    }
+}
+
+
 private enum DeleteAccountDataEntry: ItemListNodeEntry, Equatable {
     case header(PresentationTheme, String, String, String)
-    
-    case peers(PresentationTheme, [Peer])
+    case peers(PresentationTheme, [EnginePeer])
+    case phone(PresentationTheme, PresentationStrings)
+    case password(PresentationTheme, String)
     case info(PresentationTheme, String)
 
     var section: ItemListSectionId {
         switch self {
-            case .header, .peers, .info:
+            case .header:
+                return DeleteAccountDataSection.header.rawValue
+            case .peers, .info, .phone, .password:
                 return DeleteAccountDataSection.main.rawValue
         }
     }
@@ -43,7 +65,11 @@ private enum DeleteAccountDataEntry: ItemListNodeEntry, Equatable {
             case .peers:
                 return 1
             case .info:
+                return 2
+            case .phone:
                 return 3
+            case .password:
+                return 4
         }
     }
 
@@ -56,7 +82,7 @@ private enum DeleteAccountDataEntry: ItemListNodeEntry, Equatable {
                     return false
                 }
             case let .peers(lhsTheme, lhsPeers):
-                if case let .peers(rhsTheme, rhsPeers) = rhs, lhsTheme === rhsTheme, arePeerArraysEqual(lhsPeers, rhsPeers) {
+                if case let .peers(rhsTheme, rhsPeers) = rhs, lhsTheme === rhsTheme, lhsPeers == rhsPeers {
                     return true
                 } else {
                     return false
@@ -67,6 +93,19 @@ private enum DeleteAccountDataEntry: ItemListNodeEntry, Equatable {
                 } else {
                     return false
                 }
+            case let .phone(lhsTheme, lhsStrings):
+                if case let .phone(rhsTheme, rhsStrings) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings {
+                    return true
+                } else {
+                    return false
+                }
+            case let .password(lhsTheme, lhsPlaceholder):
+                if case let .password(rhsTheme, rhsPlaceholder) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder {
+                    return true
+                } else {
+                    return false
+                }
+
         }
     }
     
@@ -80,14 +119,26 @@ private enum DeleteAccountDataEntry: ItemListNodeEntry, Equatable {
             case let .header(theme, animation, title, text):
                 return InviteLinkHeaderItem(context: arguments.context, theme: theme, title: title, text: text, animationName: animation, sectionId: self.section, linkAction: nil)
             case let .peers(_, peers):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(peers.first?.debugDisplayTitle ?? ""), sectionId: self.section)
+                return DeleteAccountPeersItem(context: arguments.context, theme: presentationData.theme, strings: presentationData.strings, peers: peers, sectionId: self.section)
             case let .info(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
+            case .phone:
+                return DeleteAccountPhoneItem(theme: presentationData.theme, strings: presentationData.strings, value: (nil, nil, ""), sectionId: self.section, selectCountryCode: {
+                    arguments.selectCountryCode()
+                }, updated: { _ in
+                    
+                })
+            case let .password(_, placeholder):
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: "", placeholder: placeholder, type: .password, returnKeyType: .done, tag: DeleteAccountEntryTag.password, sectionId: self.section, textUpdated: { value in
+                    arguments.updatePassword(value)
+                }, action: {
+                    arguments.proceed()
+                })
         }
     }
 }
 
-private func deleteAccountDataEntries(presentationData: PresentationData, mode: DeleteAccountDataMode, peers: [Peer]) -> [DeleteAccountDataEntry] {
+private func deleteAccountDataEntries(presentationData: PresentationData, mode: DeleteAccountDataMode, peers: [EnginePeer]) -> [DeleteAccountDataEntry] {
     var entries: [DeleteAccountDataEntry] = []
     
     let headerTitle: String
@@ -96,24 +147,45 @@ private func deleteAccountDataEntries(presentationData: PresentationData, mode: 
     
     switch mode {
     case .peers:
-        headerAnimation = ""
+        headerAnimation = "Delete1"
         headerTitle = presentationData.strings.DeleteAccount_CloudStorageTitle
         headerText = presentationData.strings.DeleteAccount_CloudStorageText
     case .groups:
-        headerAnimation = ""
+        headerAnimation = "Delete2"
         headerTitle = presentationData.strings.DeleteAccount_GroupsAndChannelsTitle
         headerText = presentationData.strings.DeleteAccount_GroupsAndChannelsText
     case .messages:
-        headerAnimation = ""
+        headerAnimation = "Delete3"
         headerTitle = presentationData.strings.DeleteAccount_MessageHistoryTitle
         headerText = presentationData.strings.DeleteAccount_MessageHistoryText
+    case .phone:
+        headerAnimation = "Delete4"
+        headerTitle = presentationData.strings.DeleteAccount_EnterPhoneNumber
+        headerText = ""
+    case .password:
+        headerAnimation = "Delete5"
+        headerTitle = presentationData.strings.DeleteAccount_EnterPassword
+        headerText = ""
     }
     
     entries.append(.header(presentationData.theme, headerAnimation, headerTitle, headerText))
-    entries.append(.peers(presentationData.theme, peers))
     
-    if case .groups = mode {
-        entries.append(.info(presentationData.theme, presentationData.strings.DeleteAccount_GroupsAndChannelsInfo))
+    switch mode {
+        case .peers:
+            if !peers.isEmpty {
+                entries.append(.peers(presentationData.theme, peers))
+            }
+        case .groups:
+            if !peers.isEmpty {
+                entries.append(.peers(presentationData.theme, peers))
+                entries.append(.info(presentationData.theme, presentationData.strings.DeleteAccount_GroupsAndChannelsInfo))
+            }
+        case .messages:
+            break
+        case .phone:
+            entries.append(.phone(presentationData.theme, presentationData.strings))
+        case .password:
+            entries.append(.password(presentationData.theme, presentationData.strings.LoginPassword_PasswordPlaceholder))
     }
     
     return entries
@@ -121,55 +193,150 @@ private func deleteAccountDataEntries(presentationData: PresentationData, mode: 
 
 enum DeleteAccountDataMode {
     case peers
-    case groups
+    case groups([EnginePeer])
     case messages
+    case phone
+    case password
 }
 
-func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDataMode) -> ViewController {
+private struct DeleteAccountDataState: Equatable {
+    var password: String
+    var isLoading: Bool
+    
+    static func == (lhs: DeleteAccountDataState, rhs: DeleteAccountDataState) -> Bool {
+        return lhs.password == rhs.password && lhs.isLoading == rhs.isLoading
+    }
+}
+
+func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDataMode, twoStepAuthData: TwoStepVerificationAccessConfiguration?) -> ViewController {
+    let initialState = DeleteAccountDataState(password: "", isLoading: false)
+    let statePromise = ValuePromise(initialState, ignoreRepeated: true)
+    let stateValue = Atomic(value: initialState)
+    let updateState: ((DeleteAccountDataState) -> DeleteAccountDataState) -> Void = { f in
+        statePromise.set(stateValue.modify { f($0) })
+    }
+    
+    var presentControllerImpl: ((ViewController) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var replaceTopControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
+    var updateCodeImpl: (() -> Void)?
+   
+    var activateInputImpl: (() -> Void)?
+    var dismissInputImpl: (() -> Void)?
+    
+    if case .phone = mode {
+        loadServerCountryCodes(accountManager: context.sharedContext.accountManager, engine: context.engine, completion: {
+            updateCodeImpl?()
+        })
+    }
 
+    var updateCountryCodeImpl: ((Int32, String) -> Void)?
+    var proceedImpl: (() -> Void)?
+    
     let arguments = DeleteAccountDataArguments(context: context, openLink: { _ in
       
+    }, selectCountryCode: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let controller = AuthorizationSequenceCountrySelectionController(strings: presentationData.strings, theme: presentationData.theme)
+        controller.completeWithCountryCode = { code, name in
+            updateCountryCodeImpl?(Int32(code), name)
+            activateInputImpl?()
+        }
+        dismissInputImpl?()
+        pushControllerImpl?(controller)
+    }, updatePassword: { password in
+        updateState { current in
+            var updated = current
+            updated.password = password
+            return updated
+        }
+    }, proceed: {
+        proceedImpl?()
     })
     
-    let peers: Signal<[Peer], NoError> = .single([])
-
+    let preloadedGroupPeers = Promise<[EnginePeer]>([])
+    
+    let peers: Signal<[EnginePeer], NoError>
+    switch mode {
+        case .peers:
+            peers = combineLatest(
+                context.engine.peers.recentPeers()
+                |> map { recentPeers -> [EnginePeer] in
+                    if case let .peers(peers) = recentPeers {
+                        return peers.map { EnginePeer($0) }
+                    } else {
+                        return []
+                    }
+                },
+                context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            ) |> map { recentPeers, accountPeer -> [EnginePeer] in
+                var peers: [EnginePeer] = []
+                if let accountPeer = accountPeer {
+                    peers.append(accountPeer)
+                }
+                peers.append(contentsOf: recentPeers.prefix(9))
+                return peers
+            }
+        
+            preloadedGroupPeers.set(context.engine.peers.adminedPublicChannels(scope: .all)
+            |> map { peers -> [EnginePeer] in
+                return peers.map { EnginePeer($0) }
+            })
+        case let .groups(preloadedPeers):
+            peers = .single(preloadedPeers.shuffled())
+        default:
+            peers = .single([])
+    }
+    
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
-        peers
+        peers,
+        statePromise.get()
     )
-    |> map { presentationData, peers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, peers, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
 
-        let footerItem = DeleteAccountFooterItem(theme: presentationData.theme, title: presentationData.strings.DeleteAccount_ComeBackLater, secondaryTitle: presentationData.strings.DeleteAccount_Continue, action: {
+        var focusItemTag: DeleteAccountEntryTag?
+        var buttonTitle: String
+        switch mode {
+            case .phone:
+                buttonTitle = ""
+            case .password:
+                buttonTitle = ""
+                focusItemTag = .password
+            default:
+                buttonTitle = presentationData.strings.DeleteAccount_ComeBackLater
+        }
+        
+        let rightNavigationButton: ItemListNavigationButton?
+        if state.isLoading {
+            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+        } else {
+            rightNavigationButton = nil
+        }
+        
+        let footerItem = DeleteAccountFooterItem(theme: presentationData.theme, title: buttonTitle, secondaryTitle: presentationData.strings.DeleteAccount_Continue, action: {
             dismissImpl?()
         }, secondaryAction: {
-            let nextMode: DeleteAccountDataMode?
-            switch mode {
-                case .peers:
-                    nextMode = .groups
-                case .groups:
-                    nextMode = .messages
-                case .messages:
-                    nextMode = nil
-            }
-            
-            if let nextMode = nextMode {
-                let controller = deleteAccountDataController(context: context, mode: nextMode)
-                replaceTopControllerImpl?(controller)
-            }
+            proceedImpl?()
         })
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.DeleteAccount_DeleteMyAccountTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: deleteAccountDataEntries(presentationData: presentationData, mode: mode, peers: peers), style: .blocks, footerItem: footerItem)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.DeleteAccount_DeleteMyAccountTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: deleteAccountDataEntries(presentationData: presentationData, mode: mode, peers: peers), style: .blocks, focusItemTag: focusItemTag, footerItem: footerItem)
 
         return (controllerState, (listState, arguments))
     }
 
     let controller = ItemListController(context: context, state: signal, tabBarItem: nil)
+    presentControllerImpl = { [weak controller] c in
+        controller?.present(c, in: .window(.root))
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
+    }
     replaceTopControllerImpl = { [weak controller] c in
         if let navigationController = controller?.navigationController as? NavigationController {
             navigationController.pushViewController(c, completion: { [weak navigationController, weak controller, weak c] in
@@ -184,7 +351,172 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
     dismissImpl = { [weak controller] in
         let _ = controller?.dismiss()
     }
-
+    updateCodeImpl = { [weak controller] in
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? DeleteAccountPhoneItemNode {
+                itemNode.updateCountryCode()
+            }
+        }
+    }
+    
+    activateInputImpl = { [weak controller] in
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? DeleteAccountPhoneItemNode {
+                itemNode.activateInput()
+            }
+        }
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
+    }
+    controller.didAppear = { firstTime in
+        if !firstTime {
+            return
+        }
+        activateInputImpl?()
+    }
+    
+    updateCountryCodeImpl = { [weak controller] code, name in
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? DeleteAccountPhoneItemNode {
+                itemNode.updateCountryCode(code: code, name: name)
+            }
+        }
+    }
+    
+    proceedImpl = { [weak controller] in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        let action: ([EnginePeer]) -> Void = { preloadedPeers in
+            let nextMode: DeleteAccountDataMode?
+            switch mode {
+                case .peers:
+                    if !preloadedPeers.isEmpty {
+                        nextMode = .groups(preloadedPeers)
+                    } else {
+                        nextMode = .messages
+                    }
+                case .groups:
+                    nextMode = .messages
+                case .messages:
+                    nextMode = .phone
+                case .phone:
+                    if let twoStepAuthData = twoStepAuthData, case .set = twoStepAuthData {
+                        nextMode = .password
+                    } else {
+                        nextMode = nil
+                    }
+                case .password:
+                    nextMode = nil
+            }
+            
+            if let nextMode = nextMode {
+                let controller = deleteAccountDataController(context: context, mode: nextMode, twoStepAuthData: twoStepAuthData)
+                replaceTopControllerImpl?(controller)
+            } else {
+                presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.DeleteAccount_ConfirmationAlertTitle, text: presentationData.strings.DeleteAccount_ConfirmationAlertText, actions: [TextAlertAction(type: .destructiveAction, title: presentationData.strings.DeleteAccount_ConfirmationAlertDelete, action: {
+                    updateState { current in
+                        var updated = current
+                        updated.isLoading = true
+                        return updated
+                    }
+                    
+                    let accountId = context.account.id
+                    let accountManager = context.sharedContext.accountManager
+                    let _ = (context.engine.auth.deleteAccount(reason: "Manual")
+                    |> deliverOnMainQueue).start(error: { _ in
+                        updateState { current in
+                            var updated = current
+                            updated.isLoading = false
+                            return updated
+                        }
+                        
+                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+                    }, completed: {
+                        dismissImpl?()
+                        let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: true).start()
+                    })
+                }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                    dismissImpl?()
+                })]))
+            }
+        }
+        
+        switch mode {
+            case .peers:
+                let _ = (preloadedGroupPeers.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { peers in
+                    action(peers)
+                })
+            case .phone:
+                var phoneNumber: String?
+                controller?.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? DeleteAccountPhoneItemNode {
+                        phoneNumber = itemNode.phoneNumber
+                    }
+                }
+            
+                if let phoneNumber = phoneNumber, phoneNumber.count > 4 {
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                    |> deliverOnMainQueue)
+                    .start(next: { accountPeer in
+                        if let accountPeer = accountPeer, case let .user(user) = accountPeer, var phone = user.phone {
+                            if !phone.hasPrefix("+") {
+                                phone = "+\(phone)"
+                            }
+                            if phone != phoneNumber  {
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.DeleteAccount_InvalidPhoneNumberError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+                                return
+                            }
+                            action([])
+                        }
+                    })
+                }
+            case .password:
+                let state = stateValue.with { $0 }
+                if !state.password.isEmpty {
+                    updateState { current in
+                        var updated = current
+                        updated.isLoading = true
+                        return updated
+                    }
+                    
+                    let _ = (context.engine.auth.requestTwoStepVerifiationSettings(password: state.password)
+                    |> deliverOnMainQueue).start(error: { error in
+                        updateState { current in
+                            var updated = current
+                            updated.isLoading = false
+                            return updated
+                        }
+                        
+                        let text: String
+                        switch error {
+                            case .limitExceeded:
+                                text = presentationData.strings.LoginPassword_FloodError
+                            case .invalidPassword:
+                                text = presentationData.strings.DeleteAccount_InvalidPasswordError
+                            default:
+                                text = presentationData.strings.Login_UnknownError
+                        }
+                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+                    }, completed: {
+                        updateState { current in
+                            var updated = current
+                            updated.isLoading = false
+                            return updated
+                        }
+                        
+                        action([])
+                    })
+                    return
+                }
+                
+            default:
+                action([])
+        }
+    }
+    
     return controller
 }
 
