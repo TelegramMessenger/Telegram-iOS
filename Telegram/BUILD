@@ -501,6 +501,11 @@ communication_notifications_fragment = "" if telegram_is_non_dev_account else ""
 <true/>
 """
 
+filtering_notifications_fragment = "" if telegram_is_non_dev_account else """
+<key>com.apple.developer.usernotifications.filtering</key>
+<true/>
+"""
+
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
@@ -515,6 +520,7 @@ plist_fragment(
         unrestricted_voip_fragment,
         carplay_fragment,
         communication_notifications_fragment,
+        filtering_notifications_fragment,
     ])
 )
 
