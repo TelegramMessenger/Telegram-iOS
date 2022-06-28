@@ -608,14 +608,13 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
         }
 
         if let (messageId, _) = hiddenMedia {
-            self.messageRemovedDisposable = (context.account.postbox.combinedView(keys: [PostboxViewKey.messages([messageId])])
-            |> map { views -> Bool in
-                if let view = views.views[PostboxViewKey.messages([messageId])] as? MessagesView {
-                    if view.messages[messageId] == nil {
-                        return true
-                    }
+            self.messageRemovedDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+            |> map { message -> Bool in
+                if let _ = message {
+                    return false
+                } else {
+                    return true
                 }
-                return false
             }
             |> filter { $0 }
             |> take(1)
@@ -1445,8 +1444,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 Queue.mainQueue().async {
                     item.playbackCompleted()
                     if let strongSelf = self, !isAnimated {
-                        videoNode?.seek(0.0)
+                        if let snapshotView = videoNode?.view.snapshotView(afterScreenUpdates: false) {
+                            videoNode?.view.addSubview(snapshotView)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                        }
                         
+                        videoNode?.seek(0.0)
+                                                
                         if strongSelf.actionAtEnd == .stop && strongSelf.isCentral == true {
                             strongSelf.isPlayingPromise.set(false)
                             strongSelf.updateControlsVisibility(true)
@@ -2240,16 +2246,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
                 let shouldBeDismissed: Signal<Bool, NoError>
                 if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
-                    let viewKey = PostboxViewKey.messages(Set([message.id]))
-                    shouldBeDismissed = context.account.postbox.combinedView(keys: [viewKey])
-                    |> map { views -> Bool in
-                        guard let view = views.views[viewKey] as? MessagesView else {
+                    shouldBeDismissed = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: message.id))
+                    |> map { message -> Bool in
+                        if let _ = message {
                             return false
-                        }
-                        if view.messages.isEmpty {
-                            return true
                         } else {
-                            return false
+                            return true
                         }
                     }
                     |> distinctUntilChanged

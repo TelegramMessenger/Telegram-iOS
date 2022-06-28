@@ -69,16 +69,38 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: context.account.peerId)
             
-            let placeholderColor: UIColor =  message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
+            let placeholderColor: UIColor = message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             let titleColor: UIColor
             let lineImage: UIImage?
             let textColor: UIColor
             let dustColor: UIColor
-                
+            
+            var authorNameColor: UIColor?
+            
+            if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(parentMessage.id.peerId.namespace) && author?.id.namespace == Namespaces.Peer.CloudUser {
+                authorNameColor = author.flatMap { chatMessagePeerIdColors[Int(clamping: $0.id.id._internalGetInt64Value() % 7)] }
+                if let rawAuthorNameColor = authorNameColor {
+                    var dimColors = false
+                    switch presentationData.theme.theme.name {
+                        case .builtin(.nightAccent), .builtin(.night):
+                            dimColors = true
+                        default:
+                            break
+                    }
+                    if dimColors {
+                        var hue: CGFloat = 0.0
+                        var saturation: CGFloat = 0.0
+                        var brightness: CGFloat = 0.0
+                        rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
+                        authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
+                    }
+                }
+            }
+            
             switch type {
                 case let .bubble(incoming):
-                    titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                    lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(presentationData.theme.theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(presentationData.theme.theme)
+                    titleColor = incoming ? (authorNameColor ?? presentationData.theme.theme.chat.message.incoming.accentTextColor) : presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                    lineImage = incoming ? (authorNameColor.flatMap({ PresentationResourcesChat.chatBubbleVerticalLineImage(color: $0) }) ??  PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(presentationData.theme.theme)) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(presentationData.theme.theme)
                     if isMedia {
                         textColor = incoming ? presentationData.theme.theme.chat.message.incoming.secondaryTextColor : presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                     } else {

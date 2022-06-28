@@ -599,7 +599,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     let resolvedWallpaper: TelegramWallpaper?
                     if let theme = theme, case let .file(file) = theme.chat.defaultWallpaper, file.id != 0 {
                         resolvedWallpaper = theme.chat.defaultWallpaper
-                        updateCachedWallpaper(account: context.account, wallpaper: theme.chat.defaultWallpaper)
+                        updateCachedWallpaper(engine: context.engine, wallpaper: theme.chat.defaultWallpaper)
                     } else {
                         resolvedWallpaper = nil
                     }

@@ -9,6 +9,16 @@ import UrlEscaping
 import TelegramUniversalVideoContent
 import TextSelectionNode
 import InvisibleInkDustNode
+import Emoji
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import SwiftSignalKit
+import AccountContext
+import YuvConversion
+import AnimationCache
+import LottieAnimationCache
+import MultiAnimationRenderer
+import EmojiTextAttachmentView
 
 private final class CachedChatMessageText {
     let text: String
@@ -36,6 +46,25 @@ private final class CachedChatMessageText {
     }
 }
 
+private final class InlineStickerItem: Hashable {
+    let file: TelegramMediaFile
+    
+    init(file: TelegramMediaFile) {
+        self.file = file
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(self.file.fileId)
+    }
+    
+    static func ==(lhs: InlineStickerItem, rhs: InlineStickerItem) -> Bool {
+        if lhs.file.fileId != rhs.file.fileId {
+            return false
+        }
+        return true
+    }
+}
+
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
     private var spoilerTextNode: TextNode?
@@ -47,8 +76,39 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var textSelectionNode: TextSelectionNode?
     
     private var textHighlightingNodes: [LinkHighlightingNode] = []
+    private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayer] = [:]
     
     private var cachedChatMessageText: CachedChatMessageText?
+    
+    private var isVisibleForAnimations: Bool {
+        return self.visibility != .none
+    }
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            if !self.inlineStickerItemLayers.isEmpty {
+                if oldValue != self.visibility {
+                    for (_, itemLayer) in self.inlineStickerItemLayers {
+                        let isItemVisible: Bool
+                        switch self.visibility {
+                        case .none:
+                            isItemVisible = false
+                        case let .visible(_, subRect):
+                            var subRect = subRect
+                            subRect.origin.x = 0.0
+                            subRect.size.width = 10000.0
+                            if itemLayer.frame.intersects(subRect) {
+                                isItemVisible = true
+                            } else {
+                                isItemVisible = false
+                            }
+                        }
+                        itemLayer.isVisibleForAnimations = isItemVisible
+                    }
+                }
+            }
+        }
+    }
     
     required init() {
         self.textNode = TextNode()
@@ -62,7 +122,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .topLeft
         self.textNode.contentsScale = UIScreenScale
-        self.textNode.displaysAsynchronously = false
+        self.textNode.displaysAsynchronously = true
         self.addSubnode(self.textNode)
         self.addSubnode(self.textAccessibilityOverlayNode)
         
@@ -91,7 +151,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let textLayout = TextNode.asyncLayout(self.textNode)
         let spoilerTextLayout = TextNode.asyncLayout(self.spoilerTextNode)
         let statusLayout = self.statusNode.asyncLayout()
@@ -179,7 +239,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 let rawText: String
-                let attributedText: NSAttributedString
+                var attributedText: NSAttributedString
                 var messageEntities: [MessageTextEntity]?
                 
                 var mediaDuration: Double? = nil
@@ -281,6 +341,39 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
+                /*if let entities = entities {
+                    let updatedString = NSMutableAttributedString(attributedString: attributedText)
+                    
+                    for entity in entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound }) {
+                        guard case .AnimatedEmoji = entity.type else {
+                            continue
+                        }
+                        
+                        let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                        
+                        let substring = updatedString.attributedSubstring(from: range)
+                        
+                        let emoji = substring.string.basicEmoji.0
+                        
+                        var emojiFile: TelegramMediaFile?
+                        emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+                        if emojiFile == nil {
+                            emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
+                        }
+                        
+                        if let emojiFile = emojiFile {
+                            let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
+                            var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
+                            updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
+                            updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(file: emojiFile)
+                            
+                            let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}]", attributes: updatedAttributes)
+                            updatedString.replaceCharacters(in: range, with: insertString)
+                        }
+                    }
+                    attributedText = updatedString
+                }*/
+                
                 let cutout: TextNodeCutout? = nil
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 5.0, right: 2.0)
@@ -356,7 +449,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                     boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
                     
-                    return (boundingSize, { [weak self] animation, _ in
+                    return (boundingSize, { [weak self] animation, _, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             if let updatedCachedChatMessageText = updatedCachedChatMessageText {
@@ -386,7 +479,6 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let _ = textApply()
                             animation.animator.updateFrame(layer: strongSelf.textNode.layer, frame: textFrame, completion: nil)
-                            //strongSelf.textNode.frame = textFrame
                             
                             if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
                                 let spoilerTextNode = spoilerTextApply()
@@ -434,6 +526,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                             
+                            strongSelf.updateInlineStickers(context: item.context, cache: item.controllerInteraction.presentationContext.animationCache, renderer: item.controllerInteraction.presentationContext.animationRenderer, textLayout: textLayout, placeholderColor: messageTheme.mediaPlaceholderColor)
+                            
                             if let statusSizeAndApply = statusSizeAndApply {
                                 animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0), completion: nil)
                                 if strongSelf.statusNode.supernode == nil {
@@ -460,6 +554,50 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     })
                 })
             })
+        }
+    }
+    
+    private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor) {
+        var nextIndexById: [MediaId: Int] = [:]
+        var validIds: [InlineStickerItemLayer.Key] = []
+        
+        if let textLayout = textLayout {
+            for item in textLayout.embeddedItems {
+                if let stickerItem = item.value as? InlineStickerItem {
+                    let index: Int
+                    if let currentNext = nextIndexById[stickerItem.file.fileId] {
+                        index = currentNext
+                    } else {
+                        index = 0
+                    }
+                    nextIndexById[stickerItem.file.fileId] = index + 1
+                    let id = InlineStickerItemLayer.Key(id: stickerItem.file.fileId, index: index)
+                    validIds.append(id)
+                    
+                    let itemLayer: InlineStickerItemLayer
+                    if let current = self.inlineStickerItemLayers[id] {
+                        itemLayer = current
+                    } else {
+                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: false, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor)
+                        self.inlineStickerItemLayers[id] = itemLayer
+                        self.textNode.layer.addSublayer(itemLayer)
+                        itemLayer.isVisibleForAnimations = self.isVisibleForAnimations
+                    }
+                    
+                    itemLayer.frame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 0.0).center, size: CGSize()).insetBy(dx: -12.0, dy: -12.0)
+                }
+            }
+        }
+        
+        var removeKeys: [InlineStickerItemLayer.Key] = []
+        for (key, itemLayer) in self.inlineStickerItemLayers {
+            if !validIds.contains(key) {
+                removeKeys.append(key)
+                itemLayer.removeFromSuperlayer()
+            }
+        }
+        for key in removeKeys {
+            self.inlineStickerItemLayers.removeValue(forKey: key)
         }
     }
     

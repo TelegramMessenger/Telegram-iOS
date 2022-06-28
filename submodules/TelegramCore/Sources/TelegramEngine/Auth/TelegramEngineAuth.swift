@@ -3,6 +3,11 @@ import Postbox
 import TelegramApi
 import MtProtoKit
 
+public enum TelegramEngineAuthorizationState {
+    case unauthorized(UnauthorizedAccountState)
+    case authorized
+}
+
 public extension TelegramEngineUnauthorized {
     final class Auth {
         private let account: UnauthorizedAccount
@@ -42,6 +47,26 @@ public extension TelegramEngineUnauthorized {
         public func uploadedPeerVideo(resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
             return _internal_uploadedPeerVideo(postbox: self.account.postbox, network: self.account.network, messageMediaPreuploadManager: nil, resource: resource)
         }
+        
+        public func state() -> Signal<TelegramEngineAuthorizationState?, NoError> {
+            return self.account.postbox.stateView()
+            |> map { view -> TelegramEngineAuthorizationState? in
+                if let state = view.state as? UnauthorizedAccountState {
+                    return .unauthorized(state)
+                } else if let _ = view.state as? AuthorizedAccountState {
+                    return .authorized
+                } else {
+                    return nil
+                }
+            }
+        }
+        
+        public func setState(state: UnauthorizedAccountState) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.setState(state)
+            }
+            |> ignoreValues
+        }
     }
 }
 
@@ -65,8 +90,8 @@ public extension TelegramEngine {
             return _internal_updateTwoStepVerificationPassword(network: self.account.network, currentPassword: currentPassword, updatedPassword: updatedPassword)
         }
 
-        public func deleteAccount() -> Signal<Never, DeleteAccountError> {
-            return self.account.network.request(Api.functions.account.deleteAccount(reason: "GDPR"))
+        public func deleteAccount(reason: String) -> Signal<Never, DeleteAccountError> {
+            return self.account.network.request(Api.functions.account.deleteAccount(reason: reason))
             |> mapError { _ -> DeleteAccountError in
                 return .generic
             }

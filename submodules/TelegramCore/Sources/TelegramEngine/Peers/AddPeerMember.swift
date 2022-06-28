@@ -76,6 +76,7 @@ public enum AddChannelMemberError {
     case bot(PeerId)
     case botDoesntSupportGroups
     case tooMuchBots
+    case kicked
 }
 
 func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
@@ -110,6 +111,8 @@ func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: Peer
                                 return .fail(.botDoesntSupportGroups)
                             case "BOTS_TOO_MUCH":
                                 return .fail(.tooMuchBots)
+                            case "USER_KICKED":
+                                return .fail(.kicked)
                             default:
                                 return .fail(.generic)
                         }
@@ -204,6 +207,8 @@ func _internal_addChannelMembers(account: Account, peerId: PeerId, memberIds: [P
                         return .notMutualContact
                     case "USERS_TOO_MUCH":
                         return .limitExceeded
+                    case "USER_KICKED":
+                        return .kicked
                     default:
                         return .generic
                 }

@@ -158,14 +158,14 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
             if let dimensions = stickerItem.file.dimensions {
                 if stickerItem.file.isAnimatedSticker || stickerItem.file.isVideoSticker {
                     if self.animationNode == nil {
-                        let animationNode = AnimatedStickerNode()
+                        let animationNode = DefaultAnimatedStickerNodeImpl()
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
                         self.animationNode = animationNode
                         self.insertSubnode(animationNode, belowSubnode: self.textNode)
                     }
                     let dimensions = stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {

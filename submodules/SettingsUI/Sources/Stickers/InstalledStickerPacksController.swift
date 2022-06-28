@@ -1148,26 +1148,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 break
             }
         }
-        let _ = (context.account.postbox.transaction { transaction -> Void in
-            let infos = transaction.getItemCollectionsInfos(namespace: namespaceForMode(mode))
-            
-            var packDict: [ItemCollectionId: Int] = [:]
-            for i in 0 ..< infos.count {
-                packDict[infos[i].0] = i
-            }
-            var tempSortedPacks: [(ItemCollectionId, ItemCollectionInfo)] = []
-            var processedPacks = Set<ItemCollectionId>()
-            for id in currentIds {
-                if let index = packDict[id] {
-                    tempSortedPacks.append(infos[index])
-                    processedPacks.insert(id)
-                }
-            }
-            let restPacks = infos.filter { !processedPacks.contains($0.0) }
-            let sortedPacks = restPacks + tempSortedPacks
-            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespaceForMode(mode), content: .sync, noDelay: false)
-            transaction.replaceItemCollectionInfos(namespace: namespaceForMode(mode), itemCollectionInfos: sortedPacks)
-        }
+        let _ = (context.engine.stickers.reorderStickerPacks(namespace: namespaceForMode(mode), itemIds: currentIds)
         |> deliverOnMainQueue).start(completed: {
             temporaryPackOrder.set(.single(nil))
         })

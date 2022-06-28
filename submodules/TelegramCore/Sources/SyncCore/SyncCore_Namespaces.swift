@@ -39,7 +39,7 @@ public struct Namespaces {
     }
     
     public struct ItemCollection {
-        public static let CloudStickerPacks: Int32 = 0
+        public static let CloudStickerPacks: Int32 = 7
         public static let CloudMaskPacks: Int32 = 1
         public static let EmojiKeywords: Int32 = 2
         public static let CloudAnimatedEmoji: Int32 = 3
@@ -61,6 +61,8 @@ public struct Namespaces {
         public static let CloudThemes: Int32 = 9
         public static let CloudGreetingStickers: Int32 = 10
         public static let RecentDownloads: Int32 = 11
+        public static let PremiumStickers: Int32 = 12
+        public static let CloudPremiumStickers: Int32 = 13
     }
     
     public struct CachedItemCollection {
@@ -85,6 +87,7 @@ public struct Namespaces {
         public static let resolvedByPhonePeers: Int8 = 20
         public static let notificationSoundList: Int8 = 22
         public static let attachMenuBots: Int8 = 23
+        public static let featuredStickersConfiguration: Int8 = 24
     }
     
     public struct UnorderedItemList {
@@ -230,6 +233,7 @@ private enum PreferencesKeyValues: Int32 {
     case chatListFiltersFeaturedState = 22
     case secretChatSettings = 23
     case reactionSettings = 24
+    case premiumPromo = 26
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -356,6 +360,12 @@ public struct PreferencesKeys {
     public static let reactionSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.reactionSettings.rawValue)
+        return key
+    }()
+    
+    public static let premiumPromo: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.premiumPromo.rawValue)
         return key
     }()
 }

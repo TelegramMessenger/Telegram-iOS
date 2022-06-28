@@ -212,6 +212,7 @@ namespace AS {
         if (AS_AVAILABLE_IOS_TVOS(10, 10)) {
           gMutex_unfair = ASActivateExperimentalFeature(ASExperimentalUnfairLock);
         }
+          gMutex_unfair = true;
       });
       
       if (recursive) {

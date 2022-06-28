@@ -66,7 +66,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     
     private var presentationData: PresentationData
     
-    init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
+    init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter], limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?) {
         self.navigationBar = navigationBar
         
         self.context = context
@@ -89,6 +89,10 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         if case let .chatSelection(_, selectedChats, additionalCategories, chatListFilters) = mode {
             placeholder = self.presentationData.strings.ChatListFilter_AddChatsTitle
             let chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
+            if let limit = limit {
+                chatListNode.selectionLimit = limit
+                chatListNode.reachedSelectionLimit = reachedSelectionLimit
+            }
             chatListNode.accessibilityPageScrolledString = { row, count in
                 return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
             }

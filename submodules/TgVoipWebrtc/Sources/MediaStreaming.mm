@@ -96,10 +96,12 @@ private:
                     }
                 }
             } else if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kNV12) {
-                rtc::scoped_refptr<webrtc::NV12BufferInterface> nv12Buffer = (webrtc::NV12BufferInterface *)videoFrame.video_frame_buffer().get();
+                rtc::scoped_refptr<webrtc::NV12BufferInterface> nv12Buffer(static_cast<webrtc::NV12BufferInterface *>(videoFrame.video_frame_buffer().get()));
+                
                 mappedBuffer = [[CallVideoFrameNV12Buffer alloc] initWithBuffer:nv12Buffer];
             } else if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kI420) {
-                rtc::scoped_refptr<webrtc::I420BufferInterface> i420Buffer = (webrtc::I420BufferInterface *)videoFrame.video_frame_buffer().get();
+                rtc::scoped_refptr<webrtc::I420BufferInterface> i420Buffer(static_cast<webrtc::I420BufferInterface *>(videoFrame.video_frame_buffer().get()));
+                
                 mappedBuffer = [[CallVideoFrameI420Buffer alloc] initWithBuffer:i420Buffer];
             }
 

@@ -10,6 +10,7 @@ private let typeAudio: Int32 = 5
 private let typeHasLinkedStickers: Int32 = 6
 private let typeHintFileIsLarge: Int32 = 7
 private let typeHintIsValidated: Int32 = 8
+private let typeNoPremium: Int32 = 9
 
 public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
     case id(id: Int64, accessHash: Int64)
@@ -144,6 +145,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
     case HasLinkedStickers
     case hintFileIsLarge
     case hintIsValidated
+    case NoPremium
     
     public init(decoder: PostboxDecoder) {
         let type: Int32 = decoder.decodeInt32ForKey("t", orElse: 0)
@@ -171,6 +173,8 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
                 self = .hintFileIsLarge
             case typeHintIsValidated:
                 self = .hintIsValidated
+            case typeNoPremium:
+                self = .NoPremium
             default:
                 preconditionFailure()
         }
@@ -225,6 +229,8 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
                 encoder.encodeInt32(typeHintFileIsLarge, forKey: "t")
             case .hintIsValidated:
                 encoder.encodeInt32(typeHintIsValidated, forKey: "t")
+            case .NoPremium:
+                encoder.encodeInt32(typeNoPremium, forKey: "t")
         }
     }
 }
@@ -307,7 +313,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     public let videoThumbnails: [TelegramMediaFile.VideoThumbnail]
     public let immediateThumbnailData: Data?
     public let mimeType: String
-    public let size: Int?
+    public let size: Int64?
     public let attributes: [TelegramMediaFileAttribute]
     public let peerIds: [PeerId] = []
     
@@ -328,7 +334,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return result.isEmpty ? nil : result
     }
     
-    public init(fileId: MediaId, partialReference: PartialMediaReference?, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], videoThumbnails: [TelegramMediaFile.VideoThumbnail], immediateThumbnailData: Data?, mimeType: String, size: Int?, attributes: [TelegramMediaFileAttribute]) {
+    public init(fileId: MediaId, partialReference: PartialMediaReference?, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], videoThumbnails: [TelegramMediaFile.VideoThumbnail], immediateThumbnailData: Data?, mimeType: String, size: Int64?, attributes: [TelegramMediaFileAttribute]) {
         self.fileId = fileId
         self.partialReference = partialReference
         self.resource = resource
@@ -348,8 +354,10 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         self.videoThumbnails = decoder.decodeObjectArrayForKey("vr")
         self.immediateThumbnailData = decoder.decodeDataForKey("itd")
         self.mimeType = decoder.decodeStringForKey("mt", orElse: "")
-        if let size = decoder.decodeOptionalInt32ForKey("s") {
-            self.size = Int(size)
+        if let size = decoder.decodeOptionalInt64ForKey("s64") {
+            self.size = size
+        } else if let size = decoder.decodeOptionalInt32ForKey("s") {
+            self.size = Int64(size)
         } else {
             self.size = nil
         }
@@ -375,9 +383,9 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         }
         encoder.encodeString(self.mimeType, forKey: "mt")
         if let size = self.size {
-            encoder.encodeInt32(Int32(size), forKey: "s")
+            encoder.encodeInt64(size, forKey: "s64")
         } else {
-            encoder.encodeNil(forKey: "s")
+            encoder.encodeNil(forKey: "s64")
         }
         encoder.encodeObjectArray(self.attributes, forKey: "at")
     }
@@ -476,6 +484,41 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             return true
         }
         return false
+    }
+    
+    public var isPremiumSticker: Bool {
+        if let _ = self.videoThumbnails.first(where: { thumbnail in
+            if let resource = thumbnail.resource as? CloudDocumentSizeMediaResource, resource.sizeSpec == "f" {
+                return true
+            } else {
+                return false
+            }
+        }) {
+            return true
+        }
+        return false
+    }
+    
+    public var noPremium: Bool {
+        for attribute in self.attributes {
+            if case .NoPremium = attribute {
+                return true
+            }
+        }
+        return false
+    }
+    
+    public var premiumEffect: TelegramMediaFile.VideoThumbnail? {
+        if let effect = self.videoThumbnails.first(where: { thumbnail in
+            if let resource = thumbnail.resource as? CloudDocumentSizeMediaResource, resource.sizeSpec == "f" {
+                return true
+            } else {
+                return false
+            }
+        }) {
+            return effect
+        }
+        return nil
     }
     
     public var isVideoSticker: Bool {
@@ -609,7 +652,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes)
     }
     
-    public func withUpdatedSize(_ size: Int?) -> TelegramMediaFile {
+    public func withUpdatedSize(_ size: Int64?) -> TelegramMediaFile {
         return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: size, attributes: self.attributes)
     }
     

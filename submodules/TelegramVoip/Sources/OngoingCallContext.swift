@@ -3,9 +3,66 @@ import UIKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramUIPreferences
+import Network
 
 import TgVoip
 import TgVoipWebrtc
+
+private let debugUseLegacyVersionForReflectors: Bool = {
+    #if DEBUG && false
+    return true
+    #else
+    return false
+    #endif
+}()
+
+private struct PeerTag: Hashable, CustomStringConvertible {
+    var bytes: [UInt8] = Array<UInt8>(repeating: 0, count: 16)
+    
+    var canonical: PeerTag {
+        var updatedBytes = self.bytes
+        updatedBytes[0] &= ~1
+        return PeerTag(bytes: updatedBytes)
+    }
+    
+    var flipped: PeerTag {
+        var updatedBytes = self.bytes
+        updatedBytes[0] ^= 1
+        return PeerTag(bytes: updatedBytes)
+    }
+    
+    var description: String {
+        var result = ""
+        
+        for byte in bytes {
+            result.append(String(byte, radix: 16))
+        }
+        
+        return result
+    }
+}
+
+private extension PeerTag {
+    init(data: Data) {
+        precondition(data.count >= 16)
+        data.withUnsafeBytes { buffer -> Void in
+            memcpy(&self.bytes, buffer.baseAddress!.assumingMemoryBound(to: UInt8.self), 16)
+        }
+    }
+    
+    var data: Data {
+        var bytes = self.bytes
+        var resultData = Data(repeating: 0, count: 16)
+        resultData.withUnsafeMutableBytes { buffer -> Void in
+            memcpy(buffer.baseAddress!.assumingMemoryBound(to: UInt8.self), &bytes, 16)
+        }
+        return resultData
+    }
+}
+
+private func flippedPeerTag(_ data: Data) -> Data {
+    return PeerTag(data: data).flipped.data
+}
 
 private func callConnectionDescription(_ connection: CallSessionConnection) -> OngoingCallConnectionDescription? {
     switch connection {
@@ -16,28 +73,27 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
     }
 }
 
-private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection) -> [OngoingCallConnectionDescriptionWebrtc] {
+private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection, idMapping: [Int64: UInt8]) -> [OngoingCallConnectionDescriptionWebrtc] {
     switch connection {
     case let .reflector(reflector):
-        #if DEBUG
+        guard let id = idMapping[reflector.id] else {
+            return []
+        }
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
-            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: id, hasStun: false, hasTurn: true, hasTcp: reflector.isTcp, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
         }
         if !reflector.ipv6.isEmpty {
-            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: id, hasStun: false, hasTurn: true, hasTcp: reflector.isTcp, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
         }
         return result
-        #else
-        return []
-        #endif
     case let .webRtcReflector(reflector):
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
-            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ip, port: reflector.port, username: reflector.username, password: reflector.password))
+            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, hasTcp: false, ip: reflector.ip, port: reflector.port, username: reflector.username, password: reflector.password))
         }
         if !reflector.ipv6.isEmpty {
-            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ipv6, port: reflector.port, username: reflector.username, password: reflector.password))
+            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, hasTcp: false, ip: reflector.ipv6, port: reflector.port, username: reflector.username, password: reflector.password))
         }
         return result
     }
@@ -106,11 +162,6 @@ private let setupLogs: Bool = {
             Logger.shared.log("TGVOIP", value)
         }
     })
-    /*OngoingCallThreadLocalContextWebrtcCustom.setupLoggingFunction({ value in
-        if let value = value {
-            Logger.shared.log("TGVOIP", value)
-        }
-    })*/
     return true
 }()
 
@@ -645,6 +696,7 @@ public final class OngoingCallContext {
         }
     }
     
+    public let callId: CallId
     public let internalId: CallSessionInternalId
     
     private let queue = Queue()
@@ -683,25 +735,31 @@ public final class OngoingCallContext {
     private let tempLogFile: EngineTempBoxFile
     private let tempStatsLogFile: EngineTempBoxFile
     
+    private var signalingConnectionManager: QueueLocalObject<CallSignalingConnectionManager>?
+    
     public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
-        var result: [(version: String, supportsVideo: Bool)] = [(OngoingCallThreadLocalContext.version(), false)]
-        if includeExperimental {
+        #if os(iOS) && DEBUG && false
+        if "".isEmpty {
+            return [("5.0.0", true)]
+        }
+        #endif
+        
+        if debugUseLegacyVersionForReflectors {
+            return [(OngoingCallThreadLocalContext.version(), true)]
+        } else {
+            var result: [(version: String, supportsVideo: Bool)] = [(OngoingCallThreadLocalContext.version(), false)]
             result.append(contentsOf: OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: includeReference).map { version -> (version: String, supportsVideo: Bool) in
                 return (version, true)
             })
+            return result
         }
-        return result
     }
 
-    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, enableTCP: Bool, enableStunMarking: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String, preferredVideoCodec: String?) {
+    public init(account: Account, callSessionManager: CallSessionManager, callId: CallId, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, enableTCP: Bool, enableStunMarking: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String, preferredVideoCodec: String?) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
-        #if DEBUG
-        let version = "4.1.2"
-        let allowP2P = false
-        #endif
-        
+        self.callId = callId
         self.internalId = internalId
         self.account = account
         self.callSessionManager = callSessionManager
@@ -722,7 +780,18 @@ public final class OngoingCallContext {
         |> take(1)
         |> deliverOn(queue)).start(next: { [weak self] _ in
             if let strongSelf = self {
-                if OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: true).contains(version) {
+                var useModernImplementation = true
+                var version = version
+                var allowP2P = allowP2P
+                if debugUseLegacyVersionForReflectors {
+                    useModernImplementation = true
+                    version = "5.0.0"
+                    allowP2P = false
+                } else {
+                    useModernImplementation = version != OngoingCallThreadLocalContext.version()
+                }
+                
+                if useModernImplementation {
                     var voipProxyServer: VoipProxyServerWebrtc?
                     if let proxyServer = proxyServer {
                         switch proxyServer.connection {
@@ -734,30 +803,89 @@ public final class OngoingCallContext {
                     }
                     
                     let unfilteredConnections = [connections.primary] + connections.alternatives
+                    
+                    var reflectorIdList: [Int64] = []
+                    for connection in unfilteredConnections {
+                        switch connection {
+                        case let .reflector(reflector):
+                            reflectorIdList.append(reflector.id)
+                        case .webRtcReflector:
+                            break
+                        }
+                    }
+                    
+                    reflectorIdList.sort()
+                    
+                    var reflectorIdMapping: [Int64: UInt8] = [:]
+                    for i in 0 ..< reflectorIdList.count {
+                        reflectorIdMapping[reflectorIdList[i]] = UInt8(i + 1)
+                    }
+                    
+                    var signalingReflector: OngoingCallConnectionDescriptionWebrtc?
+                    
                     var processedConnections: [CallSessionConnection] = []
                     var filteredConnections: [OngoingCallConnectionDescriptionWebrtc] = []
-                    for connection in unfilteredConnections {
+                    connectionsLoop: for connection in unfilteredConnections {
                         if processedConnections.contains(connection) {
                             continue
                         }
                         processedConnections.append(connection)
-                        filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection))
+                        
+                        switch connection {
+                        case let .reflector(reflector):
+                            if reflector.isTcp {
+                                if signalingReflector == nil {
+                                    signalingReflector = OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag))
+                                }
+                                
+                                continue connectionsLoop
+                            }
+                        case .webRtcReflector:
+                            break
+                        }
+                        
+                        var webrtcConnections: [OngoingCallConnectionDescriptionWebrtc] = []
+                        for connection in callConnectionDescriptionsWebrtc(connection, idMapping: reflectorIdMapping) {
+                            webrtcConnections.append(connection)
+                        }
+                        
+                        filteredConnections.append(contentsOf: webrtcConnections)
                     }
                     
-                    /*#if DEBUG
-                    filteredConnections.removeAll()
-                    filteredConnections.append(OngoingCallConnectionDescriptionWebrtc(
-                        connectionId: 1,
-                        hasStun: true,
-                        hasTurn: true, ip: "178.62.7.192",
-                        port: 1400,
-                        username: "user",
-                        password: "user")
-                    )
-                    #endif*/
+                    if let signalingReflector = signalingReflector {
+                        if #available(iOS 12.0, *) {
+                            let peerTag = dataWithHexString(signalingReflector.password)
+                            
+                            strongSelf.signalingConnectionManager = QueueLocalObject(queue: queue, generate: {
+                                return CallSignalingConnectionManager(queue: queue, peerTag: peerTag, servers: [signalingReflector], dataReceived: { data in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.withContext { context in
+                                        if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                                            context.addSignaling(data)
+                                        }
+                                    }
+                                })
+                            })
+                        }
+                    }
                     
-                    let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: tempLogPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in
-                        callSessionManager?.sendSignalingData(internalId: internalId, data: data)
+                    let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: Data(), key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: tempLogPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in
+                        queue.async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if let signalingConnectionManager = strongSelf.signalingConnectionManager {
+                                signalingConnectionManager.with { impl in
+                                    impl.send(payloadData: data)
+                                }
+                            }
+                            
+                            if let callSessionManager = callSessionManager {
+                                callSessionManager.sendSignalingData(internalId: internalId, data: data)
+                            }
+                        }
                     }, videoCapturer: video?.impl, preferredVideoCodec: preferredVideoCodec, audioInputDeviceId: "")
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
@@ -838,7 +966,7 @@ public final class OngoingCallContext {
                             break
                         }
                     }
-                    let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary)!, alternativeConnections: connections.alternatives.compactMap(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
+                    let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), derivedState: Data(), key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary)!, alternativeConnections: connections.alternatives.compactMap(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { state in
@@ -867,6 +995,10 @@ public final class OngoingCallContext {
                         }
                     }
                 })
+                
+                strongSelf.signalingConnectionManager?.with { impl in
+                    impl.start()
+                }
             }
         }))
     }
@@ -908,7 +1040,8 @@ public final class OngoingCallContext {
         }
     }
     
-    public func stop(callId: CallId? = nil, sendDebugLogs: Bool = false, debugLogValue: Promise<String?>) {
+    public func stop(sendDebugLogs: Bool = false, debugLogValue: Promise<String?>) {
+        let callId = self.callId
         let account = self.account
         let logPath = self.logPath
         var statsLogPath = ""
@@ -941,7 +1074,7 @@ public final class OngoingCallContext {
                     let _ = try? FileManager.default.moveItem(atPath: tempStatsLogPath, toPath: statsLogPath)
                 }
                 
-                if let callId = callId, !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8) {
+                if !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8) {
                     debugLogValue.set(.single(dataString))
                     let engine = TelegramEngine(account: self.account)
                     let _ = engine.calls.saveCallDebugLog(callId: callId, log: dataString).start(next: { result in
@@ -956,10 +1089,6 @@ public final class OngoingCallContext {
                     })
                 }
             }
-            let derivedState = context.nativeGetDerivedState()
-            let _ = updateVoipDerivedStateInteractively(postbox: self.account.postbox, { _ in
-                return VoipDerivedState(data: derivedState)
-            }).start()
         }
     }
     
@@ -1058,6 +1187,260 @@ public final class OngoingCallContext {
     public func addExternalAudioData(data: Data) {
         self.withContext { context in
             context.addExternalAudioData(data: data)
+        }
+    }
+}
+
+private protocol CallSignalingConnection {
+    func start()
+    func stop()
+    func send(payloadData: Data)
+}
+
+@available(iOS 12.0, *)
+private final class CallSignalingConnectionImpl: CallSignalingConnection {
+    private let queue: Queue
+    private let host: NWEndpoint.Host
+    private let port: NWEndpoint.Port
+    private let peerTag: Data
+    private let dataReceived: (Data) -> Void
+    private let isClosed: () -> Void
+    private let connection: NWConnection
+    
+    private var isConnected: Bool = false
+    
+    private var pingTimer: SwiftSignalKit.Timer?
+    
+    private var queuedPayloads: [Data] = []
+    
+    init(queue: Queue, host: String, port: UInt16, peerTag: Data, dataReceived: @escaping (Data) -> Void, isClosed: @escaping () -> Void) {
+        self.queue = queue
+        self.host = NWEndpoint.Host(host)
+        self.port = NWEndpoint.Port(rawValue: port)!
+        self.peerTag = peerTag
+        self.dataReceived = dataReceived
+        self.isClosed = isClosed
+        self.connection = NWConnection(host: self.host, port: self.port, using: .tcp)
+        
+        self.connection.stateUpdateHandler = { [weak self] state in
+            queue.async {
+                self?.stateUpdated(state: state)
+            }
+        }
+    }
+    
+    private func stateUpdated(state: NWConnection.State) {
+        switch state {
+        case .ready:
+            OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection state is ready")
+            
+            var headerData = Data(count: 4)
+            headerData.withUnsafeMutableBytes { bytes in
+                bytes.baseAddress!.assumingMemoryBound(to: UInt32.self).pointee = 0xeeeeeeee
+            }
+            self.connection.send(content: headerData, completion: .contentProcessed({ error in
+                if let error = error {
+                    OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection send header error: \(error)")
+                }
+            }))
+            
+            self.beginPingTimer()
+            
+            self.sendPacket(payload: Data())
+        case let .failed(error):
+            OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection error: \(error)")
+            self.onIsClosed()
+        default:
+            break
+        }
+    }
+    
+    func start() {
+        self.connection.start(queue: self.queue.queue)
+        self.receivePacketHeader()
+    }
+    
+    private func beginPingTimer() {
+        self.pingTimer = SwiftSignalKit.Timer(timeout: self.isConnected ? 2.0 : 0.15, repeat: false, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.sendPacket(payload: Data())
+            
+            strongSelf.beginPingTimer()
+        }, queue: self.queue)
+        self.pingTimer?.start()
+    }
+    
+    private func receivePacketHeader() {
+        self.connection.receive(minimumIncompleteLength: 4, maximumLength: 4, completion: { [weak self] data, _, _, error in
+            guard let strongSelf = self else {
+                return
+            }
+            if let data = data, data.count == 4 {
+                let payloadSize = data.withUnsafeBytes { bytes -> UInt32 in
+                    return bytes.baseAddress!.assumingMemoryBound(to: UInt32.self).pointee
+                }
+                if payloadSize < 2 * 1024 * 1024 {
+                    strongSelf.receivePacketPayload(size: Int(payloadSize))
+                } else {
+                    OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection received invalid packet size: \(payloadSize)")
+                }
+            } else {
+                OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection receive packet header error: \(String(describing: error))")
+                strongSelf.onIsClosed()
+            }
+        })
+    }
+    
+    private func receivePacketPayload(size: Int) {
+        self.connection.receive(minimumIncompleteLength: size, maximumLength: size, completion: { [weak self] data, _, _, error in
+            guard let strongSelf = self else {
+                return
+            }
+            if let data = data, data.count == size {
+                OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection receive packet payload: \(data.count) bytes")
+                
+                if data.count < 16 + 4 {
+                    OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection invalid payload size: \(data.count)")
+                    strongSelf.onIsClosed()
+                } else {
+                    let readPeerTag = data.subdata(in: 0 ..< 16)
+                    if readPeerTag != strongSelf.peerTag {
+                        OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Peer tag mismatch: \(hexString(readPeerTag))")
+                        strongSelf.onIsClosed()
+                    } else {
+                        let actualPayloadSize = data.withUnsafeBytes { bytes -> UInt32 in
+                            var result: UInt32 = 0
+                            memcpy(&result, bytes.baseAddress!.assumingMemoryBound(to: UInt8.self).advanced(by: 16), 4)
+                            return result
+                        }
+                        
+                        if Int(actualPayloadSize) > data.count - 16 - 4 {
+                            OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection invalid actual payload size: \(actualPayloadSize)")
+                            strongSelf.onIsClosed()
+                        } else {
+                            if !strongSelf.isConnected {
+                                strongSelf.isConnected = true
+                                
+                                for payload in strongSelf.queuedPayloads {
+                                    strongSelf.sendPacket(payload: payload)
+                                }
+                                strongSelf.queuedPayloads.removeAll()
+                            }
+                            
+                            if actualPayloadSize != 0 {
+                                strongSelf.dataReceived(data.subdata(in: (16 + 4) ..< (16 + 4 + Int(actualPayloadSize))))
+                            } else {
+                                //strongSelf.sendPacket(payload: Data())
+                            }
+                            strongSelf.receivePacketHeader()
+                        }
+                    }
+                }
+            } else {
+                OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection receive packet payload error: \(String(describing: error))")
+                strongSelf.onIsClosed()
+            }
+        })
+    }
+    
+    func stop() {
+        self.connection.stateUpdateHandler = nil
+        self.connection.cancel()
+    }
+    
+    private func onIsClosed() {
+        self.connection.stateUpdateHandler = nil
+        self.connection.cancel()
+        
+        self.isClosed()
+    }
+    
+    func send(payloadData: Data) {
+        if self.isConnected {
+            self.sendPacket(payload: payloadData)
+        } else {
+            self.queuedPayloads.append(payloadData)
+        }
+    }
+    
+    private func sendPacket(payload: Data) {
+        var payloadSize = UInt32(payload.count)
+        let cleanSize = 16 + 4 + payloadSize
+        let paddingSize = ((cleanSize + 3) & ~(4 - 1)) - cleanSize
+        var totalSize = cleanSize + paddingSize
+        
+        var sendBuffer = Data(count: 4 + Int(totalSize))
+        sendBuffer.withUnsafeMutableBytes { bytes in
+            let baseAddress = bytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+            
+            memcpy(baseAddress, &totalSize, 4)
+            
+            self.peerTag.withUnsafeBytes { peerTagBytes -> Void in
+                memcpy(baseAddress.advanced(by: 4), peerTagBytes.baseAddress!.assumingMemoryBound(to: UInt8.self), 16)
+            }
+            
+            memcpy(baseAddress.advanced(by: 4 + 16), &payloadSize, 4)
+            
+            payload.withUnsafeBytes { payloadBytes -> Void in
+                memcpy(baseAddress.advanced(by: 4 + 16 + 4), payloadBytes.baseAddress!.assumingMemoryBound(to: UInt8.self), payloadBytes.count)
+            }
+        }
+        
+        OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Send packet payload: \(totalSize) bytes")
+        
+        self.connection.send(content: sendBuffer, isComplete: true, completion: .contentProcessed({ error in
+            if let error = error {
+                OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection send payload error: \(error)")
+            }
+        }))
+    }
+}
+
+private final class CallSignalingConnectionManager {
+    private let queue: Queue
+    
+    private var nextConnectionId: Int = 0
+    private var connections: [Int: CallSignalingConnection] = [:]
+    
+    init(queue: Queue, peerTag: Data, servers: [OngoingCallConnectionDescriptionWebrtc], dataReceived: @escaping (Data) -> Void) {
+        self.queue = queue
+        
+        for server in servers {
+            if server.hasTcp {
+                let id = self.nextConnectionId
+                self.nextConnectionId += 1
+                if #available(iOS 12.0, *) {
+                    let connection = CallSignalingConnectionImpl(queue: queue, host: server.ip, port: UInt16(server.port), peerTag: peerTag, dataReceived: { data in
+                        dataReceived(data)
+                    }, isClosed: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = strongSelf
+                    })
+                    connections[id] = connection
+                }
+            }
+        }
+    }
+    
+    func start() {
+        for (_, connection) in self.connections {
+            connection.start()
+        }
+    }
+    
+    func stop() {
+        for (_, connection) in self.connections {
+            connection.stop()
+        }
+    }
+    
+    func send(payloadData: Data) {
+        for (_, connection) in self.connections {
+            connection.send(payloadData: payloadData)
         }
     }
 }

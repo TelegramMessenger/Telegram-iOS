@@ -2971,7 +2971,7 @@
         [images enumerateObjectsUsingBlock:^(UIImage *image, NSUInteger index, __unused BOOL *stop)
         {
             if (index < timestamps.count)
-                [strongSelf->_scrubberView setThumbnailImage:image forTimestamp:[timestamps[index] doubleValue] index:index isSummaryThubmnail:isSummaryThumbnails];
+                [strongSelf->_scrubberView setThumbnailImage:image forTimestamp:[timestamps[index] doubleValue] index:index isSummaryThubmnail:isSummaryThumbnails last:index == (images.count - 1)];
         }];
         
         if (strongSelf->_dotImageSnapshotView != nil) {

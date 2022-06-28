@@ -4,9 +4,18 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
-enum MultiplexedRequestTarget: Equatable, Hashable {
+enum MultiplexedRequestTarget: Equatable, Hashable, CustomStringConvertible {
     case main(Int)
     case cdn(Int)
+    
+    var description: String {
+        switch self {
+        case let .main(id):
+            return "dc\(id)"
+        case let .cdn(id):
+            return "cdn\(id)"
+        }
+    }
 }
 
 private struct MultiplexedRequestTargetKey: Equatable, Hashable {

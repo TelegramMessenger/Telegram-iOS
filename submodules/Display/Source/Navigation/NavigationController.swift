@@ -358,8 +358,39 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
     
+    private var forceBadgeHidden = false
+    public func setForceBadgeHidden(_ hidden: Bool) {
+        guard hidden != self.forceBadgeHidden else {
+            return
+        }
+        self.forceBadgeHidden = hidden
+        if let layout = self.validLayout {
+            self.updateBadgeVisibility(layout: layout)
+        }
+    }
+    
+    private func updateBadgeVisibility(layout: ContainerViewLayout) {
+        guard let badgeNode = self.badgeNode else {
+            return
+        }
+        
+        let badgeIsHidden = !layout.deviceMetrics.hasTopNotch || self.forceBadgeHidden || layout.size.width > layout.size.height
+        if badgeIsHidden != badgeNode.isHidden && !badgeIsHidden {
+            Queue.mainQueue().after(0.3) {
+                badgeNode.isHidden = badgeIsHidden
+            }
+        } else {
+            badgeNode.isHidden = badgeIsHidden
+        }
+    }
+    
     private func updateContainers(layout rawLayout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.isUpdatingContainers = true
+        
+        if let badgeNode = self.badgeNode, let image = badgeNode.image {
+            self.updateBadgeVisibility(layout: rawLayout)
+            badgeNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((rawLayout.size.width - image.size.width) / 2.0), y: 6.0), size: image.size)
+        }
         
         var layout = rawLayout
         
@@ -631,6 +662,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         var topVisibleModalContainerWithStatusBar: NavigationModalContainer?
         var visibleModalCount = 0
         var topModalIsFlat = false
+        var topFlatModalHasProgress = false
         let isLandscape = layout.orientation == .landscape
         var hasVisibleStandaloneModal = false
         var topModalDismissProgress: CGFloat = 0.0
@@ -657,6 +689,17 @@ open class NavigationController: UINavigationController, ContainableController, 
                 effectiveModalTransition = 1.0 - topModalDismissProgress
             } else {
                 effectiveModalTransition = 1.0
+            }
+            
+            if navigationLayout.modal[i].isFlat, let lastController = navigationLayout.modal[i].controllers.last {
+                lastController.modalStyleOverlayTransitionFactorUpdated = { [weak self] transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.updateContainersNonReentrant(transition: transition)
+                }
+                modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, lastController.modalStyleOverlayTransitionFactor)
+                topFlatModalHasProgress = modalStyleOverlayTransitionFactor > 0.0
             }
             
             containerTransition.updateFrame(node: modalContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
@@ -862,9 +905,15 @@ open class NavigationController: UINavigationController, ContainableController, 
                 let visibleRootModalDismissProgress: CGFloat
                 var additionalModalFrameProgress: CGFloat
                 if visibleModalCount == 1 {
-                    effectiveRootModalDismissProgress = (topModalIsFlat || isLandscape) ? 1.0 : topModalDismissProgress
-                    visibleRootModalDismissProgress = effectiveRootModalDismissProgress
-                    additionalModalFrameProgress = 0.0
+                    if topFlatModalHasProgress {
+                        effectiveRootModalDismissProgress = 0.0
+                        visibleRootModalDismissProgress = effectiveRootModalDismissProgress
+                        additionalModalFrameProgress = 1.0 - topModalDismissProgress
+                    } else {
+                        effectiveRootModalDismissProgress = topModalDismissProgress
+                        visibleRootModalDismissProgress = effectiveRootModalDismissProgress
+                        additionalModalFrameProgress = 0.0
+                    }
                 } else if visibleModalCount >= 2 {
                     effectiveRootModalDismissProgress = 0.0
                     visibleRootModalDismissProgress = topModalDismissProgress
@@ -929,7 +978,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                     let maxScale: CGFloat
                     let maxOffset: CGFloat
-                    if topModalIsFlat || isLandscape {
+                    if (topModalIsFlat && !topFlatModalHasProgress) || isLandscape {
                         maxScale = 1.0
                         maxOffset = 0.0
                     } else if visibleModalCount <= 1 {
@@ -1219,7 +1268,15 @@ open class NavigationController: UINavigationController, ContainableController, 
                 self.displayNode.addSubnode(inCallStatusBar)
             }
         }
+        
+        let badgeNode = ASImageNode()
+        badgeNode.displaysAsynchronously = false
+        badgeNode.image = UIImage(bundleImageName: "Components/BadgeTest")
+        self.badgeNode = badgeNode
+        self.displayNode.addSubnode(badgeNode)
     }
+    
+    private var badgeNode: ASImageNode?
     
     public func pushViewController(_ controller: ViewController) {
         self.pushViewController(controller, completion: {})

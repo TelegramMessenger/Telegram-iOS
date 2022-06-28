@@ -95,7 +95,7 @@ public final class AnimatedStickerComponent: Component {
             if self.component?.animation != component.animation {
                 self.animationNode?.view.removeFromSuperview()
                 
-                let animationNode = AnimatedStickerNode()
+                let animationNode = DefaultAnimatedStickerNodeImpl()
                 let source: AnimatedStickerNodeSource
                 switch component.animation.source {
                     case let .bundle(name):

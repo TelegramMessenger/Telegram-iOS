@@ -74,7 +74,7 @@ class PeersNearbyHeaderItemNode: ListViewItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
                 
         super.init(layerBacked: false, dynamicBounce: false)
         

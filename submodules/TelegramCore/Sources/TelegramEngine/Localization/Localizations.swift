@@ -57,7 +57,7 @@ func _internal_availableLocalizations(postbox: Postbox, network: Network, allowC
         let infos: [LocalizationInfo] = languages.map(LocalizationInfo.init(apiLanguage:))
         return postbox.transaction { transaction -> [LocalizationInfo] in
             if let entry = CodableEntry(CachedLocalizationInfos(list: infos)) {
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: entry)
             }
             return infos
         }

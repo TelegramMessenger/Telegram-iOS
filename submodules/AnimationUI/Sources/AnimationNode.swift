@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Lottie
 import AppBundle
+import Display
 
 public final class AnimationNode : ASDisplayNode {
     private let scale: CGFloat
@@ -14,7 +15,7 @@ public final class AnimationNode : ASDisplayNode {
         }
     }
     
-    private var colorCallbacks: [LOTColorValueCallback] = []
+    //private var colorCallbacks: [LOTColorValueCallback] = []
     
     public var didPlay = false
     public var completion: (() -> Void)?
@@ -26,30 +27,31 @@ public final class AnimationNode : ASDisplayNode {
     
     private var currentParams: (String?, [String: UIColor]?)?
     
-    public init(animation: String? = nil, colors: [String: UIColor]? = nil, scale: CGFloat = 1.0) {
+    public init(animation animationName: String? = nil, colors: [String: UIColor]? = nil, scale: CGFloat = 1.0) {
         self.scale = scale
-        self.currentParams = (animation, colors)
+        self.currentParams = (animationName, colors)
         
         super.init()
         
         self.setViewBlock({
-            if let animation = animation, let url = getAppBundle().url(forResource: animation, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
-                let view = LOTAnimationView(model: composition, in: getAppBundle())
+            if let animationName = animationName, let url = getAppBundle().url(forResource: animationName, withExtension: "json"), let animation = Animation.filepath(url.path) {
+                let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = self.speed
                 view.backgroundColor = .clear
                 view.isOpaque = false
                                 
                 if let colors = colors {
                     for (key, value) in colors {
-                        let colorCallback = LOTColorValueCallback(color: value.cgColor)
+                        view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
+                        /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
                         self.colorCallbacks.append(colorCallback)
-                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
+                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                     }
                 }
                 
                 return view
             } else {
-                return LOTAnimationView()
+                return AnimationView()
             }
         })
     }
@@ -60,25 +62,24 @@ public final class AnimationNode : ASDisplayNode {
         super.init()
         
         self.setViewBlock({
-            if let json = try? JSONSerialization.jsonObject(with: animationData, options: []) as? [AnyHashable: Any] {
-                let composition = LOTComposition(json: json)
-                
-                let view = LOTAnimationView(model: composition, in: getAppBundle())
+            if let json = try? JSONSerialization.jsonObject(with: animationData, options: []) as? [String: Any], let animation = try? Animation(dictionary: json) {
+                let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = self.speed
                 view.backgroundColor = .clear
                 view.isOpaque = false
                                 
                 if let colors = colors {
                     for (key, value) in colors {
-                        let colorCallback = LOTColorValueCallback(color: value.cgColor)
+                        view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
+                        /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
                         self.colorCallbacks.append(colorCallback)
-                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
+                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                     }
                 }
                 
                 return view
             } else {
-                return LOTAnimationView()
+                return AnimationView()
             }
         })
     }
@@ -88,47 +89,51 @@ public final class AnimationNode : ASDisplayNode {
             return nil
         }
         let animationNode = AnimationNode(animation: animation, colors: colors ?? currentColors, scale: 1.0)
-        animationNode.animationView()?.play(fromProgress: progress ?? (self.animationView()?.animationProgress ?? 0.0), toProgress: 1.0, withCompletion: { [weak animationNode] _ in
+        animationNode.animationView()?.currentProgress = progress ?? (self.animationView()?.currentProgress ?? 0.0)
+        animationNode.animationView()?.play(completion: { [weak animationNode] _ in
             animationNode?.completion?()
         })
         return animationNode
     }
     
     public func seekToEnd() {
-        self.animationView()?.animationProgress = 1.0
+        self.animationView()?.currentProgress = 1.0
     }
     
     public func setAnimation(name: String, colors: [String: UIColor]? = nil) {
         self.currentParams = (name, colors)
-        if let url = getAppBundle().url(forResource: name, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
+        if let url = getAppBundle().url(forResource: name, withExtension: "json"), let animation = Animation.filepath(url.path) {
             self.didPlay = false
-            self.animationView()?.sceneModel = composition
+            self.animationView()?.animation = animation
             
             if let colors = colors {
                 for (key, value) in colors {
-                    let colorCallback = LOTColorValueCallback(color: value.cgColor)
+                    self.animationView()?.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
+                    /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
                     self.colorCallbacks.append(colorCallback)
-                    self.animationView()?.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
+                    self.animationView()?.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                 }
             }
         }
     }
     
     public func setAnimation(data: Data) {
-        if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [AnyHashable: Any] {
-            let composition = LOTComposition(json: json)
+        if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+            let animation = try? Animation(dictionary: json)
             self.didPlay = false
-            self.animationView()?.sceneModel = composition
+            self.animationView()?.animation = animation
         }
     }
     
-    public func setAnimation(json: [AnyHashable: Any]) {
+    public func setAnimation(json: [String: Any]) {
         self.didPlay = false
-        self.animationView()?.setAnimation(json: json)
+        if let animation = try? Animation(dictionary: json) {
+            self.animationView()?.animation = animation
+        }
     }
     
-    public func animationView() -> LOTAnimationView? {
-        return self.view as? LOTAnimationView
+    public func animationView() -> AnimationView? {
+        return self.view as? AnimationView
     }
     
     public func play() {
@@ -154,7 +159,7 @@ public final class AnimationNode : ASDisplayNode {
     
     public func loop() {
         if let animationView = self.animationView() {
-            animationView.loopAnimation = true
+            animationView.loopMode = .loop
             animationView.play()
         }
     }
@@ -167,8 +172,8 @@ public final class AnimationNode : ASDisplayNode {
     }
     
     public func preferredSize() -> CGSize? {
-        if let animationView = animationView(), let sceneModel = animationView.sceneModel {
-            return CGSize(width: sceneModel.compBounds.width * self.scale, height: sceneModel.compBounds.height * self.scale)
+        if let animationView = animationView(), let animation = animationView.animation {
+            return CGSize(width: animation.size.width * self.scale, height: animation.size.height * self.scale)
         } else {
             return nil
         }

@@ -1152,7 +1152,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         )
 
         let scrollIndicatorHeightFraction = min(1.0, max(0.0, (containerSize.height - containerInsets.top - containerInsets.bottom) / contentHeight))
-        if scrollIndicatorHeightFraction >= 1.0 - .ulpOfOne {
+        if scrollIndicatorHeightFraction >= 0.55 - .ulpOfOne {
             self.dateIndicator.isHidden = true
             self.lineIndicator.isHidden = true
         } else {
@@ -1204,7 +1204,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
         self.updateLineIndicator(transition: transition)
 
-        if isScrolling {
+        if isScrolling && !self.dateIndicator.isHidden {
             self.displayTooltipOnFirstScroll()
         }
     }

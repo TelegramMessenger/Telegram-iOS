@@ -21,13 +21,13 @@ public enum AvatarGalleryEntryId: Hashable {
     case resource(String)
 }
 
-public func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> Signal<Any, NoError> {
-    return context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
-    |> mapToSignal { view -> Signal<[AvatarGalleryEntry]?, NoError> in
-        guard let peer = (view.views[.basicPeer(peerId)] as? BasicPeerView)?.peer else {
+public func peerInfoProfilePhotos(context: AccountContext, peerId: EnginePeer.Id) -> Signal<Any, NoError> {
+    return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+    |> mapToSignal { peer -> Signal<[AvatarGalleryEntry]?, NoError> in
+        guard let peer = peer else {
             return .single(nil)
         }
-        return initialAvatarGalleryEntries(account: context.account, peer: peer)
+        return initialAvatarGalleryEntries(account: context.account, engine: context.engine, peer: peer._asPeer())
     }
     |> distinctUntilChanged
     |> mapToSignal { entries -> Signal<(Bool, [AvatarGalleryEntry])?, NoError> in
@@ -176,22 +176,18 @@ public func normalizeEntries(_ entries: [AvatarGalleryEntry]) -> [AvatarGalleryE
    return updatedEntries
 }
 
-public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry]?, NoError> {
+public func initialAvatarGalleryEntries(account: Account, engine: TelegramEngine, peer: Peer) -> Signal<[AvatarGalleryEntry]?, NoError> {
     var initialEntries: [AvatarGalleryEntry] = []
     if !peer.profileImageRepresentations.isEmpty, let peerReference = PeerReference(peer) {
         initialEntries.append(.topImage(peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), [], peer, nil, nil, nil))
     }
     
     if peer is TelegramChannel || peer is TelegramGroup, let peerReference = PeerReference(peer) {
-        return account.postbox.transaction { transaction in
-            return transaction.getPeerCachedData(peerId: peer.id)
-        } |> map { cachedData in
+        return engine.data.get(TelegramEngine.EngineData.Item.Peer.Photo(id: peer.id))
+        |> map { peerPhoto in
             var initialPhoto: TelegramMediaImage?
-            if let cachedData = cachedData as? CachedGroupData, let photo = cachedData.photo {
-                initialPhoto = photo
-            }
-            else if let cachedData = cachedData as? CachedChannelData, let photo = cachedData.photo {
-                initialPhoto = photo
+            if case let .known(value) = peerPhoto {
+                initialPhoto = value
             }
             
             if let photo = initialPhoto {
@@ -201,7 +197,11 @@ public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
                 }
                 return [.image(photo.imageId, photo.reference, representations, photo.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, nil, nil, nil, photo.immediateThumbnailData, nil)]
             } else {
-                return cachedData != nil ? [] : nil
+                if case .known = peerPhoto {
+                    return []
+                } else {
+                    return nil
+                }
             }
         }
     } else {
@@ -210,7 +210,7 @@ public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
 }
 
 public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry], NoError> {
-    return initialAvatarGalleryEntries(account: account, peer: peer)
+    return initialAvatarGalleryEntries(account: account, engine: engine, peer: peer)
     |> map { entries -> [AvatarGalleryEntry] in
         return entries ?? []
     }
@@ -405,7 +405,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             remoteEntriesSignal = fetchedAvatarGalleryEntries(engine: context.engine, account: context.account, peer: peer)
         }
         
-        let initialSignal = initialAvatarGalleryEntries(account: context.account, peer: peer)
+        let initialSignal = initialAvatarGalleryEntries(account: context.account, engine: context.engine, peer: peer)
         |> map { entries -> [AvatarGalleryEntry] in
             return entries ?? []
         }
@@ -565,6 +565,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             if let strongSelf = self {
                 strongSelf.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
             }
+        }, pushController: { _ in
         }, dismissController: { [weak self] in
             self?.dismiss(forceAway: true)
         }, replaceRootController: { [weak self] controller, ready in

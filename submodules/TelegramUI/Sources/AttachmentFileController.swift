@@ -239,8 +239,8 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
     )
     |> map { presentationData, recentDocuments, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var presentationData = presentationData
-        if presentationData.theme.list.blocksBackgroundColor.rgb == 0x000000 {
-            let updatedTheme = presentationData.theme.withInvertedBlocksBackground()
+        if presentationData.theme.list.blocksBackgroundColor.rgb == presentationData.theme.list.plainBackgroundColor.rgb {
+            let updatedTheme = presentationData.theme.withModalBlocksBackground()
             presentationData = presentationData.withUpdated(theme: updatedTheme)
         }
         
@@ -310,7 +310,7 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
     controller.visibleBottomContentOffsetChanged = { [weak controller] offset in
         switch offset {
             case let .known(value):
-            let backgroundAlpha: CGFloat = min(30.0, max(0.0, value)) / 30.0
+                let backgroundAlpha: CGFloat = min(30.0, max(0.0, value)) / 30.0
                 if backgroundAlpha.isZero && controller?.delayDisappear == true {
                     Queue.mainQueue().after(0.25, {
                         controller?.updateTabBarAlpha(backgroundAlpha, .animated(duration: 0.1, curve: .easeInOut))
@@ -320,7 +320,7 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
                 }
             case .unknown, .none:
                 controller?.updateTabBarAlpha(1.0, .immediate)
-            controller?.delayDisappear = false
+                controller?.delayDisappear = false
         }
     }
     controller.resetForReuseImpl = {

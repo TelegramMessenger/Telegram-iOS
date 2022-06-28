@@ -642,6 +642,8 @@ typedef enum
         frameAspectRatio = _cropRect.size.width / _cropRect.size.height;
     else
         frameAspectRatio = originalAspectRatio;
+    
+    frameAspectRatio = MAX(0.5, frameAspectRatio);
  
     _thumbnailAspectRatio = frameAspectRatio;
         
@@ -754,11 +756,17 @@ typedef enum
     [self reloadThumbnails];
 }
 
-- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)__unused timestamp index:(NSInteger)index isSummaryThubmnail:(bool)isSummaryThumbnail
+- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)__unused timestamp index:(NSInteger)index isSummaryThubmnail:(bool)isSummaryThumbnail last:(bool)last
 {
     bool exists = false;
     if (isSummaryThumbnail)
     {
+        if (index == 0 && _summaryThumbnailViews.count > 0 && _summaryThumbnailSnapshotView == nil) {
+            _summaryThumbnailSnapshotView = [_summaryThumbnailWrapperView snapshotViewAfterScreenUpdates:false];
+            _summaryThumbnailSnapshotView.frame = _summaryThumbnailWrapperView.frame;
+            [_summaryThumbnailWrapperView.superview insertSubview:_summaryThumbnailSnapshotView aboveSubview:_summaryThumbnailWrapperView];
+        }
+        
         if (_summaryThumbnailViews.count >= index + 1) {
             exists = true;
             [_summaryThumbnailViews[index] setImage:image animated:true];
@@ -775,8 +783,7 @@ typedef enum
         [_zoomedThumbnailViews addObject:thumbnailView];
     }
     
-    if (!exists && ((isSummaryThumbnail && _summaryThumbnailViews.count == _summaryTimestamps.count)
-        || (!isSummaryThumbnail && _zoomedThumbnailViews.count == _zoomedTimestamps.count)))
+    if (last)
     {
         if (!_ignoreThumbnailLoad)
         {
@@ -792,7 +799,7 @@ typedef enum
             
             UIView *snapshotView = _summaryThumbnailSnapshotView;
             _summaryThumbnailSnapshotView = nil;
-            
+                        
             if (snapshotView != nil)
             {
                 [UIView animateWithDuration:0.2f animations:^

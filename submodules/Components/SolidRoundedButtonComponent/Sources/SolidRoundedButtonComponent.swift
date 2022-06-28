@@ -3,6 +3,7 @@ import UIKit
 import ComponentFlow
 import Display
 import SolidRoundedButtonNode
+import AppBundle
 
 public final class SolidRoundedButtonComponent: Component {
     public typealias Theme = SolidRoundedButtonTheme
@@ -15,6 +16,11 @@ public final class SolidRoundedButtonComponent: Component {
     public let height: CGFloat
     public let cornerRadius: CGFloat
     public let gloss: Bool
+    public let iconName: String?
+    public let animationName: String?
+    public let iconPosition: SolidRoundedButtonIconPosition
+    public let iconSpacing: CGFloat
+    public let isLoading: Bool
     public let action: () -> Void
     
     public init(
@@ -26,6 +32,11 @@ public final class SolidRoundedButtonComponent: Component {
         height: CGFloat = 48.0,
         cornerRadius: CGFloat = 24.0,
         gloss: Bool = false,
+        iconName: String? = nil,
+        animationName: String? = nil,
+        iconPosition: SolidRoundedButtonIconPosition = .left,
+        iconSpacing: CGFloat = 8.0,
+        isLoading: Bool = false,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -36,6 +47,11 @@ public final class SolidRoundedButtonComponent: Component {
         self.height = height
         self.cornerRadius = cornerRadius
         self.gloss = gloss
+        self.iconName = iconName
+        self.animationName = animationName
+        self.iconPosition = iconPosition
+        self.iconSpacing = iconSpacing
+        self.isLoading = isLoading
         self.action = action
     }
     
@@ -64,13 +80,29 @@ public final class SolidRoundedButtonComponent: Component {
         if lhs.gloss != rhs.gloss {
             return false
         }
-        
+        if lhs.iconName != rhs.iconName {
+            return false
+        }
+        if lhs.animationName != rhs.animationName {
+            return false
+        }
+        if lhs.iconPosition != rhs.iconPosition {
+            return false
+        }
+        if lhs.iconSpacing != rhs.iconSpacing {
+            return false
+        }
+        if lhs.isLoading != rhs.isLoading {
+            return false
+        }
         return true
     }
     
     public final class View: UIView {
         private var component: SolidRoundedButtonComponent?
         private var button: SolidRoundedButtonView?
+        
+        private var currentIsLoading = false
         
         public func update(component: SolidRoundedButtonComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             if self.button == nil {
@@ -84,6 +116,7 @@ public final class SolidRoundedButtonComponent: Component {
                     cornerRadius: component.cornerRadius,
                     gloss: component.gloss
                 )
+                button.progressType = .embedded
                 self.button = button
                 self.addSubview(button)
                 
@@ -93,9 +126,25 @@ public final class SolidRoundedButtonComponent: Component {
             }
             
             if let button = self.button {
+                button.title = component.title
+                button.iconPosition = component.iconPosition
+                button.iconSpacing = component.iconSpacing
+                button.icon = component.iconName.flatMap { UIImage(bundleImageName: $0) }
+                button.animation = component.animationName
+                button.gloss = component.gloss
+                
                 button.updateTheme(component.theme)
                 let height = button.updateLayout(width: availableSize.width, transition: .immediate)
                 transition.setFrame(view: button, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height)), completion: nil)
+                
+                if self.currentIsLoading != component.isLoading {
+                    self.currentIsLoading = component.isLoading
+                    if component.isLoading {
+                        button.transitionToProgress()
+                    } else {
+                        button.transitionFromProgress()
+                    }
+                }
             }
             
             self.component = component

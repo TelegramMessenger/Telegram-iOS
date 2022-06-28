@@ -70,7 +70,7 @@ objc_library(
         "-DWEBRTC_POSIX",
         "-DRTC_ENABLE_VP9",
         "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
-        "-std=c++14",
+        "-std=c++17",
     ] + optimization_flags + (["-DTGCALLS_ENABLE_X264"] if enable_x264 else []),
     includes = [
         "PublicHeaders",
@@ -95,6 +95,9 @@ objc_library(
         "CoreMedia",
         "GLKit",
         "AVFoundation",
+    ],
+    sdk_dylibs = [
+        "libz",
     ],
     visibility = [
         "//visibility:public",
@@ -121,7 +124,7 @@ objc_library(
         "-DWEBRTC_POSIX",
         "-DRTC_ENABLE_VP9",
         "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
-        "-std=c++14",
+        "-std=c++17",
     ],
     srcs = glob([
         "tests/*.m",

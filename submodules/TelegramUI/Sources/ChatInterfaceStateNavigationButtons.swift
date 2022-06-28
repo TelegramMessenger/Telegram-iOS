@@ -153,9 +153,21 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
             if case .scheduledMessages = presentationInterfaceState.subject {
                 return chatInfoNavigationButton
             } else {
-                let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
-                buttonItem.accessibilityLabel = strings.Conversation_Search
-                return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+                if presentationInterfaceState.hasPlentyOfMessages {
+                    if case .search = currentButton?.action {
+                        return currentButton
+                    } else {
+                        let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
+                        buttonItem.accessibilityLabel = strings.Conversation_Search
+                        return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+                    }
+                } else {
+                    if case .spacer = currentButton?.action {
+                        return currentButton
+                    } else {
+                        return ChatNavigationButton(action: .spacer, buttonItem: UIBarButtonItem(title: "", style: .plain, target: target, action: selector))
+                    }
+                }
             }
         }
     }

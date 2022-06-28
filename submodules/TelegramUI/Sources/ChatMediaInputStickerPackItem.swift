@@ -233,7 +233,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                         if let current = self.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                             animatedStickerNode.started = { [weak self] in
                                 self?.imageNode.isHidden = true
                                 self?.removePlaceholder(animated: false)
@@ -244,7 +244,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                             } else {
                                 self.scalingNode.addSubnode(animatedStickerNode)
                             }
-                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: 128, height: 128, mode: .cached)
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: 128, height: 128, playbackMode: .loop, mode: .cached)
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                 }
@@ -367,7 +367,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                 case let .animated(resource, dimensions, isVideo):
                     imageSize = dimensions.cgSize.aspectFitted(boundingImageSize)
                 
-                    let animatedStickerNode = AnimatedStickerNode()
+                    let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                     animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: 128, height: 128, mode: .cached)
                     animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                     scalingNode.addSubnode(animatedStickerNode)

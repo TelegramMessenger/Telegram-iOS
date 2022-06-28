@@ -897,6 +897,7 @@ public extension Api {
 public extension Api {
     enum DialogFilter: TypeConstructorDescription {
         case dialogFilter(flags: Int32, id: Int32, title: String, emoticon: String?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
+        case dialogFilterDefault
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -924,6 +925,12 @@ public extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+                case .dialogFilterDefault:
+                    if boxed {
+                        buffer.appendInt32(909284270)
+                    }
+                    
+                    break
     }
     }
     
@@ -931,6 +938,8 @@ public extension Api {
         switch self {
                 case .dialogFilter(let flags, let id, let title, let emoticon, let pinnedPeers, let includePeers, let excludePeers):
                 return ("dialogFilter", [("flags", String(describing: flags)), ("id", String(describing: id)), ("title", String(describing: title)), ("emoticon", String(describing: emoticon)), ("pinnedPeers", String(describing: pinnedPeers)), ("includePeers", String(describing: includePeers)), ("excludePeers", String(describing: excludePeers))])
+                case .dialogFilterDefault:
+                return ("dialogFilterDefault", [])
     }
     }
     
@@ -968,6 +977,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_dialogFilterDefault(_ reader: BufferReader) -> DialogFilter? {
+            return Api.DialogFilter.dialogFilterDefault
         }
     
     }
@@ -1074,14 +1086,14 @@ public extension Api {
 }
 public extension Api {
     enum Document: TypeConstructorDescription {
-        case document(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, mimeType: String, size: Int32, thumbs: [Api.PhotoSize]?, videoThumbs: [Api.VideoSize]?, dcId: Int32, attributes: [Api.DocumentAttribute])
+        case document(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, mimeType: String, size: Int64, thumbs: [Api.PhotoSize]?, videoThumbs: [Api.VideoSize]?, dcId: Int32, attributes: [Api.DocumentAttribute])
         case documentEmpty(id: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .document(let flags, let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumbs, let videoThumbs, let dcId, let attributes):
                     if boxed {
-                        buffer.appendInt32(512177195)
+                        buffer.appendInt32(-1881881384)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -1089,7 +1101,7 @@ public extension Api {
                     serializeBytes(fileReference, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeString(mimeType, buffer: buffer, boxed: false)
-                    serializeInt32(size, buffer: buffer, boxed: false)
+                    serializeInt64(size, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(thumbs!.count))
                     for item in thumbs! {
@@ -1138,8 +1150,8 @@ public extension Api {
             _5 = reader.readInt32()
             var _6: String?
             _6 = parseString(reader)
-            var _7: Int32?
-            _7 = reader.readInt32()
+            var _7: Int64?
+            _7 = reader.readInt64()
             var _8: [Api.PhotoSize]?
             if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
                 _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhotoSize.self)

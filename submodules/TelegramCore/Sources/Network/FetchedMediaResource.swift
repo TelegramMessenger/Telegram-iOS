@@ -25,11 +25,11 @@ final class TelegramCloudMediaResourceFetchInfo: MediaResourceFetchInfo {
     }
 }
 
-public func fetchedMediaResource(mediaBox: MediaBox, reference: MediaResourceReference, range: (Range<Int>, MediaBoxFetchPriority)? = nil, statsCategory: MediaResourceStatsCategory = .generic, reportResultStatus: Bool = false, preferBackgroundReferenceRevalidation: Bool = false, continueInBackground: Bool = false) -> Signal<FetchResourceSourceType, FetchResourceError> {
+public func fetchedMediaResource(mediaBox: MediaBox, reference: MediaResourceReference, range: (Range<Int64>, MediaBoxFetchPriority)? = nil, statsCategory: MediaResourceStatsCategory = .generic, reportResultStatus: Bool = false, preferBackgroundReferenceRevalidation: Bool = false, continueInBackground: Bool = false) -> Signal<FetchResourceSourceType, FetchResourceError> {
     return fetchedMediaResource(mediaBox: mediaBox, reference: reference, ranges: range.flatMap({ [$0] }), statsCategory: statsCategory, reportResultStatus: reportResultStatus, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground)
 }
 
-public func fetchedMediaResource(mediaBox: MediaBox, reference: MediaResourceReference, ranges: [(Range<Int>, MediaBoxFetchPriority)]?, statsCategory: MediaResourceStatsCategory = .generic, reportResultStatus: Bool = false, preferBackgroundReferenceRevalidation: Bool = false, continueInBackground: Bool = false) -> Signal<FetchResourceSourceType, FetchResourceError> {
+public func fetchedMediaResource(mediaBox: MediaBox, reference: MediaResourceReference, ranges: [(Range<Int64>, MediaBoxFetchPriority)]?, statsCategory: MediaResourceStatsCategory = .generic, reportResultStatus: Bool = false, preferBackgroundReferenceRevalidation: Bool = false, continueInBackground: Bool = false) -> Signal<FetchResourceSourceType, FetchResourceError> {
     var isRandomAccessAllowed = true
     switch reference {
     case let .media(media, _):
@@ -142,7 +142,7 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
     return nil
 }
 
-public func findMediaResourceById(message: Message, resourceId: MediaResourceId) -> TelegramMediaResource? {
+public func findMediaResourceById(message: EngineMessage, resourceId: MediaResourceId) -> TelegramMediaResource? {
     for media in message.media {
         if let result = findMediaResourceById(media: media, resourceId: resourceId) {
             return result

@@ -5,28 +5,24 @@ import Lottie
 import TelegramPresentationData
 
 final class LockView: UIButton, TGModernConversationInputMicButtonLock {
+    //private var colorCallbacks = [LOTValueDelegate]()
     
-    private var colorCallbacks = [LOTValueDelegate]()
-    
-    private let idleView: LOTAnimationView = {
-        guard let url = getAppBundle().url(forResource: "LockWait", withExtension: "json"),
-            let composition = LOTComposition(filePath: url.path)
-        else { return LOTAnimationView() }
+    private let idleView: AnimationView = {
+        guard let url = getAppBundle().url(forResource: "LockWait", withExtension: "json"), let animation = Animation.filepath(url.path)
+        else { return AnimationView() }
         
-        let view = LOTAnimationView(model: composition, in: getAppBundle())
-        view.autoReverseAnimation = true
-        view.loopAnimation = true
+        let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
+        view.loopMode = .autoReverse
         view.backgroundColor = .clear
         view.isOpaque = false
         return view
     }()
     
-    private let lockingView: LOTAnimationView = {
-        guard let url = getAppBundle().url(forResource: "Lock", withExtension: "json"),
-            let composition = LOTComposition(filePath: url.path)
-        else { return LOTAnimationView() }
+    private let lockingView: AnimationView = {
+        guard let url = getAppBundle().url(forResource: "Lock", withExtension: "json"), let animation = Animation.filepath(url.path)
+        else { return AnimationView() }
         
-        let view = LOTAnimationView(model: composition, in: getAppBundle())
+        let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
         view.backgroundColor = .clear
         view.isOpaque = false
         return view
@@ -60,11 +56,11 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
         }
         lockingView.isHidden = !idleView.isHidden
         
-        lockingView.animationProgress = lockness
+        lockingView.currentProgress = lockness
     }
     
     func updateTheme(_ theme: PresentationTheme) {
-        colorCallbacks.removeAll()
+        //colorCallbacks.removeAll()
         
         [
             "Rectangle.Заливка 1": theme.chat.inputPanel.panelBackgroundColor,
@@ -72,9 +68,10 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
             "Path.Path.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
             "Path 4.Path 4.Обводка 1": theme.chat.inputPanel.panelControlAccentColor
         ].forEach { key, value in
-            let colorCallback = LOTColorValueCallback(color: value.cgColor)
+            idleView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
+            /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
             self.colorCallbacks.append(colorCallback)
-            idleView.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
+            idleView.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
         }
         
         [
@@ -84,9 +81,10 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
             "Rectangle.Заливка 1": theme.chat.inputPanel.panelControlAccentColor,
             "Path 4.Path 4.Обводка 1": theme.chat.inputPanel.panelControlAccentColor
         ].forEach { key, value in
-            let colorCallback = LOTColorValueCallback(color: value.cgColor)
+            lockingView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
+            /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
             self.colorCallbacks.append(colorCallback)
-            lockingView.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))
+            lockingView.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
         }
     }
     

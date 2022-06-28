@@ -23,13 +23,13 @@ public final class Button: Component {
     
     private init(
         content: AnyComponent<Empty>,
-        minSize: CGSize?,
+        minSize: CGSize? = nil,
         tag: AnyObject? = nil,
         automaticHighlight: Bool = true,
         action: @escaping () -> Void
     ) {
         self.content = content
-        self.minSize = nil
+        self.minSize = minSize
         self.tag = tag
         self.automaticHighlight = automaticHighlight
         self.action = action

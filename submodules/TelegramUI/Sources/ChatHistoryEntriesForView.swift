@@ -75,7 +75,6 @@ func chatHistoryEntriesForView(
         )
     }
         
-    
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)] = []
     var count = 0
     loop: for entry in view.entries {
@@ -255,9 +254,9 @@ func chatHistoryEntriesForView(
                 }
             }
             if case let .peer(peerId) = location, peerId.isReplies {
-                entries.insert(.ChatInfoEntry("", presentationData.strings.RepliesChat_DescriptionText, nil, presentationData), at: 0)
+                entries.insert(.ChatInfoEntry("", presentationData.strings.RepliesChat_DescriptionText, nil, nil, presentationData), at: 0)
             } else if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
-                entries.insert(.ChatInfoEntry(presentationData.strings.Bot_DescriptionTitle, botInfo.description, botInfo.photo, presentationData), at: 0)
+                entries.insert(.ChatInfoEntry(presentationData.strings.Bot_DescriptionTitle, botInfo.description, botInfo.photo, botInfo.video, presentationData), at: 0)
             } else {
                 var isEmpty = true
                 if entries.count <= 3 {

@@ -434,7 +434,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                         if state.status.timestamp > 5.0 && state.status.timestamp < state.status.duration - 5.0 {
                             storedState = MediaPlaybackStoredState(timestamp: state.status.timestamp, playbackRate: state.status.baseRate > 1.0 ? .x2 : .x1)
                         }
-                        let _ = updateMediaPlaybackStoredStateInteractively(postbox: account.postbox, messageId: item.message.id, state: storedState).start()
+                        let _ = updateMediaPlaybackStoredStateInteractively(engine: TelegramEngine(account: account), messageId: item.message.id, state: storedState).start()
                     }
                 }
             }
@@ -487,7 +487,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                 let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.musicPlaybackSettings]?.get(MusicPlaybackSettings.self) ?? MusicPlaybackSettings.defaultSettings
                 
                 if let location = playlist.location as? PeerMessagesPlaylistLocation, let messageId = location.messageId {
-                    return mediaPlaybackStoredState(postbox: account.postbox, messageId: messageId)
+                    return mediaPlaybackStoredState(engine: TelegramEngine(account: account), messageId: messageId)
                     |> map { storedState in
                         return (account, playlist, settings, storedState)
                     }

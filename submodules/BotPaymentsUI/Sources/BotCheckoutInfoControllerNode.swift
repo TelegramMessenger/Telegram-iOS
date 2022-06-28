@@ -96,7 +96,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     private let context: AccountContext
     private weak var navigationBar: NavigationBar?
     private let invoice: BotPaymentInvoice
-    private let messageId: EngineMessage.Id
+    private let source: BotPaymentInvoiceSource
     private var focus: BotCheckoutInfoControllerFocus?
     
     private let dismiss: () -> Void
@@ -130,7 +130,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
         context: AccountContext,
         navigationBar: NavigationBar?,
         invoice: BotPaymentInvoice,
-        messageId: EngineMessage.Id,
+        source: BotPaymentInvoiceSource,
         formInfo: BotPaymentRequestedInfo,
         focus: BotCheckoutInfoControllerFocus,
         theme: PresentationTheme,
@@ -144,7 +144,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
         self.context = context
         self.navigationBar = navigationBar
         self.invoice = invoice
-        self.messageId = messageId
+        self.source = source
         self.formInfo = formInfo
         self.focus = focus
         self.dismiss = dismiss
@@ -367,7 +367,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     func verify() {
         self.isVerifying = true
         let formInfo = self.collectFormInfo()
-        self.verifyDisposable.set((self.context.engine.payments.validateBotPaymentForm(saveInfo: self.saveInfoItem.isOn, messageId: self.messageId, formInfo: formInfo) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.verifyDisposable.set((self.context.engine.payments.validateBotPaymentForm(saveInfo: self.saveInfoItem.isOn, source: self.source, formInfo: formInfo) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.formInfoUpdated(formInfo, result)
             }

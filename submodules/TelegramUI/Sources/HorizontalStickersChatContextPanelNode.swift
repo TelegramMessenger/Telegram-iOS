@@ -12,6 +12,8 @@ import AccountContext
 import StickerPackPreviewUI
 import ContextUI
 import ChatPresentationInterfaceState
+import PremiumUI
+import UndoUI
 
 final class HorizontalStickersChatContextPanelInteraction {
     var previewedStickerItem: StickerPackItem?
@@ -169,9 +171,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                 }
                 
                 if let itemNode = strongSelf.gridNode.itemNodeAtPoint(strongSelf.view.convert(point, to: strongSelf.gridNode.view)) as? HorizontalStickerGridItemNode, let item = itemNode.stickerItem {
-                    return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                        return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                    }
+                    return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                     |> deliverOnMainQueue
                     |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                         if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
@@ -182,15 +182,36 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                 
                                     let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, false, nil, true, itemNode, itemNode.bounds)
                                 })),
-                                .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                     f(.default)
                                     
                                     if let strongSelf = self {
-                                        if isStarred {
-                                            let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-                                        } else {
-                                            let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-                                        }
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                        |> deliverOnMainQueue).start(next: { result in
+                                            switch result {
+                                                case .generic:
+                                                    strongSelf.interfaceInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                case let .limitExceeded(limit, premiumLimit):
+                                                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
+                                                    let text: String
+                                                    if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
+                                                        text = strongSelf.strings.Premium_MaxFavedStickersFinalText
+                                                    } else {
+                                                        text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
+                                                    }
+                                                    strongSelf.interfaceInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                        if let strongSelf = self {
+                                                            if case .info = action {
+                                                                let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
+                                                                strongSelf.controllerInteraction?.navigationController()?.pushViewController(controller)
+                                                                return true
+                                                            }
+                                                        }
+                                                        return false
+                                                    }), nil)
+                                            }
+                                        })
                                     }
                                 })),
                                 .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_ViewPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
@@ -220,7 +241,13 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                     }
                                 }))
                             ]
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
+                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems, openPremiumIntro: { [weak self] in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                strongSelf.controllerInteraction?.navigationController()?.pushViewController(controller)
+                            }))
                         } else {
                             return nil
                         }

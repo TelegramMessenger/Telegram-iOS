@@ -61,7 +61,7 @@ private final class ImportManager {
     }
     
     enum State {
-        case progress(totalBytes: Int, totalUploadedBytes: Int, totalMediaBytes: Int, totalUploadedMediaBytes: Int)
+        case progress(totalBytes: Int64, totalUploadedBytes: Int64, totalMediaBytes: Int64, totalUploadedMediaBytes: Int64)
         case error(ImportError)
         case done
     }
@@ -74,11 +74,11 @@ private final class ImportManager {
     
     private let disposable = MetaDisposable()
     
-    private let totalBytes: Int
-    private let totalMediaBytes: Int
-    private let mainFileSize: Int
+    private let totalBytes: Int64
+    private let totalMediaBytes: Int64
+    private let mainFileSize: Int64
     private var pendingEntries: [(SSZipEntry, String, TelegramEngine.HistoryImport.MediaType)]
-    private var entryProgress: [String: (Int, Int)] = [:]
+    private var entryProgress: [String: (Int64, Int64)] = [:]
     private var activeEntries: [String: Disposable] = [:]
     
     private var stateValue: State {
@@ -99,10 +99,10 @@ private final class ImportManager {
         
         self.mainFileSize = fileSize(mainFile.path) ?? 0
         
-        var totalMediaBytes = 0
+        var totalMediaBytes: Int64 = 0
         for entry in self.entries {
-            self.entryProgress[entry.1] = (Int(entry.0.uncompressedSize), 0)
-            totalMediaBytes += Int(entry.0.uncompressedSize)
+            self.entryProgress[entry.1] = (Int64(entry.0.uncompressedSize), 0)
+            totalMediaBytes += Int64(entry.0.uncompressedSize)
         }
         self.totalBytes = self.mainFileSize + totalMediaBytes
         self.totalMediaBytes = totalMediaBytes
@@ -155,7 +155,7 @@ private final class ImportManager {
             return
         }
         
-        var totalUploadedMediaBytes = 0
+        var totalUploadedMediaBytes: Int64 = 0
         for (_, entrySizes) in self.entryProgress {
             totalUploadedMediaBytes += entrySizes.1
         }
@@ -278,7 +278,7 @@ private final class ImportManager {
                     return
                 }
                 if let (size, _) = strongSelf.entryProgress[entry.1] {
-                    strongSelf.entryProgress[entry.1] = (size, Int(progress * Float(entry.0.uncompressedSize)))
+                    strongSelf.entryProgress[entry.1] = (size, Int64(progress * Float(entry.0.uncompressedSize)))
                     strongSelf.updateProgress()
                 }
             }, error: { [weak self] error in
@@ -321,7 +321,7 @@ public final class ChatImportActivityScreen: ViewController {
         
         private var validLayout: (ContainerViewLayout, CGFloat)?
         
-        private let totalBytes: Int
+        private let totalBytes: Int64
         private var state: ImportManager.State
         
         private var videoNode: UniversalVideoNode?
@@ -329,7 +329,7 @@ public final class ChatImportActivityScreen: ViewController {
         
         fileprivate var remainingAnimationSeconds: Double?
         
-        init(controller: ChatImportActivityScreen, context: AccountContext, totalBytes: Int, totalMediaBytes: Int) {
+        init(controller: ChatImportActivityScreen, context: AccountContext, totalBytes: Int64, totalMediaBytes: Int64) {
             self.controller = controller
             self.context = context
             self.totalBytes = totalBytes
@@ -337,8 +337,8 @@ public final class ChatImportActivityScreen: ViewController {
             
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             
-            self.animationNode = AnimatedStickerNode()
-            self.doneAnimationNode = AnimatedStickerNode()
+            self.animationNode = DefaultAnimatedStickerNodeImpl()
+            self.doneAnimationNode = DefaultAnimatedStickerNodeImpl()
             self.doneAnimationNode.isHidden = true
             
             self.radialStatus = RadialStatusNode(backgroundNodeColor: .clear)
@@ -727,8 +727,8 @@ public final class ChatImportActivityScreen: ViewController {
     fileprivate var peerId: PeerId
     private let archivePath: String?
     private let mainEntry: TempBoxFile
-    private let totalBytes: Int
-    private let totalMediaBytes: Int
+    private let totalBytes: Int64
+    private let totalMediaBytes: Int64
     private let otherEntries: [(SSZipEntry, String, TelegramEngine.HistoryImport.MediaType)]
     
     private var importManager: ImportManager?
@@ -759,9 +759,9 @@ public final class ChatImportActivityScreen: ViewController {
         
         let mainEntrySize = fileSize(self.mainEntry.path) ?? 0
         
-        var totalMediaBytes = 0
+        var totalMediaBytes: Int64 = 0
         for entry in self.otherEntries {
-            totalMediaBytes += Int(entry.0.uncompressedSize)
+            totalMediaBytes += Int64(entry.0.uncompressedSize)
         }
         self.totalBytes = mainEntrySize + totalMediaBytes
         self.totalMediaBytes = totalMediaBytes

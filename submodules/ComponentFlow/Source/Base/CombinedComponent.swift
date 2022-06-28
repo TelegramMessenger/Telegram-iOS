@@ -99,13 +99,14 @@ public final class _ConcreteChildComponent<ComponentType: Component>: _AnyChildC
             view = current.view as! ComponentType.View
         } else {
             view = component.makeView()
-            transition = .immediate
+            transition = transition.withAnimation(.none)
         }
 
         let context = view.context(component: component)
         EnvironmentBuilder._environment = context.erasedEnvironment
-        let _ = environment()
+        let environmentResult = environment()
         EnvironmentBuilder._environment = nil
+        context.erasedEnvironment = environmentResult
 
         return updateChildAnyComponent(
             id: self.id,
@@ -288,9 +289,11 @@ public final class _EnvironmentChildComponent<EnvironmentType>: _AnyChildCompone
             transition = .immediate
         }
 
-        EnvironmentBuilder._environment = view.context(component: component).erasedEnvironment
-        let _ = environment()
+        let viewContext = view.context(component: component)
+        EnvironmentBuilder._environment = viewContext.erasedEnvironment
+        let environmentResult = environment()
         EnvironmentBuilder._environment = nil
+        viewContext.erasedEnvironment = environmentResult
 
         return updateChildAnyComponent(
             id: self.id,
@@ -339,12 +342,14 @@ public final class _EnvironmentChildComponentFromMap<EnvironmentType>: _AnyChild
             view = current.view
         } else {
             view = component._makeView()
-            transition = .immediate
+            transition = transition.withAnimation(.none)
         }
 
-        EnvironmentBuilder._environment = view.context(component: component).erasedEnvironment
-        let _ = environment()
+        let viewContext = view.context(component: component)
+        EnvironmentBuilder._environment = viewContext.erasedEnvironment
+        let environmentResult = environment()
         EnvironmentBuilder._environment = nil
+        viewContext.erasedEnvironment = environmentResult
 
         return updateChildAnyComponent(
             id: self.id,

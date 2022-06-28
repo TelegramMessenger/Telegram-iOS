@@ -28,6 +28,24 @@ internal:
       - build/artifacts
     expire_in: 1 week
 
+appstore_development:
+  tags:
+    - ios_internal
+  stage: build
+  only:
+    - appstore-development
+  except:
+    - tags
+  script:
+    - bash buildbox/build-telegram.sh appstore-development
+    - bash buildbox/deploy-telegram.sh appstore-development
+  environment:
+    name: appstore-development
+  artifacts:
+    paths:
+      - build/artifacts/Telegram.DSYMs.zip
+    expire_in: 1 week
+
 experimental_i:
   tags:
     - ios_internal

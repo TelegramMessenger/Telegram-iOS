@@ -30,6 +30,10 @@ public struct ChatListNodePeersFilter: OptionSet {
     
     public static let excludeChannels = ChatListNodePeersFilter(rawValue: 1 << 12)
     public static let onlyGroupsAndChannels = ChatListNodePeersFilter(rawValue: 1 << 13)
+    
+    public static let excludeGroups = ChatListNodePeersFilter(rawValue: 1 << 14)
+    public static let excludeUsers = ChatListNodePeersFilter(rawValue: 1 << 15)
+    public static let excludeBots = ChatListNodePeersFilter(rawValue: 1 << 16)
 }
 
 

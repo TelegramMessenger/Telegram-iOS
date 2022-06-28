@@ -35,6 +35,7 @@ prepare_build_variables () {
 		IS_APPSTORE_BUILD \
 		APPSTORE_ID \
 		APP_SPECIFIC_URL_SCHEME \
+		PREMIUM_IAP_PRODUCT_ID \
 		TELEGRAM_DISABLE_EXTENSIONS \
 	)
 
@@ -66,6 +67,7 @@ prepare_build_variables () {
 	echo "telegram_is_appstore_build = \"$IS_APPSTORE_BUILD\"" >> "$VARIABLES_PATH"
 	echo "telegram_appstore_id = \"$APPSTORE_ID\"" >> "$VARIABLES_PATH"
 	echo "telegram_app_specific_url_scheme = \"$APP_SPECIFIC_URL_SCHEME\"" >> "$VARIABLES_PATH"
+	echo "telegram_premium_iap_product_id = \"$PREMIUM_IAP_PRODUCT_ID\"" >> "$VARIABLES_PATH"
 	echo "telegram_aps_environment = \"$APS_ENVIRONMENT\"" >> "$VARIABLES_PATH"
 
 	if [  "$TELEGRAM_DISABLE_EXTENSIONS" == "1" ]; then

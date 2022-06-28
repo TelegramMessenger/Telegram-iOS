@@ -29,31 +29,29 @@ public final class MediaPlaybackStoredState: Codable {
     }
 }
 
-public func mediaPlaybackStoredState(postbox: Postbox, messageId: MessageId) -> Signal<MediaPlaybackStoredState?, NoError> {
-    return postbox.transaction { transaction -> MediaPlaybackStoredState? in
-        let key = ValueBoxKey(length: 8)
-        key.setInt32(0, value: messageId.namespace)
-        key.setInt32(4, value: messageId.id)
-        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.mediaPlaybackStoredState, key: key))?.get(MediaPlaybackStoredState.self) {
-            return entry
-        } else {
-            return nil
-        }
+public func mediaPlaybackStoredState(engine: TelegramEngine, messageId: MessageId) -> Signal<MediaPlaybackStoredState?, NoError> {
+    let key = ValueBoxKey(length: 20)
+    key.setInt32(0, value: messageId.namespace)
+    key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
+    key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
+    key.setInt32(16, value: messageId.id)
+    
+    return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.mediaPlaybackStoredState, id: key))
+    |> map { entry -> MediaPlaybackStoredState? in
+        return entry?.get(MediaPlaybackStoredState.self)
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 25, highWaterItemCount: 50)
-
-public func updateMediaPlaybackStoredStateInteractively(postbox: Postbox, messageId: MessageId, state: MediaPlaybackStoredState?) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        let key = ValueBoxKey(length: 8)
-        key.setInt32(0, value: messageId.namespace)
-        key.setInt32(4, value: messageId.id)
-        let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.mediaPlaybackStoredState, key: key)
-        if let state = state, let entry = CodableEntry(state) {
-            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
-        } else {
-            transaction.removeItemCacheEntry(id: id)
-        }
+public func updateMediaPlaybackStoredStateInteractively(engine: TelegramEngine, messageId: MessageId, state: MediaPlaybackStoredState?) -> Signal<Never, NoError> {
+    let key = ValueBoxKey(length: 20)
+    key.setInt32(0, value: messageId.namespace)
+    key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
+    key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
+    key.setInt32(16, value: messageId.id)
+    
+    if let state = state {
+        return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.mediaPlaybackStoredState, id: key, item: state)
+    } else {
+        return engine.itemCache.remove(collectionId: ApplicationSpecificItemCacheCollectionId.mediaPlaybackStoredState, id: key)
     }
 }

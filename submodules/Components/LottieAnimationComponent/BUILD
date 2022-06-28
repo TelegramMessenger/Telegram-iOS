@@ -13,6 +13,7 @@ swift_library(
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/lottie-ios:Lottie",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/Display:Display",
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
     ],
     visibility = [

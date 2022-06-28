@@ -71,6 +71,12 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> S
                                 }
                             }
                         }
+                        
+                        if let channel = transaction.getPeer(peerId) as? TelegramChannel, case .broadcast = channel.info {
+                            let notificationSettings = transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings ?? TelegramPeerNotificationSettings.defaultSettings
+                            transaction.updateCurrentPeerNotificationSettings([peerId: notificationSettings.withUpdatedMuteState(.muted(until: Int32.max))])
+                        }
+                        
                         return RenderedChannelParticipant(participant: updatedParticipant, peer: peer, peers: peers, presences: presences)
                     }
                     |> castError(JoinChannelError.self)

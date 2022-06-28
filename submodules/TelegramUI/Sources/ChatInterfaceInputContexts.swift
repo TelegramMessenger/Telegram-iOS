@@ -294,14 +294,16 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     }
                 }
                 
-                if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 && chatPresentationInterfaceState.interfaceState.forwardMessageIds == nil {
-                    if chatPresentationInterfaceState.hasScheduledMessages {
+                let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
+                
+                if chatPresentationInterfaceState.interfaceState.forwardMessageIds == nil {
+                    if isTextEmpty && chatPresentationInterfaceState.hasScheduledMessages {
                         accessoryItems.append(.scheduledMessages)
                     }
                     
                     var stickersEnabled = true
                     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                        if case .broadcast = peer.info, canSendMessagesToPeer(peer) {
+                        if isTextEmpty, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
                             accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
                         }
                         if peer.hasBannedPermission(.banSendStickers) != nil {
@@ -312,11 +314,17 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                             stickersEnabled = false
                         }
                     }
-                    if chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands {
+                    if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands {
                         accessoryItems.append(.commands)
                     }
+                    #if DEBUG
                     accessoryItems.append(.stickers(stickersEnabled))
-                    if let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
+                    #else
+                    if isTextEmpty {
+                        accessoryItems.append(.stickers(stickersEnabled))
+                    }
+                    #endif
+                    if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
                         accessoryItems.append(.inputButtons)
                     }
                 }

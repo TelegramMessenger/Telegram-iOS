@@ -89,7 +89,33 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
         },
         defaultGlobalNotificationSettings: PostboxGlobalNotificationSettings(defaultIncludePeer: { peer in
             return GlobalNotificationSettings.defaultSettings.defaultIncludePeer(peer: peer)
-        })
+        }),
+        mergeMessageAttributes: { previous, updated in
+            if previous.isEmpty {
+                return
+            }
+            var audioTranscription: AudioTranscriptionMessageAttribute?
+            for attribute in previous {
+                if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+                    audioTranscription = attribute
+                    break
+                }
+            }
+            
+            if let audioTranscription = audioTranscription {
+                var found = false
+                for i in 0 ..< updated.count {
+                    if let attribute = updated[i] as? AudioTranscriptionMessageAttribute {
+                        updated[i] = attribute.merge(withPrevious: audioTranscription)
+                        found = true
+                        break
+                    }
+                }
+                if !found {
+                    updated.append(audioTranscription)
+                }
+            }
+        }
     )
 }()
 

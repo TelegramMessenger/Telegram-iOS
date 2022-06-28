@@ -62,7 +62,7 @@ func _internal_cachedPeerSendAsAvailablePeers(account: Account, peerId: PeerId) 
             return account.postbox.transaction { transaction -> [FoundPeer] in
                 let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 if let entry = CodableEntry(CachedSendAsPeers(peerIds: peers.map { $0.peer.id }, timestamp: currentTimestamp)) {
-                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSendAsPeers, key: key), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20))
+                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSendAsPeers, key: key), entry: entry)
                 }
                 return peers
             }

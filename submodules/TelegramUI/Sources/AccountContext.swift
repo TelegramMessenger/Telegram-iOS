@@ -18,6 +18,7 @@ import AsyncDisplayKit
 import PresentationDataUtils
 import MeshAnimationCache
 import FetchManagerImpl
+import InAppPurchaseManager
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -59,10 +60,9 @@ private final class DeviceSpecificContactImportContexts {
             if context.reference != reference {
                 context.reference = reference
                 
-                let key: PostboxViewKey = .basicPeer(peerId)
-                let signal = account.postbox.combinedView(keys: [key])
-                |> map { view -> String? in
-                    if let user = (view.views[key] as? BasicPeerView)?.peer as? TelegramUser {
+                let signal = TelegramEngine(account: account).data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> map { peer -> String? in
+                    if case let .user(user) = peer {
                         return user.phone
                     } else {
                         return nil
@@ -123,6 +123,7 @@ public final class AccountContextImpl: AccountContext {
     public let peersNearbyManager: PeersNearbyManager?
     public let wallpaperUploadManager: WallpaperUploadManager?
     private let themeUpdateManager: ThemeUpdateManager?
+    public let inAppPurchaseManager: InAppPurchaseManager?
     
     public let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
     
@@ -159,11 +160,19 @@ public final class AccountContextImpl: AccountContext {
     public let cachedGroupCallContexts: AccountGroupCallContextCache
     public let meshAnimationCache: MeshAnimationCache
     
+    private var animatedEmojiStickersDisposable: Disposable?
+    public private(set) var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
+    
+    private var userLimitsConfigurationDisposable: Disposable?
+    public private(set) var userLimits: EngineConfiguration.UserLimits
+    
     public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
     {
         self.sharedContextImpl = sharedContext
         self.account = account
         self.engine = TelegramEngine(account: account)
+        
+        self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
@@ -177,10 +186,16 @@ public final class AccountContextImpl: AccountContext {
             self.prefetchManager = PrefetchManagerImpl(sharedContext: sharedContext, account: account, engine: self.engine, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
+            if let premiumProductId = sharedContext.premiumProductId {
+                self.inAppPurchaseManager = InAppPurchaseManager(engine: self.engine, premiumProductId: premiumProductId)
+            } else {
+                self.inAppPurchaseManager = nil
+            }
         } else {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil
             self.themeUpdateManager = nil
+            self.inAppPurchaseManager = nil
         }
         
         if let locationManager = self.sharedContextImpl.locationManager, sharedContext.applicationBindings.isMainApp && !temp {
@@ -244,6 +259,47 @@ public final class AccountContextImpl: AccountContext {
         account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: true, includeReference: true).map { version, supportsVideo -> CallSessionManagerImplementationVersion in
             CallSessionManagerImplementationVersion(version: version, supportsVideo: supportsVideo)
         })
+        
+        self.animatedEmojiStickersDisposable = (self.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
+        |> map { animatedEmoji -> [String: [StickerPackItem]] in
+            var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
+            switch animatedEmoji {
+                case let .result(_, items, _):
+                    for item in items {
+                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
+                            animatedEmojiStickers[emoji.basicEmoji.0] = [item]
+                            let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
+                            if animatedEmojiStickers[strippedEmoji] == nil {
+                                animatedEmojiStickers[strippedEmoji] = [item]
+                            }
+                        }
+                    }
+                default:
+                    break
+            }
+            return animatedEmojiStickers
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] stickers in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.animatedEmojiStickers = stickers
+        })
+        
+        self.userLimitsConfigurationDisposable = (self.account.postbox.peerView(id: self.account.peerId)
+        |> mapToSignal { peerView -> Signal<EngineConfiguration.UserLimits, NoError> in
+            if let peer = peerView.peers[peerView.peerId] {
+                return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: peer.isPremium))
+            } else {
+                return .complete()
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.userLimits = value
+        })
     }
     
     deinit {
@@ -252,6 +308,7 @@ public final class AccountContextImpl: AccountContext {
         self.contentSettingsDisposable?.dispose()
         self.appConfigurationDisposable?.dispose()
         self.experimentalUISettingsDisposable?.dispose()
+        self.animatedEmojiStickersDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {
@@ -349,9 +406,22 @@ public final class AccountContextImpl: AccountContext {
             if currentPeerId == peerId {
                 self.sharedContext.navigateToCurrentCall()
             } else {
-                let _ = (self.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                    return (transaction.getPeer(peerId), currentPeerId.flatMap(transaction.getPeer))
+                let dataInput: Signal<(EnginePeer?, EnginePeer?), NoError>
+                if let currentPeerId = currentPeerId {
+                    dataInput = self.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: currentPeerId)
+                    )
+                } else {
+                    dataInput = self.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                    )
+                    |> map { peer -> (EnginePeer?, EnginePeer?) in
+                        return (peer, nil)
+                    }
                 }
+                
+                let _ = (dataInput
                 |> deliverOnMainQueue).start(next: { [weak self] peer, current in
                     guard let strongSelf = self else {
                         return
@@ -361,15 +431,16 @@ public final class AccountContextImpl: AccountContext {
                     }
                     let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
                     if let current = current {
-                        if current is TelegramChannel || current is TelegramGroup {
+                        switch current {
+                        case .channel, .legacyGroup:
                             let title: String
                             let text: String
-                            if let channel = current as? TelegramChannel, case .broadcast = channel.info {
+                            if case let .channel(channel) = current, case .broadcast = channel.info {
                                 title = presentationData.strings.Call_LiveStreamInProgressTitle
-                                text = presentationData.strings.Call_LiveStreamInProgressMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                                text = presentationData.strings.Call_LiveStreamInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             } else {
                                 title = presentationData.strings.Call_VoiceChatInProgressTitle
-                                text = presentationData.strings.Call_VoiceChatInProgressMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                                text = presentationData.strings.Call_VoiceChatInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             }
 
                             strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
@@ -378,12 +449,12 @@ public final class AccountContextImpl: AccountContext {
                                 }
                                 let _ = strongSelf.sharedContext.callManager?.joinGroupCall(context: strongSelf, peerId: peer.id, invite: invite, requestJoinAsPeerId: requestJoinAsPeerId, initialCall: activeCall, endCurrentIfAny: true)
                             })]), on: .root)
-                        } else {
+                        default:
                             let text: String
-                            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                                text = presentationData.strings.Call_CallInProgressLiveStreamMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                                text = presentationData.strings.Call_CallInProgressLiveStreamMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             } else {
-                                text = presentationData.strings.Call_CallInProgressVoiceChatMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                                text = presentationData.strings.Call_CallInProgressVoiceChatMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             }
                             strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
@@ -411,9 +482,22 @@ public final class AccountContextImpl: AccountContext {
                 completion()
                 self.sharedContext.navigateToCurrentCall()
             } else {
-                let _ = (self.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                    return (transaction.getPeer(peerId), currentPeerId.flatMap(transaction.getPeer))
+                let dataInput: Signal<(EnginePeer?, EnginePeer?), NoError>
+                if let currentPeerId = currentPeerId {
+                    dataInput = self.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: currentPeerId)
+                    )
+                } else {
+                    dataInput = self.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                    )
+                    |> map { peer -> (EnginePeer?, EnginePeer?) in
+                        return (peer, nil)
+                    }
                 }
+                
+                let _ = (dataInput
                 |> deliverOnMainQueue).start(next: { [weak self] peer, current in
                     guard let strongSelf = self else {
                         return
@@ -423,12 +507,13 @@ public final class AccountContextImpl: AccountContext {
                     }
                     let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
                     if let current = current {
-                        if current is TelegramChannel || current is TelegramGroup {
+                        switch current {
+                        case .channel, .legacyGroup:
                             let text: String
-                            if let channel = current as? TelegramChannel, case .broadcast = channel.info {
-                                text = presentationData.strings.Call_LiveStreamInProgressCallMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                            if case let .channel(channel) = current, case .broadcast = channel.info {
+                                text = presentationData.strings.Call_LiveStreamInProgressCallMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             } else {
-                                text = presentationData.strings.Call_VoiceChatInProgressCallMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string
+                                text = presentationData.strings.Call_VoiceChatInProgressCallMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string
                             }
                             strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_VoiceChatInProgressTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
@@ -437,8 +522,8 @@ public final class AccountContextImpl: AccountContext {
                                 let _ = strongSelf.sharedContext.callManager?.requestCall(context: strongSelf, peerId: peerId, isVideo: isVideo, endCurrentIfAny: true)
                                 completion()
                             })]), on: .root)
-                        } else {
-                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(EnginePeer(current).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                        default:
+                            strongSelf.sharedContext.mainWindow?.present(textAlertController(context: strongSelf, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                 guard let strongSelf = self else {
                                     return
                                 }

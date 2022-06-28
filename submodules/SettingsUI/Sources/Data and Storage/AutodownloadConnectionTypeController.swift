@@ -179,7 +179,7 @@ private struct AutomaticDownloadPeers {
     let otherPrivate: Bool
     let groups: Bool
     let channels: Bool
-    let size: Int32?
+    let size: Int64?
     
     init(category: MediaAutoDownloadCategory) {
         self.contacts = category.contacts

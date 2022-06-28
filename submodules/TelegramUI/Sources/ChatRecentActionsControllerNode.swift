@@ -23,6 +23,7 @@ import InviteLinksUI
 import UndoUI
 import TelegramCallsUI
 import WallpaperBackgroundNode
+import BotPaymentsUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -517,6 +518,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: { _ in
+        }, displayPremiumStickerTooltip: { _, _ in
         }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
@@ -536,7 +538,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
-        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(backgroundNode: self.backgroundNode))
+        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction
         
         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
@@ -899,6 +901,30 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case let .stickerPack(name):
                         let packReference: StickerPackReference = .name(name)
                         strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.getNavigationController()), .window(.root), nil)
+                    case let .invoice(slug, invoice):
+                        let inputData = Promise<BotCheckoutController.InputData?>()
+                        inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .slug(slug))
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                            return .single(nil)
+                        })
+                        strongSelf.controllerInteraction.presentController(BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let _ = strongSelf
+                            /*strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
+                                guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
+                                    return false
+                                }
+
+                                if case .info = action {
+                                    strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    return true
+                                }
+                                return false
+                            }), in: .current)*/
+                        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
                     case let .join(link):
@@ -932,6 +958,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     #endif
                     case .settings:
+                        break
+                    case .premiumOffer:
                         break
                     case let .joinVoiceChat(peerId, invite):
                         strongSelf.presentController(VoiceChatJoinScreen(context: strongSelf.context, peerId: peerId, invite: invite, join: { call in

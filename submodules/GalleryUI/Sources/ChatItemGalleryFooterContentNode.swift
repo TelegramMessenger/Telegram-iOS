@@ -1016,9 +1016,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     @objc func deleteButtonPressed() {
         if let currentMessage = self.currentMessage {
-            let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
-                return transaction.getMessageGroup(currentMessage.id) ?? []
-            } |> deliverOnMainQueue).start(next: { [weak self] messages in
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.MessageGroup(id: currentMessage.id))
+            |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self, !messages.isEmpty {
                     if messages.count == 1 {
                         strongSelf.commitDeleteMessages(messages, ask: true)
@@ -1032,7 +1031,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         
                         var generalMessageContentKind: MessageContentKind?
                         for message in messages {
-                            let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
+                            let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
                             if generalMessageContentKind == nil || generalMessageContentKind == currentKind {
                                 generalMessageContentKind = currentKind
                             } else {
@@ -1057,7 +1056,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             }
                         }
                     
-                        let deleteAction: ([Message]) -> Void = { messages in
+                        let deleteAction: ([EngineMessage]) -> Void = { messages in
                             if let strongSelf = self {
                                 strongSelf.commitDeleteMessages(messages, ask: false)
                             }
@@ -1070,7 +1069,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         let items: [ActionSheetItem] = [
                             ActionSheetButtonItem(title: singleText, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
-                                deleteAction([currentMessage])
+                                deleteAction([EngineMessage(currentMessage)])
                             }),
                             ActionSheetButtonItem(title: multipleText, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
@@ -1093,8 +1092,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
 
-    private func commitDeleteMessages(_ messages: [Message], ask: Bool) {
-        self.messageContextDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: Set(messages.map { $0.id })) |> deliverOnMainQueue).start(next: { [weak self] actions in
+    private func commitDeleteMessages(_ messages: [EngineMessage], ask: Bool) {
+        self.messageContextDisposable.set((self.context.sharedContext.chatAvailableMessageActions(engine: self.context.engine, accountPeerId: self.context.account.peerId, messageIds: Set(messages.map { $0.id })) |> deliverOnMainQueue).start(next: { [weak self] actions in
             if let strongSelf = self, let controllerInteration = strongSelf.controllerInteraction, !actions.options.isEmpty {
                 var presentationData = strongSelf.presentationData
                 if !presentationData.theme.overallDarkAppearance {
@@ -1166,9 +1165,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.interacting?(true)
         
         if let currentMessage = self.currentMessage {
-            let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
-                return transaction.getMessageGroup(currentMessage.id) ?? []
-            } |> deliverOnMainQueue).start(next: { [weak self] messages in
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.MessageGroup(id: currentMessage.id))
+            |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self, !messages.isEmpty {
                     var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     var forceTheme: PresentationTheme?
@@ -1181,7 +1179,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     var messageContentKinds = Set<MessageContentKindKey>()
                     
                     for message in messages {
-                        let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
+                        let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
                         if beganContentKindScanning && currentKind != generalMessageContentKind {
                             generalMessageContentKind = nil
                         } else if !beganContentKindScanning || currentKind == generalMessageContentKind {
@@ -1210,10 +1208,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     }
                     
                     if messages.count == 1 {
-                        var subject: ShareControllerSubject = ShareControllerSubject.messages(messages)
+                        var subject: ShareControllerSubject = ShareControllerSubject.messages(messages.map { $0._asMessage() })
                         for m in messages[0].media {
                             if let image = m as? TelegramMediaImage {
-                                subject = .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(messages[0]), media: m), resource: $0.resource)) }))
+                                subject = .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(messages[0]._asMessage()), media: m), resource: $0.resource)) }))
                             } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                                 if content.embedType == "iframe" {
                                     let item = OpenInItem.url(url: content.url)
@@ -1246,18 +1244,46 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                     }
                                 }
                             } else if let file = m as? TelegramMediaFile {
-                                subject = .media(.message(message: MessageReference(messages[0]), media: file))
+                                subject = .media(.message(message: MessageReference(messages[0]._asMessage()), media: file))
                                 if file.isAnimated {
                                     preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
                                         if let strongSelf = self {
                                             let message = messages[0]
-                                            let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .message(message: MessageReference(message), media: file)).start()
                                             
-                                            strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                                            let context = strongSelf.context
+                                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                            let controllerInteraction = strongSelf.controllerInteraction
+                                            let _ = (toggleGifSaved(account: context.account, fileReference: .message(message: MessageReference(message._asMessage()), media: file), saved: true)
+                                            |> deliverOnMainQueue).start(next: { result in
+                                                switch result {
+                                                    case .generic:
+                                                    controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                                    case let .limitExceeded(limit, premiumLimit):
+                                                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                                                        let text: String
+                                                        if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
+                                                            text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                                        } else {
+                                                            text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
+                                                        }
+                                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: true, animateInAsReplacement: false, action: { action in
+                                                            if case .info = action {
+                                                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs)
+                                                                controllerInteraction?.pushController(controller)
+                                                                return true
+                                                            }
+                                                            return false
+                                                        }), nil)
+                                                }
+                                            })
                                         }
                                     }))
-                                } else if file.mimeType.hasPrefix("image/") || file.mimeType.hasPrefix("video/") {
+                                } else if file.mimeType.hasPrefix("image/") {
                                     preferredAction = .saveToCameraRoll
+                                    actionCompletionText = strongSelf.presentationData.strings.Gallery_ImageSaved
+                                } else if file.mimeType.hasPrefix("video/") {
+                                    preferredAction = .saveToCameraRoll
+                                    actionCompletionText = strongSelf.presentationData.strings.Gallery_VideoSaved
                                 }
                             }
                         }
@@ -1273,16 +1299,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         }
                         shareController.completed = { [weak self] peerIds in
                             if let strongSelf = self {
-                                let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
-                                    var peers: [Peer] = []
-                                    for peerId in peerIds {
-                                        if let peer = transaction.getPeer(peerId) {
-                                            peers.append(peer)
-                                        }
-                                    }
-                                    return peers
-                                } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                                let _ = (strongSelf.context.engine.data.get(
+                                    EngineDataList(
+                                        peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                                    )
+                                )
+                                |> deliverOnMainQueue).start(next: { [weak self] peerList in
                                     if let strongSelf = self {
+                                        let peers = peerList.compactMap { $0 }
                                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                         
                                         let text: String
@@ -1292,14 +1316,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                             savedMessages = true
                                         } else {
                                             if peers.count == 1, let peer = peers.first {
-                                                let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                 text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
                                             } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                                let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                                let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                 text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
                                             } else if let peer = peers.first {
-                                                let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                 text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").string
                                             } else {
                                                 text = ""
@@ -1335,18 +1359,22 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                 shareController.dismissed = { [weak self] _ in
                                     self?.interacting?(false)
                                 }
+                                shareController.actionCompleted = { [weak self, weak shareController] in
+                                    if let strongSelf = self, let shareController = shareController, shareController.actionIsMediaSaving {
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: presentationData.strings.Gallery_ImageSaved), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
+                                    }
+                                }
                                 shareController.completed = { [weak self] peerIds in
                                     if let strongSelf = self {
-                                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
-                                            var peers: [Peer] = []
-                                            for peerId in peerIds {
-                                                if let peer = transaction.getPeer(peerId) {
-                                                    peers.append(peer)
-                                                }
-                                            }
-                                            return peers
-                                        } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                                        let _ = (strongSelf.context.engine.data.get(
+                                            EngineDataList(
+                                                peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                                            )
+                                        )
+                                        |> deliverOnMainQueue).start(next: { [weak self] peerList in
                                             if let strongSelf = self {
+                                                let peers = peerList.compactMap { $0 }
                                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                                 
                                                 let text: String
@@ -1356,14 +1384,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                                     savedMessages = true
                                                 } else {
                                                     if peers.count == 1, let peer = peers.first {
-                                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                         text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
                                                     } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                         text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
                                                     } else if let peer = peers.first {
-                                                        let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                                        let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                                         text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(peers.count - 1)").string
                                                     } else {
                                                         text = ""
@@ -1387,7 +1415,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             }),
                             ActionSheetButtonItem(title: multipleText, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
-                                shareAction(messages)
+                                shareAction(messages.map { $0._asMessage() })
                             })
                         ]
                         
@@ -1417,9 +1445,32 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 if file.isAnimated {
                     preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
                         if let strongSelf = self {
-                            let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .webPage(webPage: WebpageReference(webPage), media: file)).start()
-                            
-                            strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
+                            let context = strongSelf.context
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let controllerInteraction = strongSelf.controllerInteraction
+                            let _ = (toggleGifSaved(account: context.account, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), saved: true)
+                            |> deliverOnMainQueue).start(next: { result in
+                                switch result {
+                                    case .generic:
+                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                    case let .limitExceeded(limit, premiumLimit):
+                                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                                        let text: String
+                                        if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
+                                            text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                        } else {
+                                            text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
+                                        }
+                                        controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: true, animateInAsReplacement: false, action: { action in
+                                            if case .info = action {
+                                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs)
+                                                controllerInteraction?.pushController(controller)
+                                                return true
+                                            }
+                                            return false
+                                        }), nil)
+                                }
+                            })
                         }
                     }))
                 } else if file.mimeType.hasPrefix("image/") || file.mimeType.hasPrefix("video/") {
@@ -1464,16 +1515,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
             shareController.completed = { [weak self] peerIds in
                 if let strongSelf = self {
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
-                        var peers: [Peer] = []
-                        for peerId in peerIds {
-                            if let peer = transaction.getPeer(peerId) {
-                                peers.append(peer)
-                            }
-                        }
-                        return peers
-                    } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                    let _ = (strongSelf.context.engine.data.get(
+                        EngineDataList(
+                            peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                        )
+                    )
+                    |> deliverOnMainQueue).start(next: { [weak self] peerList in
                         if let strongSelf = self {
+                            let peers = peerList.compactMap { $0 }
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                             
                             let text: String
@@ -1483,14 +1532,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                 savedMessages = true
                             } else {
                                 if peers.count == 1, let peer = peers.first {
-                                    let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string
                                 } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                    let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     text = presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
                                 } else if let peer = peers.first {
-                                    let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     text = presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
                                 } else {
                                     text = ""

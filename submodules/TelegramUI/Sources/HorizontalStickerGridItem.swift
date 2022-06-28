@@ -142,7 +142,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                     if let currentAnimationNode = self.animationNode {
                         animationNode = currentAnimationNode
                     } else {
-                        animationNode = AnimatedStickerNode()
+                        animationNode = DefaultAnimatedStickerNodeImpl()
                         animationNode.transform = self.imageNode.transform
                         animationNode.visibility = self.isVisibleInGrid
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
@@ -178,7 +178,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                             strongSelf.removePlaceholder(animated: false)
                         }
                     }
-                    animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
                     
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
                 } else {

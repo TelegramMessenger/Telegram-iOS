@@ -126,10 +126,10 @@ public struct MediaAutoDownloadCategory: Codable, Equatable {
     public var otherPrivate: Bool
     public var groups: Bool
     public var channels: Bool
-    public var sizeLimit: Int32
+    public var sizeLimit: Int64
     public var predownload: Bool
     
-    public init(contacts: Bool, otherPrivate: Bool, groups: Bool, channels: Bool, sizeLimit: Int32, predownload: Bool) {
+    public init(contacts: Bool, otherPrivate: Bool, groups: Bool, channels: Bool, sizeLimit: Int64, predownload: Bool) {
         self.contacts = contacts
         self.otherPrivate = otherPrivate
         self.groups = groups
@@ -145,7 +145,11 @@ public struct MediaAutoDownloadCategory: Codable, Equatable {
         self.otherPrivate = try container.decode(Int32.self, forKey: "otherPrivate") != 0
         self.groups = try container.decode(Int32.self, forKey: "groups") != 0
         self.channels = try container.decode(Int32.self, forKey: "channels") != 0
-        self.sizeLimit = try container.decode(Int32.self, forKey: "size")
+        if let sizeLimit = try container.decodeIfPresent(Int64.self, forKey: "size64") {
+            self.sizeLimit = sizeLimit
+        } else {
+            self.sizeLimit = Int64(try container.decode(Int32.self, forKey: "size"))
+        }
         self.predownload = try container.decode(Int32.self, forKey: "predownload") != 0
     }
     
@@ -156,7 +160,7 @@ public struct MediaAutoDownloadCategory: Codable, Equatable {
         try container.encode((self.otherPrivate ? 1 : 0) as Int32, forKey: "otherPrivate")
         try container.encode((self.groups ? 1 : 0) as Int32, forKey: "groups")
         try container.encode((self.channels ? 1 : 0) as Int32, forKey: "channels")
-        try container.encode(self.sizeLimit, forKey: "size")
+        try container.encode(self.sizeLimit, forKey: "size64")
         try container.encode((self.predownload ? 1 : 0) as Int32, forKey: "predownload")
     }
 }
@@ -172,12 +176,12 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
     public var downloadInBackground: Bool
     
     public static var defaultSettings: MediaAutoDownloadSettings {
-        let mb: Int32 = 1024 * 1024
+        let mb: Int64 = 1024 * 1024
         let presets = MediaAutoDownloadPresets(low: MediaAutoDownloadCategories(basePreset: .low, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
                                                                                 video: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false),
                                                                                 file: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false)),
                                                medium: MediaAutoDownloadCategories(basePreset: .medium, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
-                                                                                video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: Int32(2.5 * CGFloat(mb)), predownload: false),
+                                                                                video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: Int64(2.5 * CGFloat(mb)), predownload: false),
                                                                                 file: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false)),
                                                high: MediaAutoDownloadCategories(basePreset: .high, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
                                                                                 video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 10 * mb, predownload: true),

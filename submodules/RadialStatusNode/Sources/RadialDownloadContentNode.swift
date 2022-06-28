@@ -131,6 +131,11 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
         rightPath.move(to: CGPoint(x: diameter / 2.0, y: diameter / 2.0 + arrowLength / 2.0 + arrowHeadOffset))
         rightPath.addLine(to: CGPoint(x: diameter / 2.0 + arrowHeadSize / 2.0, y: diameter / 2.0 + arrowLength / 2.0 - arrowHeadSize / 2.0 + arrowHeadOffset))
         self.rightLine.path = rightPath.cgPath
+        
+        if self.delayPrepareAnimateIn {
+            self.delayPrepareAnimateIn = false
+            self.prepareAnimateIn(from: nil)
+        }
     }
     
     private let duration: Double = 0.2
@@ -181,9 +186,14 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
         }
     }
     
+    private var delayPrepareAnimateIn = false
     override func prepareAnimateIn(from: RadialStatusNodeState?) {
         let bounds = self.bounds
         let diameter = min(bounds.size.width, bounds.size.height)
+        guard !diameter.isZero else {
+            self.delayPrepareAnimateIn = true
+            return
+        }
         let factor = diameter / 50.0
         
         var bodyPath = UIBezierPath()

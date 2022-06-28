@@ -208,10 +208,10 @@ private func ensureThemeVisible(listNode: ListView, emoticon: String?, animated:
     }
     if let resultNode = resultNode {
         var nodeToEnsure = resultNode
-        if case let .visible(resultVisibility) = resultNode.visibility, resultVisibility == 1.0 {
-            if let previousNode = previousNode, case let .visible(previousVisibility) = previousNode.visibility, previousVisibility < 0.5 {
+        if case let .visible(resultVisibility, _) = resultNode.visibility, resultVisibility == 1.0 {
+            if let previousNode = previousNode, case let .visible(previousVisibility, _) = previousNode.visibility, previousVisibility < 0.5 {
                 nodeToEnsure = previousNode
-            } else if let nextNode = nextNode, case let .visible(nextVisibility) = nextNode.visibility, nextVisibility < 0.5 {
+            } else if let nextNode = nextNode, case let .visible(nextVisibility, _) = nextNode.visibility, nextVisibility < 0.5 {
                 nodeToEnsure = nextNode
             }
         }
@@ -381,7 +381,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             Queue.mainQueue().after(0.1) {
                 if !wasSelected {
                     animatedStickerNode.seekTo(.frameIndex(0))
-                    animatedStickerNode.play()
+                    animatedStickerNode.play(firstFrame: false, fromIndex: nil)
                     
                     let scale: CGFloat = 1.95
                     animatedStickerNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
@@ -498,7 +498,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         if let current = strongSelf.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                             animatedStickerNode.started = { [weak self] in
                                 self?.emojiImageNode.isHidden = true
                             }
@@ -570,7 +570,13 @@ final class ChatQrCodeScreen: ViewController {
         var fileName: String {
             switch self {
             case let .peer(peer):
-                return "t_me-\(peer.addressName ?? "")"
+                if let addressName = peer.addressName, !addressName.isEmpty {
+                    return "t_me-\(peer.addressName ?? "")"
+                } else if let peer = peer as? TelegramUser {
+                    return "t_me-\(peer.phone ?? "")"
+                } else {
+                    return "t_me-\(Int32.random(in: 0 ..< Int32.max))"
+                }
             case let .messages(messages):
                 if let message = messages.first, let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
                     return "t_me-\(addressName)-\(message.id.id)"
@@ -989,11 +995,9 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         let sharedData = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
         |> take(1)
         if case let .peer(peer) = controller.subject, peer.id != self.context.account.peerId {
-            let cachedData = self.context.account.postbox.transaction { transaction in
-                return transaction.getPeerCachedData(peerId: peer.id)
-            }
-            initiallySelectedEmoticon = combineLatest(cachedData, sharedData)
-            |> map { cachedData, sharedData -> String in
+            let themeEmoticon = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThemeEmoticon(id: peer.id))
+            initiallySelectedEmoticon = combineLatest(themeEmoticon, sharedData)
+            |> map { themeEmoticon, sharedData -> String in
                 let themeSettings: PresentationThemeSettings
                 if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
                     themeSettings = current
@@ -1002,15 +1006,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
                 }
                 let currentDefaultEmoticon = themeSettings.theme.emoticon ?? defaultEmoticon
                 
-                if let cachedData = cachedData as? CachedUserData {
-                    return cachedData.themeEmoticon ?? currentDefaultEmoticon
-                } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.themeEmoticon ?? currentDefaultEmoticon
-                } else if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.themeEmoticon ?? currentDefaultEmoticon
-                } else {
-                    return currentDefaultEmoticon
-                }
+                return themeEmoticon ?? currentDefaultEmoticon
             }
         } else {
             initiallySelectedEmoticon = sharedData
@@ -1503,16 +1499,23 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             self.codeStaticIconNode = codeStaticIconNode
             self.codeAnimatedIconNode = nil
         } else {
-            let codeAnimatedIconNode = AnimatedStickerNode()
+            let codeAnimatedIconNode = DefaultAnimatedStickerNodeImpl()
             codeAnimatedIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogoPlain"), width: 120, height: 120, mode: .direct(cachePathPrefix: nil))
             codeAnimatedIconNode.visibility = true
             self.codeAnimatedIconNode = codeAnimatedIconNode
             self.codeStaticIconNode = nil
         }
         
+        let codeText: String
+        if let addressName = peer.addressName, !addressName.isEmpty {
+            codeText = "@\(peer.addressName ?? "")".uppercased()
+        } else {
+            codeText = peer.debugDisplayTitle.uppercased()
+        }
+        
         self.codeTextNode = ImmediateTextNode()
         self.codeTextNode.displaysAsynchronously = false
-        self.codeTextNode.attributedText = NSAttributedString(string: "@\(peer.addressName ?? "")".uppercased(), font: Font.with(size: 23.0, design: .round, weight: .bold, traits: []), textColor: .black)
+        self.codeTextNode.attributedText = NSAttributedString(string: codeText, font: Font.with(size: 23.0, design: .round, weight: .bold, traits: []), textColor: .black)
         self.codeTextNode.truncationMode = .byCharWrapping
         self.codeTextNode.maximumNumberOfLines = 2
         self.codeTextNode.textAlignment = .center
@@ -1547,8 +1550,17 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             self.addSubnode(codeAnimatedIconNode)
         }
         
+        let codeLink: String
+        if let addressName = peer.addressName, !addressName.isEmpty {
+            codeLink = "https://t.me/\(peer.addressName ?? "")"
+        } else if let peer = peer as? TelegramUser {
+            codeLink = "https://t.me/+\(peer.phone ?? "")"
+        } else {
+            codeLink = ""
+        }
+        
         let codeReadyPromise = ValuePromise<Bool>()
-        self.codeImageNode.setSignal(qrCode(string: "https://t.me/\(peer.addressName ?? "")", color: .black, backgroundColor: nil, icon: .cutout, ecl: "Q") |> beforeNext { [weak self] size, _ in
+        self.codeImageNode.setSignal(qrCode(string: codeLink, color: .black, backgroundColor: nil, icon: .cutout, ecl: "Q") |> beforeNext { [weak self] size, _ in
             guard let strongSelf = self else {
                 return
             }

@@ -3,9 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-
-private let resolvedByNamePeersCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 150, highWaterItemCount: 200)
-
 public enum ResolvePeerByNameOptionCached {
     case none
     case cached
@@ -65,7 +62,7 @@ func _internal_resolvePeerByName(account: Account, name: String, ageLimit: Int32
                     
                     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                     if let entry = CodableEntry(CachedResolvedByNamePeer(peerId: peerId, timestamp: timestamp)) {
-                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName)), entry: entry, collectionSpec: resolvedByNamePeersCollectionSpec)
+                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName)), entry: entry)
                     }
                     return peerId
                 }
@@ -77,8 +74,6 @@ func _internal_resolvePeerByName(account: Account, name: String, ageLimit: Int32
         }
     }
 }
-
-private let resolvedByPhonePeersCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 150, highWaterItemCount: 200)
 
 func _internal_resolvePeerByPhone(account: Account, phone: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<PeerId?, NoError> {
     var normalizedPhone = phone
@@ -128,7 +123,7 @@ func _internal_resolvePeerByPhone(account: Account, phone: String, ageLimit: Int
                     
                     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                     if let entry = CodableEntry(CachedResolvedByPhonePeer(peerId: peerId, timestamp: timestamp)) {
-                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByPhonePeers, key: CachedResolvedByPhonePeer.key(name: normalizedPhone)), entry: entry, collectionSpec: resolvedByNamePeersCollectionSpec)
+                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByPhonePeers, key: CachedResolvedByPhonePeer.key(name: normalizedPhone)), entry: entry)
                     }
                     return peerId
                 }

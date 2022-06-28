@@ -1015,7 +1015,7 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode, ActionSheetGr
     init(presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ClearCache"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         

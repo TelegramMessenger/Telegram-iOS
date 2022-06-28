@@ -45,6 +45,7 @@
         _explicit = explicit;
         
         _sliderView = [[TGPhotoEditorSliderView alloc] initWithFrame:CGRectZero];
+        _sliderView.enablePanHandling = true;
         if (editorItem.segmented)
             _sliderView.positionsCount = (NSInteger)editorItem.maximumValue + 1;
         _sliderView.minimumValue = editorItem.minimumValue;

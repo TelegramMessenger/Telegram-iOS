@@ -77,6 +77,7 @@ public enum ParsedInternalUrl {
     case peerId(PeerId)
     case privateMessage(messageId: MessageId, threadId: Int32?, timecode: Double?)
     case stickerPack(String)
+    case invoice(String)
     case join(String)
     case localization(String)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
@@ -87,7 +88,7 @@ public enum ParsedInternalUrl {
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
     case phone(String, String?, String?)
-    case startAttach(String, String?)
+    case startAttach(String, String?, String?)
 }
 
 private enum ParsedUrl {
@@ -209,12 +210,26 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     return .peerName(peerName, .voiceChat(value))
                                 } else if queryItem.name == "startattach" {
-                                    return .startAttach(peerName, value)
+                                    var choose: String?
+                                    for queryItem in queryItems {
+                                        if queryItem.name == "choose", let value = queryItem.value {
+                                            choose = value
+                                            break
+                                        }
+                                    }
+                                    return .startAttach(peerName, value, choose)
                                 }
                             } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name)  {
                                 return .peerName(peerName, .voiceChat(nil))
                             } else if queryItem.name == "startattach" {
-                                return .startAttach(peerName, nil)
+                                var choose: String?
+                                for queryItem in queryItems {
+                                    if queryItem.name == "choose", let value = queryItem.value {
+                                        choose = value
+                                        break
+                                    }
+                                }
+                                return .startAttach(peerName, nil, choose)
                             }
                         }
                     }
@@ -241,11 +256,16 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         return .join(String(component.dropFirst()))
                     }
+                } else if pathComponents[0].hasPrefix("$") || pathComponents[0].hasPrefix("%24") {
+                    let component = pathComponents[0].replacingOccurrences(of: "%24", with: "$")
+                    return .invoice(component)
                 }
                 return .peerName(peerName, nil)
             } else if pathComponents.count == 2 || pathComponents.count == 3 {
                 if pathComponents[0] == "addstickers" {
                     return .stickerPack(pathComponents[1])
+                } else if pathComponents[0] == "invoice" {
+                    return .invoice(pathComponents[1])
                 } else if pathComponents[0] == "joinchat" || pathComponents[0] == "joinchannel" {
                     return .join(pathComponents[1])
                 } else if pathComponents[0] == "setlanguage" {
@@ -511,9 +531,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                 }
             }
         case let .peerId(peerId):
-            return context.account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(peerId)
-            }
+            return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
                     return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
@@ -522,11 +540,9 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                 }
             }
         case let .privateMessage(messageId, threadId, timecode):
-            return context.account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(messageId.peerId)
-            }
+            return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
-                let foundPeer: Signal<Peer?, NoError>
+                let foundPeer: Signal<EnginePeer?, NoError>
                 if let peer = peer {
                     foundPeer = .single(peer)
                 } else {
@@ -558,6 +574,18 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             }
         case let .stickerPack(name):
             return .single(.stickerPack(name: name))
+        case let .invoice(slug):
+            return context.engine.payments.fetchBotPaymentInvoice(source: .slug(slug))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<TelegramMediaInvoice?, NoError> in
+                return .single(nil)
+            }
+            |> map { invoice -> ResolvedUrl? in
+                guard let invoice = invoice else {
+                    return nil
+                }
+                return .invoice(slug: slug, invoice: invoice)
+            }
         case let .join(link):
             return .single(.join(link))
         case let .localization(identifier):
@@ -577,7 +605,23 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             return .single(.wallpaper(parameter))
         case let .theme(slug):
             return .single(.theme(slug))
-        case let .startAttach(name, payload):
+        case let .startAttach(name, payload, chooseValue):
+            var choose: ResolvedBotChoosePeerTypes = []
+            if let chooseValue = chooseValue?.lowercased() {
+                let components = chooseValue.components(separatedBy: "+")
+                if components.contains("users") {
+                    choose.insert(.users)
+                }
+                if components.contains("bots") {
+                    choose.insert(.bots)
+                }
+                if components.contains("groups") {
+                    choose.insert(.groups)
+                }
+                if components.contains("channels") {
+                    choose.insert(.channels)
+                }
+            }
             return context.engine.peers.resolvePeerByName(name: name)
             |> take(1)
             |> mapToSignal { peer -> Signal<Peer?, NoError> in
@@ -585,7 +629,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
-                    return .single(.startAttach(peerId: peer.id, payload: payload))
+                    return .single(.startAttach(peerId: peer.id, payload: payload, choose: !choose.isEmpty ? choose : nil))
                 } else {
                     return .single(.inaccessiblePeer)
                 }
@@ -713,8 +757,8 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
     
     return ApplicationSpecificNotice.getSecretChatLinkPreviews(accountManager: context.sharedContext.accountManager)
     |> mapToSignal { linkPreviews -> Signal<ResolvedUrl, NoError> in
-        return context.account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
-            let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+        return context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.App())
+        |> mapToSignal { appConfiguration -> Signal<ResolvedUrl, NoError> in
             let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
             
             var skipUrlAuth = skipUrlAuth
@@ -772,7 +816,7 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                 }
             }
             return .single(.externalUrl(url))
-        } |> switchToLatest
+        }
     }
 }
 

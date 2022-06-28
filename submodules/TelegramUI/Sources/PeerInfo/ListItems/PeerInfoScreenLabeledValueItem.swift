@@ -86,6 +86,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     private let maskNode: ASImageNode
     private let labelNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
+    private let measureTextNode: ImmediateTextNode
     private let bottomSeparatorNode: ASDisplayNode
     
     private let expandBackgroundNode: ASImageNode
@@ -119,6 +120,10 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.isUserInteractionEnabled = false
+        
+        self.measureTextNode = ImmediateTextNode()
+        self.measureTextNode.displaysAsynchronously = false
+        self.measureTextNode.isUserInteractionEnabled = false
         
         self.bottomSeparatorNode = ASDisplayNode()
         self.bottomSeparatorNode.isLayerBacked = true
@@ -285,38 +290,6 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         
         self.labelNode.attributedText = NSAttributedString(string: item.label, font: Font.regular(14.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
         
-        var text = item.text
-        let maxNumberOfLines: Int
-        switch item.textBehavior {
-        case .singleLine:
-            maxNumberOfLines = 1
-            self.textNode.maximumNumberOfLines = maxNumberOfLines
-            self.textNode.cutout = nil
-            self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
-        case let .multiLine(maxLines, enabledEntities):
-            if !self.isExpanded {
-                text = trimToLineCount(text, lineCount: 3)
-            }
-            
-            maxNumberOfLines = self.isExpanded ? maxLines : 3
-            self.textNode.maximumNumberOfLines = maxNumberOfLines
-            if enabledEntities.isEmpty {
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: textColorValue)
-            } else {
-                let fontSize: CGFloat = 17.0
-                
-                let baseFont = Font.regular(fontSize)
-                let linkFont = baseFont
-                let boldFont = Font.medium(fontSize)
-                let italicFont = Font.italic(fontSize)
-                let boldItalicFont = Font.semiboldItalic(fontSize)
-                let titleFixedFont = Font.monospace(fontSize)
-                
-                let entities = generateTextEntities(text, enabledTypes: enabledEntities)
-                self.textNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: textColorValue, linkColor: presentationData.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: baseFont)
-            }
-        }
-        
         if let icon = item.icon {
             let iconImage: UIImage?
             switch icon {
@@ -332,6 +305,55 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         }
         
         let additionalSideInset: CGFloat = !self.iconNode.isHidden ? 32.0 : 0.0
+        
+        var text = item.text
+        let maxNumberOfLines: Int
+        switch item.textBehavior {
+        case .singleLine:
+            maxNumberOfLines = 1
+            self.textNode.maximumNumberOfLines = maxNumberOfLines
+            self.textNode.cutout = nil
+            self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
+        case let .multiLine(maxLines, enabledEntities):
+            let originalText = text
+            if !self.isExpanded {
+                text = trimToLineCount(text, lineCount: 3)
+            }
+            
+            func createAttributedText(_ text: String) -> NSAttributedString {
+                if enabledEntities.isEmpty {
+                    return NSAttributedString(string: text, font: Font.regular(17.0), textColor: textColorValue)
+                } else {
+                    let fontSize: CGFloat = 17.0
+                    
+                    let baseFont = Font.regular(fontSize)
+                    let linkFont = baseFont
+                    let boldFont = Font.medium(fontSize)
+                    let italicFont = Font.italic(fontSize)
+                    let boldItalicFont = Font.semiboldItalic(fontSize)
+                    let titleFixedFont = Font.monospace(fontSize)
+                    
+                    let entities = generateTextEntities(text, enabledTypes: enabledEntities)
+                    return stringWithAppliedEntities(text, entities: entities, baseColor: textColorValue, linkColor: presentationData.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: baseFont)
+                }
+            }
+                        
+            self.measureTextNode.maximumNumberOfLines = 0
+            self.measureTextNode.attributedText = createAttributedText(originalText)
+            
+            let textLayout = self.measureTextNode.updateLayoutInfo(CGSize(width: width - sideInset * 2.0 - additionalSideInset, height: .greatestFiniteMagnitude))
+            var collapsedNumberOfLines = 3
+            if textLayout.numberOfLines == 4 {
+                collapsedNumberOfLines = 4
+            }
+            
+            self.textNode.attributedText = createAttributedText(text)
+            
+            maxNumberOfLines = self.isExpanded ? maxLines : collapsedNumberOfLines
+            self.textNode.maximumNumberOfLines = maxNumberOfLines
+        }
+        
+
         let labelSize = self.labelNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
         let textLayout = self.textNode.updateLayoutInfo(CGSize(width: width - sideInset * 2.0 - additionalSideInset, height: .greatestFiniteMagnitude))
         let textSize = textLayout.size
@@ -367,7 +389,12 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.expandBackgroundNode.image = generateExpandBackground(size: expandBackgroundFrame.size, color: presentationData.theme.list.itemBlocksBackgroundColor)
         
         transition.updateFrame(node: self.labelNode, frame: labelFrame)
-        transition.updateFrame(node: self.textNode, frame: textFrame)
+        
+        var textTransition = transition
+        if self.textNode.frame.size != textFrame.size {
+            textTransition = .immediate
+        }
+        textTransition.updateFrame(node: self.textNode, frame: textFrame)
         
         let height = labelSize.height + 3.0 + textSize.height + 22.0
         

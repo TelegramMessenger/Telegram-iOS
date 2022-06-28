@@ -235,7 +235,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         } |> retryRequest
     }
     
-    func part(location: Api.InputFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
+    func part(location: Api.InputFileLocation, offset: Int64, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()
             
@@ -244,7 +244,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                 updatedLength += 1
             }
             
-            let data = Api.functions.upload.getFile(flags: 0, location: location, offset: Int32(offset), limit: Int32(updatedLength))
+            let data = Api.functions.upload.getFile(flags: 0, location: location, offset: offset, limit: Int32(updatedLength))
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {

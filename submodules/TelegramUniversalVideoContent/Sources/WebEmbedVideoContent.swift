@@ -10,6 +10,7 @@ import UniversalMediaPlayer
 import LegacyComponents
 import AccountContext
 import PhotoResources
+import RangeSet
 
 public final class WebEmbedVideoContent: UniversalVideoContent {
     public let id: AnyHashable
@@ -50,8 +51,8 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
         return self._status.get()
     }
     
-    private let _bufferingStatus = Promise<(IndexSet, Int)?>()
-    var bufferingStatus: Signal<(IndexSet, Int)?, NoError> {
+    private let _bufferingStatus = Promise<(RangeSet<Int64>, Int64)?>()
+    var bufferingStatus: Signal<(RangeSet<Int64>, Int64)?, NoError> {
         return self._bufferingStatus.get()
     }
     

@@ -365,10 +365,10 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
         self.addSubnode(self.listNode)
         
         let interaction = SettingsSearchInteraction(openItem: { result in
-            addRecentSettingsSearchItem(postbox: context.account.postbox, item: result.id)
+            addRecentSettingsSearchItem(engine: context.engine, item: result.id)
             openResult(result)
         }, deleteRecentItem: { id in
-            removeRecentSettingsSearchItem(postbox: context.account.postbox, item: id)
+            removeRecentSettingsSearchItem(engine: context.engine, item: id)
         })
         
         let searchableItems = Promise<[SettingsSearchableItem]>()
@@ -400,7 +400,7 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
         self.recentListNode.isHidden = false
         
         let previousRecentlySearchedItemOrder = Atomic<[SettingsSearchableItemId]>(value: [])
-        let fixedRecentlySearchedItems = settingsSearchRecentItems(postbox: context.account.postbox)
+        let fixedRecentlySearchedItems = settingsSearchRecentItems(engine: context.engine)
         |> map { recentIds -> [SettingsSearchableItemId] in
             var result: [SettingsSearchableItemId] = []
             let _ = previousRecentlySearchedItemOrder.modify { current in
@@ -449,7 +449,7 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
         |> deliverOnMainQueue).start(next: { [weak self] recentSearchItems, faqItems, presentationData in
             if let strongSelf = self {
                 let recentHeader = ChatListSearchItemHeader(type: .recentPeers, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.WebSearch_RecentSectionClear, action: {
-                    clearRecentSettingsSearchItems(postbox: context.account.postbox)
+                    clearRecentSettingsSearchItems(engine: context.engine)
                 })
                 let faqHeader = ChatListSearchItemHeader(type: .faq, theme: presentationData.theme, strings: presentationData.strings)
                 

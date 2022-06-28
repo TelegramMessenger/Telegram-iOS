@@ -28,6 +28,7 @@ swift_library(
         "//submodules/ChatPresentationInterfaceState:ChatPresentationInterfaceState",
         "//submodules/Pasteboard:Pasteboard",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
     ],
     visibility = [
         "//visibility:public",

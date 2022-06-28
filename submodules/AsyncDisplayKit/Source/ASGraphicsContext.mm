@@ -7,161 +7,130 @@
 //
 
 #import <AsyncDisplayKit/ASGraphicsContext.h>
-#import <AsyncDisplayKit/ASCGImageBuffer.h>
 #import <AsyncDisplayKit/ASAssert.h>
 #import <AsyncDisplayKit/ASConfigurationInternal.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
-#import <UIKit/UIGraphics.h>
-#import <UIKit/UIImage.h>
-#import <objc/runtime.h>
+#import <AsyncDisplayKit/ASAvailability.h>
 
-/**
- * Our version of the private CGBitmapGetAlignedBytesPerRow function.
- *
- * In both 32-bit and 64-bit, this function rounds up to nearest multiple of 32
- * in iOS 9, 10, and 11. We'll try to catch if this ever changes by asserting that
- * the bytes-per-row for a 1x1 context from the system is 32.
- */
-static size_t ASGraphicsGetAlignedBytesPerRow(size_t baseValue) {
-  // Add 31 then zero out low 5 bits.
-  return (baseValue + 31) & ~0x1F;
+
+#if AS_AT_LEAST_IOS13
+#define ASPerformBlockWithTraitCollection(work, traitCollection) \
+    if (@available(iOS 13.0, tvOS 13.0, *)) { \
+      UITraitCollection *uiTraitCollection = ASPrimitiveTraitCollectionToUITraitCollection(traitCollection); \
+      [uiTraitCollection performAsCurrentTraitCollection:^{ \
+        work(); \
+      }];\
+    } else { \
+      work(); \
+    }
+#else
+#define ASPerformBlockWithTraitCollection(work, traitCollection) work();
+#endif
+
+
+NS_AVAILABLE_IOS(10)
+NS_INLINE void ASConfigureExtendedRange(UIGraphicsImageRendererFormat *format)
+{
+  if (AS_AVAILABLE_IOS_TVOS(12, 12)) {
+    // nop. We always use automatic range on iOS >= 12.
+  } else {
+    // Currently we never do wide color. One day we could pipe this information through from the ASImageNode if it was worth it.
+    format.prefersExtendedRange = NO;
+  }
 }
 
-/**
- * A key used to associate CGContextRef -> NSMutableData, nonatomic retain.
- *
- * That way the data will be released when the context dies. If they pull an image,
- * we will retain the data object (in a CGDataProvider) before releasing the context.
- */
-static UInt8 __contextDataAssociationKey;
-
-#pragma mark - Graphics Contexts
-
-void ASGraphicsBeginImageContextWithOptions(CGSize size, BOOL opaque, CGFloat scale)
+UIImage *ASGraphicsCreateImageWithOptions(CGSize size, BOOL opaque, CGFloat scale, UIImage *sourceImage,
+                                          asdisplaynode_iscancelled_block_t NS_NOESCAPE isCancelled,
+                                          void (^NS_NOESCAPE work)())
 {
-  if (!ASActivateExperimentalFeature(ASExperimentalGraphicsContexts)) {
-    UIGraphicsBeginImageContextWithOptions(size, opaque, scale);
-    return;
-  }
-  
-  // We use "reference contexts" to get device-specific options that UIKit
-  // uses.
-  static dispatch_once_t onceToken;
-  static CGContextRef refCtxOpaque;
-  static CGContextRef refCtxTransparent;
-  dispatch_once(&onceToken, ^{
-    UIGraphicsBeginImageContextWithOptions(CGSizeMake(1, 1), YES, 1);
-    refCtxOpaque = CGContextRetain(UIGraphicsGetCurrentContext());
-    ASDisplayNodeCAssert(CGBitmapContextGetBytesPerRow(refCtxOpaque) == 32, @"Expected bytes per row to be aligned to 32. Has CGBitmapGetAlignedBytesPerRow implementation changed?");
-    UIGraphicsEndImageContext();
-    
-    // Make transparent ref context.
-    UIGraphicsBeginImageContextWithOptions(CGSizeMake(1, 1), NO, 1);
-    refCtxTransparent = CGContextRetain(UIGraphicsGetCurrentContext());
-    UIGraphicsEndImageContext();
-  });
-  
-  // These options are taken from UIGraphicsBeginImageContext.
-  CGContextRef refCtx = opaque ? refCtxOpaque : refCtxTransparent;
-  CGBitmapInfo bitmapInfo = CGBitmapContextGetBitmapInfo(refCtx);
-  
-  if (scale == 0) {
-    scale = ASScreenScale();
-  }
-  size_t intWidth = (size_t)ceil(size.width * scale);
-  size_t intHeight = (size_t)ceil(size.height * scale);
-  size_t bitsPerComponent = CGBitmapContextGetBitsPerComponent(refCtx);
-  size_t bytesPerRow = CGBitmapContextGetBitsPerPixel(refCtx) * intWidth / 8;
-  bytesPerRow = ASGraphicsGetAlignedBytesPerRow(bytesPerRow);
-  size_t bufferSize = bytesPerRow * intHeight;
-  CGColorSpaceRef colorspace = CGBitmapContextGetColorSpace(refCtx);
-
-  // We create our own buffer, and wrap the context around that. This way we can prevent
-  // the copy that usually gets made when you form a CGImage from the context.
-  ASCGImageBuffer *buffer = [[ASCGImageBuffer alloc] initWithLength:bufferSize];
-  
-  CGContextRef context = CGBitmapContextCreate(buffer.mutableBytes, intWidth, intHeight, bitsPerComponent, bytesPerRow, colorspace, bitmapInfo);
-  
-  // Transfer ownership of the data to the context. So that if the context
-  // is destroyed before we create an image from it, the data will be released.
-  objc_setAssociatedObject((__bridge id)context, &__contextDataAssociationKey, buffer, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-  
-  // Set the CTM to account for iOS orientation & specified scale.
-  // If only we could use CGContextSetBaseCTM. It doesn't
-  // seem like there are any consequences for our use case
-  // but we'll be on the look out. The internet hinted that it
-  // affects shadowing but I tested and shadowing works.
-  CGContextTranslateCTM(context, 0, intHeight);
-  CGContextScaleCTM(context, scale, -scale);
-  
-  // Save the state so we can restore it and recover our scale in GetImageAndEnd
-  CGContextSaveGState(context);
-  
-  // Transfer context ownership to the UIKit stack.
-  UIGraphicsPushContext(context);
-  CGContextRelease(context);
+  return ASGraphicsCreateImage(ASPrimitiveTraitCollectionMakeDefault(), size, opaque, scale, sourceImage, isCancelled, work);
 }
 
-UIImage * _Nullable ASGraphicsGetImageAndEndCurrentContext() NS_RETURNS_RETAINED
-{
-  if (!ASActivateExperimentalFeature(ASExperimentalGraphicsContexts)) {
-    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    return image;
+UIImage *ASGraphicsCreateImage(ASPrimitiveTraitCollection traitCollection, CGSize size, BOOL opaque, CGFloat scale, UIImage * sourceImage, asdisplaynode_iscancelled_block_t NS_NOESCAPE isCancelled, void (NS_NOESCAPE ^work)()) {
+    if (@available(iOS 10.0, *)) {
+    if (true /*ASActivateExperimentalFeature(ASExperimentalDrawingGlobal)*/) {
+      // If they used default scale, reuse one of two preferred formats.
+      static UIGraphicsImageRendererFormat *defaultFormat;
+      static UIGraphicsImageRendererFormat *opaqueFormat;
+      static dispatch_once_t onceToken;
+      dispatch_once(&onceToken, ^{
+        if (AS_AVAILABLE_IOS_TVOS(11, 11)) {
+          defaultFormat = [UIGraphicsImageRendererFormat preferredFormat];
+          opaqueFormat = [UIGraphicsImageRendererFormat preferredFormat];
+        } else {
+          defaultFormat = [UIGraphicsImageRendererFormat defaultFormat];
+          opaqueFormat = [UIGraphicsImageRendererFormat defaultFormat];
+        }
+        opaqueFormat.opaque = YES;
+        ASConfigureExtendedRange(defaultFormat);
+        ASConfigureExtendedRange(opaqueFormat);
+      });
+
+      UIGraphicsImageRendererFormat *format;
+      if (sourceImage) {
+        if (sourceImage.renderingMode == UIImageRenderingModeAlwaysTemplate) {
+          // Template images will be black and transparent, so if we use
+          // sourceImage.imageRenderFormat it will assume a grayscale color space.
+          // This is not good because a template image should be able to tint to any color,
+          // so we'll just use the default here.
+          if (AS_AVAILABLE_IOS_TVOS(11, 11)) {
+            format = [UIGraphicsImageRendererFormat preferredFormat];
+          } else {
+            format = [UIGraphicsImageRendererFormat defaultFormat];
+          }
+        } else {
+          format = sourceImage.imageRendererFormat;
+        }
+        // We only want the private bits (color space and bits per component) from the image.
+        // We have our own ideas about opacity and scale.
+        format.opaque = opaque;
+        format.scale = scale;
+      } else if (scale == 0 || scale == ASScreenScale()) {
+        format = opaque ? opaqueFormat : defaultFormat;
+      } else {
+        if (AS_AVAILABLE_IOS_TVOS(11, 11)) {
+          format = [UIGraphicsImageRendererFormat preferredFormat];
+        } else {
+          format = [UIGraphicsImageRendererFormat defaultFormat];
+        }
+        if (opaque) format.opaque = YES;
+        format.scale = scale;
+        ASConfigureExtendedRange(format);
+      }
+      
+      // Avoid using the imageWithActions: method because it does not support cancellation at the
+      // last moment i.e. before actually creating the resulting image.
+      __block UIImage *image;
+      NSError *error;
+      [[[UIGraphicsImageRenderer alloc] initWithSize:size format:format]
+          runDrawingActions:^(UIGraphicsImageRendererContext *rendererContext) {
+            ASDisplayNodeCAssert(UIGraphicsGetCurrentContext(), @"Should have a context!");
+            ASPerformBlockWithTraitCollection(work, traitCollection);
+          }
+          completionActions:^(UIGraphicsImageRendererContext *rendererContext) {
+            if (isCancelled == nil || !isCancelled()) {
+              image = rendererContext.currentImage;
+            }
+          }
+          error:&error];
+      if (error) {
+        NSCAssert(NO, @"Error drawing: %@", error);
+      }
+      return image;
+    }
   }
-  
-  // Pop the context and make sure we have one.
-  CGContextRef context = UIGraphicsGetCurrentContext();
-  if (context == NULL) {
-    ASDisplayNodeCFailAssert(@"Can't end image context without having begun one.");
-    return nil;
+
+  // Bad OS or experiment flag. Use UIGraphics* API.
+  UIGraphicsBeginImageContextWithOptions(size, opaque, scale);
+  ASPerformBlockWithTraitCollection(work, traitCollection)
+  UIImage *image = nil;
+  if (isCancelled == nil || !isCancelled()) {
+    image = UIGraphicsGetImageFromCurrentImageContext();
   }
-  
-  // Read the device-specific ICC-based color space to use for the image.
-  // For DeviceRGB contexts (e.g. UIGraphics), CGBitmapContextCreateImage
-  // generates an image in a device-specific color space (for wide color support).
-  // We replicate that behavior, even though at this time CA does not
-  // require the image to be in this space. Plain DeviceRGB images seem
-  // to be treated exactly the same, but better safe than sorry.
-  static CGColorSpaceRef imageColorSpace;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    UIGraphicsBeginImageContextWithOptions(CGSizeMake(1, 1), YES, 0);
-    UIImage *refImage = UIGraphicsGetImageFromCurrentImageContext();
-    imageColorSpace = CGColorSpaceRetain(CGImageGetColorSpace(refImage.CGImage));
-    ASDisplayNodeCAssertNotNil(imageColorSpace, nil);
-    UIGraphicsEndImageContext();
-  });
-  
-  // Retrieve our buffer and create a CGDataProvider from it.
-  ASCGImageBuffer *buffer = objc_getAssociatedObject((__bridge id)context, &__contextDataAssociationKey);
-  ASDisplayNodeCAssertNotNil(buffer, nil);
-  CGDataProviderRef provider = [buffer createDataProviderAndInvalidate];
-  
-  // Create the CGImage. Options taken from CGBitmapContextCreateImage.
-  CGImageRef cgImg = CGImageCreate(CGBitmapContextGetWidth(context), CGBitmapContextGetHeight(context), CGBitmapContextGetBitsPerComponent(context), CGBitmapContextGetBitsPerPixel(context), CGBitmapContextGetBytesPerRow(context), imageColorSpace, CGBitmapContextGetBitmapInfo(context), provider, NULL, true, kCGRenderingIntentDefault);
-  CGDataProviderRelease(provider);
-  
-  // We saved our GState right after setting the CTM so that we could restore it
-  // here and get the original scale back.
-  CGContextRestoreGState(context);
-  CGFloat scale = CGContextGetCTM(context).a;
-  
-  // Note: popping from the UIKit stack will probably destroy the context.
-  context = NULL;
-  UIGraphicsPopContext();
-  
-  UIImage *result = [[UIImage alloc] initWithCGImage:cgImg scale:scale orientation:UIImageOrientationUp];
-  CGImageRelease(cgImg);
-  return result;
+  UIGraphicsEndImageContext();
+  return image;
 }
 
-void ASGraphicsEndImageContext()
-{
-  if (!ASActivateExperimentalFeature(ASExperimentalGraphicsContexts)) {
-    UIGraphicsEndImageContext();
-    return;
-  }
-  
-  UIGraphicsPopContext();
+UIImage *ASGraphicsCreateImageWithTraitCollectionAndOptions(ASPrimitiveTraitCollection traitCollection, CGSize size, BOOL opaque, CGFloat scale, UIImage * sourceImage, void (NS_NOESCAPE ^work)()) {
+  return ASGraphicsCreateImage(traitCollection, size, opaque, scale, sourceImage, nil, work);
 }

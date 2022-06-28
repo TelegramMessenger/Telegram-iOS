@@ -14,6 +14,7 @@ private let animationDurationFactor: Double = 1.0
 public protocol ContextControllerProtocol: AnyObject {
     var useComplexItemsTransitionAnimation: Bool { get set }
     var immediateItemsTransitionAnimation: Bool { get set }
+    var getOverlayViews: (() -> [UIView])? { get set }
 
     func getActionsMinHeight() -> ContextController.ActionsHeight?
     func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?)
@@ -91,6 +92,7 @@ public final class ContextMenuActionItem {
     public let textColor: ContextMenuActionItemTextColor
     public let textFont: ContextMenuActionItemFont
     public let textLayout: ContextMenuActionItemTextLayout
+    public let parseMarkdown: Bool
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
@@ -102,6 +104,7 @@ public final class ContextMenuActionItem {
         textColor: ContextMenuActionItemTextColor = .primary,
         textLayout: ContextMenuActionItemTextLayout = .twoLinesMax,
         textFont: ContextMenuActionItemFont = .regular,
+        parseMarkdown: Bool = false,
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
@@ -113,6 +116,7 @@ public final class ContextMenuActionItem {
             textColor: textColor,
             textLayout: textLayout,
             textFont: textFont,
+            parseMarkdown: parseMarkdown,
             badge: badge,
             icon: icon,
             iconSource: iconSource,
@@ -130,6 +134,7 @@ public final class ContextMenuActionItem {
         textColor: ContextMenuActionItemTextColor = .primary,
         textLayout: ContextMenuActionItemTextLayout = .twoLinesMax,
         textFont: ContextMenuActionItemFont = .regular,
+        parseMarkdown: Bool = false,
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
@@ -140,6 +145,7 @@ public final class ContextMenuActionItem {
         self.textColor = textColor
         self.textFont = textFont
         self.textLayout = textLayout
+        self.parseMarkdown = parseMarkdown
         self.badge = badge
         self.icon = icon
         self.iconSource = iconSource
@@ -222,7 +228,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private var initialContinueGesturePoint: CGPoint?
     private var didMoveFromInitialGesturePoint = false
     private var highlightedActionNode: ContextActionNodeProtocol?
-    private var highlightedReaction: ReactionContextItem.Reaction?
+    private var highlightedReaction: ReactionItem.Reaction?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -1238,7 +1244,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
             
             if animateOutToItem, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
-                
                 let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
                 
                 self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y), duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true)
@@ -2091,12 +2096,17 @@ public extension ContextReferenceContentSource {
 }
 
 public final class ContextControllerTakeViewInfo {
-    public let contentContainingNode: ContextExtractedContentContainingNode
+    public enum ContainingItem {
+        case node(ContextExtractedContentContainingNode)
+        case view(ContextExtractedContentContainingView)
+    }
+    
+    public let containingItem: ContainingItem
     public let contentAreaInScreenSpace: CGRect
     public let maskView: UIView?
     
-    public init(contentContainingNode: ContextExtractedContentContainingNode, contentAreaInScreenSpace: CGRect, maskView: UIView? = nil) {
-        self.contentContainingNode = contentContainingNode
+    public init(containingItem: ContainingItem, contentAreaInScreenSpace: CGRect, maskView: UIView? = nil) {
+        self.containingItem = containingItem
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.maskView = maskView
     }
@@ -2187,12 +2197,14 @@ public final class ContextController: ViewController, StandalonePresentableContr
         public var content: Content
         public var context: AccountContext?
         public var reactionItems: [ReactionContextItem]
+        public var disablePositionLock: Bool
         public var tip: Tip?
 
-        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], tip: Tip? = nil) {
+        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], disablePositionLock: Bool = false, tip: Tip? = nil) {
             self.content = content
             self.context = context
             self.reactionItems = reactionItems
+            self.disablePositionLock = disablePositionLock
             self.tip = tip
         }
 
@@ -2200,6 +2212,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.content = .list([])
             self.context = nil
             self.reactionItems = []
+            self.disablePositionLock = false
             self.tip = nil
         }
     }
@@ -2266,6 +2279,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
     private var shouldBeDismissedDisposable: Disposable?
     
     public var reactionSelected: ((ReactionContextItem, Bool) -> Void)?
+    
+    public var getOverlayViews: (() -> [UIView])?
     
     public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, workaroundUseLegacyImplementation: Bool = false) {
         self.account = account
@@ -2423,6 +2438,10 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     override public func dismiss(completion: (() -> Void)? = nil) {
         self.dismiss(result: .default, completion: completion)
+    }
+    
+    public func dismissWithoutContent() {
+        self.dismiss(result: .dismissWithoutContent, completion: nil)
     }
     
     public func dismissNow() {

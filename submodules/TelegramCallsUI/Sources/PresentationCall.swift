@@ -211,7 +211,6 @@ public final class PresentationCallImpl: PresentationCall {
     
     private let serializedData: String?
     private let dataSaving: VoiceCallDataSaving
-    private let derivedState: VoipDerivedState
     private let proxyServer: ProxyServerSettings?
     private let auxiliaryServers: [OngoingCallContext.AuxiliaryServer]
     private let currentNetworkType: NetworkType
@@ -307,7 +306,6 @@ public final class PresentationCallImpl: PresentationCall {
         callKitIntegration: CallKitIntegration?,
         serializedData: String?,
         dataSaving: VoiceCallDataSaving,
-        derivedState: VoipDerivedState,
         getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void),
         initialState: CallSession?,
         internalId: CallSessionInternalId,
@@ -363,7 +361,6 @@ public final class PresentationCallImpl: PresentationCall {
         
         self.serializedData = serializedData
         self.dataSaving = dataSaving
-        self.derivedState = derivedState
         self.proxyServer = proxyServer
         self.currentNetworkType = currentNetworkType
         self.updatedNetworkType = updatedNetworkType
@@ -692,7 +689,7 @@ public final class PresentationCallImpl: PresentationCall {
 
                     let updatedConnections = connections
                     
-                    let ongoingContext = OngoingCallContext(account: self.context.account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: updatedConnections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
+                    let ongoingContext = OngoingCallContext(account: self.context.account, callSessionManager: self.callSessionManager, callId: id, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: updatedConnections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
                     self.ongoingContext = ongoingContext
                     ongoingContext.setIsMuted(self.isMutedValue)
                     if let requestedVideoAspect = self.requestedVideoAspect {
@@ -763,11 +760,11 @@ public final class PresentationCallImpl: PresentationCall {
                         self.callKitIntegration?.reportOutgoingCallConnected(uuid: sessionState.id, at: Date())
                     }
                 }
-            case let .terminated(id, _, options):
+            case let .terminated(_, _, options):
                 self.audioSessionShouldBeActive.set(true)
                 if wasActive {
                     let debugLogValue = Promise<String?>()
-                    self.ongoingContext?.stop(callId: id, sendDebugLogs: options.contains(.sendDebugLogs), debugLogValue: debugLogValue)
+                    self.ongoingContext?.stop(sendDebugLogs: options.contains(.sendDebugLogs), debugLogValue: debugLogValue)
                 }
             default:
                 self.audioSessionShouldBeActive.set(false)

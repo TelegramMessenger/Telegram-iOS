@@ -164,7 +164,7 @@ func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMedia
                 }
             }
             
-            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
+            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: size, fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: size, attributes: parsedAttributes)
         case .documentEmpty:
             return nil
     }

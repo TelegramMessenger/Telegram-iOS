@@ -31,6 +31,7 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     let iconSize: CGSize?
     let iconPlacement: IconPlacement
     let title: String
+    let subtitle: String?
     let style: ItemListCheckboxItemStyle
     let color: ItemListCheckboxItemColor
     let textColor: TextColor
@@ -40,12 +41,13 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     let action: () -> Void
     let deleteAction: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, iconPlacement: IconPlacement = .default, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, textColor: TextColor = .primary, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void, deleteAction: (() -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, iconPlacement: IconPlacement = .default, title: String, subtitle: String? = nil, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, textColor: TextColor = .primary, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void, deleteAction: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.iconSize = iconSize
         self.iconPlacement = iconPlacement
         self.title = title
+        self.subtitle = subtitle
         self.style = style
         self.color = color
         self.textColor = textColor
@@ -111,6 +113,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
     private let imageNode: ASImageNode
     private let iconNode: ASImageNode
     private let titleNode: TextNode
+    private let subtitleNode: TextNode
     
     private var item: ItemListCheckboxItem?
     
@@ -149,6 +152,11 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
+        self.subtitleNode = TextNode()
+        self.subtitleNode.isUserInteractionEnabled = false
+        self.subtitleNode.contentMode = .left
+        self.subtitleNode.contentsScale = UIScreen.main.scale
+        
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
@@ -161,6 +169,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
         self.contentContainerNode.addSubnode(self.imageNode)
         self.contentContainerNode.addSubnode(self.iconNode)
         self.contentContainerNode.addSubnode(self.titleNode)
+        self.contentContainerNode.addSubnode(self.subtitleNode)
         self.addSubnode(self.activateArea)
         
         self.activateArea.activate = { [weak self] in
@@ -171,6 +180,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
     
     public func asyncLayout() -> (_ item: ItemListCheckboxItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         
         let currentItem = self.item
         
@@ -181,7 +191,9 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
             case .left:
                 leftInset += 62.0
             case .right:
-                leftInset += 16.0
+                if item.icon == nil {
+                    leftInset += 16.0
+                }
             }
             
             let iconInset: CGFloat = 62.0
@@ -195,8 +207,10 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
             }
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
+            let subtitleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             
             let titleColor: UIColor
+            let subtitleColor: UIColor = item.presentationData.theme.list.itemSecondaryTextColor
             switch item.textColor {
             case .primary:
                 titleColor = item.presentationData.theme.list.itemPrimaryTextColor
@@ -206,10 +220,15 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 28.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
+            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.subtitle ?? "", font: subtitleFont, textColor: subtitleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 28.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
             let separatorHeight = UIScreenPixel
             
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
-            let contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0)
+            var contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0)
+            if item.subtitle != nil {
+                contentSize.height += subtitleLayout.size.height
+            }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
@@ -257,6 +276,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let _ = titleApply()
+                    let _ = subtitleApply()
                     
                     if let image = strongSelf.iconNode.image {
                         switch item.style {
@@ -313,6 +333,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                    strongSelf.subtitleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY), size: subtitleLayout.size)
                     
                     if let icon = item.icon {
                         let iconSize = item.iconSize ?? icon.size

@@ -51,16 +51,22 @@ public extension TelegramEngine {
             return _internal_searchMessageIdByTimestamp(account: self.account, peerId: peerId, threadId: threadId, timestamp: timestamp)
         }
 
-        public func deleteMessages(transaction: Transaction, ids: [MessageId], deleteMedia: Bool = true, manualAddMessageThreadStatsDifference: ((MessageId, Int, Int) -> Void)? = nil) {
-            return _internal_deleteMessages(transaction: transaction, mediaBox: self.account.postbox.mediaBox, ids: ids, deleteMedia: deleteMedia, manualAddMessageThreadStatsDifference: manualAddMessageThreadStatsDifference)
+        public func deleteMessages(transaction: Transaction, ids: [MessageId]) {
+            return _internal_deleteMessages(transaction: transaction, mediaBox: self.account.postbox.mediaBox, ids: ids, deleteMedia: true, manualAddMessageThreadStatsDifference: nil)
         }
 
-        public func deleteAllMessagesWithAuthor(transaction: Transaction, peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
-            return _internal_deleteAllMessagesWithAuthor(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, authorId: authorId, namespace: namespace)
+        public func deleteAllMessagesWithAuthor(peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_deleteAllMessagesWithAuthor(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, authorId: authorId, namespace: namespace)
+            }
+            |> ignoreValues
         }
 
-        public func deleteAllMessagesWithForwardAuthor(transaction: Transaction, peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace) {
-            return _internal_deleteAllMessagesWithForwardAuthor(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, forwardAuthorId: forwardAuthorId, namespace: namespace)
+        public func deleteAllMessagesWithForwardAuthor(peerId: EnginePeer.Id, forwardAuthorId: EnginePeer.Id, namespace: MessageId.Namespace) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_deleteAllMessagesWithForwardAuthor(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, forwardAuthorId: forwardAuthorId, namespace: namespace)
+            }
+            |> ignoreValues
         }
 
         public func clearCallHistory(forEveryone: Bool) -> Signal<Never, ClearCallHistoryError> {
@@ -149,11 +155,35 @@ public extension TelegramEngine {
         }
 
         public func earliestUnseenPersonalMentionMessage(peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+            let account = self.account
             return _internal_earliestUnseenPersonalMentionMessage(account: self.account, peerId: peerId)
+            |> mapToSignal { result -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
+                switch result {
+                case .loading:
+                    return .single(result)
+                case let .result(messageId):
+                    if messageId == nil {
+                        let _ = clearPeerUnseenPersonalMessagesInteractively(account: account, peerId: peerId).start()
+                    }
+                    return .single(result)
+                }
+            }
         }
         
         public func earliestUnseenPersonalReactionMessage(peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+            let account = self.account
             return _internal_earliestUnseenPersonalReactionMessage(account: self.account, peerId: peerId)
+            |> mapToSignal { result -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
+                switch result {
+                case .loading:
+                    return .single(result)
+                case let .result(messageId):
+                    if messageId == nil {
+                        let _ = clearPeerUnseenReactionsInteractively(account: account, peerId: peerId).start()
+                    }
+                    return .single(result)
+                }
+            }
         }
 
         public func exportMessageLink(peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
@@ -322,6 +352,28 @@ public extension TelegramEngine {
             return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
         }
         
+        public func transcribeAudio(messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
+            return _internal_transcribeAudio(postbox: self.account.postbox, network: self.account.network, messageId: messageId)
+        }
+        
+        public func storeLocallyTranscribedAudio(messageId: MessageId, text: String, isFinal: Bool, error: AudioTranscriptionMessageAttribute.TranscriptionError?) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.updateMessage(messageId, update: { currentMessage in
+                    let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                    var attributes = currentMessage.attributes.filter { !($0 is AudioTranscriptionMessageAttribute) }
+                    
+                    attributes.append(AudioTranscriptionMessageAttribute(id: 0, text: text, isPending: !isFinal, didRate: false, error: error))
+                    
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                })
+            }
+            |> ignoreValues
+        }
+        
+        public func rateAudioTranscription(messageId: MessageId, id: Int64, isGood: Bool) -> Signal<Never, NoError> {
+            return _internal_rateAudioTranscription(postbox: self.account.postbox, network: self.account.network, messageId: messageId, id: id, isGood: isGood)
+        }
+        
         public func requestWebView(peerId: PeerId, botId: PeerId, url: String?, payload: String?, themeParams: [String: Any]?, fromMenu: Bool, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
             return _internal_requestWebView(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, botId: botId, url: url, payload: payload, themeParams: themeParams, fromMenu: fromMenu, replyToMessageId: replyToMessageId)
         }
@@ -349,6 +401,71 @@ public extension TelegramEngine {
         
         public func attachMenuBots() -> Signal<[AttachMenuBot], NoError> {
             return _internal_attachMenuBots(postbox: self.account.postbox)
+        }
+        
+        public func ensureMessagesAreLocallyAvailable(messages: [EngineMessage]) {
+            let _ = self.account.postbox.transaction({ transaction in
+                for message in messages {
+                    _internal_storeMessageFromSearch(transaction: transaction, message: message._asMessage())
+                }
+            }).start()
+        }
+        
+        public func findRandomMessage(peerId: EnginePeer.Id, namespace: EngineMessage.Id.Namespace, tag: EngineMessage.Tags, ignoreIds: ([EngineMessage.Id], Set<EngineMessage.Id>)) -> Signal<EngineMessage.Index?, NoError> {
+            return self.account.postbox.transaction { transaction -> EngineMessage.Index? in
+                return transaction.findRandomMessage(peerId: peerId, namespace: namespace, tag: tag, ignoreIds: ignoreIds)
+            }
+        }
+        
+        public func failedMessageGroup(id: EngineMessage.Id) -> Signal<[EngineMessage], NoError> {
+            return self.account.postbox.transaction { transaction -> [EngineMessage] in
+                return transaction.getMessageFailedGroup(id)?.map(EngineMessage.init) ?? []
+            }
+        }
+        
+        public func unreadChatListPeerIds(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?) -> Signal<[EnginePeer.Id], NoError> {
+            return self.account.postbox.transaction { transaction -> [EnginePeer.Id] in
+                return transaction.getUnreadChatListPeerIds(groupId: groupId._asGroup(), filterPredicate: filterPredicate)
+            }
+        }
+        
+        public func markAllChatsAsReadInteractively(items: [(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?)]) -> Signal<Never, NoError> {
+            let account = self.account
+            return self.account.postbox.transaction { transaction -> Void in
+                for (groupId, filterPredicate) in items {
+                    _internal_markAllChatsAsReadInteractively(transaction: transaction, viewTracker: account.viewTracker, groupId: groupId._asGroup(), filterPredicate: filterPredicate)
+                }
+            }
+            |> ignoreValues
+        }
+        
+        public func getRelativeUnreadChatListIndex(filtered: Bool, position: EngineChatList.RelativePosition, groupId: EngineChatList.Group) -> Signal<EngineChatList.Item.Index?, NoError> {
+            return self.account.postbox.transaction { transaction -> EngineChatList.Item.Index? in
+                return transaction.getRelativeUnreadChatListIndex(filtered: filtered, position: position._asPosition(), groupId: groupId._asGroup())
+            }
+        }
+        
+        public func togglePeersUnreadMarkInteractively(peerIds: [EnginePeer.Id], setToValue: Bool?) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    _internal_togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: self.account.viewTracker, peerId: peerId, setToValue: setToValue)
+                }
+            }
+            |> ignoreValues
+        }
+        
+        public func debugAddHoles() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)
+            }
+            |> ignoreValues
+        }
+        
+        public func debugReindexUnreadCounters() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.reindexUnreadCounters()
+            }
+            |> ignoreValues
         }
     }
 }

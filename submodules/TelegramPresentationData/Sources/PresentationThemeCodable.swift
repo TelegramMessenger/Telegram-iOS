@@ -813,7 +813,9 @@ extension PresentationThemeList.PaymentOption: Codable {
 extension PresentationThemeList: Codable {
     enum CodingKeys: String, CodingKey {
         case blocksBg
+        case modalBlocksBg
         case plainBg
+        case modalPlainBg
         case primaryText
         case secondaryText
         case disabledText
@@ -822,6 +824,7 @@ extension PresentationThemeList: Codable {
         case destructive
         case placeholderText
         case itemBlocksBg
+        case itemModalBlocksBg
         case itemHighlightedBg
         case blocksSeparator
         case plainSeparator
@@ -860,7 +863,9 @@ extension PresentationThemeList: Codable {
         
         self.init(
             blocksBackgroundColor: try decodeColor(values, .blocksBg),
+            modalBlocksBackgroundColor: try decodeColor(values, .modalBlocksBg, decoder: decoder, fallbackKey: "list.blocksBg"),
             plainBackgroundColor: try decodeColor(values, .plainBg),
+            modalPlainBackgroundColor: try decodeColor(values, .modalPlainBg, decoder: decoder, fallbackKey: "list.plainBg"),
             itemPrimaryTextColor: try decodeColor(values, .primaryText),
             itemSecondaryTextColor: try decodeColor(values, .secondaryText),
             itemDisabledTextColor: try decodeColor(values, .disabledText),
@@ -869,6 +874,7 @@ extension PresentationThemeList: Codable {
             itemDestructiveColor: try decodeColor(values, .destructive),
             itemPlaceholderTextColor: try decodeColor(values, .placeholderText),
             itemBlocksBackgroundColor: try decodeColor(values, .itemBlocksBg),
+            itemModalBlocksBackgroundColor: try decodeColor(values, .itemModalBlocksBg, decoder: decoder, fallbackKey: "list.itemBlocksBg"),
             itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
             itemBlocksSeparatorColor: try decodeColor(values, .blocksSeparator),
             itemPlainSeparatorColor: try decodeColor(values, .plainSeparator),

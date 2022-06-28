@@ -14,6 +14,7 @@ swift_library(
         "//submodules/rlottie:RLottieBinding",
         "//submodules/lottie-ios:Lottie",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/Display:Display",
     ],
     visibility = [
         "//visibility:public",

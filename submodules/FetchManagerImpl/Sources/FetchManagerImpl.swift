@@ -6,6 +6,7 @@ import Postbox
 import TelegramUIPreferences
 import AccountContext
 import UniversalMediaPlayer
+import RangeSet
 
 public struct FetchManagerLocationEntryId: Hashable {
     public let location: FetchManagerLocation
@@ -41,15 +42,15 @@ private final class FetchManagerLocationEntry {
     var userInitiated: Bool = false
     var storeToDownloadsPeerType: MediaAutoDownloadPeerType?
     let references = Bag<FetchManagerPriority>()
-    let ranges = Bag<IndexSet>()
+    let ranges = Bag<RangeSet<Int64>>()
     var elevatedPriorityReferenceCount: Int32 = 0
     var userInitiatedPriorityIndices: [Int32] = []
     var isPaused: Bool = false
     
-    var combinedRanges: IndexSet {
-        var result = IndexSet()
+    var combinedRanges: RangeSet<Int64> {
+        var result = RangeSet<Int64>()
         if self.userInitiated {
-            result.insert(integersIn: 0 ..< Int(Int32.max))
+            result.insert(contentsOf: 0 ..< Int64.max)
         } else {
             for range in self.ranges.copyItems() {
                 result.formUnion(range)
@@ -77,7 +78,7 @@ private final class FetchManagerLocationEntry {
 
 private final class FetchManagerActiveContext {
     let userInitiated: Bool
-    var ranges = IndexSet()
+    var ranges = RangeSet<Int64>()
     var disposable: Disposable?
     
     init(userInitiated: Bool) {
@@ -186,6 +187,9 @@ private final class FetchManagerCategoryContext {
                 if self.topEntryIdAndPriority?.0 == id {
                     self.topEntryIdAndPriority = nil
                 }
+                if let entry = self.entries[id] {
+                    Logger.shared.log("FetchManager", "Canceled fetching \(entry.resourceReference.resource.id.stringRepresentation)")
+                }
                 self.entries.removeValue(forKey: id)
                 removedEntries = true
             }
@@ -220,18 +224,20 @@ private final class FetchManagerCategoryContext {
                     activeContext.ranges = ranges
                     let entryCompleted = self.entryCompleted
                     let storeManager = self.storeManager
-                    let parsedRanges: [(Range<Int>, MediaBoxFetchPriority)]?
-                    if ranges.count == 1 && ranges.min() == 0 && ranges.max() == Int(Int32.max) {
+                    let parsedRanges: [(Range<Int64>, MediaBoxFetchPriority)]?
+                    
+                    if ranges == RangeSet<Int64>(0 ..< Int64.max) {
                         parsedRanges = nil
                     } else {
-                        var resultRanges: [(Range<Int>, MediaBoxFetchPriority)] = []
-                        for range in ranges.rangeView {
+                        var resultRanges: [(Range<Int64>, MediaBoxFetchPriority)] = []
+                        for range in ranges.ranges {
                             resultRanges.append((range, .default))
                         }
                         parsedRanges = resultRanges
                     }
                     activeContext.disposable?.dispose()
                     let postbox = self.postbox
+                    Logger.shared.log("FetchManager", "Begin fetching \(entry.resourceReference.resource.id.stringRepresentation) ranges: \(String(describing: parsedRanges))")
                     activeContext.disposable = (fetchedMediaResource(mediaBox: postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
                     |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
                         if filterDownloadStatsEntry(entry: entry), case let .message(message, _) = entry.mediaReference, let messageId = message.id, case .remote = type {
@@ -248,6 +254,7 @@ private final class FetchManagerCategoryContext {
                         return .single(type)
                     }
                     |> deliverOnMainQueue).start(next: { _ in
+                        Logger.shared.log("FetchManager", "Completed fetching \(entry.resourceReference.resource.id.stringRepresentation)")
                         entryCompleted(id)
                     })
                 } else {
@@ -302,27 +309,27 @@ private final class FetchManagerCategoryContext {
             if let entry = self.entries[topEntryId] {
                 let ranges = entry.combinedRanges
                 
-                let parsedRanges: [(Range<Int>, MediaBoxFetchPriority)]?
+                let parsedRanges: [(Range<Int64>, MediaBoxFetchPriority)]?
                 
                 var count = 0
                 var isCompleteRange = false
                 var isVideoPreload = false
-                for range in ranges.rangeView {
+                for range in ranges.ranges {
                     count += 1
-                    if range.lowerBound == 0 && range.upperBound == Int(Int32.max) {
+                    if range.lowerBound == 0 && range.upperBound == Int64.max {
                         isCompleteRange = true
                     }
                 }
                 
-                if count == 2, let range = ranges.rangeView.first, range.lowerBound == 0 && range.upperBound == 2 * 1024 * 1024 {
+                if count == 2, let range = ranges.ranges.first, range.lowerBound == 0 && range.upperBound == 2 * 1024 * 1024 {
                     isVideoPreload = true
                 }
                 
                 if count == 1 && isCompleteRange {
                     parsedRanges = nil
                 } else {
-                    var resultRanges: [(Range<Int>, MediaBoxFetchPriority)] = []
-                    for range in ranges.rangeView {
+                    var resultRanges: [(Range<Int64>, MediaBoxFetchPriority)] = []
+                    for range in ranges.ranges {
                         resultRanges.append((range, .default))
                     }
                     parsedRanges = resultRanges
@@ -356,6 +363,7 @@ private final class FetchManagerCategoryContext {
                     } else if ranges.isEmpty {
                     } else {
                         let postbox = self.postbox
+                        Logger.shared.log("FetchManager", "Begin fetching \(entry.resourceReference.resource.id.stringRepresentation) ranges: \(String(describing: parsedRanges))")
                         activeContext.disposable = (fetchedMediaResource(mediaBox: postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
                         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
                             if filterDownloadStatsEntry(entry: entry), case let .message(message, _) = entry.mediaReference, let messageId = message.id, case .remote = type {
@@ -372,6 +380,7 @@ private final class FetchManagerCategoryContext {
                             return .single(type)
                         }
                         |> deliverOnMainQueue).start(next: { _ in
+                            Logger.shared.log("FetchManager", "Completed fetching \(entry.resourceReference.resource.id.stringRepresentation)")
                             entryCompleted(topEntryId)
                         })
                     }
@@ -411,7 +420,8 @@ private final class FetchManagerCategoryContext {
         var entriesRemoved = false
         let _ = entriesRemoved
         
-        if let _ = self.entries[id] {
+        if let entry = self.entries[id] {
+            Logger.shared.log("FetchManager", "Cancel fetching \(entry.resourceReference.resource.id.stringRepresentation)")
             self.entries.removeValue(forKey: id)
             entriesRemoved = true
             
@@ -701,7 +711,7 @@ public final class FetchManagerImpl: FetchManager {
         }
     }
     
-    public func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, ranges: IndexSet, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, priority: FetchManagerPriority = .userInitiated, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Void, NoError> {
+    public func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, ranges: RangeSet<Int64>, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, priority: FetchManagerPriority = .userInitiated, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Void, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {

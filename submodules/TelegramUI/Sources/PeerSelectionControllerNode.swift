@@ -489,7 +489,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             if textInputPanelNode.frame.width.isZero {
                 panelTransition = .immediate
             }
-            var panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: UIEdgeInsets(), maxHeight: layout.size.height / 2.0, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics)
+            var panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: layout.intrinsicInsets.bottom, additionalSideInsets: UIEdgeInsets(), maxHeight: layout.size.height / 2.0, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics)
             if self.searchDisplayController == nil {
                 panelHeight += insets.bottom
             } else {
@@ -705,11 +705,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     } else {
                         switch peer {
                             case let .peer(peer, _, _):
-                                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Peer? in
-                                    return transaction.getPeer(peer.id)
-                                } |> deliverOnMainQueue).start(next: { peer in
+                                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id))
+                                |> deliverOnMainQueue).start(next: { peer in
                                     if let strongSelf = self, let peer = peer {
-                                        strongSelf.requestOpenPeerFromSearch?(peer)
+                                        strongSelf.requestOpenPeerFromSearch?(peer._asPeer())
                                     }
                                 })
                             case .deviceContact:

@@ -134,6 +134,14 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
         }
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.bounds.contains(point) {
+            return self.view
+        } else {
+            return nil
+        }
+    }
+    
     private func beginReactionAnimation() {
         if let item = self.item, let updatedReaction = item.reaction, let availableReactions = item.availableReactions, let messageNode = self.messageNode as? ChatMessageItemNodeProtocol {
             if let targetView = messageNode.targetReactionView(value: updatedReaction) {
@@ -161,8 +169,8 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                             supernode.addSubnode(standaloneReactionAnimation)
                             standaloneReactionAnimation.frame = supernode.bounds
                             standaloneReactionAnimation.animateReactionSelection(
-                                context: item.context, theme: item.theme, reaction: ReactionContextItem(
-                                    reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                context: item.context, theme: item.theme, reaction: ReactionItem(
+                                    reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                     appearAnimation: reaction.appearAnimation,
                                     stillAnimation: reaction.selectAnimation,
                                     listAnimation: centerAnimation,

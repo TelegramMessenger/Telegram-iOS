@@ -358,6 +358,8 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                 updatedTheme = item.presentationData.theme
             }
             
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.accountContext.currentAppConfiguration.with { $0 })
+            
             var credibilityIconImage: UIImage?
             var credibilityIconOffset: CGFloat = 4.0
             if let peer = item.peer {
@@ -369,6 +371,8 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                     credibilityIconOffset = 2.0
                 } else if peer.isVerified {
                     credibilityIconImage = PresentationResourcesItemList.verifiedPeerIcon(item.presentationData.theme)
+                } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                    credibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
                 }
             }
             
@@ -660,7 +664,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                     overrideImage = .image(representation)
                             }
                         } else if case .editSettings = item.mode {
-                            overrideImage = AvatarNodeImageOverride.editAvatarIcon
+                            overrideImage = AvatarNodeImageOverride.editAvatarIcon(forceNone: false)
                         } else if peer.isDeleted {
                             overrideImage = .deletedIcon
                         }

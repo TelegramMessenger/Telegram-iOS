@@ -34,7 +34,7 @@ public enum UndoOverlayContent {
     case voiceChatRecording(text: String)
     case voiceChatFlag(text: String)
     case voiceChatCanSpeak(text: String)
-    case sticker(context: AccountContext, file: TelegramMediaFile, text: String)
+    case sticker(context: AccountContext, file: TelegramMediaFile, title: String?, text: String, undoText: String?)
     case copy(text: String)
     case mediaSaved(text: String)
     case paymentSent(currencyValue: String, itemTitle: String)

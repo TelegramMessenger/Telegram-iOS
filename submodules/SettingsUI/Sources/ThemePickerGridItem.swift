@@ -258,7 +258,7 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
             if let current = self.animatedStickerNode {
                 animatedStickerNode = current
             } else {
-                animatedStickerNode = AnimatedStickerNode()
+                animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                 animatedStickerNode.started = { [weak self] in
                     self?.emojiImageNode.isHidden = true
                 }

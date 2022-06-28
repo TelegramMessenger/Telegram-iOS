@@ -154,6 +154,15 @@ public extension Peer {
         }
     }
     
+    var isPremium: Bool {
+        switch self {
+        case let user as TelegramUser:
+            return user.flags.contains(.isPremium)
+        default:
+            return false
+        }
+    }
+    
     var isCopyProtectionEnabled: Bool {
         switch self {
         case let group as TelegramGroup:

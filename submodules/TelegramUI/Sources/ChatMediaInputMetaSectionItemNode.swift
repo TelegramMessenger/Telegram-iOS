@@ -15,6 +15,7 @@ enum ChatMediaInputMetaSectionItemType: Equatable {
     case stickersMode
     case savedGifs
     case trendingGifs
+    case premium
     case gifEmoji(String, TelegramMediaFile?)
 }
 
@@ -131,7 +132,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
-        self.imageNode.contentMode = .scaleAspectFit
+        self.imageNode.contentMode = .center
         
         self.textNodeContainer = ASDisplayNode()
         self.textNodeContainer.isUserInteractionEnabled = false
@@ -171,13 +172,15 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
             self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0)
         case .recentStickers:
             self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0)
+        case .premium:
+            self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue, id: 0)
         default:
             break
         }
     }
     
     func updateTheme(account: Account, theme: PresentationTheme, strings: PresentationStrings, expanded: Bool) {
-        let imageSize = CGSize(width: 26.0 * 1.6, height: 26.0 * 1.6)
+        let imageSize = CGSize(width: 44.0, height: 42.0)
         self.imageNode.frame = CGRect(origin: CGPoint(x: floor((expandedBoundingSize.width - imageSize.width) / 2.0), y: floor((expandedBoundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
         
         self.textNodeContainer.frame = CGRect(origin: CGPoint(x: floor((expandedBoundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((expandedBoundingSize.height - imageSize.height) / 2.0) + 1.0), size: imageSize)
@@ -204,6 +207,9 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                 case .trendingGifs:
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelTrendingGifsIcon(theme)
                     title = strings.Stickers_Trending
+                case .premium:
+                    self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelPremiumIcon(theme)
+                    title = strings.Stickers_PremiumStickers
                 case let .gifEmoji(emoji, file):
                     switch emoji {
                         case "😡":
@@ -237,10 +243,10 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                         if let current = self.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                             self.animatedStickerNode = animatedStickerNode
                             self.scalingNode.addSubnode(animatedStickerNode)
-                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: file.resource), width: 128, height: 128, mode: .cached)
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: file.resource), width: 128, height: 128, playbackMode: .loop, mode: .cached)
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                         

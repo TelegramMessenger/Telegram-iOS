@@ -266,6 +266,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     _portraitCollectionView.toolsDataSource = self;
     _portraitCollectionView.interactionBegan = _interactionBegan;
     _portraitCollectionView.interactionEnded = _interactionEnded;
+    _portraitCollectionView.canCancelContentTouches = true;
     [_portraitToolsWrapperView addSubview:_portraitCollectionView];
     
     if (!TGIsPad())
@@ -278,6 +279,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         _landscapeCollectionView.toolsDataSource = self;
         _landscapeCollectionView.interactionBegan = _interactionBegan;
         _landscapeCollectionView.interactionEnded = _interactionEnded;
+        _landscapeCollectionView.canCancelContentTouches = true;
         [_landscapeToolsWrapperView addSubview:_landscapeCollectionView];
     }
     

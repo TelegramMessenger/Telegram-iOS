@@ -68,6 +68,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         
         _panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
         _panGestureRecognizer.enabled = false;
+        _panGestureRecognizer.delegate = self;
         [self addGestureRecognizer:_panGestureRecognizer];
         
         _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
@@ -530,6 +531,19 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         [self maybeCancelParentViewScrolling:parentView.superview depth:depth++];
     }
 }
+
+- (BOOL)gestureRecognizerShouldBegin:(UIPanGestureRecognizer *)gestureRecognizer {
+    if (gestureRecognizer == _panGestureRecognizer) {
+        CGPoint velocity = [gestureRecognizer velocityInView:gestureRecognizer.view];
+        if (ABS(velocity.x) > ABS(velocity.y)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
 
 - (BOOL)beginTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)__unused event
 {
