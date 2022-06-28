@@ -44,8 +44,9 @@ final class DeleteAccountFooterItem: ItemListControllerFooterItem {
 final class DeleteAccountFooterItemNode: ItemListControllerFooterItemNode {
     private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
+    private let clipNode: ASDisplayNode
     private let buttonNode: SolidRoundedButtonNode
-    private let secondaryButtonNode: HighlightTrackingButtonNode
+    private let secondaryButtonNode: HighlightableButtonNode
     
     private var validLayout: ContainerViewLayout?
     
@@ -64,16 +65,20 @@ final class DeleteAccountFooterItemNode: ItemListControllerFooterItemNode {
         self.backgroundNode = NavigationBackgroundNode(color: item.theme.rootController.tabBar.backgroundColor)
         self.separatorNode = ASDisplayNode()
         
+        self.clipNode = ASDisplayNode()
+        self.clipNode.clipsToBounds = true
+        
         self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 11.0, gloss: true)
         
-        self.secondaryButtonNode = HighlightTrackingButtonNode()
+        self.secondaryButtonNode = HighlightableButtonNode()
         
         super.init()
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
-        self.addSubnode(self.buttonNode)
-        self.addSubnode(self.secondaryButtonNode)
+        self.addSubnode(self.clipNode)
+        self.clipNode.addSubnode(self.buttonNode)
+        self.clipNode.addSubnode(self.secondaryButtonNode)
     
         self.secondaryButtonNode.addTarget(self, action: #selector(self.secondaryButtonPressed), forControlEvents: .touchUpInside)
         
@@ -121,8 +126,19 @@ final class DeleteAccountFooterItemNode: ItemListControllerFooterItemNode {
         let secondaryButtonSize = self.secondaryButtonNode.measure(CGSize(width: buttonWidth, height: CGFloat.greatestFiniteMagnitude))
         
         var panelHeight: CGFloat = buttonHeight + topInset + spacing + secondaryButtonSize.height + bottomInset
+        
+        var buttonOffset: CGFloat = 0.0
         let totalPanelHeight: CGFloat
+        
+        if (self.buttonNode.title?.isEmpty ?? false) {
+            buttonOffset = -buttonHeight - topInset
+            self.buttonNode.alpha = 0.0
+        } else {
+            self.buttonNode.alpha = 1.0
+        }
+        
         if let inputHeight = layout.inputHeight, inputHeight > 0.0 {
+            panelHeight += buttonOffset
             totalPanelHeight = panelHeight + insets.bottom
         } else {
             panelHeight += insets.bottom
@@ -130,12 +146,14 @@ final class DeleteAccountFooterItemNode: ItemListControllerFooterItemNode {
         }
         
         let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - totalPanelHeight), size: CGSize(width: layout.size.width, height: panelHeight))
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: panelFrame.minY + topInset), size: CGSize(width: buttonWidth, height: buttonHeight)))
-        
-        transition.updateFrame(node: self.secondaryButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - secondaryButtonSize.width) / 2.0), y: panelFrame.minY + topInset + buttonHeight + spacing), size: secondaryButtonSize))
         
         transition.updateFrame(node: self.backgroundNode, frame: panelFrame)
         self.backgroundNode.update(size: panelFrame.size, transition: transition)
+        
+        transition.updateFrame(node: self.clipNode, frame: panelFrame)
+        
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: topInset + buttonOffset), size: CGSize(width: buttonWidth, height: buttonHeight)))
+        transition.updateFrame(node: self.secondaryButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - secondaryButtonSize.width) / 2.0), y: topInset + buttonHeight + spacing + buttonOffset), size: secondaryButtonSize))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: panelFrame.origin, size: CGSize(width: panelFrame.width, height: UIScreenPixel)))
         

@@ -275,9 +275,8 @@ class GiftAvatarComponent: Component {
             }
             
             self.hasIdleAnimations = component.hasIdleAnimations
-            
             let avatarSize = CGSize(width: 100.0, height: 100.0)
-            self.avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: component.peer, size: avatarSize, font: avatarPlaceholderFont(size: 78.0), fullSize: true))
+            self.avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: component.peer, size: avatarSize, font: avatarPlaceholderFont(size: 43.0), fullSize: true))
             self.avatarNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - avatarSize.width) / 2.0), y: 63.0), size: avatarSize)
             
             return availableSize

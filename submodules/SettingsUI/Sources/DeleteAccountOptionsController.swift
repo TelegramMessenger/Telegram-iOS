@@ -15,14 +15,17 @@ import PresentationDataUtils
 import UrlHandling
 import AccountUtils
 import PremiumUI
+import PasswordSetupUI
 
 private struct DeleteAccountOptionsArguments {
     let changePhoneNumber: () -> Void
     let addAccount: () -> Void
     let setupPrivacy: () -> Void
-    let setTwoStepAuth: () -> Void
+    let setupTwoStepAuth: () -> Void
     let setPasscode: () -> Void
     let clearCache: () -> Void
+    let clearSyncedContacts: () -> Void
+    let deleteChats: () -> Void
     let contactSupport: () -> Void
     let deleteAccount: () -> Void
 }
@@ -111,8 +114,8 @@ private enum DeleteAccountOptionsEntry: ItemListNodeEntry, Equatable {
                     arguments.setupPrivacy()
                 })
             case let .setTwoStepAuth(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.setPasscode, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
-                    arguments.setTwoStepAuth()
+                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.deleteSetTwoStepAuth, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                    arguments.setupTwoStepAuth()
                 })
             case let .setPasscode(_, title, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.deleteSetPasscode, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
@@ -124,11 +127,11 @@ private enum DeleteAccountOptionsEntry: ItemListNodeEntry, Equatable {
                 })
             case let .clearSyncedContacts(_, title, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.clearSynced, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
-                    arguments.clearCache()
+                    arguments.clearSyncedContacts()
                 })
             case let .deleteChats(_, title, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.deleteChats, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
-                    arguments.clearCache()
+                    arguments.deleteChats()
                 })
             case let .contactSupport(_, title, text):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.support, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
@@ -168,14 +171,14 @@ private func deleteAccountOptionsEntries(presentationData: PresentationData, can
     return entries
 }
 
-public func deleteAccountOptionsController(context: AccountContext, navigationController: NavigationController, hasTwoStepAuth: Bool) -> ViewController {
+public func deleteAccountOptionsController(context: AccountContext, navigationController: NavigationController, hasTwoStepAuth: Bool, twoStepAuthData: TwoStepVerificationAccessConfiguration?) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var replaceTopControllerImpl: ((ViewController, Bool) -> Void)?
     var dismissImpl: (() -> Void)?
 
     let supportPeerDisposable = MetaDisposable()
-
+    
     let arguments = DeleteAccountOptionsArguments(changePhoneNumber: {
         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.engine.account.peerId))
         |> deliverOnMainQueue).start(next: { accountPeer in
@@ -224,9 +227,30 @@ public func deleteAccountOptionsController(context: AccountContext, navigationCo
             }
         })
     }, setupPrivacy: {
+        replaceTopControllerImpl?(makePrivacyAndSecurityController(context: context), false)
+    }, setupTwoStepAuth: {
+        if let data = twoStepAuthData {
+            switch data {
+            case .set:
+                break
+            case let .notSet(pendingEmail):
+                if pendingEmail == nil {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .intro(.init(
+                        title: presentationData.strings.TwoFactorSetup_Intro_Title,
+                        text: presentationData.strings.TwoFactorSetup_Intro_Text,
+                        actionText: presentationData.strings.TwoFactorSetup_Intro_Action,
+                        doneText: presentationData.strings.TwoFactorSetup_Done_Action
+                    )))
 
-    }, setTwoStepAuth: {
+                    replaceTopControllerImpl?(controller, false)
+                    return
+                }
+            }
+        }
 
+        let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: twoStepAuthData.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
+        replaceTopControllerImpl?(controller, false)
     }, setPasscode: {
         let _ = passcodeOptionsAccessController(context: context, pushController: { controller in
             replaceTopControllerImpl?(controller, false)
@@ -241,11 +265,44 @@ public func deleteAccountOptionsController(context: AccountContext, navigationCo
     }, clearCache: {
         pushControllerImpl?(storageUsageController(context: context))
         dismissImpl?()
+    }, clearSyncedContacts: {
+        replaceTopControllerImpl?(dataPrivacyController(context: context), false)
+    }, deleteChats: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        var faqUrl = presentationData.strings.DeleteAccount_DeleteMessagesURL
+        if faqUrl == "DeleteAccount.DeleteMessagesURL" || faqUrl.isEmpty {
+            faqUrl = "https://telegram.org/faq#q-can-i-delete-my-messages"
+        }
+        let resolvedUrl = resolveInstantViewUrl(account: context.account, url: faqUrl)
+
+        let resolvedUrlPromise = Promise<ResolvedUrl>()
+        resolvedUrlPromise.set(resolvedUrl)
+
+        let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+            presentControllerImpl?(controller, nil)
+            let _ = (resolvedUrl.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak controller] resolvedUrl in
+                controller?.dismiss()
+                dismissImpl?()
+
+                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
+                }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { controller, arguments in
+                    pushControllerImpl?(controller)
+                }, dismissInput: {}, contentContext: nil)
+            })
+        }
+        
+        openFaq(resolvedUrlPromise)
     }, contactSupport: { [weak navigationController] in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
         let supportPeer = Promise<PeerId?>()
         supportPeer.set(context.engine.peers.supportPeerId())
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-
+        
         var faqUrl = presentationData.strings.Settings_FAQ_URL
         if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
             faqUrl = "https://telegram.org/faq#general"
@@ -289,7 +346,7 @@ public func deleteAccountOptionsController(context: AccountContext, navigationCo
             })
         ]), nil)
     }, deleteAccount: {
-        let controller = deleteAccountDataController(context: context, mode: .peers)
+        let controller = deleteAccountDataController(context: context, mode: .peers, twoStepAuthData: twoStepAuthData)
         replaceTopControllerImpl?(controller, true)
     })
 
@@ -337,7 +394,18 @@ public func deleteAccountOptionsController(context: AccountContext, navigationCo
                 }
             })
         } else {
-            navigationController?.replaceTopController(c, animated: true)
+            if c is PrivacyAndSecurityControllerImpl {
+                if let navigationController = navigationController {
+                    if let existing = navigationController.viewControllers.first(where: { $0 is PrivacyAndSecurityControllerImpl }) as? ViewController {
+                        existing.scrollToTop?()
+                        dismissImpl?()
+                    } else {
+                        navigationController.replaceTopController(c, animated: true)
+                    }
+                }
+            } else {
+                navigationController?.replaceTopController(c, animated: true)
+            }
         }
     }
     dismissImpl = { [weak controller] in

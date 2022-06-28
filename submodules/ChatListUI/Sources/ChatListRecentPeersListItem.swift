@@ -120,7 +120,7 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                         peersNode = currentPeersNode
                         peersNode.updateThemeAndStrings(theme: item.theme, strings: item.strings)
                     } else {
-                        peersNode = ChatListSearchRecentPeersNode(context: item.context, theme: item.theme, mode: .list, strings: item.strings, peerSelected: { peer in
+                        peersNode = ChatListSearchRecentPeersNode(context: item.context, theme: item.theme, mode: .list(compact: false), strings: item.strings, peerSelected: { peer in
                             self?.item?.peerSelected(peer)
                         }, peerContextAction: { peer, node, gesture in
                             self?.item?.peerContextAction(peer, node, gesture)
