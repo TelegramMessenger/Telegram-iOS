@@ -20,10 +20,17 @@ public protocol PeekControllerContent {
     func node() -> PeekControllerContentNode & ASDisplayNode
     
     func topAccessoryNode() -> ASDisplayNode?
+    func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)?
     
     func isEqual(to: PeekControllerContent) -> Bool
 }
 
 public protocol PeekControllerContentNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
+}
+
+public protocol PeekControllerAccessoryNode {
+    var dismiss: () -> Void { get set }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
 }

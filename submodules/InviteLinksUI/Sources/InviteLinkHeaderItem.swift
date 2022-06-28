@@ -12,15 +12,15 @@ import AccountContext
 import Markdown
 import TextFormat
 
-class InviteLinkHeaderItem: ListViewItem, ItemListItem {
-    let context: AccountContext
-    let theme: PresentationTheme
-    let text: String
-    let animationName: String
-    let sectionId: ItemListSectionId
-    let linkAction: ((ItemListTextItemLinkAction) -> Void)?
+public class InviteLinkHeaderItem: ListViewItem, ItemListItem {
+    public let context: AccountContext
+    public let theme: PresentationTheme
+    public let text: String
+    public let animationName: String
+    public let sectionId: ItemListSectionId
+    public let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, text: String, animationName: String, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
+    public init(context: AccountContext, theme: PresentationTheme, text: String, animationName: String, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
         self.context = context
         self.theme = theme
         self.text = text
@@ -29,7 +29,7 @@ class InviteLinkHeaderItem: ListViewItem, ItemListItem {
         self.linkAction = linkAction
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = InviteLinkHeaderItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -45,7 +45,7 @@ class InviteLinkHeaderItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             guard let nodeValue = node() as? InviteLinkHeaderItemNode else {
                 assertionFailure()
@@ -80,7 +80,7 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         super.init(layerBacked: false, dynamicBounce: false)
         

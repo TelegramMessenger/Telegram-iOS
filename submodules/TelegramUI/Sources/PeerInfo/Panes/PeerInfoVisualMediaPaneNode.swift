@@ -1175,6 +1175,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     let captureProtected: Bool
     var strings: PresentationStrings
     let useListItems: Bool
+    let roundListThumbnails: Bool
     let listItemInteraction: ListMessageItemInteraction
     let chatControllerInteraction: ChatControllerInteraction
     var chatPresentationData: ChatPresentationData
@@ -1191,10 +1192,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
 
     private var shimmerImages: [CGFloat: UIImage] = [:]
 
-    init(context: AccountContext, chatLocation: ChatLocation, useListItems: Bool, listItemInteraction: ListMessageItemInteraction, chatControllerInteraction: ChatControllerInteraction, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool) {
+    init(context: AccountContext, chatLocation: ChatLocation, useListItems: Bool, roundListThumbnails: Bool, listItemInteraction: ListMessageItemInteraction, chatControllerInteraction: ChatControllerInteraction, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool) {
         self.context = context
         self.chatLocation = chatLocation
         self.useListItems = useListItems
+        self.roundListThumbnails = roundListThumbnails
         self.listItemInteraction = listItemInteraction
         self.chatControllerInteraction = chatControllerInteraction
         self.directMediaImageCache = directMediaImageCache
@@ -1294,7 +1296,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 fillRoundedRect(rect: CGRect(origin: CGPoint(x: titleOrigin.x, y: titleOrigin.y - lineHeight / 2.0), size: CGSize(width: 160.0, height: lineHeight)), radius: lineHeight / 2.0)
                 fillRoundedRect(rect: CGRect(origin: CGPoint(x: dateOrigin.x, y: dateOrigin.y - lineHeight / 2.0), size: CGSize(width: 220.0, height: lineHeight)), radius: lineHeight / 2.0)
 
-                fillRoundedRect(rect: fileItemNode.extensionIconNode.frame, radius: 6.0)
+                if self.roundListThumbnails {
+                    context.fillEllipse(in: fileItemNode.extensionIconNode.frame)
+                } else {
+                    fillRoundedRect(rect: fileItemNode.extensionIconNode.frame, radius: 6.0)
+                }
 
                 UIGraphicsPopContext()
             })!.stretchableImage(withLeftCapWidth: 299, topCapHeight: 0)
@@ -1665,6 +1671,12 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.directMediaImageCache = DirectMediaImageCache(account: context.account)
 
         let useListItems: Bool
+        let roundListThumbnails: Bool
+        if case .voiceAndVideoMessages = contentType {
+            roundListThumbnails = true
+        } else {
+            roundListThumbnails = false
+        }
         switch contentType {
         case .files, .voiceAndVideoMessages, .music:
             useListItems = true
@@ -1700,6 +1712,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             context: context,
             chatLocation: .peer(id: peerId),
             useListItems: useListItems,
+            roundListThumbnails: roundListThumbnails,
             listItemInteraction: listItemInteraction,
             chatControllerInteraction: chatControllerInteraction,
             directMediaImageCache: self.directMediaImageCache,
@@ -1836,7 +1849,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             guard let strongSelf = self else {
                 return
             }
-            let _ = updateVisualMediaStoredState(postbox: strongSelf.context.account.postbox, peerId: strongSelf.peerId, messageTag: strongSelf.stateTag, state: VisualMediaStoredState(zoomLevel: Int32(zoomLevel.rawValue))).start()
+            let _ = updateVisualMediaStoredState(engine: strongSelf.context.engine, peerId: strongSelf.peerId, messageTag: strongSelf.stateTag, state: VisualMediaStoredState(zoomLevel: Int32(zoomLevel.rawValue))).start()
         }
         
         self._itemInteraction = VisualMediaItemInteraction(
@@ -1933,7 +1946,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             strongSelf.itemGrid.cancelGestures()
         }
 
-        self.storedStateDisposable = (visualMediaStoredState(postbox: context.account.postbox, peerId: peerId, messageTag: self.stateTag)
+        self.storedStateDisposable = (visualMediaStoredState(engine: context.engine, peerId: peerId, messageTag: self.stateTag)
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
@@ -2002,34 +2015,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             case .music:
                 summaries.append(.music)
             }
-            return context.account.postbox.combinedView(keys: summaries.map { tag in
-                return PostboxViewKey.historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)
-            })
-            |> map { views -> (ContentType, [MessageTags: Int32]) in
-                switch contentType {
-                case .photoOrVideo:
-                    summaries.append(.photo)
-                    summaries.append(.video)
-                case .photo:
-                    summaries.append(.photo)
-                case .video:
-                    summaries.append(.video)
-                case .gifs:
-                    summaries.append(.gif)
-                case .files:
-                    summaries.append(.file)
-                case .voiceAndVideoMessages:
-                    summaries.append(.voiceOrInstantVideo)
-                case .music:
-                    summaries.append(.music)
-                }
+            
+            return context.engine.data.subscribe(EngineDataMap(
+                summaries.map { TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: $0) }
+            ))
+            |> map { summaries -> (ContentType, [MessageTags: Int32]) in
                 var result: [MessageTags: Int32] = [:]
-                for tag in summaries {
-                    if let view = views.views[PostboxViewKey.historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)] as? MessageHistoryTagSummaryView {
-                        result[tag] = view.count ?? 0
-                    } else {
-                        result[tag] = 0
-                    }
+                for (key, count) in summaries {
+                    result[key.tag] = count.flatMap(Int32.init) ?? 0
                 }
                 return (contentType, result)
             }
@@ -2187,7 +2180,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     func updateZoomLevel(level: ZoomLevel) {
         self.itemGrid.setZoomLevel(level: level.value)
 
-        let _ = updateVisualMediaStoredState(postbox: self.context.account.postbox, peerId: self.peerId, messageTag: self.stateTag, state: VisualMediaStoredState(zoomLevel: level.rawValue)).start()
+        let _ = updateVisualMediaStoredState(engine: self.context.engine, peerId: self.peerId, messageTag: self.stateTag, state: VisualMediaStoredState(zoomLevel: level.rawValue)).start()
     }
     
     func ensureMessageIsVisible(id: MessageId) {
@@ -2562,32 +2555,25 @@ final class VisualMediaStoredState: Codable {
     }
 }
 
-func visualMediaStoredState(postbox: Postbox, peerId: PeerId, messageTag: MessageTags) -> Signal<VisualMediaStoredState?, NoError> {
-    return postbox.transaction { transaction -> VisualMediaStoredState? in
-        let key = ValueBoxKey(length: 8 + 4)
-        key.setInt64(0, value: peerId.toInt64())
-        key.setUInt32(8, value: messageTag.rawValue)
-        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.visualMediaStoredState, key: key))?.get(VisualMediaStoredState.self) {
-            return entry
-        } else {
-            return nil
-        }
+func visualMediaStoredState(engine: TelegramEngine, peerId: PeerId, messageTag: MessageTags) -> Signal<VisualMediaStoredState?, NoError> {
+    let key = ValueBoxKey(length: 8 + 4)
+    key.setInt64(0, value: peerId.toInt64())
+    key.setUInt32(8, value: messageTag.rawValue)
+    
+    return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.visualMediaStoredState, id: key))
+    |> map { entry -> VisualMediaStoredState? in
+        return entry?.get(VisualMediaStoredState.self)
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 25, highWaterItemCount: 50)
-
-func updateVisualMediaStoredState(postbox: Postbox, peerId: PeerId, messageTag: MessageTags, state: VisualMediaStoredState?) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        let key = ValueBoxKey(length: 8 + 4)
-        key.setInt64(0, value: peerId.toInt64())
-        key.setUInt32(8, value: messageTag.rawValue)
-
-        let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.visualMediaStoredState, key: key)
-        if let state = state, let entry = CodableEntry(state) {
-            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
-        } else {
-            transaction.removeItemCacheEntry(id: id)
-        }
+func updateVisualMediaStoredState(engine: TelegramEngine, peerId: PeerId, messageTag: MessageTags, state: VisualMediaStoredState?) -> Signal<Never, NoError> {
+    let key = ValueBoxKey(length: 8 + 4)
+    key.setInt64(0, value: peerId.toInt64())
+    key.setUInt32(8, value: messageTag.rawValue)
+    
+    if let state = state {
+        return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.visualMediaStoredState, id: key, item: state)
+    } else {
+        return engine.itemCache.remove(collectionId: ApplicationSpecificItemCacheCollectionId.visualMediaStoredState, id: key)
     }
 }

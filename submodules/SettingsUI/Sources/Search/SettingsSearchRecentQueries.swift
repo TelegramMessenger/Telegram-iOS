@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 import TelegramUIPreferences
 
@@ -37,42 +38,30 @@ public final class RecentSettingsSearchQueryItem: Codable {
     }
 }
 
-func addRecentSettingsSearchItem(postbox: Postbox, item: SettingsSearchableItemId) {
-    let _ = (postbox.transaction { transaction in
-        let itemId = SettingsSearchRecentQueryItemId(item.index)
-        if let entry = CodableEntry(RecentSettingsSearchQueryItem()) {
-            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems, item: OrderedItemListEntry(id: itemId.rawValue, contents: entry), removeTailIfCountExceeds: 100)
-        }
-    }).start()
+func addRecentSettingsSearchItem(engine: TelegramEngine, item: SettingsSearchableItemId) {
+    let itemId = SettingsSearchRecentQueryItemId(item.index)
+    let _ = engine.orderedLists.addOrMoveToFirstPosition(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems, id: itemId.rawValue, item: RecentSettingsSearchQueryItem(), removeTailIfCountExceeds: 100).start()
 }
 
-func removeRecentSettingsSearchItem(postbox: Postbox, item: SettingsSearchableItemId) {
-    let _ = (postbox.transaction { transaction -> Void in
-        let itemId = SettingsSearchRecentQueryItemId(item.index)
-        transaction.removeOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems, itemId: itemId.rawValue)
-    }).start()
+func removeRecentSettingsSearchItem(engine: TelegramEngine, item: SettingsSearchableItemId) {
+    let itemId = SettingsSearchRecentQueryItemId(item.index)
+    let _ = engine.orderedLists.removeItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems, id: itemId.rawValue).start()
 }
 
-func clearRecentSettingsSearchItems(postbox: Postbox) {
-    let _ = (postbox.transaction { transaction -> Void in
-        transaction.replaceOrderedItemListItems(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems, items: [])
-    }).start()
+func clearRecentSettingsSearchItems(engine: TelegramEngine) {
+    let _ = engine.orderedLists.clear(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems).start()
 }
 
-func settingsSearchRecentItems(postbox: Postbox) -> Signal<[SettingsSearchableItemId], NoError> {
-    return postbox.combinedView(keys: [.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems)])
-    |> mapToSignal { view -> Signal<[SettingsSearchableItemId], NoError> in
-        return postbox.transaction { transaction -> [SettingsSearchableItemId] in
-            var result: [SettingsSearchableItemId] = []
-            if let view = view.views[.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems)] as? OrderedItemListView {
-                for item in view.items {
-                    let index = SettingsSearchRecentQueryItemId(item.id).value
-                    if let itemId = SettingsSearchableItemId(index: index) {
-                        result.append(itemId)
-                    }
-                }
+func settingsSearchRecentItems(engine: TelegramEngine) -> Signal<[SettingsSearchableItemId], NoError> {
+    return engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems))
+    |> map { items -> [SettingsSearchableItemId] in
+        var result: [SettingsSearchableItemId] = []
+        for item in items {
+            let index = SettingsSearchRecentQueryItemId(item.id).value
+            if let itemId = SettingsSearchableItemId(index: index) {
+                result.append(itemId)
             }
-            return result
         }
+        return result
     }
 }

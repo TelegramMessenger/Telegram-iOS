@@ -14,6 +14,7 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/Markdown:Markdown",
+        "//submodules/Emoji:Emoji",
     ],
     visibility = [
         "//visibility:public",

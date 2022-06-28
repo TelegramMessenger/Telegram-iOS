@@ -71,6 +71,7 @@ public final class SeedConfiguration {
     public let chatMessagesNamespaces: Set<MessageId.Namespace>
     public let getGlobalNotificationSettings: (Transaction) -> PostboxGlobalNotificationSettings?
     public let defaultGlobalNotificationSettings: PostboxGlobalNotificationSettings
+    public let mergeMessageAttributes: ([MessageAttribute], inout [MessageAttribute]) -> Void
     
     public init(
         globalMessageIdsPeerIdNamespaces: Set<GlobalMessageIdsNamespace>,
@@ -91,7 +92,8 @@ public final class SeedConfiguration {
         defaultMessageNamespaceReadStates: [MessageId.Namespace: PeerReadState],
         chatMessagesNamespaces: Set<MessageId.Namespace>,
         getGlobalNotificationSettings: @escaping (Transaction) -> PostboxGlobalNotificationSettings?,
-        defaultGlobalNotificationSettings: PostboxGlobalNotificationSettings
+        defaultGlobalNotificationSettings: PostboxGlobalNotificationSettings,
+        mergeMessageAttributes: @escaping ([MessageAttribute], inout [MessageAttribute]) -> Void
     ) {
         self.globalMessageIdsPeerIdNamespaces = globalMessageIdsPeerIdNamespaces
         self.initializeChatListWithHole = initializeChatListWithHole
@@ -108,5 +110,6 @@ public final class SeedConfiguration {
         self.chatMessagesNamespaces = chatMessagesNamespaces
         self.getGlobalNotificationSettings = getGlobalNotificationSettings
         self.defaultGlobalNotificationSettings = defaultGlobalNotificationSettings
+        self.mergeMessageAttributes = mergeMessageAttributes
     }
 }

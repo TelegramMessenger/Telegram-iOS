@@ -44,7 +44,7 @@ class BazelCommandLine:
             # repository), but disabling it also causes a noticeable build time regression
             # so it can be explicitly re-enabled by users who are not affected by those
             # crashes.
-            #'--features=swift.use_global_module_cache',
+            '--features=swift.use_global_module_cache',
 
             # https://docs.bazel.build/versions/master/command-line-reference.html
             # Print the subcommand details in case of failure.

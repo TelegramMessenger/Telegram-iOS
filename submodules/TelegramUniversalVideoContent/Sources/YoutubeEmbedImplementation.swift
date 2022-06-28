@@ -401,6 +401,10 @@ public class YoutubeEmbedStoryboardMediaResource: TelegramMediaResource {
     public let storyboardId: Int32
     public let url: String
     
+    public var size: Int64? {
+        return nil
+    }
+    
     public init(videoId: String, storyboardId: Int32, url: String) {
         self.videoId = videoId
         self.storyboardId = storyboardId

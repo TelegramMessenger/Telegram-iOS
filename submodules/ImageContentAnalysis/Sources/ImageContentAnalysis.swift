@@ -26,32 +26,30 @@ private final class CachedImageRecognizedContent: Codable {
     }
 }
 
-private func cachedImageRecognizedContent(postbox: Postbox, messageId: MessageId) -> Signal<CachedImageRecognizedContent?, NoError> {
-    return postbox.transaction { transaction -> CachedImageRecognizedContent? in
-        let key = ValueBoxKey(length: 8)
-        key.setInt32(0, value: messageId.namespace)
-        key.setInt32(4, value: messageId.id)
-        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedImageRecognizedContent, key: key))?.get(CachedImageRecognizedContent.self) {
-            return entry
-        } else {
-            return nil
-        }
+private func cachedImageRecognizedContent(engine: TelegramEngine, messageId: MessageId) -> Signal<CachedImageRecognizedContent?, NoError> {
+    let key = ValueBoxKey(length: 20)
+    key.setInt32(0, value: messageId.namespace)
+    key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
+    key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
+    key.setInt32(16, value: messageId.id)
+    
+    return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.cachedImageRecognizedContent, id: key))
+    |> map { entry -> CachedImageRecognizedContent? in
+        return entry?.get(CachedImageRecognizedContent.self)
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 50, highWaterItemCount: 100)
-
-private func updateCachedImageRecognizedContent(postbox: Postbox, messageId: MessageId, content: CachedImageRecognizedContent?) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        let key = ValueBoxKey(length: 8)
-        key.setInt32(0, value: messageId.namespace)
-        key.setInt32(4, value: messageId.id)
-        let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedImageRecognizedContent, key: key)
-        if let content = content, let entry = CodableEntry(content) {
-            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
-        } else {
-            transaction.removeItemCacheEntry(id: id)
-        }
+private func updateCachedImageRecognizedContent(engine: TelegramEngine, messageId: MessageId, content: CachedImageRecognizedContent?) -> Signal<Never, NoError> {
+    let key = ValueBoxKey(length: 20)
+    key.setInt32(0, value: messageId.namespace)
+    key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
+    key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
+    key.setInt32(16, value: messageId.id)
+    
+    if let content = content {
+        return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.cachedImageRecognizedContent, id: key, item: content)
+    } else {
+        return engine.itemCache.remove(collectionId: ApplicationSpecificItemCacheCollectionId.cachedImageRecognizedContent, id: key)
     }
 }
 
@@ -334,8 +332,8 @@ private func recognizeContent(in image: UIImage?) -> Signal<[RecognizedContent],
     }
 }
 
-public func recognizedContent(postbox: Postbox, image: @escaping () -> UIImage?, messageId: MessageId) -> Signal<[RecognizedContent], NoError> {
-    return cachedImageRecognizedContent(postbox: postbox, messageId: messageId)
+public func recognizedContent(engine: TelegramEngine, image: @escaping () -> UIImage?, messageId: MessageId) -> Signal<[RecognizedContent], NoError> {
+    return cachedImageRecognizedContent(engine: engine, messageId: messageId)
     |> mapToSignal { cachedContent -> Signal<[RecognizedContent], NoError> in
         if let cachedContent = cachedContent {
             return .single(cachedContent.results)
@@ -345,7 +343,7 @@ public func recognizedContent(postbox: Postbox, image: @escaping () -> UIImage?,
             |> then(
                 recognizeContent(in: image())
                 |> beforeNext { results in
-                    let _ = updateCachedImageRecognizedContent(postbox: postbox, messageId: messageId, content: CachedImageRecognizedContent(results: results)).start()
+                    let _ = updateCachedImageRecognizedContent(engine: engine, messageId: messageId, content: CachedImageRecognizedContent(results: results)).start()
                 }
             )
         }

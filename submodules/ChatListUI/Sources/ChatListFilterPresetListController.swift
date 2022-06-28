@@ -10,19 +10,20 @@ import ItemListUI
 import AccountContext
 import ItemListPeerActionItem
 import ChatListFilterSettingsHeaderItem
+import PremiumUI
 
 private final class ChatListFilterPresetListControllerArguments {
     let context: AccountContext
     
-    let addSuggestedPresed: (String, ChatListFilterData) -> Void
+    let addSuggestedPressed: (String, ChatListFilterData) -> Void
     let openPreset: (ChatListFilter) -> Void
     let addNew: () -> Void
     let setItemWithRevealedOptions: (Int32?, Int32?) -> Void
     let removePreset: (Int32) -> Void
     
-    init(context: AccountContext, addSuggestedPresed: @escaping (String, ChatListFilterData) -> Void, openPreset: @escaping (ChatListFilter) -> Void, addNew: @escaping () -> Void, setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void, removePreset: @escaping (Int32) -> Void) {
+    init(context: AccountContext, addSuggestedPressed: @escaping (String, ChatListFilterData) -> Void, openPreset: @escaping (ChatListFilter) -> Void, addNew: @escaping () -> Void, setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void, removePreset: @escaping (Int32) -> Void) {
         self.context = context
-        self.addSuggestedPresed = addSuggestedPresed
+        self.addSuggestedPressed = addSuggestedPressed
         self.openPreset = openPreset
         self.addNew = addNew
         self.setItemWithRevealedOptions = setItemWithRevealedOptions
@@ -73,7 +74,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
     case suggestedPreset(index: PresetIndex, title: String, label: String, preset: ChatListFilterData)
     case suggestedAddCustom(String)
     case listHeader(String)
-    case preset(index: PresetIndex, title: String, label: String, preset: ChatListFilter, canBeReordered: Bool, canBeDeleted: Bool, isEditing: Bool)
+    case preset(index: PresetIndex, title: String, label: String, preset: ChatListFilter, canBeReordered: Bool, canBeDeleted: Bool, isEditing: Bool, isAllChats: Bool, isDisabled: Bool)
     case addItem(text: String, isEditing: Bool)
     case listFooter(String)
     
@@ -94,7 +95,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return 0
         case .listHeader:
             return 100
-        case let .preset(index, _, _, _, _, _, _):
+        case let .preset(index, _, _, _, _, _, _, _, _):
             return 101 + index.value
         case .addItem:
             return 1000
@@ -121,7 +122,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return .suggestedAddCustom
         case .listHeader:
             return .listHeader
-        case let .preset(_, _, _, preset, _, _, _):
+        case let .preset(_, _, _, preset, _, _, _, _, _):
             return .preset(preset.id)
         case .addItem:
             return .addItem
@@ -143,7 +144,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
         case let .suggestedPreset(_, title, label, preset):
             return ChatListFilterPresetListSuggestedItem(presentationData: presentationData, title: title, label: label, sectionId: self.section, style: .blocks, installAction: {
-                arguments.addSuggestedPresed(title, preset)
+                arguments.addSuggestedPressed(title, preset)
             }, tag: nil)
         case let .suggestedAddCustom(text):
             return ItemListPeerActionItem(presentationData: presentationData, icon: nil, title: text, sectionId: self.section, height: .generic, editing: false, action: {
@@ -151,9 +152,13 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             })
         case let .listHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
-        case let .preset(_, title, label, preset, canBeReordered, canBeDeleted, isEditing):
-            return ChatListFilterPresetListItem(presentationData: presentationData, preset: preset, title: title, label: label, editing: ChatListFilterPresetListItemEditing(editable: true, editing: isEditing, revealed: false), canBeReordered: canBeReordered, canBeDeleted: canBeDeleted, sectionId: self.section, action: {
-                arguments.openPreset(preset)
+        case let .preset(_, title, label, preset, canBeReordered, canBeDeleted, isEditing, isAllChats, isDisabled):
+            return ChatListFilterPresetListItem(presentationData: presentationData, preset: preset, title: title, label: label, editing: ChatListFilterPresetListItemEditing(editable: true, editing: isEditing, revealed: false), canBeReordered: canBeReordered, canBeDeleted: canBeDeleted, isAllChats: isAllChats, isDisabled: isDisabled, sectionId: self.section, action: {
+                if isDisabled {
+                    arguments.addNew()
+                } else {
+                    arguments.openPreset(preset)
+                }
             }, setItemWithRevealedOptions: { lhs, rhs in
                 arguments.setItemWithRevealedOptions(lhs, rhs)
             }, remove: {
@@ -190,16 +195,25 @@ private func filtersWithAppliedOrder(filters: [(ChatListFilter, Int)], order: [I
     return sortedFilters
 }
 
-private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filters: [(ChatListFilter, Int)], updatedFilterOrder: [Int32]?, suggestedFilters: [ChatListFeaturedFilter], settings: ChatListFilterSettings) -> [ChatListFilterPresetListEntry] {
+private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filters: [(ChatListFilter, Int)], updatedFilterOrder: [Int32]?, suggestedFilters: [ChatListFeaturedFilter], settings: ChatListFilterSettings, isPremium: Bool, limits: EngineConfiguration.UserLimits, premiumLimits: EngineConfiguration.UserLimits) -> [ChatListFilterPresetListEntry] {
     var entries: [ChatListFilterPresetListEntry] = []
 
     entries.append(.screenHeader(presentationData.strings.ChatListFolderSettings_Info))
     
     let filteredSuggestedFilters = suggestedFilters.filter { suggestedFilter in
         for (filter, _) in filters {
-            if filter.data == suggestedFilter.data {
-                return false
+            if case let .filter(_, _, _, data) = filter {
+                if data == suggestedFilter.data {
+                    return false
+                }
             }
+        }
+        return true
+    }
+    
+    let actualFilters = filters.filter { filter in
+        if case .allChats = filter.0 {
+            return false
         }
         return true
     }
@@ -207,16 +221,23 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
     if !filters.isEmpty || suggestedFilters.isEmpty {
         entries.append(.listHeader(presentationData.strings.ChatListFolderSettings_FoldersSection))
         
+        var folderCount = 0
         for (filter, chatCount) in filtersWithAppliedOrder(filters: filters, order: updatedFilterOrder) {
-            entries.append(.preset(index: PresetIndex(value: entries.count), title: filter.title, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing))
+            if isPremium, case .allChats = filter {
+                entries.append(.preset(index: PresetIndex(value: entries.count), title: "", label: "", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: false, isEditing: state.isEditing, isAllChats: true, isDisabled: false))
+            }
+            if case let .filter(_, title, _, _) = filter {
+                folderCount += 1
+                entries.append(.preset(index: PresetIndex(value: entries.count), title: title, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing, isAllChats: false, isDisabled: !isPremium && folderCount > limits.maxFoldersCount))
+            }
         }
-        if filters.count < 10 {
-            entries.append(.addItem(text: presentationData.strings.ChatListFolderSettings_NewFolder, isEditing: state.isEditing))
-        }
+        
+        entries.append(.addItem(text: presentationData.strings.ChatListFolderSettings_NewFolder, isEditing: state.isEditing))
+        
         entries.append(.listFooter(presentationData.strings.ChatListFolderSettings_EditFoldersInfo))
     }
     
-    if !filteredSuggestedFilters.isEmpty && filters.count < 10 {
+    if !filteredSuggestedFilters.isEmpty && actualFilters.count < limits.maxFoldersCount {
         entries.append(.suggestedListHeader(presentationData.strings.ChatListFolderSettings_RecommendedFoldersSection))
         for filter in filteredSuggestedFilters {
             entries.append(.suggestedPreset(index: PresetIndex(value: entries.count), title: filter.title, label: filter.description, preset: filter.data))
@@ -246,20 +267,107 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
+    let filtersWithCountsSignal = context.engine.peers.updatedChatListFilters()
+    |> distinctUntilChanged
+    |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
+        return .single(filters.map { filter -> (ChatListFilter, Int) in
+            return (filter, 0)
+        })
+    }
+    
+    let filtersWithCounts = Promise<[(ChatListFilter, Int)]>()
+    filtersWithCounts.set(filtersWithCountsSignal)
+    
     let arguments = ChatListFilterPresetListControllerArguments(context: context,
-    addSuggestedPresed: { title, data in
-        let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
-            var filters = filters
-            let id = context.engine.peers.generateNewChatListFilterId(filters: filters)
-            filters.insert(ChatListFilter(id: id, title: title, emoticon: nil, data: data), at: 0)
-            return filters
-        }
-        |> deliverOnMainQueue).start(next: { _ in
+    addSuggestedPressed: { title, data in
+        let _ = combineLatest(
+            queue: Queue.mainQueue(),
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+            ),
+            filtersWithCounts.get() |> take(1)
+        ).start(next: { result, filters in
+            let (accountPeer, limits, premiumLimits) = result
+            let isPremium = accountPeer?.isPremium ?? false
+            
+            let filters = filters.filter { filter in
+                if case .allChats = filter.0 {
+                    return false
+                }
+                return true
+            }
+            
+            let limit = limits.maxFoldersCount
+            let premiumLimit = premiumLimits.maxFoldersCount
+            if filters.count >= premiumLimit {
+                let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {})
+                pushControllerImpl?(controller)
+                return
+            } else if filters.count >= limit && !isPremium {
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {
+                    let controller = PremiumIntroScreen(context: context, source: .folders)
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
+                }
+                pushControllerImpl?(controller)
+                return
+            }
+            let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
+                var filters = filters
+                let id = context.engine.peers.generateNewChatListFilterId(filters: filters)
+                filters.insert(.filter(id: id, title: title, emoticon: nil, data: data), at: 0)
+                return filters
+            }
+            |> deliverOnMainQueue).start(next: { _ in
+            })
         })
     }, openPreset: { preset in
         pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: preset, updated: { _ in }))
     }, addNew: {
-        pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: nil, updated: { _ in }))
+        let _ = combineLatest(
+            queue: Queue.mainQueue(),
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+            ),
+            filtersWithCounts.get() |> take(1)
+        ).start(next: { result, filters in
+            let (accountPeer, limits, premiumLimits) = result
+            let isPremium = accountPeer?.isPremium ?? false
+            
+            let filters = filters.filter { filter in
+                if case .allChats = filter.0 {
+                    return false
+                }
+                return true
+            }
+            
+            let limit = limits.maxFoldersCount
+            let premiumLimit = premiumLimits.maxFoldersCount
+            if filters.count >= premiumLimit {
+                let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {})
+                pushControllerImpl?(controller)
+                return
+            } else if filters.count >= limit && !isPremium {
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {
+                    let controller = PremiumIntroScreen(context: context, source: .folders)
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
+                }
+                pushControllerImpl?(controller)
+                return
+            }
+            pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: nil, updated: { _ in }))
+        })
     }, setItemWithRevealedOptions: { preset, fromPreset in
         updateState { state in
             var state = state
@@ -296,15 +404,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         ])
         presentControllerImpl?(actionSheet)
     })
-    
-    let filtersWithCountsSignal = context.engine.peers.updatedChatListFilters()
-    |> distinctUntilChanged
-    |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
-        return .single(filters.map { filter -> (ChatListFilter, Int) in
-            return (filter, 0)
-        })
-    }
-    
+        
     let featuredFilters = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFiltersFeaturedState])
     |> map { preferences -> [ChatListFeaturedFilter] in
         guard let state = preferences.values[PreferencesKeys.chatListFiltersFeaturedState]?.get(ChatListFiltersFeaturedState.self) else {
@@ -313,23 +413,30 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         return state.filters
     }
     |> distinctUntilChanged
-    
-    let filtersWithCounts = Promise<[(ChatListFilter, Int)]>()
-    filtersWithCounts.set(filtersWithCountsSignal)
-    
+        
     let updatedFilterOrder = Promise<[Int32]?>(nil)
     
     let preferences = context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.chatListFilterSettings])
     
+    let limits = context.engine.data.get(
+        TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+        TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+    )
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
         statePromise.get(),
         filtersWithCounts.get(),
         preferences,
         updatedFilterOrder.get(),
-        featuredFilters
+        featuredFilters,
+        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+        limits
     )
-    |> map { presentationData, state, filtersWithCountsValue, preferences, updatedFilterOrderValue, suggestedFilters -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, filtersWithCountsValue, preferences, updatedFilterOrderValue, suggestedFilters, peer, allLimits -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let isPremium = peer?.isPremium ?? false
+        let limits = allLimits.0
+        let premiumLimits = allLimits.1
+        
         let filterSettings = preferences.values[ApplicationSpecificPreferencesKeys.chatListFilterSettings]?.get(ChatListFilterSettings.self) ?? ChatListFilterSettings.default
         let leftNavigationButton: ItemListNavigationButton?
         switch mode {
@@ -398,7 +505,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatListFolderSettings_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, settings: filterSettings), style: .blocks, animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, settings: filterSettings, isPremium: isPremium, limits: limits, premiumLimits: premiumLimits), style: .blocks, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     }
@@ -428,7 +535,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     }
     controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [ChatListFilterPresetListEntry]) -> Signal<Bool, NoError> in
         let fromEntry = entries[fromIndex]
-        guard case let .preset(_, _, _, fromPreset, _, _, _) = fromEntry else {
+        guard case let .preset(_, _, _, fromPreset, _, _, _, _, _) = fromEntry else {
             return .single(false)
         }
         var referenceFilter: ChatListFilter?
@@ -436,7 +543,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         var afterAll = false
         if toIndex < entries.count {
             switch entries[toIndex] {
-            case let .preset(_, _, _, preset, _, _, _):
+            case let .preset(_, _, _, preset, _, _, _, _, _):
                 referenceFilter = preset
             default:
                 if entries[toIndex] < fromEntry {

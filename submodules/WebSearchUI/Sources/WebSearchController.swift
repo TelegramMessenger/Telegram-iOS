@@ -129,7 +129,7 @@ public final class WebSearchController: ViewController {
     private let mode: WebSearchControllerMode
     private let peer: EnginePeer?
     private let chatLocation: ChatLocation?
-    private let configuration: SearchBotsConfiguration
+    private let configuration: EngineConfiguration.SearchBots
     
     private var controllerNode: WebSearchControllerNode {
         return self.displayNode as! WebSearchControllerNode
@@ -170,7 +170,7 @@ public final class WebSearchController: ViewController {
     
     public var searchingUpdated: (Bool) -> Void = { _ in }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, configuration: EngineConfiguration.SearchBots, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode
         self.peer = peer
@@ -280,7 +280,7 @@ public final class WebSearchController: ViewController {
             }
         }, deleteRecentQuery: { [weak self] query in
             if let strongSelf = self {
-                _ = removeRecentWebSearchQuery(postbox: strongSelf.context.account.postbox, string: query).start()
+                let _ = removeRecentWebSearchQuery(engine: strongSelf.context.engine, string: query).start()
             }
         }, toggleSelection: { [weak self] result, value in
             if let strongSelf = self {
@@ -415,7 +415,7 @@ public final class WebSearchController: ViewController {
     
     private func updateSearchQuery(_ query: String) {
         if !query.isEmpty {
-            let _ = addRecentWebSearchQuery(postbox: self.context.account.postbox, string: query).start()
+            let _ = addRecentWebSearchQuery(engine: self.context.engine, string: query).start()
         }
         
         let scope: Signal<WebSearchScope?, NoError>

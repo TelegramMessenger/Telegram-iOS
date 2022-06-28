@@ -1096,6 +1096,13 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if canTranslate {
                     actions.append(ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuTranslate, accessibilityLabel: strings.Conversation_ContextMenuTranslate), action: { [weak self] in
                         let controller = TranslateScreen(context: context, text: text, fromLanguage: language)
+                        controller.pushController = { [weak self] c in
+                            (self?.controller?.navigationController as? NavigationController)?._keepModalDismissProgress = true
+                            self?.controller?.push(c)
+                        }
+                        controller.presentController = { [weak self] c in
+                            self?.controller?.present(c, in: .window(.root))
+                        }
                         self?.present(controller, nil)
                     }))
                 }

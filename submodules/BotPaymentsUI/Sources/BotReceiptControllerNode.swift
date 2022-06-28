@@ -305,8 +305,8 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         self.actionButtonPanelSeparator = ASDisplayNode()
         self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         
-        self.actionButton = BotCheckoutActionButton(activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.plainBackgroundColor)
-        self.actionButton.setState(.active(self.presentationData.strings.Common_Done))
+        self.actionButton = BotCheckoutActionButton(activeFillColor: self.presentationData.theme.list.itemAccentColor, inactiveFillColor: self.presentationData.theme.list.itemDisabledTextColor, foregroundColor: self.presentationData.theme.list.plainBackgroundColor)
+        self.actionButton.setState(.active(text: self.presentationData.strings.Common_Done, isEnabled: true))
         
         super.init(controller: controller, navigationBar: navigationBar, state: signal)
         

@@ -13,7 +13,7 @@ public struct ContentSettings: Equatable {
     }
 }
 
-private extension ContentSettings {
+extension ContentSettings {
     init(appConfiguration: AppConfiguration) {
         var reasons: [String] = []
         if let data = appConfiguration.data, let reasonsData = data["ignore_restriction_reasons"] as? [String] {

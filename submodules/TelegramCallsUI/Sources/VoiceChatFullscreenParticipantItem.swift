@@ -495,19 +495,24 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
 
             let leftInset: CGFloat = 58.0 + params.leftInset
             
+//            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
+            
             var titleIconsWidth: CGFloat = 0.0
-            var currentCredibilityIconImage: UIImage?
-            var credibilityIconOffset: CGFloat = 0.0
-            if item.peer.isScam {
-                currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
-                credibilityIconOffset = 2.0
-            } else if item.peer.isFake {
-                currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
-                credibilityIconOffset = 2.0
-            } else if item.peer.isVerified {
-                currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-                credibilityIconOffset = 3.0
-            }
+            let currentCredibilityIconImage: UIImage? = nil
+            let credibilityIconOffset: CGFloat = 0.0
+//            if item.peer.isScam {
+//                currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+//                credibilityIconOffset = 2.0
+//            } else if item.peer.isFake {
+//                currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+//                credibilityIconOffset = 2.0
+//            } else if item.peer.isVerified {
+//                currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+//                credibilityIconOffset = 3.0
+//            } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+//                currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+//                credibilityIconOffset = 3.0
+//            }
             
             if let currentCredibilityIconImage = currentCredibilityIconImage {
                 titleIconsWidth += 4.0 + currentCredibilityIconImage.size.width

@@ -212,14 +212,12 @@ using AS::MutexLocker;
     displayBlock = ^id{
       CHECK_CANCELLED_AND_RETURN_NIL();
       
-      ASGraphicsBeginImageContextWithOptions(bounds.size, opaque, contentsScaleForDisplay);
-
-      for (dispatch_block_t block in displayBlocks) {
-        CHECK_CANCELLED_AND_RETURN_NIL(ASGraphicsEndImageContext());
-        block();
-      }
-      
-      UIImage *image = ASGraphicsGetImageAndEndCurrentContext();
+        UIImage *image = ASGraphicsCreateImage(self.primitiveTraitCollection, bounds.size, opaque, contentsScaleForDisplay, nil, isCancelledBlock, ^{
+            for (dispatch_block_t block in displayBlocks) {
+                if (isCancelledBlock()) return;
+                block();
+            }
+        });
 
       ASDN_DELAY_FOR_DISPLAY();
       return image;
@@ -228,38 +226,35 @@ using AS::MutexLocker;
     displayBlock = ^id{
       CHECK_CANCELLED_AND_RETURN_NIL();
 
-      if (shouldCreateGraphicsContext) {
-        ASGraphicsBeginImageContextWithOptions(bounds.size, opaque, contentsScaleForDisplay);
-        CHECK_CANCELLED_AND_RETURN_NIL( ASGraphicsEndImageContext(); );
-      }
-
-      CGContextRef currentContext = UIGraphicsGetCurrentContext();
-      UIImage *image = nil;
-
-      if (shouldCreateGraphicsContext && !currentContext) {
-        //ASDisplayNodeAssert(NO, @"Failed to create a CGContext (size: %@)", NSStringFromCGSize(bounds.size));
-        return nil;
-      }
-
-      // For -display methods, we don't have a context, and thus will not call the _willDisplayNodeContentWithRenderingContext or
-      // _didDisplayNodeContentWithRenderingContext blocks. It's up to the implementation of -display... to do what it needs.
-      [self __willDisplayNodeContentWithRenderingContext:currentContext drawParameters:drawParameters];
-      
-      if (usesImageDisplay) {                                   // If we are using a display method, we'll get an image back directly.
-        image = [self.class displayWithParameters:drawParameters isCancelled:isCancelledBlock];
-      } else if (usesDrawRect) {                                // If we're using a draw method, this will operate on the currentContext.
-        [self.class drawRect:bounds withParameters:drawParameters isCancelled:isCancelledBlock isRasterizing:rasterizing];
-      }
-      
-      [self __didDisplayNodeContentWithRenderingContext:currentContext image:&image drawParameters:drawParameters backgroundColor:backgroundColor borderWidth:borderWidth borderColor:borderColor];
-      
-      if (shouldCreateGraphicsContext) {
-        CHECK_CANCELLED_AND_RETURN_NIL( ASGraphicsEndImageContext(); );
-        image = ASGraphicsGetImageAndEndCurrentContext();
-      }
-
-      ASDN_DELAY_FOR_DISPLAY();
-      return image;
+        __block UIImage *image = nil;
+        void (^workWithContext)() = ^{
+            CGContextRef currentContext = UIGraphicsGetCurrentContext();
+            
+            if (shouldCreateGraphicsContext && !currentContext) {
+                ASDisplayNodeAssert(NO, @"Failed to create a CGContext (size: %@)", NSStringFromCGSize(bounds.size));
+                return;
+            }
+            
+            // For -display methods, we don't have a context, and thus will not call the _willDisplayNodeContentWithRenderingContext or
+            // _didDisplayNodeContentWithRenderingContext blocks. It's up to the implementation of -display... to do what it needs.
+            [self __willDisplayNodeContentWithRenderingContext:currentContext drawParameters:drawParameters];
+            
+            if (usesImageDisplay) {                                   // If we are using a display method, we'll get an image back directly.
+                image = [self.class displayWithParameters:drawParameters isCancelled:isCancelledBlock];
+            } else if (usesDrawRect) {                                // If we're using a draw method, this will operate on the currentContext.
+                [self.class drawRect:bounds withParameters:drawParameters isCancelled:isCancelledBlock isRasterizing:rasterizing];
+            }
+            
+            [self __didDisplayNodeContentWithRenderingContext:currentContext image:&image drawParameters:drawParameters backgroundColor:backgroundColor borderWidth:borderWidth borderColor:borderColor];
+            ASDN_DELAY_FOR_DISPLAY();
+        };
+        
+        if (shouldCreateGraphicsContext) {
+            return ASGraphicsCreateImage(self.primitiveTraitCollection, bounds.size, opaque, contentsScaleForDisplay, nil, isCancelledBlock, workWithContext);
+        } else {
+            workWithContext();
+            return image;
+        }
     };
   }
 
@@ -309,57 +304,12 @@ using AS::MutexLocker;
   }
   
   __instanceLock__.lock();
-    ASCornerRoundingType cornerRoundingType = _cornerRoundingType;
-    CGFloat cornerRadius = _cornerRadius;
-    CGFloat contentsScale = _contentsScaleForDisplay;
     ASDisplayNodeContextModifier didDisplayNodeContentWithRenderingContext = _didDisplayNodeContentWithRenderingContext;
   __instanceLock__.unlock();
   
   if (context != NULL) {
     if (didDisplayNodeContentWithRenderingContext) {
       didDisplayNodeContentWithRenderingContext(context, drawParameters);
-    }
-  }
-
-  if (cornerRoundingType == ASCornerRoundingTypePrecomposited && cornerRadius > 0.0f) {
-    CGRect bounds = CGRectZero;
-    if (context == NULL) {
-      bounds = self.threadSafeBounds;
-      bounds.size.width *= contentsScale;
-      bounds.size.height *= contentsScale;
-      CGFloat white = 0.0f, alpha = 0.0f;
-      [backgroundColor getWhite:&white alpha:&alpha];
-      ASGraphicsBeginImageContextWithOptions(bounds.size, (alpha == 1.0f), contentsScale);
-      [*image drawInRect:bounds];
-    } else {
-      bounds = CGContextGetClipBoundingBox(context);
-    }
-    
-    ASDisplayNodeAssert(UIGraphicsGetCurrentContext(), @"context is expected to be pushed on UIGraphics stack %@", self);
-    
-    UIBezierPath *roundedHole = [UIBezierPath bezierPathWithRect:bounds];
-    [roundedHole appendPath:[UIBezierPath bezierPathWithRoundedRect:bounds cornerRadius:cornerRadius * contentsScale]];
-    roundedHole.usesEvenOddFillRule = YES;
-    
-    UIBezierPath *roundedPath = nil;
-    if (borderWidth > 0.0f) {  // Don't create roundedPath and stroke if borderWidth is 0.0
-      CGFloat strokeThickness = borderWidth * contentsScale;
-      CGFloat strokeInset = ((strokeThickness + 1.0f) / 2.0f) - 1.0f;
-      roundedPath = [UIBezierPath bezierPathWithRoundedRect:CGRectInset(bounds, strokeInset, strokeInset)
-                                               cornerRadius:_cornerRadius * contentsScale];
-      roundedPath.lineWidth = strokeThickness;
-      [[UIColor colorWithCGColor:borderColor] setStroke];
-    }
-    
-    // Punch out the corners by copying the backgroundColor over them.
-    // This works for everything from clearColor to opaque colors.
-    [backgroundColor setFill];
-    [roundedHole fillWithBlendMode:kCGBlendModeCopy alpha:1.0f];
-    
-    [roundedPath stroke];  // Won't do anything if borderWidth is 0 and roundedPath is nil.
-    
-    if (*image) {
-      *image = ASGraphicsGetImageAndEndCurrentContext();
     }
   }
 }

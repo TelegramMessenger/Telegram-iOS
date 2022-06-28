@@ -1090,43 +1090,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {
         switch gesture {
-            case .tap:
-                if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
-                    if let item = self.item, let author = item.content.firstMessage.author {
-                        return .optionalAction({
-                            var openPeerId = item.effectiveAuthorId ?? author.id
-                            var navigate: ChatControllerInteractionNavigateToPeer
-                            
-                            if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                navigate = .chat(textInputState: nil, subject: nil, peekData: nil)
-                            } else {
-                                navigate = .info
-                            }
-                            
-                            for attribute in item.content.firstMessage.attributes {
-                                if let attribute = attribute as? SourceReferenceMessageAttribute {
-                                    openPeerId = attribute.messageId.peerId
-                                    navigate = .chat(textInputState: nil, subject: .message(id: .id(attribute.messageId), highlight: true, timecode: nil), peekData: nil)
-                                }
-                            }
-                            
-                            if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
-                                item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
-                            } else if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported), forwardInfo.author == nil {
-                                item.controllerInteraction.displayImportedMessageTooltip(avatarNode)
-                            } else {
-                                if !item.message.id.peerId.isReplies, let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
-                                    if case .member = channel.participationStatus {
-                                    } else {
-                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
-                                    }
-                                }
-                                item.controllerInteraction.openPeer(openPeerId, navigate, MessageReference(item.message), item.message.peers[openPeerId])
-                            }
-                        })
-                    }
-                }
-                
+            case .tap:                
                 if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(location) {
                     if let item = self.item {
                         for attribute in item.message.attributes {

@@ -160,6 +160,9 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     var fileSelected: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect) -> Void)?
     var fileContextMenu: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
     var enableVideoNodes = false
+        
+    private var currentActivatingId: VisibleVideoItem.Id?
+    private var isFinishingActivation = false
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
@@ -174,6 +177,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         self.timebase = timebase!
         
         self.contextContainerNode = ContextControllerSourceNode()
+        self.contextContainerNode.animateScale = false
         self.scrollNode = ASScrollNode()
         
         self.trendingTitleNode = ImmediateTextNode()
@@ -243,14 +247,70 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 return false
             }
             gestureLocation = point
-            return strongSelf.fileAt(point: point) != nil
+            if let (id, _, _, _) = strongSelf.internalFileAt(point: point) {
+                strongSelf.currentActivatingId = id
+                return true
+            } else {
+                return false
+            }
+        }
+        
+        self.contextContainerNode.customActivationProgress = { [weak self] progress, update in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if let currentActivatingId = strongSelf.currentActivatingId, let (_, layer) = strongSelf.visibleLayers[currentActivatingId] {
+                let layer = layer.layer
+                
+                let targetContentRect: CGRect = layer.bounds
+                
+                let scaleSide = targetContentRect.width
+                let minScale: CGFloat = max(0.7, (scaleSide - 15.0) / scaleSide)
+                let currentScale = 1.0 * (1.0 - progress) + minScale * progress
+                
+                let originalCenterOffsetX: CGFloat = targetContentRect.width / 2.0 - targetContentRect.midX
+                let scaledCenterOffsetX: CGFloat = originalCenterOffsetX * currentScale
+                
+                let originalCenterOffsetY: CGFloat = targetContentRect.height / 2.0 - targetContentRect.midY
+                let scaledCenterOffsetY: CGFloat = originalCenterOffsetY * currentScale
+                
+                let scaleMidX: CGFloat = scaledCenterOffsetX - originalCenterOffsetX
+                let scaleMidY: CGFloat = scaledCenterOffsetY - originalCenterOffsetY
+                
+                switch update {
+                case .update:
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    layer.sublayerTransform = sublayerTransform
+                case .begin:
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    layer.sublayerTransform = sublayerTransform
+                    
+                    if let thumbnail = strongSelf.visibleThumbnailLayers[currentActivatingId] {
+                        thumbnail.isHidden = true
+                    }
+                case .ended:
+                    if !strongSelf.isFinishingActivation {
+                        strongSelf.isFinishingActivation = true
+                        let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                        let previousTransform = layer.sublayerTransform
+                        layer.sublayerTransform = sublayerTransform
+                        layer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: sublayerTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, completion: { _ in
+                            strongSelf.isFinishingActivation = false
+                            if let thumbnail = strongSelf.visibleThumbnailLayers[currentActivatingId] {
+                                thumbnail.isHidden = false
+                            }
+                        })
+                    }
+                }
+            }
         }
         
         self.contextContainerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let gestureLocation = gestureLocation else {
                 return
             }
-            if let (file, rect, isSaved) = strongSelf.fileAt(point: gestureLocation) {
+            if let (_, file, rect, isSaved) = strongSelf.internalFileAt(point: gestureLocation) {
                 if !strongSelf.files.isStale {
                     strongSelf.fileContextMenu?(file, strongSelf, rect.offsetBy(dx: 0.0, dy: -strongSelf.scrollNode.bounds.minY), gesture, isSaved)
                 } else {
@@ -670,7 +730,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     @objc func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: self.view)
-            if let (file, rect, _) = self.fileAt(point: point) {
+            if let (_, file, rect, _) = self.internalFileAt(point: point) {
                 if !self.files.isStale {
                     self.fileSelected?(file, self, rect)
                 }
@@ -688,11 +748,19 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func fileAt(point: CGPoint) -> (MultiplexedVideoNodeFile, CGRect, Bool)? {
+        if let result = self.internalFileAt(point: point) {
+            return (result.1, result.2, result.3)
+        } else {
+            return nil
+        }
+    }
+    
+    private func internalFileAt(point: CGPoint) -> (VisibleVideoItem.Id, MultiplexedVideoNodeFile, CGRect, Bool)? {
         let offsetPoint = point.offsetBy(dx: 0.0, dy: self.scrollNode.bounds.minY)
         return self.offsetFileAt(point: offsetPoint)
     }
     
-    private func offsetFileAt(point: CGPoint) -> (MultiplexedVideoNodeFile, CGRect, Bool)? {
+    private func offsetFileAt(point: CGPoint) -> (VisibleVideoItem.Id, MultiplexedVideoNodeFile, CGRect, Bool)? {
         for item in self.displayItems {
             if item.frame.contains(point) {
                 let isSaved: Bool
@@ -702,7 +770,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
                 case .trending:
                     isSaved = false
                 }
-                return (item.file, item.frame, isSaved)
+                return (item.id, item.file, item.frame, isSaved)
             }
         }
         return nil

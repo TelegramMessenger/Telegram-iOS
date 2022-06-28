@@ -196,32 +196,34 @@ class ChatStatusChecksTooltipContentNode: ASDisplayNode, TooltipControllerCustom
         self.deliveredChecksNode.updateState(false, animated: true)
         self.readChecksNode.updateState(false, animated: true)
         
-        self.deliveredChecksNode.layer.animateScale(from: 1.0, to: 1.12, duration: 0.25, delay: 0.1, removeOnCompletion: false, completion: { [weak self] _ in
-            if let strongSelf = self {
-                strongSelf.deliveredChecksNode.layer.animateScale(from: 1.12, to: 1.0, duration: 0.25)
-            }
-        })
-        
-        self.deliveredTextNode.layer.animateScale(from: 1.0, to: 1.12, duration: 0.25, delay: 0.1, removeOnCompletion: false, completion: { [weak self] _ in
-            if let strongSelf = self {
-                strongSelf.deliveredTextNode.layer.animateScale(from: 1.12, to: 1.0, duration: 0.25)
-            }
-        })
-        
-        Queue.mainQueue().after(0.5) {
-            self.readChecksNode.updateState(true, animated: true)
-            
-            self.readChecksNode.layer.animateScale(from: 1.0, to: 1.12, duration: 0.25, removeOnCompletion: false, completion: { [weak self] _ in
+        Queue.mainQueue().after(0.25) {
+            self.deliveredChecksNode.layer.animateScale(from: 1.0, to: 1.12, duration: 0.25, delay: 0.0, removeOnCompletion: false, completion: { [weak self] _ in
                 if let strongSelf = self {
-                    strongSelf.readChecksNode.layer.animateScale(from: 1.12, to: 1.0, duration: 0.25)
+                    strongSelf.deliveredChecksNode.layer.animateScale(from: 1.12, to: 1.0, duration: 0.25)
                 }
             })
             
-            self.readTextNode.layer.animateScale(from: 1.0, to: 1.12, duration: 0.25, removeOnCompletion: false, completion: { [weak self] _ in
+            self.deliveredTextNode.layer.animateScale(from: 1.0, to: 1.12, duration: 0.25, delay: 0.0, removeOnCompletion: false, completion: { [weak self] _ in
                 if let strongSelf = self {
-                    strongSelf.readTextNode.layer.animateScale(from: 1.12, to: 1.0, duration: 0.25)
+                    strongSelf.deliveredTextNode.layer.animateScale(from: 1.12, to: 1.0, duration: 0.25)
                 }
             })
+            
+            Queue.mainQueue().after(0.5) {
+                self.readChecksNode.updateState(true, animated: true)
+                
+                self.readChecksNode.layer.animateScale(from: 1.0, to: 1.12, duration: 0.25, removeOnCompletion: false, completion: { [weak self] _ in
+                    if let strongSelf = self {
+                        strongSelf.readChecksNode.layer.animateScale(from: 1.12, to: 1.0, duration: 0.25)
+                    }
+                })
+                
+                self.readTextNode.layer.animateScale(from: 1.0, to: 1.12, duration: 0.25, removeOnCompletion: false, completion: { [weak self] _ in
+                    if let strongSelf = self {
+                        strongSelf.readTextNode.layer.animateScale(from: 1.12, to: 1.0, duration: 0.25)
+                    }
+                })
+            }
         }
     }
     

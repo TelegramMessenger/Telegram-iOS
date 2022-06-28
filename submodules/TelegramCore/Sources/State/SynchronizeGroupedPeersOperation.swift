@@ -2,14 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-
-public func updatePeerGroupIdInteractively(postbox: Postbox, peerId: PeerId, groupId: PeerGroupId) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: groupId)
-    }
-}
-
-public func updatePeerGroupIdInteractively(transaction: Transaction, peerId: PeerId, groupId: PeerGroupId) {
+func _internal_updatePeerGroupIdInteractively(transaction: Transaction, peerId: PeerId, groupId: PeerGroupId) {
     let initialInclusion = transaction.getPeerChatListInclusion(peerId)
     var updatedInclusion = initialInclusion
     switch initialInclusion {

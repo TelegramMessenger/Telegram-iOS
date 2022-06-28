@@ -18,7 +18,9 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, st
         let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: primaryColor)
         let bold = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: primaryColor)
         return parseMarkdownIntoAttributedString(strings.Login_ShortCallTitle, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
-    case .call, .flashCall:
+    case .call:
+        return NSAttributedString(string: strings.Login_CodeSentCall, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
+    case .flashCall:
         return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
     }
 }
@@ -35,7 +37,13 @@ public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, 
                 let timeString = NSString(format: "%d:%.02d", Int(minutes), Int(seconds))
                 return (NSAttributedString(string: strings.Login_WillSendSms(timeString as String).string, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
             }
-        case .call, .flashCall, .missedCall:
+        case .call:
+            if timeout <= 0 {
+                return (NSAttributedString(string: strings.Login_CodeSentCall, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+            } else {
+                return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).string, minutes, seconds), font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+            }
+        case .flashCall, .missedCall:
             if timeout <= 0 {
                 return (NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
             } else {

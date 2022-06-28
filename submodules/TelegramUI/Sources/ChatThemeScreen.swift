@@ -189,10 +189,10 @@ private func ensureThemeVisible(listNode: ListView, emoticon: String?, animated:
     }
     if let resultNode = resultNode {
         var nodeToEnsure = resultNode
-        if case let .visible(resultVisibility) = resultNode.visibility, resultVisibility == 1.0 {
-            if let previousNode = previousNode, case let .visible(previousVisibility) = previousNode.visibility, previousVisibility < 0.5 {
+        if case let .visible(resultVisibility, _) = resultNode.visibility, resultVisibility == 1.0 {
+            if let previousNode = previousNode, case let .visible(previousVisibility, _) = previousNode.visibility, previousVisibility < 0.5 {
                 nodeToEnsure = previousNode
-            } else if let nextNode = nextNode, case let .visible(nextVisibility) = nextNode.visibility, nextVisibility < 0.5 {
+            } else if let nextNode = nextNode, case let .visible(nextVisibility, _) = nextNode.visibility, nextVisibility < 0.5 {
                 nodeToEnsure = nextNode
             }
         }
@@ -362,7 +362,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             Queue.mainQueue().after(0.1) {
                 if !wasSelected {
                     animatedStickerNode.seekTo(.frameIndex(0))
-                    animatedStickerNode.play()
+                    animatedStickerNode.play(firstFrame: false, fromIndex: nil)
                     
                     let scale: CGFloat = 2.6
                     animatedStickerNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
@@ -479,7 +479,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         if let current = strongSelf.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
-                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                             animatedStickerNode.started = { [weak self] in
                                 self?.emojiImageNode.isHidden = true
                             }

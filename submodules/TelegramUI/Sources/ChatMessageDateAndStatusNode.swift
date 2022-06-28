@@ -226,7 +226,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     var reactionSelected: ((String) -> Void)?
-    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingNode, String) -> Void)?
+    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, String) -> Void)?
     
     override init() {
         self.dateNode = TextNode()
@@ -801,24 +801,25 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 reactionButtonPosition.y += item.size.height + 6.0
                             }
                                 
-                            if item.node.supernode == nil {
-                                strongSelf.addSubnode(item.node)
-                                item.node.frame = CGRect(origin: reactionButtonPosition, size: item.size)
+                            if item.node.view.superview != strongSelf.view {
+                                assert(item.node.view.superview == nil)
+                                strongSelf.view.addSubview(item.node.view)
+                                item.node.view.frame = CGRect(origin: reactionButtonPosition, size: item.size)
                                 
                                 if animation.isAnimated {
-                                    item.node.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-                                    item.node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    item.node.view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                                    item.node.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 }
                             } else {
-                                animation.animator.updateFrame(layer: item.node.layer, frame: CGRect(origin: reactionButtonPosition, size: item.size), completion: nil)
+                                animation.animator.updateFrame(layer: item.node.view.layer, frame: CGRect(origin: reactionButtonPosition, size: item.size), completion: nil)
                             }
                             
                             let itemValue = item.value
                             let itemNode = item.node
-                            item.node.isGestureEnabled = true
+                            item.node.view.isGestureEnabled = true
                             let canViewReactionList = arguments.canViewReactionList
-                            item.node.activateAfterCompletion = !canViewReactionList
-                            item.node.activated = { [weak itemNode] gesture, _ in
+                            item.node.view.activateAfterCompletion = !canViewReactionList
+                            item.node.view.activated = { [weak itemNode] gesture, _ in
                                 guard let strongSelf = self, canViewReactionList else {
                                     return
                                 }
@@ -827,7 +828,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 }
                                 
                                 if let openReactionPreview = strongSelf.openReactionPreview {
-                                    openReactionPreview(gesture, itemNode.containerNode, itemValue)
+                                    openReactionPreview(gesture, itemNode.view.containerView, itemValue)
                                 } else {
                                     gesture.cancel()
                                 }
@@ -838,12 +839,12 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         
                         for node in reactionButtons.removedNodes {
                             if animation.isAnimated {
-                                node.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
-                                node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
-                                    node?.removeFromSupernode()
+                                node.view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                                node.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                    node.view.removeFromSuperview()
                                 })
                             } else {
-                                node.removeFromSupernode()
+                                node.view.removeFromSuperview()
                             }
                         }
                         
@@ -1072,6 +1073,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     if animation.isAnimated {
                                         node.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
                                         node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
+                                            node?.layer.removeAllAnimations()
                                             node?.removeFromSupernode()
                                         })
                                     } else {
@@ -1195,7 +1197,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
         for (key, button) in self.reactionButtonsContainer.buttons {
             if key == value {
-                return button.iconView
+                return button.view.iconView
             }
         }
         return nil
@@ -1203,8 +1205,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         for (_, button) in self.reactionButtonsContainer.buttons {
-            if button.frame.contains(point) {
-                if let result = button.hitTest(self.view.convert(point, to: button.view), with: event) {
+            if button.view.frame.contains(point) {
+                if let result = button.view.hitTest(self.view.convert(point, to: button.view), with: event) {
                     return result
                 }
             }

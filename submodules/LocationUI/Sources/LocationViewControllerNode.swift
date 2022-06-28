@@ -348,9 +348,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         let previousEntries = Atomic<[LocationViewEntry]?>(value: nil)
         let previousHadTravelTimes = Atomic<Bool>(value: false)
         
-        let selfPeer = context.account.postbox.transaction { transaction -> Peer? in
-            return transaction.getPeer(context.account.peerId)
-        }
+        let selfPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
                         
         self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), selfPeer, liveLocations, self.headerNode.mapNode.userLocation, userLocation, address, eta, self.travelTimesPromise.get())
         |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, selfPeer, liveLocations, userLocation, distance, address, eta, travelTimes in
@@ -462,7 +460,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         
                         let timestamp = CACurrentMediaTime()
                         if message.localTags.contains(.OutgoingLiveLocation), let selfPeer = selfPeer {
-                            userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, isSelf: true, heading: location.heading)
+                            userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer._asPeer(), isSelf: true, heading: location.heading)
                         } else {
                             var drivingTime: ExpectedTravelTime = .unknown
                             var transitTime: ExpectedTravelTime = .unknown
@@ -517,7 +515,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                                 }
                             }
                             
-                            annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, isSelf: message.author?.id == context.account.peerId, heading: location.heading))
+                            annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer?._asPeer(), isSelf: message.author?.id == context.account.peerId, heading: location.heading))
                             entries.append(.liveLocation(presentationData.theme, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, message, distance, drivingTime, transitTime, walkingTime, index))
                         }
                         index += 1

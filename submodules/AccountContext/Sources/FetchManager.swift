@@ -3,6 +3,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramUIPreferences
+import RangeSet
 
 public enum FetchManagerCategory: Int32 {
     case image
@@ -148,12 +149,10 @@ public enum FetchManagerPriority: Comparable {
     }
 }
 
-public let FetchCompleteRange = IndexSet(integersIn: 0 ..< Int(Int32.max) as Range<Int>)
-
 public protocol FetchManager {
     var queue: Queue { get }
     
-    func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, ranges: IndexSet, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, priority: FetchManagerPriority, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Void, NoError>
+    func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, ranges: RangeSet<Int64>, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, priority: FetchManagerPriority, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Void, NoError>
     func cancelInteractiveFetches(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, resource: MediaResource)
     func cancelInteractiveFetches(resourceId: String)
     func toggleInteractiveFetchPaused(resourceId: String, isPaused: Bool)

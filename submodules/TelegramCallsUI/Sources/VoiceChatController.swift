@@ -838,7 +838,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
         private var currentSpeakingSubtitle: String?
         private var currentCallMembers: ([GroupCallParticipantsContext.Participant], String?)?
         private var currentTotalCount: Int32 = 0
-        private var currentInvitedPeers: [Peer]?
+        private var currentInvitedPeers: [EnginePeer]?
         private var currentSpeakingPeers: Set<PeerId>?
         private var currentContentOffset: CGFloat?
         private var currentNormalButtonColor: UIColor?
@@ -1194,11 +1194,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     return
                 }
                 
-                let groupPeerId = strongSelf.call.peerId
-                let groupPeer = strongSelf.context.account.postbox.transaction { transaction -> Peer? in
-                    return transaction.getPeer(groupPeerId)
-                }
-                
+                let groupPeer = strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.call.peerId))
                 let _ = combineLatest(queue: Queue.mainQueue(), groupPeer, strongSelf.inviteLinksPromise.get() |> take(1)).start(next: { groupPeer, inviteLinks in
                     guard let strongSelf = self else {
                         return
@@ -1207,7 +1203,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         return
                     }
                     
-                    if let groupPeer = groupPeer as? TelegramChannel {
+                    if case let .channel(groupPeer) = groupPeer {
                         var canInviteMembers = true
                         if case .broadcast = groupPeer.info, !(groupPeer.addressName?.isEmpty ?? true) {
                             canInviteMembers = false
@@ -1224,11 +1220,11 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     if let (currentCallMembers, _) = strongSelf.currentCallMembers {
                         filters.append(.disable(Array(currentCallMembers.map { $0.peer.id })))
                     }
-                    if let groupPeer = groupPeer as? TelegramChannel {
+                    if case let .channel(groupPeer) = groupPeer {
                         if !groupPeer.hasPermission(.inviteMembers) && inviteLinks?.listenerLink == nil {
                             filters.append(.excludeNonMembers)
                         }
-                    } else if let groupPeer = groupPeer as? TelegramGroup {
+                    } else if case let .legacyGroup(groupPeer) = groupPeer {
                         if groupPeer.hasBannedPermission(.banAddMembers) {
                             filters.append(.excludeNonMembers)
                         }
@@ -1242,6 +1238,8 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             return
                         }
                         
+                        let peer = EnginePeer(peer)
+                        
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         if peer.id == strongSelf.callState?.myPeerId {
                             return
@@ -1252,15 +1250,15 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             if strongSelf.call.invitePeer(participant.peer.id) {
                                 let text: String
                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 } else {
-                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 }
                                 strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(participant.peer), text: text), action: { _ in return false })
                             }
                         } else {
-                            if let groupPeer = groupPeer as? TelegramChannel, let listenerLink = inviteLinks?.listenerLink, !groupPeer.hasPermission(.inviteMembers) {
-                                let text = strongSelf.presentationData.strings.VoiceChat_SendPublicLinkText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                            if case let .channel(groupPeer) = groupPeer, let listenerLink = inviteLinks?.listenerLink, !groupPeer.hasPermission(.inviteMembers) {
+                                let text = strongSelf.presentationData.strings.VoiceChat_SendPublicLinkText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 
                                 strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_SendPublicLinkSend, action: { [weak self] in
                                     dismissController?()
@@ -1269,17 +1267,17 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: listenerLink, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)])
                                         |> deliverOnMainQueue).start(next: { [weak self] _ in
                                             if let strongSelf = self {
-                                                strongSelf.presentUndoOverlay(content: .forward(savedMessages: false, text: strongSelf.presentationData.strings.UserInfo_LinkForwardTooltip_Chat_One(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), action: { _ in return true })
+                                                strongSelf.presentUndoOverlay(content: .forward(savedMessages: false, text: strongSelf.presentationData.strings.UserInfo_LinkForwardTooltip_Chat_One(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), action: { _ in return true })
                                             }
                                         })
                                     }
                                 })]), in: .window(.root))
                             } else {
                                 let text: String
-                                if let groupPeer = groupPeer as? TelegramChannel, case .broadcast = groupPeer.info {
-                                    text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToChannelFirstText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                if case let .channel(groupPeer) = groupPeer, case .broadcast = groupPeer.info {
+                                    text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToChannelFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 } else {
-                                    text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                    text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 }
                                 
                                 strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: {
@@ -1287,7 +1285,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                         return
                                     }
                                     
-                                    if let groupPeer = groupPeer as? TelegramChannel {
+                                    if case let .channel(groupPeer) = groupPeer {
                                         let selfController = strongSelf.controller
                                         let inviteDisposable = strongSelf.inviteDisposable
                                         var inviteSignal = strongSelf.context.peerChannelMemberCategoriesContextsManager.addMembers(engine: strongSelf.context.engine, peerId: groupPeer.id, memberIds: [peer.id])
@@ -1346,6 +1344,8 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                                     text = presentationData.strings.Channel_TooMuchBots
                                                 case .bot:
                                                     text = presentationData.strings.Login_UnknownError
+                                                case .kicked:
+                                                    text = presentationData.strings.Channel_AddUserKickedError
                                             }
                                             strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                         }, completed: {
@@ -1358,14 +1358,14 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                             if strongSelf.call.invitePeer(peer.id) {
                                                 let text: String
                                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-                                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 } else {
-                                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 }
-                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(peer), text: text), action: { _ in return false })
+                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text), action: { _ in return false })
                                             }
                                         }))
-                                    } else if let groupPeer = groupPeer as? TelegramGroup {
+                                    } else if case let .legacyGroup(groupPeer) = groupPeer {
                                         let selfController = strongSelf.controller
                                         let inviteDisposable = strongSelf.inviteDisposable
                                         var inviteSignal = strongSelf.context.engine.peers.addGroupMember(peerId: groupPeer.id, memberId: peer.id)
@@ -1426,11 +1426,11 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                             if strongSelf.call.invitePeer(peer.id) {
                                                 let text: String
                                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-                                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 } else {
-                                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 }
-                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(peer), text: text), action: { _ in return false })
+                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text), action: { _ in return false })
                                             }
                                         }))
                                     }
@@ -1446,19 +1446,20 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         }
                         let callPeerId = strongSelf.call.peerId
                         
-                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> String? in
+                        let _ = (strongSelf.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.Peer(id: callPeerId),
+                            TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: callPeerId)
+                        )
+                        |> map { peer, exportedInvitation -> String? in
                             if let link = inviteLinks?.listenerLink {
                                 return link
-                            } else if let peer = transaction.getPeer(callPeerId), let addressName = peer.addressName, !addressName.isEmpty {
+                            } else if let peer = peer, let addressName = peer.addressName, !addressName.isEmpty {
                                 return "https://t.me/\(addressName)"
-                            } else if let cachedData = transaction.getPeerCachedData(peerId: callPeerId) {
-                                if let cachedData = cachedData as? CachedChannelData {
-                                    return cachedData.exportedInvitation?.link
-                                } else if let cachedData = cachedData as? CachedGroupData {
-                                    return cachedData.exportedInvitation?.link
-                                }
+                            } else if let link = exportedInvitation?.link {
+                                return link
+                            } else {
+                                return nil
                             }
-                            return nil
                         }
                         |> deliverOnMainQueue).start(next: { link in
                             guard let strongSelf = self else {
@@ -1875,10 +1876,13 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             
             self.updateDecorationsColors()
                         
-            let invitedPeers: Signal<[Peer], NoError> = self.call.invitedPeers
-            |> mapToSignal { ids -> Signal<[Peer], NoError> in
-                return context.account.postbox.transaction { transaction -> [Peer] in
-                    return ids.compactMap(transaction.getPeer)
+            let invitedPeers: Signal<[EnginePeer], NoError> = self.call.invitedPeers
+            |> mapToSignal { ids -> Signal<[EnginePeer], NoError> in
+                return context.engine.data.get(EngineDataList(
+                    ids.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                ))
+                |> map { itemList -> [EnginePeer] in
+                    return itemList.compactMap { $0 }
                 }
             }
             
@@ -2027,8 +2031,22 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 guard let strongSelf = self else {
                     return
                 }
+                
+                var existingOutputs = Set<String>()
+                var filteredOutputs: [AudioSessionOutput] = []
+                for output in state.0 {
+                    if case let .port(port) = output {
+                        if !existingOutputs.contains(port.name) {
+                            existingOutputs.insert(port.name)
+                            filteredOutputs.append(output)
+                        }
+                    } else {
+                        filteredOutputs.append(output)
+                    }
+                }
+                
                 let wasEmpty = strongSelf.audioOutputState == nil
-                strongSelf.audioOutputState = state
+                strongSelf.audioOutputState = (filteredOutputs, state.1)
                 if let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
                 }
@@ -3378,30 +3396,28 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     let shareController = ShareController(context: strongSelf.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: strongSelf.darkTheme, forcedActionTitle: presentationData.strings.VoiceChat_CopyInviteLink)
                     shareController.completed = { [weak self] peerIds in
                         if let strongSelf = self {
-                            let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
-                                var peers: [Peer] = []
-                                for peerId in peerIds {
-                                    if let peer = transaction.getPeer(peerId) {
-                                        peers.append(peer)
-                                    }
-                                }
-                                return peers
-                            } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                            let _ = (strongSelf.context.engine.data.get(
+                                EngineDataList(
+                                    peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                                )
+                            )
+                            |> deliverOnMainQueue).start(next: { [weak self] peerList in
                                 if let strongSelf = self {
+                                    let peers = peerList.compactMap { $0 }
                                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                     
                                     let text: String
                                     var isSavedMessages = false
                                     if peers.count == 1, let peer = peers.first {
                                         isSavedMessages = peer.id == strongSelf.context.account.peerId
-                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                         text = presentationData.strings.VoiceChat_ForwardTooltip_Chat(peerName).string
                                     } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                         text = presentationData.strings.VoiceChat_ForwardTooltip_TwoChats(firstPeerName, secondPeerName).string
                                     } else if let peer = peers.first {
-                                        let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                         text = presentationData.strings.VoiceChat_ForwardTooltip_ManyChats(peerName, "\(peers.count - 1)").string
                                     } else {
                                         text = ""
@@ -3587,18 +3603,17 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         return
                     }
                     
-                    let callPeerId = strongSelf.call.peerId
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> GroupCallInviteLinks? in
+                    let _ = (strongSelf.context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.call.peerId),
+                        TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: strongSelf.call.peerId)
+                    )
+                    |> map { peer, exportedInvitation -> GroupCallInviteLinks? in
                         if let inviteLinks = inviteLinks {
                             return inviteLinks
-                        } else if let peer = transaction.getPeer(callPeerId), let addressName = peer.addressName, !addressName.isEmpty {
+                        } else if let peer = peer, let addressName = peer.addressName, !addressName.isEmpty {
                             return GroupCallInviteLinks(listenerLink: "https://t.me/\(addressName)?voicechat", speakerLink: nil)
-                        } else if let cachedData = transaction.getPeerCachedData(peerId: callPeerId) {
-                            if let cachedData = cachedData as? CachedChannelData, let link = cachedData.exportedInvitation?.link {
-                                return GroupCallInviteLinks(listenerLink: link, speakerLink: nil)
-                            } else if let cachedData = cachedData as? CachedGroupData, let link = cachedData.exportedInvitation?.link {
-                                return GroupCallInviteLinks(listenerLink: link, speakerLink: nil)
-                            }
+                        } else if let link = exportedInvitation?.link {
+                            return GroupCallInviteLinks(listenerLink: link, speakerLink: nil)
                         }
                         return nil
                     }
@@ -4998,7 +5013,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             self.updateMembers(muteState: self.effectiveMuteState, callMembers: self.currentCallMembers ?? ([], nil), invitedPeers: self.currentInvitedPeers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), maybeUpdateVideo: maybeUpdateVideo, force: force)
         }
         
-        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: ([GroupCallParticipantsContext.Participant], String?), invitedPeers: [Peer], speakingPeers: Set<PeerId>, maybeUpdateVideo: Bool = true, force: Bool = false) {
+        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, callMembers: ([GroupCallParticipantsContext.Participant], String?), invitedPeers: [EnginePeer], speakingPeers: Set<EnginePeer.Id>, maybeUpdateVideo: Bool = true, force: Bool = false) {
             var disableAnimation = false
             if self.currentCallMembers?.1 != callMembers.1 {
                 disableAnimation = true
@@ -5280,7 +5295,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 processedPeerIds.insert(peer.id)
                 
                 entries.append(.peer(VoiceChatPeerEntry(
-                    peer: peer,
+                    peer: peer._asPeer(),
                     about: nil,
                     isMyPeer: false,
                     videoEndpointId: nil,
@@ -6103,9 +6118,10 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 return
             }
             
-            let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
-                return (transaction.getPeer(peerId), currentSearchBotsConfiguration(transaction: transaction))
-            }
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Configuration.SearchBots()
+            )
             |> deliverOnMainQueue).start(next: { [weak self] peer, searchBotsConfiguration in
                 guard let strongSelf = self, let peer = peer else {
                     return
@@ -6151,7 +6167,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     guard let strongSelf = self else {
                         return
                     }
-                    let controller = WebSearchController(context: strongSelf.context, peer: EnginePeer(peer), chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.id.namespace == Namespaces.Peer.CloudUser ? nil : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
+                    let controller = WebSearchController(context: strongSelf.context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.id.namespace == Namespaces.Peer.CloudUser ? nil : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
                         assetsController?.dismiss()
                         self?.updateProfilePhoto(result)
                     }))
@@ -7071,7 +7087,7 @@ private final class VoiceChatContextExtractedContentSource: ContextExtractedCont
     
     func takeView() -> ContextControllerTakeViewInfo? {
         self.animateTransitionIn()
-        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds, maskView: self.maskView)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds, maskView: self.maskView)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {

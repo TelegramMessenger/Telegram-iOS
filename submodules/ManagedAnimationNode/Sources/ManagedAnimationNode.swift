@@ -176,17 +176,6 @@ open class ManagedAnimationNode: ASDisplayNode {
         self.imageNode.displaysAsynchronously = false
         self.imageNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)
         
-        final class DisplayLinkTarget: NSObject {
-            private let f: () -> Void
-            
-            init(_ f: @escaping () -> Void) {
-                self.f = f
-            }
-            
-            @objc func event() {
-                self.f()
-            }
-        }
         var displayLinkUpdate: (() -> Void)?
         self.displayLink = CADisplayLink(target: DisplayLinkTarget {
             displayLinkUpdate?()

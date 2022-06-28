@@ -40,7 +40,7 @@ func addRecentlyUsedSticker(transaction: Transaction, fileReference: FileMediaRe
     }
 }
 
-public func clearRecentlyUsedStickers(transaction: Transaction) {
+func _internal_clearRecentlyUsedStickers(transaction: Transaction) {
     transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, items: [])
     addSynchronizeRecentlyUsedMediaOperation(transaction: transaction, category: .stickers, operation: .clear)
 }

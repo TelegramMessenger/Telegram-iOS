@@ -45,6 +45,13 @@
     [aCoder encodeBool:_media forKey:@"media"];
 }
 
+- (BOOL)isEqual:(id)object {
+    if (![object isKindOfClass:[MTTransportScheme class]]) {
+        return false;
+    }
+    return [self isEqualToScheme:(MTTransportScheme *)object];
+}
+
 - (BOOL)isEqualToScheme:(MTTransportScheme *)other
 {
     if (![other isKindOfClass:[MTTransportScheme class]])

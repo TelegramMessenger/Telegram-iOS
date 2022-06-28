@@ -13,6 +13,7 @@ import StickerPackPreviewUI
 import ContextUI
 import ChatPresentationInterfaceState
 import UndoUI
+import PremiumUI
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult
@@ -174,7 +175,13 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     }
                                 })))
                             }
-                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
+                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems, openPremiumIntro: { [weak self] in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                strongSelf.interfaceInteraction?.getNavigationController()?.pushViewController(controller)
+                            }))
                         } else {
                             var menuItems: [ContextMenuItem] = []
                             if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isAnimated {
@@ -186,10 +193,33 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .standalone(media: file)).start()
                                     
-                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                    strongSelf.interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: strongSelf.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                                    let context = strongSelf.context
+                                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                    let interfaceInteraction = strongSelf.interfaceInteraction
+                                    let _ = (toggleGifSaved(account: context.account, fileReference: .standalone(media: file), saved: true)
+                                    |> deliverOnMainQueue).start(next: { result in
+                                        switch result {
+                                            case .generic:
+                                            interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                            case let .limitExceeded(limit, premiumLimit):
+                                                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                                                let text: String
+                                                if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
+                                                    text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                                } else {
+                                                    text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
+                                                }
+                                                interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                                    if case .info = action {
+                                                        let controller = PremiumIntroScreen(context: context, source: .savedGifs)
+                                                        interfaceInteraction?.getNavigationController()?.pushViewController(controller)
+                                                        return true
+                                                    }
+                                                    return false
+                                                }), nil)
+                                        }
+                                    })
                                 })))
                             }
                             menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.ShareMenu_Send, icon: { theme in

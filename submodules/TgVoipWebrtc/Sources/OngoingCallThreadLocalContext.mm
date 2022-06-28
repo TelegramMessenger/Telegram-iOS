@@ -38,15 +38,17 @@
 #include "sdk/objc/native/src/objc_frame_buffer.h"
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 #import "platform/darwin/TGRTCCVPixelBuffer.h"
+#include "rtc_base/logging.h"
 
 @implementation OngoingCallConnectionDescriptionWebrtc
 
-- (instancetype _Nonnull)initWithConnectionId:(int64_t)connectionId hasStun:(bool)hasStun hasTurn:(bool)hasTurn ip:(NSString * _Nonnull)ip port:(int32_t)port username:(NSString * _Nonnull)username password:(NSString * _Nonnull)password {
+- (instancetype _Nonnull)initWithReflectorId:(uint8_t)reflectorId hasStun:(bool)hasStun hasTurn:(bool)hasTurn hasTcp:(bool)hasTcp ip:(NSString * _Nonnull)ip port:(int32_t)port username:(NSString * _Nonnull)username password:(NSString * _Nonnull)password {
     self = [super init];
     if (self != nil) {
-        _connectionId = connectionId;
+        _reflectorId = reflectorId;
         _hasStun = hasStun;
         _hasTurn = hasTurn;
+        _hasTcp = hasTcp;
         _ip = ip;
         _port = port;
         _username = username;
@@ -433,10 +435,10 @@ private:
                     }
                 }
             } else if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kNV12) {
-                rtc::scoped_refptr<webrtc::NV12BufferInterface> nv12Buffer = (webrtc::NV12BufferInterface *)videoFrame.video_frame_buffer().get();
+                rtc::scoped_refptr<webrtc::NV12BufferInterface> nv12Buffer(static_cast<webrtc::NV12BufferInterface *>(videoFrame.video_frame_buffer().get()));
                 mappedBuffer = [[CallVideoFrameNV12Buffer alloc] initWithBuffer:nv12Buffer];
             } else if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kI420) {
-                rtc::scoped_refptr<webrtc::I420BufferInterface> i420Buffer = (webrtc::I420BufferInterface *)videoFrame.video_frame_buffer().get();
+                rtc::scoped_refptr<webrtc::I420BufferInterface> i420Buffer(static_cast<webrtc::I420BufferInterface *>(videoFrame.video_frame_buffer().get()));
                 mappedBuffer = [[CallVideoFrameI420Buffer alloc] initWithBuffer:i420Buffer];
             }
 
@@ -536,7 +538,7 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
     }
     _isProcessingCustomSampleBuffer.value = true;
 
-    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer, videoRotation = videoRotation, isProcessingCustomSampleBuffer = _isProcessingCustomSampleBuffer]() {
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask([interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer, videoRotation = videoRotation, isProcessingCustomSampleBuffer = _isProcessingCustomSampleBuffer]() {
         auto capture = GetVideoCaptureAssumingSameThread(interface.get());
         auto source = capture->source();
         if (source) {
@@ -558,7 +560,7 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 
     auto sinkReference = [storedSink sink];
 
-    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, sinkReference]() {
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask([interface = _interface, sinkReference]() {
         interface->setOutput(sinkReference);
     });
 
@@ -782,6 +784,10 @@ static tgcalls::DataSaving callControllerDataSavingForType(OngoingCallDataSaving
 
 static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
++ (void)logMessage:(NSString * _Nonnull)string {
+    RTC_LOG(LS_INFO) << std::string(string.UTF8String);
+}
+
 + (void)setupLoggingFunction:(void (*)(NSString *))loggingFunction {
     InternalVoipLoggingFunction = loggingFunction;
     tgcalls::SetLoggingFunction([](std::string const &string) {
@@ -830,7 +836,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 + (tgcalls::ProtocolVersion)protocolVersionFromLibraryVersion:(NSString *)version {
     if ([version isEqualToString:@"2.7.7"]) {
         return tgcalls::ProtocolVersion::V0;
-    } else if ([version isEqualToString:@"3.0.0"]) {
+    } else if ([version isEqualToString:@"5.0.0"]) {
         return tgcalls::ProtocolVersion::V1;
     } else {
         return tgcalls::ProtocolVersion::V0;
@@ -882,20 +888,24 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         for (OngoingCallConnectionDescriptionWebrtc *connection in connections) {
             if (connection.hasStun) {
                 parsedRtcServers.push_back((tgcalls::RtcServer){
+                    .id = 0,
                     .host = connection.ip.UTF8String,
                     .port = (uint16_t)connection.port,
                     .login = "",
                     .password = "",
-                    .isTurn = false
+                    .isTurn = false,
+                    .isTcp = false
                 });
             }
-            if (connection.hasTurn) {
+            if (connection.hasTurn || connection.hasTcp) {
                 parsedRtcServers.push_back((tgcalls::RtcServer){
+                    .id = connection.reflectorId,
                     .host = connection.ip.UTF8String,
                     .port = (uint16_t)connection.port,
                     .login = connection.username.UTF8String,
                     .password = connection.password.UTF8String,
-                    .isTurn = true
+                    .isTurn = true,
+                    .isTcp = connection.hasTcp
                 });
             }
         }
@@ -1386,7 +1396,8 @@ private:
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
     enableNoiseSuppression:(bool)enableNoiseSuppression
     disableAudioInput:(bool)disableAudioInput
-    preferX264:(bool)preferX264 {
+    preferX264:(bool)preferX264
+    logPath:(NSString * _Nonnull)logPath {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -1424,10 +1435,8 @@ private:
         bool disableOutgoingAudioProcessing = false;
 
         tgcalls::GroupConfig config;
-        config.need_log = false;
-#if DEBUG
         config.need_log = true;
-#endif
+        config.logPath.data = std::string(logPath.length == 0 ? "" : logPath.UTF8String);
 
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){

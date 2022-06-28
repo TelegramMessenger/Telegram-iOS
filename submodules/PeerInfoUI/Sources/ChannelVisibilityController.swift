@@ -22,6 +22,7 @@ import InviteLinksUI
 import ContextUI
 import UndoUI
 import QrCodeUI
+import PremiumUI
 
 private final class ChannelVisibilityControllerArguments {
     let context: AccountContext
@@ -59,6 +60,7 @@ private final class ChannelVisibilityControllerArguments {
 
 private enum ChannelVisibilitySection: Int32 {
     case type
+    case limitInfo
     case link
     case linkActions
     case joinToSend
@@ -87,6 +89,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     
     case publicLinkHeader(PresentationTheme, String)
     case publicLinkAvailability(PresentationTheme, String, Bool)
+    case linksLimitInfo(PresentationTheme, String, Int32, Int32, Int32, Bool)
     case editablePublicLink(PresentationTheme, PresentationStrings, String, String)
     case privateLinkHeader(PresentationTheme, String)
     case privateLink(PresentationTheme, ExportedInvitation?, [EnginePeer], Int32, Bool)
@@ -115,6 +118,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
         switch self {
             case .typeHeader, .typePublic, .typePrivate, .typeInfo:
                 return ChannelVisibilitySection.type.rawValue
+            case .linksLimitInfo:
+                return ChannelVisibilitySection.limitInfo.rawValue
             case .publicLinkHeader, .publicLinkAvailability, .privateLinkHeader, .privateLink, .editablePublicLink, .privateLinkInfo, .publicLinkInfo, .publicLinkStatus:
                 return ChannelVisibilitySection.link.rawValue
             case .privateLinkManage, .privateLinkManageInfo:
@@ -144,22 +149,24 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return 4
             case .publicLinkAvailability:
                 return 5
-            case .privateLinkHeader:
+            case .linksLimitInfo:
                 return 6
-            case .privateLink:
+            case .privateLinkHeader:
                 return 7
-            case .editablePublicLink:
+            case .privateLink:
                 return 8
-            case .privateLinkInfo:
+            case .editablePublicLink:
                 return 9
-            case .publicLinkStatus:
+            case .privateLinkInfo:
                 return 10
-            case .publicLinkInfo:
+            case .publicLinkStatus:
                 return 11
-            case .existingLinksInfo:
+            case .publicLinkInfo:
                 return 12
+            case .existingLinksInfo:
+                return 13
             case let .existingLinkPeerItem(index, _, _, _, _, _, _, _):
-                return 13 + index
+                return 14 + index
             case .privateLinkManage:
                 return 1000
             case .privateLinkManageInfo:
@@ -217,6 +224,12 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 }
             case let .publicLinkAvailability(lhsTheme, lhsText, lhsValue):
                 if case let .publicLinkAvailability(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .linksLimitInfo(lhsTheme, lhsText, lhsCount, lhsLimit, lhsPremiumLimit, lhsIsPremiumDisabled):
+                if case let .linksLimitInfo(rhsTheme, rhsText, rhsCount, rhsLimit, rhsPremiumLimit, rhsIsPremiumDisabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsCount == rhsCount, lhsLimit == rhsLimit, lhsPremiumLimit == rhsPremiumLimit, lhsIsPremiumDisabled == rhsIsPremiumDisabled {
                     return true
                 } else {
                     return false
@@ -381,6 +394,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 let attr = NSMutableAttributedString(string: text, textColor: value ? theme.list.freeTextColor : theme.list.freeTextErrorColor)
                 attr.addAttribute(.font, value: Font.regular(13), range: NSMakeRange(0, attr.length))
                 return ItemListActivityTextItem(displayActivity: value, presentationData: presentationData, text: attr, sectionId: self.section)
+            case let .linksLimitInfo(theme, text, count, limit, premiumLimit, isPremiumDisabled):
+                return IncreaseLimitHeaderItem(theme: theme, strings: presentationData.strings, icon: .link, count: count, limit: limit, premiumCount: premiumLimit, text: text, isPremiumDisabled: isPremiumDisabled, sectionId: self.section)
             case let .privateLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .privateLink(_, invite, peers, importersCount, displayImporters):
@@ -607,8 +622,15 @@ private struct ChannelVisibilityControllerState: Equatable {
     }
 }
 
-private func channelVisibilityControllerEntries(presentationData: PresentationData, mode: ChannelVisibilityControllerMode, view: PeerView, publicChannelsToRevoke: [Peer]?, importers: PeerInvitationImportersState?, state: ChannelVisibilityControllerState) -> [ChannelVisibilityEntry] {
+private func channelVisibilityControllerEntries(presentationData: PresentationData, mode: ChannelVisibilityControllerMode, view: PeerView, publicChannelsToRevoke: [Peer]?, importers: PeerInvitationImportersState?, state: ChannelVisibilityControllerState, limits: EngineConfiguration.UserLimits, premiumLimits: EngineConfiguration.UserLimits, isPremium: Bool, isPremiumDisabled: Bool) -> [ChannelVisibilityEntry] {
     var entries: [ChannelVisibilityEntry] = []
+    
+    let isInitialSetup: Bool
+    if case .initialSetup = mode {
+        isInitialSetup = true
+    } else {
+        isInitialSetup = false
+    }
     
     if let peer = view.peers[view.peerId] as? TelegramChannel {
         var isGroup = false
@@ -635,7 +657,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             }
         }
         
- /*       let joinToSend: CurrentChannelJoinToSend
+        let joinToSend: CurrentChannelJoinToSend
         if let current = state.joinToSend {
             joinToSend = current
         } else {
@@ -656,7 +678,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 approveMembers = false
             }
         }
- */
+        
         let forwardingEnabled: Bool
         if let enabled = state.forwardingEnabled {
             forwardingEnabled = enabled
@@ -682,7 +704,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         if let _ = (view.cachedData as? CachedChannelData)?.peerGeoLocation {
         } else {
             switch mode {
-                case .privateLink:
+                case .privateLink, .revokeNames:
                     break
                 case .initialSetup, .generic:
                     entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader.uppercased() : presentationData.strings.Channel_Edit_LinkItem.uppercased()))
@@ -706,35 +728,42 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             }
         }
         
-        switch selectedType {
-            case .publicChannel:
-                var displayAvailability = false
-                if peer.addressName == nil {
-                    displayAvailability = publicChannelsToRevoke != nil && !(publicChannelsToRevoke!.isEmpty)
-                }
-                
-                if displayAvailability {
-                    if let publicChannelsToRevoke = publicChannelsToRevoke {
-                        entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesInfo, false))
-                        var index: Int32 = 0
-                        for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
-                            var lhsDate: Int32 = 0
-                            var rhsDate: Int32 = 0
-                            if let lhs = lhs as? TelegramChannel {
-                                lhsDate = lhs.creationDate
-                            }
-                            if let rhs = rhs as? TelegramChannel {
-                                rhsDate = rhs.creationDate
-                            }
-                            return lhsDate > rhsDate
-                        }) {
-                            entries.append(.existingLinkPeerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, ItemListPeerItemEditing(editable: true, editing: true, revealed: state.revealedRevokePeerId == peer.id), state.revokingPeerId == nil))
-                            index += 1
-                        }
-                    } else {
-                        entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp, true))
-                    }
+        if case .revokeNames = mode {
+            let count = Int32(publicChannelsToRevoke?.count ?? 0)
+            
+            let text: String
+            if count >= premiumLimits.maxPublicLinksCount {
+                text = presentationData.strings.Group_Username_RemoveExistingUsernamesFinalInfo
+            } else {
+                if isPremiumDisabled {
+                    text = presentationData.strings.Group_Username_RemoveExistingUsernamesNoPremiumInfo
                 } else {
+                    text = presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(premiumLimits.maxPublicLinksCount)").string
+                }
+            }
+            
+            entries.append(.linksLimitInfo(presentationData.theme, text, count, limits.maxPublicLinksCount, premiumLimits.maxPublicLinksCount, isPremiumDisabled))
+            
+            if let publicChannelsToRevoke = publicChannelsToRevoke {
+                var index: Int32 = 0
+                for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
+                    var lhsDate: Int32 = 0
+                    var rhsDate: Int32 = 0
+                    if let lhs = lhs as? TelegramChannel {
+                        lhsDate = lhs.creationDate
+                    }
+                    if let rhs = rhs as? TelegramChannel {
+                        rhsDate = rhs.creationDate
+                    }
+                    return lhsDate > rhsDate
+                }) {
+                    entries.append(.existingLinkPeerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, ItemListPeerItemEditing(editable: true, editing: true, revealed: state.revealedRevokePeerId == peer.id), state.revokingPeerId == nil))
+                    index += 1
+                }
+            }
+        } else {
+            switch selectedType {
+                case .publicChannel:
                     entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, presentationData.strings.Group_PublicLink_Placeholder, currentAddressName))
                     if let status = state.addressNameValidationStatus {
                         let text: String
@@ -788,123 +817,135 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                             entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_PublicLink_Info))
                         } else {
                             entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp))
-                        }                        
+                        }
                     } else {
                         entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePublicLinkHelp))
                     }
                     switch mode {
-                        case .initialSetup:
+                        case .initialSetup, .revokeNames:
                             break
                         case .generic, .privateLink:
                             entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
                             entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
                     }
-                }
-            case .privateChannel:
-                let invite = (view.cachedData as? CachedChannelData)?.exportedInvitation
-                entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
-            entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
-                if isGroup {
-                    entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
-                } else {
-                    entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePrivateLinkHelp))
-                }
-                switch mode {
-                    case .initialSetup:
-                        break
-                    case .generic, .privateLink:
-                        entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-                        entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-                }
-        }
-/*
-        if isGroup && selectedType == .publicChannel {
+                case .privateChannel:
+                    let invite = (view.cachedData as? CachedChannelData)?.exportedInvitation
+                    entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
+                    entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, !isInitialSetup))
+                    if isGroup {
+                        entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
+                    } else {
+                        entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePrivateLinkHelp))
+                    }
+                    switch mode {
+                        case .initialSetup, .revokeNames:
+                            break
+                        case .generic, .privateLink:
+                            entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                            entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                    }
+            }
+                        
             var isDiscussion = false
-            if let cachedData = view.cachedData as? CachedChannelData, case .known = cachedData.linkedDiscussionPeerId {
+            if let cachedData = view.cachedData as? CachedChannelData, case let .known(peerId) = cachedData.linkedDiscussionPeerId, peerId != nil {
                 isDiscussion = true
             }
             
-            if isDiscussion {
-                entries.append(.joinToSendHeader(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Title.uppercased()))
-                entries.append(.joinToSendEveryone(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Everyone, joinToSend == .everyone))
-                entries.append(.joinToSendMembers(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_OnlyMembers, joinToSend == .members))
+            if isGroup && (selectedType == .publicChannel || isDiscussion) {
+                if isDiscussion {
+                    entries.append(.joinToSendHeader(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Title.uppercased()))
+                    entries.append(.joinToSendEveryone(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Everyone, joinToSend == .everyone))
+                    entries.append(.joinToSendMembers(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_OnlyMembers, joinToSend == .members))
+                }
+                    
+                if !isDiscussion || joinToSend == .members {
+                    entries.append(.approveMembers(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembers, approveMembers))
+                    entries.append(.approveMembersInfo(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembersInfo))
+                }
             }
-                
-            if !isDiscussion || joinToSend == .members {
-                entries.append(.approveMembers(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembers, approveMembers))
-                entries.append(.approveMembersInfo(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembersInfo))
-            }
+            
+            entries.append(.forwardingHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased() : presentationData.strings.Group_Setup_ForwardingChannelTitle.uppercased()))
+            entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
+            entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingChannelInfo) : (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled : presentationData.strings.Group_Setup_ForwardingChannelInfoDisabled)))
         }
-*/
-        entries.append(.forwardingHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased() : presentationData.strings.Group_Setup_ForwardingChannelTitle.uppercased()))
-        entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
-        entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingChannelInfo) : (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled : presentationData.strings.Group_Setup_ForwardingChannelInfoDisabled)))
     } else if let peer = view.peers[view.peerId] as? TelegramGroup {
-        switch mode {
-            case .privateLink:
-                let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
-                entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
-                entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
-                entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.GroupInfo_InviteLink_Help))
-                switch mode {
-                    case .initialSetup:
-                        break
-                    case .generic, .privateLink:
-                        entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-                        entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-                }
-            case .generic, .initialSetup:                
-                let selectedType: CurrentChannelType
-                if let current = state.selectedType {
-                    selectedType = current
+        if case .revokeNames = mode {
+            let count = Int32(publicChannelsToRevoke?.count ?? 0)
+            
+            let text: String
+            if count >= premiumLimits.maxPublicLinksCount {
+                text = presentationData.strings.Group_Username_RemoveExistingUsernamesFinalInfo
+            } else {
+                if isPremiumDisabled {
+                    text = presentationData.strings.Group_Username_RemoveExistingUsernamesNoPremiumInfo
                 } else {
-                    selectedType = .privateChannel
+                    text = presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(premiumLimits.maxPublicLinksCount)").string
                 }
-                
-                let currentAddressName: String
-                if let current = state.editingPublicLinkText {
-                    currentAddressName = current
-                } else {
-                    currentAddressName = ""
+            }
+            
+            entries.append(.linksLimitInfo(presentationData.theme, text, count, limits.maxPublicLinksCount, premiumLimits.maxPublicLinksCount, isPremiumDisabled))
+            
+            if let publicChannelsToRevoke = publicChannelsToRevoke {
+                var index: Int32 = 0
+                for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
+                    var lhsDate: Int32 = 0
+                    var rhsDate: Int32 = 0
+                    if let lhs = lhs as? TelegramChannel {
+                        lhsDate = lhs.creationDate
+                    }
+                    if let rhs = rhs as? TelegramChannel {
+                        rhsDate = rhs.creationDate
+                    }
+                    return lhsDate > rhsDate
+                }) {
+                    entries.append(.existingLinkPeerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, ItemListPeerItemEditing(editable: true, editing: true, revealed: state.revealedRevokePeerId == peer.id), state.revokingPeerId == nil))
+                    index += 1
                 }
-                
-                entries.append(.typeHeader(presentationData.theme, presentationData.strings.Group_Setup_TypeHeader.uppercased()))
-                entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
-                entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
-                
-                switch selectedType {
-                case .publicChannel:
-                    entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
-                case .privateChannel:
-                    entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePrivateHelp))
-                }
-                
-                switch selectedType {
+            }
+        } else {
+            switch mode {
+                case .revokeNames:
+                    break
+                case .privateLink:
+                    let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
+                    entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
+                    entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, !isInitialSetup))
+                    entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.GroupInfo_InviteLink_Help))
+                    switch mode {
+                        case .initialSetup, .revokeNames:
+                            break
+                        case .generic, .privateLink:
+                            entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                            entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                    }
+                case .generic, .initialSetup:
+                    let selectedType: CurrentChannelType
+                    if let current = state.selectedType {
+                        selectedType = current
+                    } else {
+                        selectedType = .privateChannel
+                    }
+                    
+                    let currentAddressName: String
+                    if let current = state.editingPublicLinkText {
+                        currentAddressName = current
+                    } else {
+                        currentAddressName = ""
+                    }
+                    
+                    entries.append(.typeHeader(presentationData.theme, presentationData.strings.Group_Setup_TypeHeader.uppercased()))
+                    entries.append(.typePublic(presentationData.theme, presentationData.strings.Channel_Setup_TypePublic, selectedType == .publicChannel))
+                    entries.append(.typePrivate(presentationData.theme, presentationData.strings.Channel_Setup_TypePrivate, selectedType == .privateChannel))
+                    
+                    switch selectedType {
                     case .publicChannel:
-                        let displayAvailability = publicChannelsToRevoke == nil || !(publicChannelsToRevoke!.isEmpty)
-                        
-                        if displayAvailability {
-                            if let publicChannelsToRevoke = publicChannelsToRevoke {
-                                entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesInfo, false))
-                                var index: Int32 = 0
-                                for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
-                                    var lhsDate: Int32 = 0
-                                    var rhsDate: Int32 = 0
-                                    if let lhs = lhs as? TelegramChannel {
-                                        lhsDate = lhs.creationDate
-                                    }
-                                    if let rhs = rhs as? TelegramChannel {
-                                        rhsDate = rhs.creationDate
-                                    }
-                                    return lhsDate > rhsDate
-                                }) {
-                                    entries.append(.existingLinkPeerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, ItemListPeerItemEditing(editable: true, editing: true, revealed: state.revealedRevokePeerId == peer.id), state.revokingPeerId == nil))
-                                    index += 1
-                                }
-                            } else {
-                                entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp, true))
-                            }
-                        } else {
+                        entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePublicHelp))
+                    case .privateChannel:
+                        entries.append(.typeInfo(presentationData.theme, presentationData.strings.Group_Setup_TypePrivateHelp))
+                    }
+                    
+                    switch selectedType {
+                        case .publicChannel:
                             entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, "", currentAddressName))
                             if let status = state.addressNameValidationStatus {
                                 let text: String
@@ -939,36 +980,36 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                             }
                             
                             entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePublicLinkHelp))
-                        }
-                    case .privateChannel:
-                        let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
-                        entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
-                    entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
-                        entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
-                        switch mode {
-                            case .initialSetup:
-                                break
-                            case .generic, .privateLink:
-                                entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
-                                entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
-                        }
+                        case .privateChannel:
+                            let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
+                            entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
+                        entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, !isInitialSetup))
+                            entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
+                            switch mode {
+                                case .initialSetup, .revokeNames:
+                                    break
+                                case .generic, .privateLink:
+                                    entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
+                                    entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
+                            }
+                }
             }
-        }
-        
-        let forwardingEnabled: Bool
-        if let enabled = state.forwardingEnabled {
-            forwardingEnabled = enabled
-        } else {
-            if peer.flags.contains(.copyProtectionEnabled) {
-                forwardingEnabled = false
+            
+            let forwardingEnabled: Bool
+            if let enabled = state.forwardingEnabled {
+                forwardingEnabled = enabled
             } else {
-                forwardingEnabled = true
+                if peer.flags.contains(.copyProtectionEnabled) {
+                    forwardingEnabled = false
+                } else {
+                    forwardingEnabled = true
+                }
             }
+            
+            entries.append(.forwardingHeader(presentationData.theme, presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased()))
+            entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
+            entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled))
         }
-        
-        entries.append(.forwardingHeader(presentationData.theme, presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased()))
-        entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
-        entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled))
     }
     
     return entries
@@ -1040,13 +1081,22 @@ public enum ChannelVisibilityControllerMode {
     case initialSetup
     case generic
     case privateLink
+    case revokeNames([Peer])
 }
 
-public func channelVisibilityController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, mode: ChannelVisibilityControllerMode, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void, onDismissRemoveController: ViewController? = nil) -> ViewController {
+public func channelVisibilityController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, mode: ChannelVisibilityControllerMode, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void, onDismissRemoveController: ViewController? = nil, revokedPeerAddressName: ((PeerId) -> Void)? = nil) -> ViewController {
     let statePromise = ValuePromise(ChannelVisibilityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelVisibilityControllerState())
     let updateState: ((ChannelVisibilityControllerState) -> ChannelVisibilityControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
+    }
+    
+    let adminedPublicChannels = Promise<[Peer]?>()
+    if case let .revokeNames(peers) = mode {
+        adminedPublicChannels.set(.single(peers))
+    } else {
+        adminedPublicChannels.set(context.engine.peers.adminedPublicChannels(scope: .all)
+        |> map(Optional.init))
     }
     
     let peersDisablingAddressNameAssignment = Promise<[Peer]?>()
@@ -1093,8 +1143,42 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     actionsDisposable.add(toggleRequestToJoinDisposable)
     
     let arguments = ChannelVisibilityControllerArguments(context: context, updateCurrentType: { type in
-        updateState { state in
-            return state.withUpdatedSelectedType(type)
+        if type == .publicChannel {
+            let _ = combineLatest(
+                queue: Queue.mainQueue(),
+                adminedPublicChannels.get() |> filter { $0 != nil } |> take(1),
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+                context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+                    TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+                )
+            ).start(next: { peers, accountPeer, data in
+                let (limits, premiumLimits) = data
+                let isPremium = accountPeer?.isPremium ?? false
+                
+                if let peers = peers {
+                    let count = Int32(peers.count)
+                    if count < limits.maxPublicLinksCount || (count < premiumLimits.maxPublicLinksCount && isPremium) {
+                        updateState { state in
+                            return state.withUpdatedSelectedType(type)
+                        }
+                    } else {
+                        let controller = channelVisibilityController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, mode: .revokeNames(peers), upgradedToSupergroup: { _, _ in }, revokedPeerAddressName: { revokedPeerId in
+                            let updatedPublicChannels = peers.filter { $0.id != revokedPeerId }
+                            adminedPublicChannels.set(.single(updatedPublicChannels) |> then(
+                                context.engine.peers.adminedPublicChannels(scope: .all) |> map(Optional.init))
+                            )
+                        })
+                        controller.navigationPresentation = .modal
+                        pushControllerImpl?(controller)
+                    }
+                } else {
+                }
+            })
+        } else {
+            updateState { state in
+                return state.withUpdatedSelectedType(type)
+            }
         }
     }, updatePublicLinkText: { currentText, text in
         if text.isEmpty {
@@ -1139,11 +1223,8 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 return state.withUpdatedRevokingPeerId(nil)
             }
         }, completed: {
-            peersDisablingAddressNameAssignment.set(.single([]) |> delay(0.2, queue: Queue.mainQueue()) |> afterNext { _ in
-                updateState { state in
-                    return state.withUpdatedRevokingPeerId(nil)
-                }
-            })
+            revokedPeerAddressName?(peerId)
+            dismissImpl?()
         }))
     }, copyLink: { invite in
         UIPasteboard.general.string = invite.link
@@ -1174,17 +1255,9 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }, action: { _, f in
             f(.dismissWithoutContent)
             
-            let _ = (context.account.postbox.transaction { transaction -> String? in
-                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
-                    if let cachedData = cachedData as? CachedChannelData {
-                        return cachedData.exportedInvitation?.link
-                    } else if let cachedData = cachedData as? CachedGroupData {
-                        return cachedData.exportedInvitation?.link
-                    }
-                }
-                return nil
-            } |> deliverOnMainQueue).start(next: { link in
-                if let link = link {
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId))
+            |> deliverOnMainQueue).start(next: { exportedInvitation in
+                if let link = exportedInvitation?.link {
                     UIPasteboard.general.string = link
                     
                     dismissTooltipsImpl?()
@@ -1200,16 +1273,8 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }, action: { _, f in
             f(.dismissWithoutContent)
             
-            let _ = (context.account.postbox.transaction { transaction -> ExportedInvitation? in
-                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
-                    if let cachedData = cachedData as? CachedChannelData {
-                        return cachedData.exportedInvitation
-                    } else if let cachedData = cachedData as? CachedGroupData {
-                        return cachedData.exportedInvitation
-                    }
-                }
-                return nil
-            } |> deliverOnMainQueue).start(next: { invite in
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId))
+            |> deliverOnMainQueue).start(next: { invite in
                 if let invite = invite {
                     let _ = (context.account.postbox.loadedPeerWithId(peerId)
                     |> deliverOnMainQueue).start(next: { peer in
@@ -1249,17 +1314,9 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                         ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                             dismissAction()
                             
-                            let _ = (context.account.postbox.transaction { transaction -> String? in
-                                if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
-                                    if let cachedData = cachedData as? CachedChannelData {
-                                        return cachedData.exportedInvitation?.link
-                                    } else if let cachedData = cachedData as? CachedGroupData {
-                                        return cachedData.exportedInvitation?.link
-                                    }
-                                }
-                                return nil
-                            } |> deliverOnMainQueue).start(next: { link in
-                                if let link = link {
+                            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId))
+                            |> deliverOnMainQueue).start(next: { exportedInvitation in
+                                if let link = exportedInvitation?.link {
                                     var revoke = false
                                     updateState { state in
                                         if !state.revokingPrivateLink {
@@ -1332,196 +1389,232 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }
     }
     
+    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
-    let signal = combineLatest(presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue, importersContext, importersState.get())
+    let signal = combineLatest(
+        presentationData,
+        statePromise.get() |> deliverOnMainQueue,
+        peerView,
+        adminedPublicChannels.get(),
+        importersContext,
+        importersState.get(),
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true),
+            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
+        )
+    )
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, publicChannelsToRevoke, importersContext, importers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, view, publicChannelsToRevoke, importersContext, importers, data -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peer = peerViewMainPeer(view)
         
+        let (limits, premiumLimits, accountPeer) = data
+        let isPremium = accountPeer?.isPremium ?? false
+        
+        var footerItem: ItemListControllerFooterItem?
+        
         var rightNavigationButton: ItemListNavigationButton?
-        if let peer = peer as? TelegramChannel {
-            var doneEnabled = true
-            if let selectedType = state.selectedType {
-                switch selectedType {
-                    case .privateChannel:
-                        break
-                    case .publicChannel:
-                        var hasLocation = false
-                        if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
-                            hasLocation = true
-                        }
-                        
-                        if let addressNameValidationStatus = state.addressNameValidationStatus {
-                            switch addressNameValidationStatus {
-                                case .availability(.available):
-                                    break
-                                default:
-                                    doneEnabled = false
-                            }
-                        } else {
-                            doneEnabled = !(peer.addressName?.isEmpty ?? true) || hasLocation
-                        }
-                }
+        if case .revokeNames = mode {
+            let count = Int32(publicChannelsToRevoke?.count ?? 0)
+            if !premiumConfiguration.isPremiumDisabled && count < premiumLimits.maxPublicLinksCount {
+                footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: presentationData.strings.Premium_IncreaseLimit, colorful: true, action: {
+                    let controller = PremiumIntroScreen(context: context, source: .publicLinks)
+                    pushControllerImpl?(controller)
+                })
             }
-            
-            rightNavigationButton = ItemListNavigationButton(content: .text(mode == .initialSetup ? presentationData.strings.Common_Next : presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
-                var updatedAddressNameValue: String?
-                updateState { state in
-                    updatedAddressNameValue = updatedAddressName(mode: mode, state: state, peer: peer, cachedData: view.cachedData)
-                    return state
+        } else {
+            if let peer = peer as? TelegramChannel {
+                var doneEnabled = true
+                if let selectedType = state.selectedType {
+                    switch selectedType {
+                        case .privateChannel:
+                            break
+                        case .publicChannel:
+                            var hasLocation = false
+                            if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
+                                hasLocation = true
+                            }
+                            
+                            if let addressNameValidationStatus = state.addressNameValidationStatus {
+                                switch addressNameValidationStatus {
+                                    case .availability(.available):
+                                        break
+                                    default:
+                                        doneEnabled = false
+                                }
+                            } else {
+                                doneEnabled = !(peer.addressName?.isEmpty ?? true) || hasLocation
+                            }
+                    }
                 }
                 
-                if let updatedCopyProtection = state.forwardingEnabled {
-                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
+                let isInitialSetup: Bool
+                if case .initialSetup = mode {
+                    isInitialSetup = true
+                } else {
+                    isInitialSetup = false
                 }
                 
-                if let updatedJoinToSend = state.joinToSend {
-                    toggleJoinToSendDisposable.set(context.engine.peers.toggleChannelJoinToSend(peerId: peerId, enabled: updatedJoinToSend == .members).start())
-                }
-                
-                if let updatedApproveMembers = state.approveMembers {
-                    toggleRequestToJoinDisposable.set(context.engine.peers.toggleChannelJoinRequest(peerId: peerId, enabled: updatedApproveMembers).start())
-                }
-                
-                if let updatedAddressNameValue = updatedAddressNameValue {
-                    let invokeAction: () -> Void = {
-                        updateState { state in
-                            return state.withUpdatedUpdatingAddressName(true)
+                rightNavigationButton = ItemListNavigationButton(content: .text(isInitialSetup ? presentationData.strings.Common_Next : presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
+                    var updatedAddressNameValue: String?
+                    updateState { state in
+                        updatedAddressNameValue = updatedAddressName(mode: mode, state: state, peer: peer, cachedData: view.cachedData)
+                        return state
+                    }
+                    
+                    if let updatedCopyProtection = state.forwardingEnabled {
+                        toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
+                    }
+                    
+                    if let updatedJoinToSend = state.joinToSend {
+                        toggleJoinToSendDisposable.set(context.engine.peers.toggleChannelJoinToSend(peerId: peerId, enabled: updatedJoinToSend == .members).start())
+                    }
+                    
+                    if let updatedApproveMembers = state.approveMembers {
+                        toggleRequestToJoinDisposable.set(context.engine.peers.toggleChannelJoinRequest(peerId: peerId, enabled: updatedApproveMembers).start())
+                    }
+                    
+                    if let updatedAddressNameValue = updatedAddressNameValue {
+                        let invokeAction: () -> Void = {
+                            updateState { state in
+                                return state.withUpdatedUpdatingAddressName(true)
+                            }
+                            _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
+                            
+                            updateAddressNameDisposable.set((context.engine.peers.updateAddressName(domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
+                                |> deliverOnMainQueue).start(error: { _ in
+                                    updateState { state in
+                                        return state.withUpdatedUpdatingAddressName(false)
+                                    }
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                }, completed: {
+                                    updateState { state in
+                                        return state.withUpdatedUpdatingAddressName(false)
+                                    }
+                                    switch mode {
+                                        case .initialSetup:
+                                            nextImpl?()
+                                        case .generic, .privateLink, .revokeNames:
+                                            dismissImpl?()
+                                    }
+                                }))
+                            
                         }
-                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
                         
-                        updateAddressNameDisposable.set((context.engine.peers.updateAddressName(domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
-                            |> deliverOnMainQueue).start(error: { _ in
-                                updateState { state in
-                                    return state.withUpdatedUpdatingAddressName(false)
+                        _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
+                            if showAlert {
+                                let text: String
+                                if case .broadcast = peer.info {
+                                    text = presentationData.strings.Channel_Edit_PrivatePublicLinkAlert
+                                } else {
+                                    text = presentationData.strings.Group_Edit_PrivatePublicLinkAlert
                                 }
-                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                            }, completed: {
-                                updateState { state in
-                                    return state.withUpdatedUpdatingAddressName(false)
+                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
+                            } else {
+                                invokeAction()
+                            }
+                        })
+                    } else {
+                        switch mode {
+                            case .initialSetup:
+                                nextImpl?()
+                            case .generic, .privateLink, .revokeNames:
+                                dismissImpl?()
+                        }
+                    }
+                })
+            } else if let peer = peer as? TelegramGroup {
+                var doneEnabled = true
+                if let selectedType = state.selectedType {
+                    switch selectedType {
+                        case .privateChannel:
+                            break
+                        case .publicChannel:
+                            if let addressNameValidationStatus = state.addressNameValidationStatus {
+                                switch addressNameValidationStatus {
+                                    case .availability(.available):
+                                        break
+                                    default:
+                                        doneEnabled = false
                                 }
-                                switch mode {
-                                    case .initialSetup:
-                                        nextImpl?()
-                                    case .generic, .privateLink:
+                            } else {
+                                doneEnabled = !(peer.addressName?.isEmpty ?? true)
+                            }
+                    }
+                }
+                
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
+                    var updatedAddressNameValue: String?
+                    updateState { state in
+                        updatedAddressNameValue = updatedAddressName(mode: mode, state: state, peer: peer, cachedData: nil)
+                        return state
+                    }
+                    
+                    if let updatedCopyProtection = state.forwardingEnabled {
+                        toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
+                    }
+                    
+                    if let updatedAddressNameValue = updatedAddressNameValue {
+                        let invokeAction: () -> Void = {
+                            updateState { state in
+                                return state.withUpdatedUpdatingAddressName(true)
+                            }
+                            _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
+                            
+                            let signal = context.engine.peers.convertGroupToSupergroup(peerId: peerId)
+                            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
+                                return context.engine.peers.updateAddressName(domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
+                                |> `catch` { _ -> Signal<Void, NoError> in
+                                    return .complete()
+                                }
+                                |> mapToSignal { _ -> Signal<PeerId?, NoError> in
+                                    return .complete()
+                                }
+                                |> then(.single(upgradedPeerId))
+                                |> castError(ConvertGroupToSupergroupError.self)
+                            }
+                            |> deliverOnMainQueue
+                            
+                            updateAddressNameDisposable.set((signal
+                            |> deliverOnMainQueue).start(next: { updatedPeerId in
+                                if let updatedPeerId = updatedPeerId {
+                                    upgradedToSupergroup(updatedPeerId, {
                                         dismissImpl?()
+                                    })
+                                } else {
+                                    dismissImpl?()
+                                }
+                            }, error: { error in
+                                updateState { state in
+                                    return state.withUpdatedUpdatingAddressName(false)
+                                }
+                                switch error {
+                                case .tooManyChannels:
+                                    pushControllerImpl?(oldChannelsController(context: context, updatedPresentationData: updatedPresentationData, intent: .upgrade))
+                                default:
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                             }))
+                        }
                         
-                    }
-                    
-                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
-                        if showAlert {
-                            let text: String
-                            if case .broadcast = peer.info {
-                                text = presentationData.strings.Channel_Edit_PrivatePublicLinkAlert
+                        _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
+                            if showAlert {
+                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Group_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
                             } else {
-                                text = presentationData.strings.Group_Edit_PrivatePublicLinkAlert
+                                invokeAction()
                             }
-                            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
-                        } else {
-                            invokeAction()
-                        }
-                    })
-                } else {
-                    switch mode {
-                        case .initialSetup:
-                            nextImpl?()
-                        case .generic, .privateLink:
-                            dismissImpl?()
-                    }
-                }
-            })
-        } else if let peer = peer as? TelegramGroup {
-            var doneEnabled = true
-            if let selectedType = state.selectedType {
-                switch selectedType {
-                    case .privateChannel:
-                        break
-                    case .publicChannel:
-                        if let addressNameValidationStatus = state.addressNameValidationStatus {
-                            switch addressNameValidationStatus {
-                                case .availability(.available):
-                                    break
-                                default:
-                                    doneEnabled = false
-                            }
-                        } else {
-                            doneEnabled = !(peer.addressName?.isEmpty ?? true)
-                        }
-                }
-            }
-            
-            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
-                var updatedAddressNameValue: String?
-                updateState { state in
-                    updatedAddressNameValue = updatedAddressName(mode: mode, state: state, peer: peer, cachedData: nil)
-                    return state
-                }
-                
-                if let updatedCopyProtection = state.forwardingEnabled {
-                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
-                }
-                
-                if let updatedAddressNameValue = updatedAddressNameValue {
-                    let invokeAction: () -> Void = {
-                        updateState { state in
-                            return state.withUpdatedUpdatingAddressName(true)
-                        }
-                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
-                        
-                        let signal = context.engine.peers.convertGroupToSupergroup(peerId: peerId)
-                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
-                            return context.engine.peers.updateAddressName(domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
-                            |> `catch` { _ -> Signal<Void, NoError> in
-                                return .complete()
-                            }
-                            |> mapToSignal { _ -> Signal<PeerId?, NoError> in
-                                return .complete()
-                            }
-                            |> then(.single(upgradedPeerId))
-                            |> castError(ConvertGroupToSupergroupError.self)
-                        }
-                        |> deliverOnMainQueue
-                        
-                        updateAddressNameDisposable.set((signal
-                        |> deliverOnMainQueue).start(next: { updatedPeerId in
-                            if let updatedPeerId = updatedPeerId {
-                                upgradedToSupergroup(updatedPeerId, {
-                                    dismissImpl?()
-                                })
-                            } else {
+                        })
+                    } else {
+                        switch mode {
+                            case .initialSetup:
+                                nextImpl?()
+                            case .generic, .privateLink, .revokeNames:
                                 dismissImpl?()
-                            }
-                        }, error: { error in
-                            updateState { state in
-                                return state.withUpdatedUpdatingAddressName(false)
-                            }
-                            switch error {
-                            case .tooManyChannels:
-                                pushControllerImpl?(oldChannelsController(context: context, updatedPresentationData: updatedPresentationData, intent: .upgrade))
-                            default:
-                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                            }
-                        }))
-                    }
-                    
-                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
-                        if showAlert {
-                            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Group_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
-                        } else {
-                            invokeAction()
                         }
-                    })
-                } else {
-                    switch mode {
-                        case .initialSetup:
-                            nextImpl?()
-                        case .generic, .privateLink:
-                            dismissImpl?()
                     }
-                }
-            })
+                })
+            }
         }
         
         if state.revokingPeerId != nil {
@@ -1541,13 +1634,14 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         switch mode {
             case .initialSetup:
                 leftNavigationButton = nil
-            case .generic, .privateLink:
+            case .generic, .privateLink, .revokeNames:
                 leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                     dismissImpl?()
                 })
         }
         
         var crossfade: Bool = false
+        var animateChanges: Bool = false
         if let cachedData = view.cachedData as? CachedChannelData {
             let invitation = cachedData.exportedInvitation
             let previousInvitation = previousInvitation.swap(invitation)
@@ -1580,20 +1674,27 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             if selectedType == .publicChannel, let hadNamesToRevoke = hadNamesToRevoke, !crossfade {
                 crossfade = hadNamesToRevoke != hasNamesToRevoke
             }
-        }
-        
-        let title: String
-        if case .privateLink = mode {
-            title = presentationData.strings.GroupInfo_InviteLink_Title
-        } else {
-            if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
-                title = presentationData.strings.Group_PublicLink_Title
-            } else {
-                title = isGroup ? presentationData.strings.GroupInfo_GroupType : presentationData.strings.Channel_TypeSetup_Title
+                        
+            if let hadNamesToRevoke = hadNamesToRevoke {
+                animateChanges = hadNamesToRevoke != hasNamesToRevoke
             }
         }
         
-        let entries = channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, importers: importers, state: state)
+        let title: String
+        switch mode {
+            case .generic, .initialSetup:
+                if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
+                    title = presentationData.strings.Group_PublicLink_Title
+                } else {
+                    title = isGroup ? presentationData.strings.GroupInfo_GroupType : presentationData.strings.Channel_TypeSetup_Title
+                }
+            case .privateLink:
+                title = presentationData.strings.GroupInfo_InviteLink_Title
+            case .revokeNames:
+                title = presentationData.strings.Premium_LimitReached
+        }
+
+        let entries = channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, importers: importers, state: state, limits: limits, premiumLimits: premiumLimits, isPremium: isPremium, isPremiumDisabled: premiumConfiguration.isPremiumDisabled)
         
         var focusItemTag: ItemListItemTag?
         if entries.count > 1, let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
@@ -1601,7 +1702,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, focusItemTag: focusItemTag, crossfadeState: crossfade, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, focusItemTag: focusItemTag, footerItem: footerItem, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

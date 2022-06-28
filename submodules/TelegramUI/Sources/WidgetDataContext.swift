@@ -198,15 +198,16 @@ final class WidgetDataContext {
                 if peerIds.isEmpty {
                     continue
                 }
-                let topMessagesKey: PostboxViewKey = .topChatMessage(peerIds: Array(peerIds))
                 
-                accountSignals.append(account.postbox.combinedView(keys: [topMessagesKey])
-                |> map { combinedView -> [WidgetDataPeer] in
-                    guard let topMessages = combinedView.views[topMessagesKey] as? TopChatMessageView else {
-                        return []
-                    }
+                accountSignals.append(TelegramEngine(account: account).data.subscribe(EngineDataMap(
+                    peerIds.map(TelegramEngine.EngineData.Item.Messages.TopMessage.init)
+                ))
+                |> map { topMessages -> [WidgetDataPeer] in
                     var result: [WidgetDataPeer] = []
-                    for (peerId, message) in topMessages.messages {
+                    for (peerId, message) in topMessages {
+                        guard let message = message else {
+                            continue
+                        }
                         guard let peer = message.peers[message.id.peerId] else {
                             continue
                         }
@@ -227,7 +228,7 @@ final class WidgetDataContext {
                             name = peer.debugDisplayTitle
                         }
                         
-                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: name, lastName: lastName, letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(accountPeerId: account.peerId, message: EngineMessage(message))))
+                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: name, lastName: lastName, letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(accountPeerId: account.peerId, message: message)))
                     }
                     result.sort(by: { lhs, rhs in
                         return lhs.id < rhs.id

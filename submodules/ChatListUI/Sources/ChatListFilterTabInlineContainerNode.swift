@@ -374,7 +374,7 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
     var tabSelected: ((ChatListFilterTabEntryId) -> Void)?
     var tabRequestedDeletion: ((ChatListFilterTabEntryId) -> Void)?
     var addFilter: (() -> Void)?
-    var contextGesture: ((Int32?, ContextExtractedContentContainingNode, ContextGesture) -> Void)?
+    var contextGesture: ((Int32?, ContextExtractedContentContainingNode, ContextGesture, Bool) -> Void)?
     
     private var reorderingGesture: ReorderingGestureRecognizer?
     private var reorderingItem: ChatListFilterTabEntryId?
@@ -390,7 +390,7 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
             $0.compactMap {
                 switch $0 {
                 case .all:
-                    return nil
+                    return 0
                 case let .filter(id):
                     return id
                 }
@@ -653,9 +653,9 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
                     strongSelf.scrollNode.view.setContentOffset(strongSelf.scrollNode.view.contentOffset, animated: false)
                     switch filter {
                     case let .filter(id, _, _):
-                        strongSelf.contextGesture?(id, sourceNode, gesture)
+                        strongSelf.contextGesture?(id, sourceNode, gesture, false)
                     default:
-                        strongSelf.contextGesture?(nil, sourceNode, gesture)
+                        strongSelf.contextGesture?(nil, sourceNode, gesture, false)
                     }
                 }), highlighted: ItemNode(pressed: { [weak self] in
                     self?.tabSelected?(filter.id)
@@ -670,9 +670,9 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
                         strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = false
                         strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = true
                         strongSelf.scrollNode.view.setContentOffset(strongSelf.scrollNode.view.contentOffset, animated: false)
-                        strongSelf.contextGesture?(id, sourceNode, gesture)
+                        strongSelf.contextGesture?(id, sourceNode, gesture, false)
                     default:
-                        strongSelf.contextGesture?(nil, sourceNode, gesture)
+                        strongSelf.contextGesture?(nil, sourceNode, gesture, false)
                     }
                 }))
                 self.itemNodePairs[filter.id] = itemNodePair

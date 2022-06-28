@@ -569,8 +569,10 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         break
                     } else if let file = media as? TelegramMediaFile {
                         updatedMediaReference = .message(message: MessageReference(message), media: file)
-                        if !file.isInstantVideo, let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+                        if !file.isInstantVideo && !file.isSticker, let representation = largestImageRepresentation(file.previewRepresentations) {
                             imageDimensions = representation.dimensions.cgSize
+                        } else if file.isAnimated, let dimensions = file.dimensions {
+                            imageDimensions = dimensions.cgSize
                         }
                         break
                     }
@@ -620,7 +622,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                             let dimensions = fileReference.media.dimensions ?? PixelDimensions(width: 512, height: 512)
                             updateImageSignal = chatMessageAnimatedSticker(postbox: context.account.postbox, file: fileReference.media, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)))
                             updatedFetchMediaSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource))
-                        } else if fileReference.media.isVideo {
+                        } else if fileReference.media.isVideo || fileReference.media.isAnimated {
                             updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                         } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
                             updateImageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
@@ -677,7 +679,6 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     
                     let textFrame = CGRect(origin: CGPoint(x: 0.0, y: 23.0), size: textLayout.size)
                     strongSelf.textNode.frame = textFrame
-                    
                     
                     if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
                         let spoilerTextNode = spoilerTextApply()

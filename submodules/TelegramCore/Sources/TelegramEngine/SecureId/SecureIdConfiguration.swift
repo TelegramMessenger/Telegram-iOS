@@ -36,7 +36,7 @@ public func secureIdConfiguration(postbox: Postbox, network: Network) -> Signal<
             }
             return postbox.transaction { transaction -> SecureIdConfiguration in
                 if let entry = CodableEntry(parsed) {
-                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSecureIdConfiguration, key: ValueBoxKey(length: 0)), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSecureIdConfiguration, key: ValueBoxKey(length: 0)), entry: entry)
                 }
                 return parsed.value
             }

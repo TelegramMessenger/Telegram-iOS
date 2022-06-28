@@ -1,32 +1,15 @@
-load("//build-system/bazel-utils:unique_directories.bzl", "unique_directories")
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
-private_headers = glob([
-    "lottie-ios/**/*.h",
-], exclude = [
-    "lottie-ios/Classes/PublicHeaders/**/*.h",
-])
-
-objc_library(
+swift_library(
     name = "Lottie",
-    enable_modules = True,
     module_name = "Lottie",
     srcs = glob([
-        "lottie-ios/**/*.m",
-    ]) + private_headers,
-    copts = [
-        "-I{}/{}".format(package_name(), directory) for directory in unique_directories(private_headers)
-    ] + [
-        "-I{}/lottie-ios/Classes/PublicHeaders/Lottie".format(package_name()),
-    ],
-    hdrs = glob([
-        "lottie-ios/Classes/PublicHeaders/**/*.h",
+        "Sources/**/*.swift",
     ]),
-    includes = [
-        "lottie-ios/Classes/PublicHeaders",
+    copts = [
+        "-warnings-as-errors",
     ],
-    sdk_frameworks = [
-        "Foundation",
-        "UIKit",
+    deps = [
     ],
     visibility = [
         "//visibility:public",

@@ -50,4 +50,8 @@ AS_SUBCLASSING_RESTRICTED
 
 @end
 
+@interface ASCustomTextContainer : NSTextContainer
+
+@end
+
 #endif

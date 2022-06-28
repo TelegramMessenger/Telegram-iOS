@@ -196,20 +196,11 @@ public func peerAllowedReactionListController(
     let _ = dismissImpl
     
     let actionsDisposable = DisposableSet()
-    actionsDisposable.add((context.account.postbox.transaction { transaction -> Set<String>? in
-        let cachedData = transaction.getPeerCachedData(peerId: peerId)
-        if let cachedData = cachedData as? CachedChannelData {
-            return cachedData.allowedReactions.flatMap(Set.init)
-        } else if let cachedData = cachedData as? CachedGroupData {
-            return cachedData.allowedReactions.flatMap(Set.init)
-        } else {
-            return nil
-        }
-    }
+    actionsDisposable.add((context.engine.data.get(TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: peerId))
     |> deliverOnMainQueue).start(next: { allowedReactions in
         updateState { state in
             var state = state
-            state.updatedAllowedReactions = allowedReactions
+            state.updatedAllowedReactions = allowedReactions.flatMap(Set.init)
             return state
         }
     }))
@@ -303,17 +294,10 @@ public func peerAllowedReactionListController(
     
     let controller = ItemListController(context: context, state: signal)
     controller.willDisappear = { _ in
-        let _ = (context.account.postbox.transaction { transaction -> Set<String>? in
-            let cachedData = transaction.getPeerCachedData(peerId: peerId)
-            if let cachedData = cachedData as? CachedChannelData {
-                return cachedData.allowedReactions.flatMap(Set.init)
-            } else if let cachedData = cachedData as? CachedGroupData {
-                return cachedData.allowedReactions.flatMap(Set.init)
-            } else {
-                return nil
-            }
-        }
-        |> deliverOnMainQueue).start(next: { initialAllowedReactions in
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: peerId))
+        |> deliverOnMainQueue).start(next: { initialAllowedReactionList in
+            let initialAllowedReactions = initialAllowedReactionList.flatMap(Set.init)
+            
             let updatedAllowedReactions = stateValue.with({ $0 }).updatedAllowedReactions
             if let updatedAllowedReactions = updatedAllowedReactions, initialAllowedReactions != updatedAllowedReactions {
                 let _ = context.engine.peers.updatePeerAllowedReactions(peerId: peerId, allowedReactions: Array(updatedAllowedReactions)).start()

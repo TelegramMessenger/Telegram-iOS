@@ -84,7 +84,7 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -101,7 +101,7 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
     @objc private func animationTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if !self.animationNode.isPlaying {
-                self.animationNode.play()
+                self.animationNode.play(firstFrame: false, fromIndex: nil)
             }
         }
     }

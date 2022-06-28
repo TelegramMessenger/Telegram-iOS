@@ -50,13 +50,18 @@ public struct ListViewItemConfigureNodeFlags: OptionSet {
     public static let preferSynchronousResourceLoading = ListViewItemConfigureNodeFlags(rawValue: 1 << 0)
 }
 
-public struct ListViewItemApply {
+public final class ListViewItemApply {
     public let isOnScreen: Bool
     public let timestamp: Double?
+    public private(set) var invertOffsetDirection: Bool = false
     
     public init(isOnScreen: Bool, timestamp: Double? = nil) {
         self.isOnScreen = isOnScreen
         self.timestamp = timestamp
+    }
+    
+    public func setInvertOffsetDirection() {
+        self.invertOffsetDirection = true
     }
 }
 

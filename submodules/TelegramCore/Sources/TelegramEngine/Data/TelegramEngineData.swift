@@ -64,6 +64,68 @@ public final class EngineDataMap<Item: TelegramEngineDataItem & TelegramEngineMa
     }
 }
 
+public final class EngineDataList<Item: TelegramEngineDataItem & TelegramEngineMapKeyDataItem>: TelegramEngineDataItem, AnyPostboxViewDataItem {
+    public typealias Result = [Item.Result]
+
+    private let items: [Item]
+
+    public init(_ items: [Item]) {
+        self.items = items
+    }
+
+    var keys: [PostboxViewKey] {
+        var keys = Set<PostboxViewKey>()
+        for item in self.items {
+            for key in (item as! AnyPostboxViewDataItem).keys {
+                keys.insert(key)
+            }
+        }
+        return Array(keys)
+    }
+
+    func _extract(views: [PostboxViewKey: PostboxView]) -> Any {
+        var result: [Item.Result] = []
+
+        for item in self.items {
+            let itemResult = (item as! AnyPostboxViewDataItem)._extract(views: views)
+            result.append(itemResult as! Item.Result)
+        }
+
+        return result
+    }
+}
+
+public final class EngineDataOptional<Item: TelegramEngineDataItem>: TelegramEngineDataItem, AnyPostboxViewDataItem {
+    public typealias Result = Item.Result?
+
+    private let item: Item?
+
+    public init(_ item: Item?) {
+        self.item = item
+    }
+
+    var keys: [PostboxViewKey] {
+        var keys = Set<PostboxViewKey>()
+        if let item = self.item {
+            for key in (item as! AnyPostboxViewDataItem).keys {
+                keys.insert(key)
+            }
+        }
+        return Array(keys)
+    }
+
+    func _extract(views: [PostboxViewKey: PostboxView]) -> Any {
+        var result: [Item.Result] = []
+
+        if let item = self.item {
+            let itemResult = (item as! AnyPostboxViewDataItem)._extract(views: views)
+            result.append(itemResult as! Item.Result)
+        }
+
+        return result
+    }
+}
+
 public extension TelegramEngine {
     final class EngineData {
         public struct Item {
@@ -128,6 +190,37 @@ public extension TelegramEngine {
                 )
             }
         }
+        
+        public func subscribe<
+            T0: TelegramEngineDataItem,
+            T1: TelegramEngineDataItem,
+            T2: TelegramEngineDataItem
+        >(
+            _ t0: T0,
+            _ t1: T1,
+            _ t2: T2
+        ) -> Signal<
+            (
+                T0.Result,
+                T1.Result,
+                T2.Result
+            ),
+        NoError> {
+            return self._subscribe(items: [
+                t0 as! AnyPostboxViewDataItem,
+                t1 as! AnyPostboxViewDataItem,
+                t2 as! AnyPostboxViewDataItem
+            ])
+            |> map { results -> (T0.Result, T1.Result, T2.Result) in
+                return (
+                    results[0] as! T0.Result,
+                    results[1] as! T1.Result,
+                    results[2] as! T2.Result
+                )
+            }
+        }
+        
+        
         public func get<
             T0: TelegramEngineDataItem,
             T1: TelegramEngineDataItem
@@ -141,6 +234,24 @@ public extension TelegramEngine {
             ),
         NoError> {
             return self.subscribe(t0, t1) |> take(1)
+        }
+        
+        public func get<
+            T0: TelegramEngineDataItem,
+            T1: TelegramEngineDataItem,
+            T2: TelegramEngineDataItem
+        >(
+            _ t0: T0,
+            _ t1: T1,
+            _ t2: T2
+        ) -> Signal<
+            (
+                T0.Result,
+                T1.Result,
+                T2.Result
+            ),
+        NoError> {
+            return self.subscribe(t0, t1, t2) |> take(1)
         }
     }
 }

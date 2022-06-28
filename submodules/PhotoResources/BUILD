@@ -25,6 +25,7 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/MusicAlbumArtResources:MusicAlbumArtResources",
         "//submodules/Svg:Svg",
+        "//submodules/Utils/RangeSet:RangeSet",
     ],
     visibility = [
         "//visibility:public",

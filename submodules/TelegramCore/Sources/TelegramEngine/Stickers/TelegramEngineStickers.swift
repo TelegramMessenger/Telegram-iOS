@@ -81,6 +81,10 @@ public extension TelegramEngine {
             return _internal_getStickerSetShortNameSuggestion(account: self.account, title: title)
         }
         
+        public func toggleStickerSaved(file: TelegramMediaFile, saved: Bool) -> Signal<SavedStickerResult, AddSavedStickerError> {
+            return _internal_toggleStickerSaved(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, file: file, saved: saved)
+        }
+        
         public func validateStickerSetShortNameInteractive(shortName: String) -> Signal<AddressNameValidationStatus, NoError> {
             if let error = _internal_checkAddressNameFormat(shortName) {
                 return .single(.invalidFormat(error))
@@ -107,6 +111,49 @@ public extension TelegramEngine {
                 return settings
             }).start()
             return _internal_updateDefaultReaction(account: self.account, reaction: reaction)
+        }
+        
+        public func isStickerSaved(id: EngineMedia.Id) -> Signal<Bool, NoError> {
+            return self.account.postbox.transaction { transaction -> Bool in
+                return getIsStickerSaved(transaction: transaction, fileId: id)
+            }
+        }
+        
+        public func isGifSaved(id: EngineMedia.Id) -> Signal<Bool, NoError> {
+            return self.account.postbox.transaction { transaction -> Bool in
+                return getIsGifSaved(transaction: transaction, mediaId: id)
+            }
+        }
+        
+        public func clearRecentlyUsedStickers() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_clearRecentlyUsedStickers(transaction: transaction)
+            }
+            |> ignoreValues
+        }
+        
+        public func reorderStickerPacks(namespace: ItemCollectionId.Namespace, itemIds: [ItemCollectionId]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                let infos = transaction.getItemCollectionsInfos(namespace: namespace)
+                
+                var packDict: [ItemCollectionId: Int] = [:]
+                for i in 0 ..< infos.count {
+                    packDict[infos[i].0] = i
+                }
+                var tempSortedPacks: [(ItemCollectionId, ItemCollectionInfo)] = []
+                var processedPacks = Set<ItemCollectionId>()
+                for id in itemIds {
+                    if let index = packDict[id] {
+                        tempSortedPacks.append(infos[index])
+                        processedPacks.insert(id)
+                    }
+                }
+                let restPacks = infos.filter { !processedPacks.contains($0.0) }
+                let sortedPacks = restPacks + tempSortedPacks
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: .sync, noDelay: false)
+                transaction.replaceItemCollectionInfos(namespace: namespace, itemCollectionInfos: sortedPacks)
+            }
+            |> ignoreValues
         }
     }
 }

@@ -274,19 +274,28 @@ final class AuthorizedApplicationContext {
             }
         }))
 
-        let postbox = context.account.postbox
+        let engine = context.engine
         self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
         |> mapToSignal { messageList -> Signal<[([Message], PeerGroupId, Bool)], NoError> in
-            return postbox.transaction { transaction -> [([Message], PeerGroupId, Bool)] in
+            return engine.data.get(EngineDataMap(
+                messageList.compactMap { item -> TelegramEngine.EngineData.Item.Messages.ChatListIndex? in
+                    if let message = item.0.first {
+                        return TelegramEngine.EngineData.Item.Messages.ChatListIndex(id: message.id.peerId)
+                    } else {
+                        return nil
+                    }
+                }
+            ))
+            |> map { chatListIndexMap -> [([Message], PeerGroupId, Bool)] in
                 return messageList.filter { item in
                     guard let message = item.0.first else {
                         return false
                     }
-                    let inclusion = transaction.getPeerChatListInclusion(message.id.peerId)
-                    if case .notIncluded = inclusion {
+                    if let maybeChatListIndex = chatListIndexMap[message.id.peerId], maybeChatListIndex != nil {
+                        return true
+                    } else {
                         return false
                     }
-                    return true
                 }
             }
         }
@@ -477,7 +486,7 @@ final class AuthorizedApplicationContext {
                     }
                     let accountId = strongSelf.context.account.id
                     let accountManager = strongSelf.context.sharedContext.accountManager
-                    let _ = (strongSelf.context.engine.auth.deleteAccount()
+                    let _ = (strongSelf.context.engine.auth.deleteAccount(reason: "GDPR")
                     |> deliverOnMainQueue).start(error: { _ in
                         guard let strongSelf = self else {
                             return

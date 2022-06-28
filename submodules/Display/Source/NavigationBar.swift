@@ -4,7 +4,7 @@ import SwiftSignalKit
 
 private var backArrowImageCache: [Int32: UIImage] = [:]
 
-public final class SparseNode: ASDisplayNode {
+open class SparseNode: ASDisplayNode {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.alpha.isZero {
             return nil
@@ -123,6 +123,14 @@ public final class NavigationBackgroundNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
 
     private var validLayout: (CGSize, CGFloat)?
+    
+    public var backgroundCornerRadius: CGFloat {
+        if let (_, cornerRadius) = self.validLayout {
+            return cornerRadius
+        } else {
+            return 0.0
+        }
+    }
 
     public init(color: UIColor, enableBlur: Bool = true) {
         self._color = .clear

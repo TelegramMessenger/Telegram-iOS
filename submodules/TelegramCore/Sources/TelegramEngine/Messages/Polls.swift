@@ -149,8 +149,6 @@ func _internal_requestClosePoll(postbox: Postbox, network: Network, stateManager
     }
 }
 
-private let cachedPollResultsCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 20, highWaterItemCount: 40)
-
 final class CachedPollOptionResult: Codable {
     let peerIds: [PeerId]
     let count: Int32
@@ -299,7 +297,7 @@ private final class PollResultsOptionContext {
                             }
                             if populateCache {
                                 if let entry = CodableEntry(CachedPollOptionResult(peerIds: resultPeers.map { $0.peerId }, count: count)) {
-                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier)), entry: entry, collectionSpec: cachedPollResultsCollectionSpec)
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier)), entry: entry)
                                 }
                             }
                             return (resultPeers, Int(count), nextOffset)

@@ -84,7 +84,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), fontSize: 16.0, height: 50.0, cornerRadius: 11.0)
         
@@ -143,7 +143,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                         strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.animationName), width: 256, height: 256, playbackMode: .still(.start), mode: .direct(cachePathPrefix: nil))
                         strongSelf.animationNode.visibility = true
                         Queue.mainQueue().after(0.3) {
-                            strongSelf.animationNode.play()
+                            strongSelf.animationNode.play(firstFrame: false, fromIndex: nil)
                         }
                     }
                     strongSelf.item = item

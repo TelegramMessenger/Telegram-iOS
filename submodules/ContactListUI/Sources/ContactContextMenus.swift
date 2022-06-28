@@ -12,10 +12,14 @@ import LocalizedPeerData
 
 func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, contactsController: ContactsController?) -> Signal<[ContextMenuItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
-    return context.account.postbox.transaction { [weak contactsController] transaction -> [ContextMenuItem] in
+    
+    return context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.AreVoiceCallsAvailable(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.AreVideoCallsAvailable(id: peerId)
+    )
+    |> map { [weak contactsController] peer, areVoiceCallsAvailable, areVideoCallsAvailable -> [ContextMenuItem] in
         var items: [ContextMenuItem] = []
-        
-        let peer = transaction.getPeer(peerId)
         
         items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_SendMessage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.contextMenu.primaryColor) }, action: { _, f in
             if let contactsController = contactsController, let navigationController = contactsController.navigationController as? NavigationController {
@@ -25,34 +29,13 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
         })))
         
         var canStartSecretChat = true
-        if let user = peer as? TelegramUser, user.flags.contains(.isSupport) {
+        if case let .user(user) = peer, user.flags.contains(.isSupport) {
             canStartSecretChat = false
         }
         
         if canStartSecretChat {
             items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_StartSecretChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                let _ = (context.account.postbox.transaction { transaction -> EnginePeer.Id? in
-                    let filteredPeerIds = Array(transaction.getAssociatedPeerIds(peerId)).filter { $0.namespace == Namespaces.Peer.SecretChat }
-                    var activeIndices: [EngineChatList.Item.Index] = []
-                    for associatedId in filteredPeerIds {
-                        if let state = (transaction.getPeer(associatedId) as? TelegramSecretChat)?.embeddedState {
-                            switch state {
-                            case .active, .handshake:
-                                if let (_, index) = transaction.getPeerChatListIndex(associatedId) {
-                                    activeIndices.append(index)
-                                }
-                            default:
-                                break
-                            }
-                        }
-                    }
-                    activeIndices.sort()
-                    if let index = activeIndices.last {
-                        return index.messageIndex.id.peerId
-                    } else {
-                        return nil
-                    }
-                }
+                let _ = (context.engine.peers.mostRecentSecretChat(id: peerId)
                 |> deliverOnMainQueue).start(next: { currentPeerId in
                     if let currentPeerId = currentPeerId {
                         if let contactsController = contactsController, let navigationController = (contactsController.navigationController as? NavigationController) {
@@ -113,15 +96,13 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
         }
         
         var canCall = true
-        if let user = peer as? TelegramUser, let cachedUserData = transaction.getPeerCachedData(peerId: peerId) as? CachedUserData, user.flags.contains(.isSupport) || cachedUserData.callsPrivate {
+        if case let .user(user) = peer, (user.flags.contains(.isSupport) || !areVoiceCallsAvailable) {
             canCall = false
         }
         var canVideoCall = false
         if canCall {
-            if let cachedUserData = transaction.getPeerCachedData(peerId: peerId) as? CachedUserData {
-                if cachedUserData.videoCallsAvailable {
-                    canVideoCall = true
-                }
+            if areVideoCallsAvailable {
+                canVideoCall = true
             }
         }
         

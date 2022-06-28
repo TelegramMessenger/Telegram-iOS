@@ -141,7 +141,7 @@ public final class InstantPageController: ViewController {
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
-        let _ = updateInstantPageStoredStateInteractively(postbox: self.context.account.postbox, webPage: self.webPage, state: self.controllerNode.currentState).start()
+        let _ = updateInstantPageStoredStateInteractively(engine: self.context.engine, webPage: self.webPage, state: self.controllerNode.currentState).start()
     }
     
     override public func loadDisplayNode() {
@@ -167,7 +167,7 @@ public final class InstantPageController: ViewController {
             }
         })
         
-        self.storedStateDisposable = (instantPageStoredState(postbox: self.context.account.postbox, webPage: self.webPage)
+        self.storedStateDisposable = (instantPageStoredState(engine: self.context.engine, webPage: self.webPage)
         |> deliverOnMainQueue).start(next: { [weak self] state in
             if let strongSelf = self {
                 strongSelf.controllerNode.updateWebPage(strongSelf.webPage, anchor: strongSelf.anchor, state: state)

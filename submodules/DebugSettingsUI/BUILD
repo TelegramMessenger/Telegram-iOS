@@ -24,6 +24,7 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/GZip:GZip",
         "//third-party/ZipArchive:ZipArchive",
+        "//submodules/InAppPurchaseManager:InAppPurchaseManager",
     ],
     visibility = [
         "//visibility:public",

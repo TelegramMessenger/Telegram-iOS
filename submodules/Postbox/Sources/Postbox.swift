@@ -740,9 +740,9 @@ public final class Transaction {
         return self.postbox?.storedMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp)
     }
     
-    public func putItemCacheEntry(id: ItemCacheEntryId, entry: CodableEntry, collectionSpec: ItemCacheCollectionSpec) {
+    public func putItemCacheEntry(id: ItemCacheEntryId, entry: CodableEntry) {
         assert(!self.disposed)
-        self.postbox?.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
+        self.postbox?.putItemCacheEntry(id: id, entry: entry)
     }
     
     public func removeItemCacheEntry(id: ItemCacheEntryId) {
@@ -2107,7 +2107,7 @@ final class PostboxImpl {
         return indices.max()
     }
     
-    fileprivate func getPeerChatListInclusion(_ id: PeerId) -> PeerChatListInclusion {
+    func getPeerChatListInclusion(_ id: PeerId) -> PeerChatListInclusion {
         if let inclusion = self.currentUpdatedChatListInclusions[id] {
             return inclusion
         } else {
@@ -2351,7 +2351,7 @@ final class PostboxImpl {
         }
     }
     
-    fileprivate func putItemCacheEntry(id: ItemCacheEntryId, entry: CodableEntry, collectionSpec: ItemCacheCollectionSpec) {
+    fileprivate func putItemCacheEntry(id: ItemCacheEntryId, entry: CodableEntry) {
         self.itemCacheTable.put(id: id, entry: entry, metaTable: self.itemCacheMetaTable)
         self.currentUpdatedCacheEntryKeys.insert(id)
     }

@@ -542,6 +542,8 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], t
                 break
             case .hintIsValidated:
                 break
+            case .NoPremium:
+                break
         }
     }
     return result
@@ -600,6 +602,8 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
             case .hintFileIsLarge:
                 break
             case .hintIsValidated:
+                break
+            case .NoPremium:
                 break
         }
     }
@@ -660,6 +664,8 @@ private func decryptedAttributes101(_ attributes: [TelegramMediaFileAttribute], 
                 break
             case .hintIsValidated:
                 break
+            case .NoPremium:
+                break
         }
     }
     return result
@@ -708,6 +714,8 @@ private func decryptedEntities73(_ entities: [MessageTextEntity]?) -> [SecretApi
             case .BankCard:
                 break
             case .Spoiler:
+                break
+            case .AnimatedEmoji:
                 break
             case .Custom:
                 break
@@ -759,6 +767,8 @@ private func decryptedEntities101(_ entities: [MessageTextEntity]?) -> [SecretAp
             case .BankCard:
                 break
             case .Spoiler:
+                break
+            case .AnimatedEmoji:
                 break
             case .Custom:
                 break
@@ -825,7 +835,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                     arc4random_buf(randomBytesData, 15)
                     let randomBytes = Buffer(memory: randomBytesData, size: 15, capacity: 15, freeWhenDone: true)
                     
-                    let decryptedMedia = SecretApi8.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
+                    let decryptedMedia = SecretApi8.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: Int32(uploadedFile.size), key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                     
                     return .layer8(.decryptedMessage(randomId: globallyUniqueId, randomBytes: randomBytes, message: message.text, media: decryptedMedia))
                 case .layer46:
@@ -835,7 +845,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                     if let _ = viaBotName {
                         flags |= (1 << 11)
                     }
-                    let decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
+                    let decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: Int32(uploadedFile.size), key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
                     flags |= (1 << 9)
                     return .layer46(.decryptedMessage(flags: flags, randomId: globallyUniqueId, ttl: messageAutoremoveTimeout, message: message.text, media: decryptedMedia, entities: nil, viaBotName: viaBotName, replyToRandomId: replyGlobalId))
                 case .layer73:
@@ -849,7 +859,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                     if let _ = decryptedEntites {
                         flags |= (1 << 7)
                     }
-                    let decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
+                    let decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: Int32(uploadedFile.size), key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
                     flags |= (1 << 9)
                     if message.groupingKey != nil {
                         flags |= (1 << 17)
@@ -866,7 +876,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                     if let _ = decryptedEntites {
                         flags |= (1 << 7)
                     }
-                    let decryptedMedia = SecretApi101.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
+                    let decryptedMedia = SecretApi101.DecryptedMessageMedia.decryptedMessageMediaPhoto(thumb: thumb, thumbW: thumbW, thumbH: thumbH, w: Int32(largestRepresentation.dimensions.width), h: Int32(largestRepresentation.dimensions.height), size: Int32(uploadedFile.size), key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), caption: "")
                     flags |= (1 << 9)
                     if message.groupingKey != nil {
                         flags |= (1 << 17)
@@ -894,7 +904,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                         arc4random_buf(randomBytesData, 15)
                         let randomBytes = Buffer(memory: randomBytesData, size: 15, capacity: 15, freeWhenDone: true)
                         
-                        let decryptedMedia = SecretApi8.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, fileName: file.fileName ?? "file", mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
+                        let decryptedMedia = SecretApi8.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, fileName: file.fileName ?? "file", mimeType: file.mimeType, size: Int32(uploadedFile.size), key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                     
                         return .layer8(.decryptedMessage(randomId: globallyUniqueId, randomBytes: randomBytes, message: message.text, media: decryptedMedia))
                     }
@@ -913,9 +923,9 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                         }
                         
                         if let voiceDuration = voiceDuration {
-                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: Int32(uploadedFile.size), key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
                         } else {
-                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes46(file.attributes, transaction: transaction), caption: "")
+                            decryptedMedia = SecretApi46.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: Int32(uploadedFile.size), key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes46(file.attributes, transaction: transaction), caption: "")
                         }
                     } else {
                         if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
@@ -943,7 +953,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                     var decryptedMedia: SecretApi73.DecryptedMessageMedia?
                     
                     if let uploadedFile = uploadedFile {
-                        decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes73(file.attributes, transaction: transaction), caption: "")
+                        decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: Int32(uploadedFile.size), key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes73(file.attributes, transaction: transaction), caption: "")
                     } else {
                         if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
                             let thumb: SecretApi73.PhotoSize
@@ -977,7 +987,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                 var decryptedMedia: SecretApi101.DecryptedMessageMedia?
                 
                 if let uploadedFile = uploadedFile {
-                    decryptedMedia = SecretApi101.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes101(file.attributes, transaction: transaction), caption: "")
+                    decryptedMedia = SecretApi101.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: Int32(uploadedFile.size), key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes101(file.attributes, transaction: transaction), caption: "")
                 } else {
                     if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
                         let thumb: SecretApi101.PhotoSize

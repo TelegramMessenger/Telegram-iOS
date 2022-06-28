@@ -444,15 +444,13 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         if item?.message.id != self.currentlyObservedMessageId {
             self.currentlyObservedMessageId = item?.message.id
             if let id = item?.message.id {
-                let key: PostboxViewKey = .messages(Set([id]))
-                self.currentlyObservedMessageDisposable.set((self.context.account.postbox.combinedView(keys: [key])
-                |> filter { views in
-                    if let view = views.views[key] as? MessagesView {
-                        if !view.messages.isEmpty {
-                            return false
-                        }
+                self.currentlyObservedMessageDisposable.set((self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: id))
+                |> filter { message in
+                    if let _ = message {
+                        return false
+                    } else {
+                        return true
                     }
-                    return true
                 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] _ in
@@ -559,35 +557,41 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
             case let .index(index):
                 switch self.messagesLocation {
                     case let .messages(chatLocation, tagMask, _):
-                        let inputIndex: Signal<MessageIndex?, NoError>
+                        var inputIndex: Signal<MessageIndex?, NoError>?
                         let looping = self.looping
                         switch self.order {
                             case .regular, .reversed:
                                 inputIndex = .single(index)
                             case .random:
                                 var playbackStack = self.playbackStack
-                                inputIndex = self.context.account.postbox.transaction { transaction -> MessageIndex? in
-                                    if case let .random(previous) = navigation, previous {
-                                        let _ = playbackStack.pop()
-                                        while true {
-                                            if let id = playbackStack.pop() {
-                                                if let message = transaction.getMessage(id) {
-                                                    return message.index
-                                                }
-                                            } else {
-                                                break
+                            
+                                if case let .random(previous) = navigation, previous {
+                                    let _ = playbackStack.pop()
+                                    inner: while true {
+                                        if let id = playbackStack.pop() {
+                                            inputIndex = self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: id))
+                                            |> map { message in
+                                                return message?.index
                                             }
+                                            break inner
+                                        } else {
+                                            break
                                         }
                                     }
-                                    
+                                }
+                            
+                                if inputIndex == nil {
                                     if let peerId = chatLocation.peerId {
-                                        return transaction.findRandomMessage(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
+                                        inputIndex = self.context.engine.messages.findRandomMessage(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set))
+                                        |> map { result in
+                                            return result ?? index
+                                        }
                                     } else {
-                                        return nil
+                                        inputIndex = .single(nil)
                                     }
                                 }
                         }
-                        let historySignal = inputIndex
+                        let historySignal = (inputIndex ?? .single(nil))
                         |> mapToSignal { inputIndex -> Signal<(Message, [Message])?, NoError> in
                             guard let inputIndex = inputIndex else {
                                 return .single(nil)

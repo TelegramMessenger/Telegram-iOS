@@ -1070,17 +1070,22 @@ public final class ContactListNode: ASDisplayNode {
                                     resultPeers.append(FoundPeer(peer: mainPeer, subscribers: nil))
                                 }
                             }
-                            return context.account.postbox.transaction { transaction -> ([FoundPeer], [EnginePeer.Id: EnginePeer.Presence]) in
+                            
+                            return context.engine.data.get(
+                                EngineDataMap(resultPeers.map(\.peer.id).map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
+                                EngineDataMap(resultPeers.map(\.peer.id).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
+                            )
+                            |> map { presenceMap, participantCountMap -> ([FoundPeer], [EnginePeer.Id: EnginePeer.Presence]) in
                                 var resultPresences: [EnginePeer.Id: EnginePeer.Presence] = [:]
                                 var mappedPeers: [FoundPeer] = []
                                 for peer in resultPeers {
-                                    if let presence = transaction.getPeerPresence(peerId: peer.peer.id) {
-                                        resultPresences[peer.peer.id] = EnginePeer.Presence(presence)
+                                    if let maybePresence = presenceMap[peer.peer.id], let presence = maybePresence {
+                                        resultPresences[peer.peer.id] = presence
                                     }
                                     if let _ = peer.peer as? TelegramChannel {
                                         var subscribers: Int32?
-                                        if let cachedData = transaction.getPeerCachedData(peerId: peer.peer.id) as? CachedChannelData {
-                                            subscribers = cachedData.participantsSummary.memberCount
+                                        if let maybeMemberCount = participantCountMap[peer.peer.id], let memberCount = maybeMemberCount {
+                                            subscribers = Int32(memberCount)
                                         }
                                         mappedPeers.append(FoundPeer(peer: peer.peer, subscribers: subscribers))
                                     } else {
@@ -1257,24 +1262,39 @@ public final class ContactListNode: ASDisplayNode {
                     chatListSignal = self.context.account.viewTracker.tailChatListView(groupId: .root, count: 100)
                     |> take(1)
                     |> mapToSignal { view, _ -> Signal<[(EnginePeer, Int32)], NoError> in
-                        return context.account.postbox.transaction { transaction -> [(EnginePeer, Int32)] in
+                        return context.engine.data.get(EngineDataMap(
+                            view.entries.compactMap { entry -> EnginePeer.Id? in
+                                switch entry {
+                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
+                                    if let peer = renderedPeer.peer {
+                                        if let channel = peer as? TelegramChannel, case .group = channel.info {
+                                            return peer.id
+                                        }
+                                    }
+                                default:
+                                    break
+                                }
+                                return nil
+                            }.map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init)
+                        ))
+                        |> map { participantCountMap -> [(EnginePeer, Int32)] in
                             var peers: [(EnginePeer, Int32)] = []
                             for entry in view.entries {
                                 switch entry {
-                                    case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
-                                        if let peer = renderedPeer.peer {
-                                            if peer is TelegramGroup {
-                                                peers.append((EnginePeer(peer), 0))
-                                            } else if let channel = peer as? TelegramChannel, case .group = channel.info {
-                                                var memberCount: Int32 = 0
-                                                if let cachedData = transaction.getPeerCachedData(peerId: peer.id) as? CachedChannelData {
-                                                    memberCount = cachedData.participantsSummary.memberCount ?? 0
-                                                }
-                                                peers.append((EnginePeer(peer), memberCount))
+                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
+                                    if let peer = renderedPeer.peer {
+                                        if peer is TelegramGroup {
+                                            peers.append((EnginePeer(peer), 0))
+                                        } else if let channel = peer as? TelegramChannel, case .group = channel.info {
+                                            var memberCount: Int32 = 0
+                                            if let maybeParticipantCount = participantCountMap[peer.id], let participantCount = maybeParticipantCount {
+                                                memberCount = Int32(participantCount)
                                             }
+                                            peers.append((EnginePeer(peer), memberCount))
                                         }
-                                    default:
-                                        break
+                                    }
+                                default:
+                                    break
                                 }
                             }
                             return peers

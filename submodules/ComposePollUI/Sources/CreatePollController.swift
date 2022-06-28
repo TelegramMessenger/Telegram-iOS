@@ -798,8 +798,8 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     )
     |> map { presentationData, state, limitsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var presentationData = presentationData
-        if presentationData.theme.list.blocksBackgroundColor.rgb == 0x000000 {
-            let updatedTheme = presentationData.theme.withInvertedBlocksBackground()
+        if presentationData.theme.list.blocksBackgroundColor.rgb == presentationData.theme.list.plainBackgroundColor.rgb {
+            let updatedTheme = presentationData.theme.withModalBlocksBackground()
             presentationData = presentationData.withUpdated(theme: updatedTheme)
         }
         
@@ -932,15 +932,9 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     weak var currentTooltipController: TooltipController?
     let controller = CreatePollControllerImpl(context: context, state: signal)
     controller.navigationPresentation = .modal
-//    controller.visibleBottomContentOffsetChanged = { [weak controller] offset in
-//        switch offset {
-//            case let .known(value):
-//                let backgroundAlpha: CGFloat = min(30.0, value) / 30.0
-//                controller?.updateTabBarAlpha(backgroundAlpha, .immediate)
-//            case .unknown, .none:
-//                controller?.updateTabBarAlpha(1.0, .immediate)
-//        }
-//    }
+    controller.visibleBottomContentOffsetChanged = { [weak controller] _ in
+        controller?.updateTabBarAlpha(1.0, .immediate)
+    }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

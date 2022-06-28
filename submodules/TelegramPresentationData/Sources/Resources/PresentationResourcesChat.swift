@@ -100,6 +100,10 @@ public struct PresentationResourcesChat {
         }) as! PrincipalThemeAdditionalGraphics
     }
     
+    public static func chatBubbleVerticalLineImage(color: UIColor) -> UIImage? {
+        return generateLineImage(color: color)
+    }
+    
     public static func chatBubbleVerticalLineIncomingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleVerticalLineIncomingImage.rawValue, { theme in
             return generateLineImage(color: theme.chat.message.incoming.accentTextColor)
@@ -285,6 +289,31 @@ public struct PresentationResourcesChat {
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/TrendingGifs"), color: theme.chat.inputMediaPanel.panelIconColor) {
                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
+                }
+            })
+        })
+    }
+    
+    public static func chatInputMediaPanelPremiumIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputMediaPanelPremiumIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 44.0, height: 42.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                if let image = UIImage(bundleImageName: "Peer Info/PremiumIcon") {
+                    if let cgImage = image.cgImage {
+                        context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
+                    }
+                    
+                    let colorsArray: [CGColor] = [
+                        UIColor(rgb: 0x6B93FF).cgColor,
+                        UIColor(rgb: 0x6B93FF).cgColor,
+                        UIColor(rgb: 0x976FFF).cgColor,
+                        UIColor(rgb: 0xE46ACE).cgColor,
+                        UIColor(rgb: 0xE46ACE).cgColor
+                    ]
+                    var locations: [CGFloat] = [0.0, 0.35, 0.5, 0.65, 1.0]
+                    let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
+
+                    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
                 }
             })
         })

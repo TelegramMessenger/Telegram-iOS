@@ -334,6 +334,7 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
         
         var statusBarTransition = transition
         
+        var ignoreInputHeight = false
         if let pending = self.state.pending {
             if pending.isReady {
                 self.state.pending = nil
@@ -343,6 +344,9 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                 var updatedLayout = layout
                 if pending.value.value.view.disableAutomaticKeyboardHandling.isEmpty {
                     updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
+                }
+                if case .regular = layout.metrics.widthClass, pending.value.layout.inputHeight == nil {
+                    ignoreInputHeight = true
                 }
                 self.topTransition(from: previous, to: pending.value, transitionType: pending.transitionType, layout: updatedLayout, transition: pending.transition)
                 self.state.top?.value.isInFocus = self.isInFocus
@@ -368,6 +372,9 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                 if !viewTreeContainsFirstResponder(view: top.value.view) {
                     updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
                 }
+            }
+            if ignoreInputHeight {
+                updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
             }
             self.applyLayout(layout: updatedLayout, to: top, isMaster: true, transition: transition)
             if let childTransition = self.state.transition, childTransition.coordinator.isInteractive {
@@ -470,8 +477,15 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
             })
         } else {
             if let fromValue = fromValue {
+                if viewTreeContainsFirstResponder(view: fromValue.value.view) {
+                    self.ignoreInputHeight = true
+                }
+                
                 fromValue.value.viewWillLeaveNavigation()
                 fromValue.value.viewWillDisappear(false)
+                
+                self.keyboardViewManager?.dismissEditingWithoutAnimation(view: fromValue.value.view)
+                
                 fromValue.value.setIgnoreAppearanceMethodInvocations(true)
                 fromValue.value.displayNode.removeFromSupernode()
                 fromValue.value.setIgnoreAppearanceMethodInvocations(false)
@@ -487,6 +501,7 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                 toValue.value.displayNode.recursivelyEnsureDisplaySynchronously(true)
                 toValue.value.viewDidAppear(false)
             }
+            self.ignoreInputHeight = false
         }
     }
     

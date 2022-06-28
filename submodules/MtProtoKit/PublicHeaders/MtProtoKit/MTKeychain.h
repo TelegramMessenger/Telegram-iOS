@@ -8,6 +8,4 @@
 - (id)objectForKey:(NSString *)aKey group:(NSString *)group;
 - (void)removeObjectForKey:(NSString *)aKey group:(NSString *)group;
 
-- (void)dropGroup:(NSString *)group;
-
 @end

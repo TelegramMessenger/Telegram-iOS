@@ -434,14 +434,14 @@ private class ReplyThreadHistoryContextImpl {
                     return .single(nil)
                 }
                 |> afterNext { result in
-                    guard let (incomingMesageId, count) = result else {
+                    guard let (incomingMessageId, count) = result else {
                         return
                     }
                     Queue.mainQueue().async {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.maxReadIncomingMessageIdValue = incomingMesageId
+                        strongSelf.maxReadIncomingMessageIdValue = incomingMessageId
                         strongSelf.unreadCountValue = count
                     }
                 }

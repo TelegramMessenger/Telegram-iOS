@@ -55,21 +55,6 @@ private class AvatarNodeParameters: NSObject {
     }
 }
 
-private func generateGradientFilledCircleImage(diameter: CGFloat, colors: NSArray) -> UIImage? {
-    return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        context.addEllipse(in: bounds)
-        context.clip()
-        
-        var locations: [CGFloat] = [0.0, 1.0]
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
-        
-        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())
-    })
-}
-
 private let grayscaleColors: NSArray = [
     UIColor(rgb: 0xb1b1b1).cgColor, UIColor(rgb: 0xcdcdcd).cgColor
 ]
@@ -117,7 +102,7 @@ public enum AvatarNodeImageOverride: Equatable {
     case savedMessagesIcon
     case repliesIcon
     case archivedChatsIcon(hiddenByDefault: Bool)
-    case editAvatarIcon
+    case editAvatarIcon(forceNone: Bool)
     case deletedIcon
     case phoneIcon
 }
@@ -322,8 +307,8 @@ public final class AvatarNode: ASDisplayNode {
                 case let .archivedChatsIcon(hiddenByDefault):
                     representation = nil
                     icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
-                case .editAvatarIcon:
-                    representation = peer?.smallProfileImage
+                case let .editAvatarIcon(forceNone):
+                    representation = forceNone ? nil : peer?.smallProfileImage
                     icon = .editAvatarIcon
                 case .deletedIcon:
                     representation = nil

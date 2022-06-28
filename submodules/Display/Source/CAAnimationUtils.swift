@@ -24,6 +24,7 @@ import UIKitRuntimeUtils
         }
         if let completion = self.completion {
             completion(flag)
+            self.completion = nil
         }
     }
 }
@@ -47,6 +48,15 @@ public extension CAAnimation {
             } else {
                 self.delegate = CALayerAnimationDelegate(animation: self, completion: value)
             }
+        }
+    }
+}
+
+private func adjustFrameRate(animation: CAAnimation) {
+    if #available(iOS 15.0, *) {
+        let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
+        if maxFps > 61.0 {
+            animation.preferredFrameRateRange = CAFrameRateRange(minimum: maxFps, maximum: maxFps, preferred: maxFps)
         }
     }
 }
@@ -83,6 +93,8 @@ public extension CALayer {
                 animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
                 animation.fillMode = .both
             }
+            adjustFrameRate(animation: animation)
+            
             return animation
         } else if timingFunction == kCAMediaTimingFunctionSpring {
             let animation = makeSpringAnimation(keyPath)
@@ -107,6 +119,8 @@ public extension CALayer {
                 animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
                 animation.fillMode = .both
             }
+            
+            adjustFrameRate(animation: animation)
             
             return animation
         } else {
@@ -137,6 +151,8 @@ public extension CALayer {
                 animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
                 animation.fillMode = .both
             }
+            
+            adjustFrameRate(animation: animation)
             
             return animation
         }
@@ -196,6 +212,8 @@ public extension CALayer {
             animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
         }
         
+        adjustFrameRate(animation: animation)
+        
         self.add(animation, forKey: keyPath)
     }
     
@@ -224,6 +242,8 @@ public extension CALayer {
         
         animation.speed = speed * Float(animation.duration / duration)
         animation.isAdditive = additive
+        
+        adjustFrameRate(animation: animation)
         
         return animation
     }
@@ -257,6 +277,8 @@ public extension CALayer {
         animation.speed = speed * Float(animation.duration / duration)
         animation.isAdditive = additive
         
+        adjustFrameRate(animation: animation)
+        
         self.add(animation, forKey: keyPath)
     }
     
@@ -283,6 +305,8 @@ public extension CALayer {
         if let completion = completion {
             animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
         }
+        
+        adjustFrameRate(animation: animation)
         
         self.add(animation, forKey: key)
     }

@@ -31,6 +31,9 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
     }
     private let stateDisposable = MetaDisposable()
     
+    private var didStart = false
+    var started = {}
+    
     var audioRecorder: ManagedAudioRecorder? {
         didSet {
             if self.audioRecorder !== oldValue {
@@ -42,6 +45,12 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
                                     strongSelf.timestamp = duration
                                 case let .recording(duration, _):
                                     strongSelf.timestamp = duration
+                                    Queue.mainQueue().async {
+                                        if duration > 0.0 && !strongSelf.didStart {
+                                            strongSelf.didStart = true
+                                            strongSelf.started()
+                                        }
+                                    }
                                 case .stopped:
                                     break
                             }
@@ -66,7 +75,13 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
                 if let videoRecordingStatus = self.videoRecordingStatus {
                     self.durationDisposable?.set(videoRecordingStatus.duration.start(next: { [weak self] duration in
                         Queue.mainQueue().async { [weak self] in
-                            self?.timestamp = duration
+                            if let strongSelf = self {
+                                strongSelf.timestamp = duration
+                                if duration > 0.0 && !strongSelf.didStart {
+                                    strongSelf.didStart = true
+                                    strongSelf.started()
+                                }
+                            }
                         }
                     }))
                 } else if self.audioRecorder == nil {

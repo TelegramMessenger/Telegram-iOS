@@ -307,9 +307,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             switch fetchStatus {
                 case .Fetching:
                     if let context = self.context, let message = self.message, message.flags.isSending {
-                       let _ = context.account.postbox.transaction({ transaction -> Void in
-                            context.engine.messages.deleteMessages(transaction: transaction, ids: [message.id])
-                        }).start()
+                        let _ = context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).start()
                     } else if let media = media, let context = self.context, let message = message {
                         if let media = media as? TelegramMediaFile {
                             messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: media)
@@ -842,7 +840,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     }
                                 }
                             } else {
-                                updatedStatusSignal = chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image), displayAtSize: 600)
+                                updatedStatusSignal = chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image), displayAtSize: nil)
                                 |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                     return (resourceStatus, nil)
                                 }
@@ -983,7 +981,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 }
                                 
                                 if currentReplaceAnimatedStickerNode, let updatedAnimatedStickerFile = updateAnimatedStickerFile {
-                                    let animatedStickerNode = AnimatedStickerNode()
+                                    let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                                     animatedStickerNode.isUserInteractionEnabled = false
                                     animatedStickerNode.started = {
                                         guard let strongSelf = self else {

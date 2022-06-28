@@ -2,16 +2,17 @@ import Foundation
 import SwiftSignalKit
 import Crc32
 import ManagedFile
+import RangeSet
 
 private final class MediaBoxFileMap {
-    fileprivate(set) var sum: Int32
-    private(set) var ranges: IndexSet
-    private(set) var truncationSize: Int32?
+    fileprivate(set) var sum: Int64
+    private(set) var ranges: RangeSet<Int64>
+    private(set) var truncationSize: Int64?
     private(set) var progress: Float?
 
     init() {
         self.sum = 0
-        self.ranges = IndexSet()
+        self.ranges = RangeSet<Int64>()
         self.truncationSize = nil
         self.progress = nil
     }
@@ -21,104 +22,181 @@ private final class MediaBoxFileMap {
             return nil
         }
         
-        var crc: UInt32 = 0
-        var count: Int32 = 0
-        var sum: Int32 = 0
-        var ranges: IndexSet = IndexSet()
-        
-        guard fd.read(&crc, 4) == 4 else {
-            return nil
-        }
-        guard fd.read(&count, 4) == 4 else {
+        var firstUInt32: UInt32 = 0
+        guard fd.read(&firstUInt32, 4) == 4 else {
             return nil
         }
         
-        if count < 0 {
-            return nil
-        }
-        
-        if count < 0 || length < 4 + 4 + count * 2 * 4 {
-            return nil
-        }
-        
-        var truncationSizeValue: Int32 = 0
-        
-        var data = Data(count: Int(4 + count * 2 * 4))
-        let dataCount = data.count
-        if !(data.withUnsafeMutableBytes { rawBytes -> Bool in
-            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+        if firstUInt32 == 0x7bac1487 {
+            var crc: UInt32 = 0
+            guard fd.read(&crc, 4) == 4 else {
+                return nil
+            }
+            
+            var count: Int32 = 0
+            var sum: Int64 = 0
+            var ranges = RangeSet<Int64>()
+            
+            guard fd.read(&count, 4) == 4 else {
+                return nil
+            }
+            
+            if count < 0 {
+                return nil
+            }
+            
+            if count < 0 || length < 4 + 4 + 4 + 8 + count * 2 * 8 {
+                return nil
+            }
+            
+            var truncationSizeValue: Int64 = 0
+            
+            var data = Data(count: Int(8 + count * 2 * 8))
+            let dataCount = data.count
+            if !(data.withUnsafeMutableBytes { rawBytes -> Bool in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
 
-            guard fd.read(bytes, dataCount) == dataCount else {
-                return false
-            }
-            
-            memcpy(&truncationSizeValue, bytes, 4)
-            
-            let calculatedCrc = Crc32(bytes, Int32(dataCount))
-            if calculatedCrc != crc {
-                return false
-            }
-            
-            var offset = 4
-            for _ in 0 ..< count {
-                var intervalOffset: Int32 = 0
-                var intervalLength: Int32 = 0
-                memcpy(&intervalOffset, bytes.advanced(by: offset), 4)
-                memcpy(&intervalLength, bytes.advanced(by: offset + 4), 4)
-                offset += 8
+                guard fd.read(bytes, dataCount) == dataCount else {
+                    return false
+                }
                 
-                ranges.insert(integersIn: Int(intervalOffset) ..< Int(intervalOffset + intervalLength))
+                memcpy(&truncationSizeValue, bytes, 8)
                 
-                sum += intervalLength
+                let calculatedCrc = Crc32(bytes, Int32(dataCount))
+                if calculatedCrc != crc {
+                    return false
+                }
+                
+                var offset = 8
+                for _ in 0 ..< count {
+                    var intervalOffset: Int64 = 0
+                    var intervalLength: Int64 = 0
+                    memcpy(&intervalOffset, bytes.advanced(by: offset), 8)
+                    memcpy(&intervalLength, bytes.advanced(by: offset + 8), 8)
+                    offset += 8 * 2
+                    
+                    ranges.insert(contentsOf: intervalOffset ..< (intervalOffset + intervalLength))
+                    
+                    sum += intervalLength
+                }
+                
+                return true
+            }) {
+                return nil
             }
-            
-            return true
-        }) {
-            return nil
-        }
 
-        self.sum = sum
-        self.ranges = ranges
-        if truncationSizeValue == -1 {
-            self.truncationSize = nil
+            self.sum = sum
+            self.ranges = ranges
+            if truncationSizeValue == -1 {
+                self.truncationSize = nil
+            } else if truncationSizeValue < 0 {
+                self.truncationSize = nil
+            } else {
+                self.truncationSize = truncationSizeValue
+            }
         } else {
-            self.truncationSize = truncationSizeValue
+            let crc: UInt32 = firstUInt32
+            var count: Int32 = 0
+            var sum: Int32 = 0
+            var ranges = RangeSet<Int64>()
+            
+            guard fd.read(&count, 4) == 4 else {
+                return nil
+            }
+            
+            if count < 0 {
+                return nil
+            }
+            
+            if count < 0 || length < 4 + 4 + count * 2 * 4 {
+                return nil
+            }
+            
+            var truncationSizeValue: Int32 = 0
+            
+            var data = Data(count: Int(4 + count * 2 * 4))
+            let dataCount = data.count
+            if !(data.withUnsafeMutableBytes { rawBytes -> Bool in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
+                guard fd.read(bytes, dataCount) == dataCount else {
+                    return false
+                }
+                
+                memcpy(&truncationSizeValue, bytes, 4)
+                
+                let calculatedCrc = Crc32(bytes, Int32(dataCount))
+                if calculatedCrc != crc {
+                    return false
+                }
+                
+                var offset = 4
+                for _ in 0 ..< count {
+                    var intervalOffset: Int32 = 0
+                    var intervalLength: Int32 = 0
+                    memcpy(&intervalOffset, bytes.advanced(by: offset), 4)
+                    memcpy(&intervalLength, bytes.advanced(by: offset + 4), 4)
+                    offset += 8
+                    
+                    ranges.insert(contentsOf: Int64(intervalOffset) ..< Int64(intervalOffset + intervalLength))
+                    
+                    sum += intervalLength
+                }
+                
+                return true
+            }) {
+                return nil
+            }
+
+            self.sum = Int64(sum)
+            self.ranges = ranges
+            if truncationSizeValue == -1 {
+                self.truncationSize = nil
+            } else {
+                self.truncationSize = Int64(truncationSizeValue)
+            }
         }
     }
     
     func serialize(to file: ManagedFile) {
         file.seek(position: 0)
         let buffer = WriteBuffer()
+        var magic: UInt32 = 0x7bac1487
+        buffer.write(&magic, offset: 0, length: 4)
+        
         var zero: Int32 = 0
         buffer.write(&zero, offset: 0, length: 4)
         
-        let rangeView = self.ranges.rangeView
+        let rangeView = self.ranges.ranges
         var count: Int32 = Int32(rangeView.count)
         buffer.write(&count, offset: 0, length: 4)
         
-        var truncationSizeValue: Int32 = self.truncationSize ?? -1
-        buffer.write(&truncationSizeValue, offset: 0, length: 4)
+        var truncationSizeValue: Int64 = self.truncationSize ?? -1
+        buffer.write(&truncationSizeValue, offset: 0, length: 8)
         
         for range in rangeView {
-            var intervalOffset = Int32(range.lowerBound)
-            var intervalLength = Int32(range.count)
-            buffer.write(&intervalOffset, offset: 0, length: 4)
-            buffer.write(&intervalLength, offset: 0, length: 4)
+            var intervalOffset = range.lowerBound
+            var intervalLength = range.upperBound - range.lowerBound
+            buffer.write(&intervalOffset, offset: 0, length: 8)
+            buffer.write(&intervalLength, offset: 0, length: 8)
         }
-        var crc: UInt32 = Crc32(buffer.memory.advanced(by: 4 * 2), Int32(buffer.length - 4 * 2))
-        memcpy(buffer.memory, &crc, 4)
+        var crc: UInt32 = Crc32(buffer.memory.advanced(by: 4 + 4 + 4), Int32(buffer.length - (4 + 4 + 4)))
+        memcpy(buffer.memory.advanced(by: 4), &crc, 4)
         let written = file.write(buffer.memory, count: buffer.length)
         assert(written == buffer.length)
     }
     
-    fileprivate func fill(_ range: Range<Int32>) {
-        let intRange: Range<Int> = Int(range.lowerBound) ..< Int(range.upperBound)
-        let previousCount = self.ranges.count(in: intRange)
-        self.ranges.insert(integersIn: intRange)
-        self.sum += Int32(range.count - previousCount)
+    fileprivate func fill(_ range: Range<Int64>) {
+        var previousCount: Int64 = 0
+        for intersectionRange in self.ranges.intersection(RangeSet<Int64>(range)).ranges {
+            previousCount += intersectionRange.upperBound - intersectionRange.lowerBound
+        }
+        
+        self.ranges.insert(contentsOf: range)
+        self.sum += (range.upperBound - range.lowerBound) - previousCount
     }
     
-    fileprivate func truncate(_ size: Int32) {
+    fileprivate func truncate(_ size: Int64) {
         self.truncationSize = size
     }
     fileprivate func progressUpdated(_ progress: Float) {
@@ -127,21 +205,24 @@ private final class MediaBoxFileMap {
     
     fileprivate func reset() {
         self.truncationSize = nil
-        self.ranges.removeAll()
+        self.ranges = RangeSet<Int64>()
         self.sum = 0
         self.progress = nil
     }
     
-    fileprivate func contains(_ range: Range<Int32>) -> Range<Int32>? {
-        let maxValue: Int
+    fileprivate func contains(_ range: Range<Int64>) -> Range<Int64>? {
+        let maxValue: Int64
         if let truncationSize = self.truncationSize {
-            maxValue = Int(truncationSize)
+            maxValue = truncationSize
         } else {
-            maxValue = Int.max
+            maxValue = Int64.max
         }
-        let intRange: Range<Int> = Int(range.lowerBound) ..< min(maxValue, Int(range.upperBound))
-        if self.ranges.contains(integersIn: intRange) {
-            return Int32(intRange.lowerBound) ..< Int32(intRange.upperBound)
+        let clippedUpperBound = min(maxValue, range.upperBound)
+        let clippedRange: Range<Int64> = min(range.lowerBound, clippedUpperBound) ..< clippedUpperBound
+        let clippedRangeSet = RangeSet<Int64>(clippedRange)
+        
+        if self.ranges.isSuperset(of: clippedRangeSet) {
+            return clippedRange
         } else {
             return nil
         }
@@ -149,11 +230,11 @@ private final class MediaBoxFileMap {
 }
 
 private class MediaBoxPartialFileDataRequest {
-    let range: Range<Int32>
+    let range: Range<Int64>
     var waitingUntilAfterInitialFetch: Bool
     let completion: (MediaResourceData) -> Void
     
-    init(range: Range<Int32>, waitingUntilAfterInitialFetch: Bool, completion: @escaping (MediaResourceData) -> Void) {
+    init(range: Range<Int64>, waitingUntilAfterInitialFetch: Bool, completion: @escaping (MediaResourceData) -> Void) {
         self.range = range
         self.waitingUntilAfterInitialFetch = waitingUntilAfterInitialFetch
         self.completion = completion
@@ -165,21 +246,21 @@ final class MediaBoxPartialFile {
     private let path: String
     private let metaPath: String
     private let completePath: String
-    private let completed: (Int32) -> Void
+    private let completed: (Int64) -> Void
     private let metadataFd: ManagedFile
     private let fd: ManagedFile
     fileprivate let fileMap: MediaBoxFileMap
     private var dataRequests = Bag<MediaBoxPartialFileDataRequest>()
     private let missingRanges: MediaBoxFileMissingRanges
-    private let rangeStatusRequests = Bag<((IndexSet) -> Void, () -> Void)>()
-    private let statusRequests = Bag<((MediaResourceStatus) -> Void, Int32?)>()
+    private let rangeStatusRequests = Bag<((RangeSet<Int64>) -> Void, () -> Void)>()
+    private let statusRequests = Bag<((MediaResourceStatus) -> Void, Int64?)>()
     
     private let fullRangeRequests = Bag<Disposable>()
     
-    private var currentFetch: (Promise<[(Range<Int>, MediaBoxFetchPriority)]>, Disposable)?
+    private var currentFetch: (Promise<[(Range<Int64>, MediaBoxFetchPriority)]>, Disposable)?
     private var processedAtLeastOneFetch: Bool = false
     
-    init?(queue: Queue, path: String, metaPath: String, completePath: String, completed: @escaping (Int32) -> Void) {
+    init?(queue: Queue, path: String, metaPath: String, completePath: String, completed: @escaping (Int64) -> Void) {
         assert(queue.isCurrent())
         if let metadataFd = ManagedFile(queue: queue, path: metaPath, mode: .readwrite), let fd = ManagedFile(queue: queue, path: path, mode: .readwrite) {
             self.queue = queue
@@ -191,7 +272,7 @@ final class MediaBoxPartialFile {
             self.fd = fd
             if let fileMap = MediaBoxFileMap(fd: self.metadataFd) {
                 if !fileMap.ranges.isEmpty {
-                    let upperBound = fileMap.ranges[fileMap.ranges.endIndex]
+                    let upperBound = fileMap.ranges.ranges.last!.upperBound
                     if let actualSize = fileSize(path, useTotalFileAllocatedSize: false) {
                         if upperBound > actualSize {
                             self.fileMap = MediaBoxFileMap()
@@ -217,7 +298,7 @@ final class MediaBoxPartialFile {
         self.currentFetch?.1.dispose()
     }
     
-    static func extractPartialData(path: String, metaPath: String, range: Range<Int32>) -> Data? {
+    static func extractPartialData(path: String, metaPath: String, range: Range<Int64>) -> Data? {
         guard let metadataFd = ManagedFile(queue: nil, path: metaPath, mode: .read) else {
             return nil
         }
@@ -234,7 +315,7 @@ final class MediaBoxPartialFile {
         return fd.readData(count: Int(clippedRange.upperBound - clippedRange.lowerBound))
     }
     
-    var storedSize: Int32 {
+    var storedSize: Int64 {
         assert(self.queue.isCurrent())
         return self.fileMap.sum
     }
@@ -246,7 +327,7 @@ final class MediaBoxPartialFile {
         self.fileMap.serialize(to: self.metadataFd)
         
         for request in self.dataRequests.copyItems() {
-            request.completion(MediaResourceData(path: self.path, offset: Int(request.range.lowerBound), size: 0, complete: false))
+            request.completion(MediaResourceData(path: self.path, offset: request.range.lowerBound, size: 0, complete: false))
         }
         
         if let updatedRanges = self.missingRanges.reset(fileMap: self.fileMap) {
@@ -283,7 +364,7 @@ final class MediaBoxPartialFile {
                 }
                 
                 for request in self.dataRequests.copyItems() {
-                    request.completion(MediaResourceData(path: self.completePath, offset: Int(request.range.lowerBound), size: max(0, size - Int(request.range.lowerBound)), complete: true))
+                    request.completion(MediaResourceData(path: self.completePath, offset: request.range.lowerBound, size: max(0, size - request.range.lowerBound), complete: true))
                 }
                 self.dataRequests.removeAll()
                 
@@ -325,7 +406,7 @@ final class MediaBoxPartialFile {
                 }
                 
                 for request in self.dataRequests.copyItems() {
-                    request.completion(MediaResourceData(path: self.completePath, offset: Int(request.range.lowerBound), size: max(0, size - Int(request.range.lowerBound)), complete: true))
+                    request.completion(MediaResourceData(path: self.completePath, offset: request.range.lowerBound, size: max(0, size - request.range.lowerBound), complete: true))
                 }
                 self.dataRequests.removeAll()
                 
@@ -334,17 +415,17 @@ final class MediaBoxPartialFile {
                 }
                 self.statusRequests.removeAll()
                 
-                self.completed(Int32(size))
+                self.completed(size)
             } else {
                 assertionFailure()
             }
         }
     }
     
-    func truncate(_ size: Int32) {
+    func truncate(_ size: Int64) {
         assert(self.queue.isCurrent())
         
-        let range: Range<Int32> = size ..< Int32.max
+        let range: Range<Int64> = size ..< Int64.max
         
         self.fileMap.truncate(size)
         self.fileMap.serialize(to: self.metadataFd)
@@ -359,24 +440,24 @@ final class MediaBoxPartialFile {
         self.updateStatuses()
     }
     
-    func write(offset: Int32, data: Data, dataRange: Range<Int>) {
+    func write(offset: Int64, data: Data, dataRange: Range<Int64>) {
         assert(self.queue.isCurrent())
         
-        self.fd.seek(position: Int64(offset))
+        self.fd.seek(position: offset)
         let written = data.withUnsafeBytes { rawBytes -> Int in
             let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
 
-            return self.fd.write(bytes.advanced(by: dataRange.lowerBound), count: dataRange.count)
+            return self.fd.write(bytes.advanced(by: Int(dataRange.lowerBound)), count: dataRange.count)
         }
         assert(written == dataRange.count)
-        let range: Range<Int32> = offset ..< (offset + Int32(dataRange.count))
+        let range: Range<Int64> = offset ..< (offset + Int64(dataRange.count))
         self.fileMap.fill(range)
         self.fileMap.serialize(to: self.metadataFd)
         
         self.checkDataRequestsAfterFill(range: range)
     }
     
-    func checkDataRequestsAfterFill(range: Range<Int32>) {
+    func checkDataRequestsAfterFill(range: Range<Int64>) {
         var removeIndices: [(Int, MediaBoxPartialFileDataRequest)] = []
         for (index, request) in self.dataRequests.copyItemsWithIndices() {
             if request.range.overlaps(range) {
@@ -388,8 +469,8 @@ final class MediaBoxPartialFile {
                     assertionFailure()
                     removeIndices.append((index, request))
                 } else {
-                    let intRange: Range<Int> = Int(request.range.lowerBound) ..< Int(min(maxValue, request.range.upperBound))
-                    if self.fileMap.ranges.contains(integersIn: intRange) {
+                    let intRange: Range<Int64> = request.range.lowerBound ..< min(maxValue, request.range.upperBound)
+                    if self.fileMap.ranges.isSuperset(of: RangeSet<Int64>(intRange)) {
                         removeIndices.append((index, request))
                     }
                 }
@@ -402,7 +483,7 @@ final class MediaBoxPartialFile {
                 if let truncationSize = self.fileMap.truncationSize, truncationSize < maxValue {
                     maxValue = truncationSize
                 }
-                request.completion(MediaResourceData(path: self.path, offset: Int(request.range.lowerBound), size: Int(maxValue) - Int(request.range.lowerBound), complete: true))
+                request.completion(MediaResourceData(path: self.path, offset: request.range.lowerBound, size: maxValue - request.range.lowerBound, complete: true))
             }
         }
         
@@ -451,7 +532,7 @@ final class MediaBoxPartialFile {
         }
     }
     
-    func read(range: Range<Int32>) -> Data? {
+    func read(range: Range<Int64>) -> Data? {
         assert(self.queue.isCurrent())
         
         if let actualRange = self.fileMap.contains(range) {
@@ -472,11 +553,11 @@ final class MediaBoxPartialFile {
         }
     }
     
-    func data(range: Range<Int32>, waitUntilAfterInitialFetch: Bool, next: @escaping (MediaResourceData) -> Void) -> Disposable {
+    func data(range: Range<Int64>, waitUntilAfterInitialFetch: Bool, next: @escaping (MediaResourceData) -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
         if let actualRange = self.fileMap.contains(range) {
-            next(MediaResourceData(path: self.path, offset: Int(actualRange.lowerBound), size: actualRange.count, complete: true))
+            next(MediaResourceData(path: self.path, offset: actualRange.lowerBound, size: Int64(actualRange.count), complete: true))
             return EmptyDisposable
         }
         
@@ -484,7 +565,7 @@ final class MediaBoxPartialFile {
         if waitUntilAfterInitialFetch && !self.processedAtLeastOneFetch {
             waitingUntilAfterInitialFetch = true
         } else {
-            next(MediaResourceData(path: self.path, offset: Int(range.lowerBound), size: 0, complete: false))
+            next(MediaResourceData(path: self.path, offset: range.lowerBound, size: 0, complete: false))
         }
         
         let index = self.dataRequests.add(MediaBoxPartialFileDataRequest(range: range, waitingUntilAfterInitialFetch: waitingUntilAfterInitialFetch, completion: { data in
@@ -501,7 +582,7 @@ final class MediaBoxPartialFile {
         }
     }
     
-    func fetched(range: Range<Int32>, priority: MediaBoxFetchPriority, fetch: @escaping (Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
+    func fetched(range: Range<Int64>, priority: MediaBoxFetchPriority, fetch: @escaping (Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
         if let _ = self.fileMap.contains(range) {
@@ -528,14 +609,14 @@ final class MediaBoxPartialFile {
         }
     }
     
-    func fetchedFullRange(fetch: @escaping (Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
+    func fetchedFullRange(fetch: @escaping (Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         let queue = self.queue
         let disposable = MetaDisposable()
         
         let index = self.fullRangeRequests.add(disposable)
         self.updateStatuses()
         
-        disposable.set(self.fetched(range: 0 ..< Int32.max, priority: .default, fetch: fetch, error: { e in
+        disposable.set(self.fetched(range: 0 ..< Int64.max, priority: .default, fetch: fetch, error: { e in
             error(e)
         }, completed: { [weak self] in
             queue.async {
@@ -578,7 +659,7 @@ final class MediaBoxPartialFile {
         }
     }
     
-    func rangeStatus(next: @escaping (IndexSet) -> Void, completed: @escaping () -> Void) -> Disposable {
+    func rangeStatus(next: @escaping (RangeSet<Int64>) -> Void, completed: @escaping () -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
         next(self.fileMap.ranges)
@@ -599,7 +680,7 @@ final class MediaBoxPartialFile {
         }
     }
     
-    private func immediateStatus(size: Int32?) -> MediaResourceStatus {
+    private func immediateStatus(size: Int64?) -> MediaResourceStatus {
         let status: MediaResourceStatus
         if self.fullRangeRequests.isEmpty && self.currentFetch == nil {
             if let truncationSize = self.fileMap.truncationSize, self.fileMap.sum == truncationSize {
@@ -629,7 +710,7 @@ final class MediaBoxPartialFile {
         return status
     }
     
-    func status(next: @escaping (MediaResourceStatus) -> Void, completed: @escaping () -> Void, size: Int32?) -> Disposable {
+    func status(next: @escaping (MediaResourceStatus) -> Void, completed: @escaping () -> Void, size: Int64?) -> Disposable {
         let index = self.statusRequests.add((next, size))
         
         let value = self.immediateStatus(size: size)
@@ -649,7 +730,7 @@ final class MediaBoxPartialFile {
         }
     }
     
-    private func updateRequestRanges(_ intervals: [(Range<Int>, MediaBoxFetchPriority)], fetch: ((Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)?) {
+    private func updateRequestRanges(_ intervals: [(Range<Int64>, MediaBoxFetchPriority)], fetch: ((Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)?) {
         assert(self.queue.isCurrent())
         
         #if DEBUG
@@ -667,7 +748,7 @@ final class MediaBoxPartialFile {
             if let (promise, _) = self.currentFetch {
                 promise.set(.single(intervals))
             } else if let fetch = fetch {
-                let promise = Promise<[(Range<Int>, MediaBoxFetchPriority)]>()
+                let promise = Promise<[(Range<Int64>, MediaBoxFetchPriority)]>()
                 let disposable = MetaDisposable()
                 self.currentFetch = (promise, disposable)
                 self.updateStatuses()
@@ -680,15 +761,15 @@ final class MediaBoxPartialFile {
                                     strongSelf.reset()
                                 }
                             case let .resourceSizeUpdated(size):
-                                strongSelf.truncate(Int32(size))
+                                strongSelf.truncate(size)
                             case let .dataPart(resourceOffset, data, range, complete):
                                 if !data.isEmpty {
-                                    strongSelf.write(offset: Int32(resourceOffset), data: data, dataRange: range)
+                                    strongSelf.write(offset: resourceOffset, data: data, dataRange: range)
                                 }
                                 if complete {
-                                    if let maxOffset = strongSelf.fileMap.ranges.rangeView.reversed().first?.upperBound {
-                                        let maxValue = max(resourceOffset + range.count, maxOffset)
-                                        strongSelf.truncate(Int32(maxValue))
+                                    if let maxOffset = strongSelf.fileMap.ranges.ranges.reversed().first?.upperBound {
+                                        let maxValue = max(resourceOffset + Int64(range.count), Int64(maxOffset))
+                                        strongSelf.truncate(maxValue)
                                     }
                                 }
                             case let .replaceHeader(data, range):
@@ -710,9 +791,9 @@ final class MediaBoxPartialFile {
                                     request.waitingUntilAfterInitialFetch = false
                                     
                                     if let actualRange = strongSelf.fileMap.contains(request.range) {
-                                        request.completion(MediaResourceData(path: strongSelf.path, offset: Int(actualRange.lowerBound), size: actualRange.count, complete: true))
+                                        request.completion(MediaResourceData(path: strongSelf.path, offset: actualRange.lowerBound, size: Int64(actualRange.count), complete: true))
                                     } else {
-                                        request.completion(MediaResourceData(path: strongSelf.path, offset: Int(request.range.lowerBound), size: 0, complete: false))
+                                        request.completion(MediaResourceData(path: strongSelf.path, offset: request.range.lowerBound, size: 0, complete: false))
                                     }
                                 }
                             }
@@ -733,17 +814,16 @@ final class MediaBoxPartialFile {
 }
 
 private final class MediaBoxFileMissingRange {
-    var range: Range<Int32>
+    var range: Range<Int64>
     let priority: MediaBoxFetchPriority
-    var remainingRanges: IndexSet
+    var remainingRanges: RangeSet<Int64>
     let error: (MediaResourceDataFetchError) -> Void
     let completion: () -> Void
     
-    init(range: Range<Int32>, priority: MediaBoxFetchPriority, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) {
+    init(range: Range<Int64>, priority: MediaBoxFetchPriority, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) {
         self.range = range
         self.priority = priority
-        let intRange: Range<Int> = Int(range.lowerBound) ..< Int(range.upperBound)
-        self.remainingRanges = IndexSet(integersIn: intRange)
+        self.remainingRanges = RangeSet<Int64>(range)
         self.error = error
         self.completion = completion
     }
@@ -752,8 +832,8 @@ private final class MediaBoxFileMissingRange {
 private final class MediaBoxFileMissingRanges {
     private var requestedRanges = Bag<MediaBoxFileMissingRange>()
     
-    private var missingRangesFlattened = IndexSet()
-    private var missingRangesByPriority: [MediaBoxFetchPriority: IndexSet] = [:]
+    private var missingRangesFlattened = RangeSet<Int64>()
+    private var missingRangesByPriority: [MediaBoxFetchPriority: RangeSet<Int64>] = [:]
     
     func clear() -> [((MediaResourceDataFetchError) -> Void, () -> Void)] {
         let errorsAndCompletions = self.requestedRanges.copyItems().map({ ($0.error, $0.completion) })
@@ -761,31 +841,31 @@ private final class MediaBoxFileMissingRanges {
         return errorsAndCompletions
     }
     
-    func reset(fileMap: MediaBoxFileMap) -> [(Range<Int>, MediaBoxFetchPriority)]? {
+    func reset(fileMap: MediaBoxFileMap) -> [(Range<Int64>, MediaBoxFetchPriority)]? {
         return self.update(fileMap: fileMap)
     }
     
-    private func missingRequestedIntervals() -> [(Range<Int>, MediaBoxFetchPriority)] {
-        var intervalsByPriority: [MediaBoxFetchPriority: IndexSet] = [:]
-        var remainingIntervals = IndexSet()
+    private func missingRequestedIntervals() -> [(Range<Int64>, MediaBoxFetchPriority)] {
+        var intervalsByPriority: [MediaBoxFetchPriority: RangeSet<Int64>] = [:]
+        var remainingIntervals = RangeSet<Int64>()
         for item in self.requestedRanges.copyItems() {
-            var requestedInterval = IndexSet(integersIn: Int(item.range.lowerBound) ..< Int(item.range.upperBound))
+            var requestedInterval = RangeSet<Int64>(item.range)
             requestedInterval.formIntersection(self.missingRangesFlattened)
             if !requestedInterval.isEmpty {
                 if intervalsByPriority[item.priority] == nil {
-                    intervalsByPriority[item.priority] = IndexSet()
+                    intervalsByPriority[item.priority] = RangeSet<Int64>()
                 }
                 intervalsByPriority[item.priority]?.formUnion(requestedInterval)
                 remainingIntervals.formUnion(requestedInterval)
             }
         }
         
-        var result: [(Range<Int>, MediaBoxFetchPriority)] = []
+        var result: [(Range<Int64>, MediaBoxFetchPriority)] = []
         
         for priority in intervalsByPriority.keys.sorted(by: { $0.rawValue > $1.rawValue }) {
             let currentIntervals = intervalsByPriority[priority]!.intersection(remainingIntervals)
             remainingIntervals.subtract(currentIntervals)
-            for range in currentIntervals.rangeView {
+            for range in currentIntervals.ranges {
                 if !range.isEmpty {
                     result.append((range, priority))
                 }
@@ -795,18 +875,17 @@ private final class MediaBoxFileMissingRanges {
         return result
     }
     
-    func fill(_ range: Range<Int32>) -> ([(Range<Int>, MediaBoxFetchPriority)], [() -> Void])? {
-        let intRange: Range<Int> = Int(range.lowerBound) ..< Int(range.upperBound)
-        if self.missingRangesFlattened.intersects(integersIn: intRange) {
-            self.missingRangesFlattened.remove(integersIn: intRange)
+    func fill(_ range: Range<Int64>) -> ([(Range<Int64>, MediaBoxFetchPriority)], [() -> Void])? {
+        if self.missingRangesFlattened.intersects(range) {
+            self.missingRangesFlattened.remove(contentsOf: range)
             for priority in self.missingRangesByPriority.keys {
-                self.missingRangesByPriority[priority]!.remove(integersIn: intRange)
+                self.missingRangesByPriority[priority]!.remove(contentsOf: range)
             }
             
             var completions: [() -> Void] = []
             for (index, item) in self.requestedRanges.copyItemsWithIndices() {
                 if item.range.overlaps(range) {
-                    item.remainingRanges.remove(integersIn: intRange)
+                    item.remainingRanges.remove(contentsOf: range)
                     if item.remainingRanges.isEmpty {
                         self.requestedRanges.remove(index)
                         completions.append(item.completion)
@@ -820,27 +899,27 @@ private final class MediaBoxFileMissingRanges {
         }
     }
     
-    func addRequest(fileMap: MediaBoxFileMap, range: Range<Int32>, priority: MediaBoxFetchPriority, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) -> (Int, [(Range<Int>, MediaBoxFetchPriority)]?) {
+    func addRequest(fileMap: MediaBoxFileMap, range: Range<Int64>, priority: MediaBoxFetchPriority, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) -> (Int, [(Range<Int64>, MediaBoxFetchPriority)]?) {
         let index = self.requestedRanges.add(MediaBoxFileMissingRange(range: range, priority: priority, error: error, completion: completion))
         
         return (index, self.update(fileMap: fileMap))
     }
     
-    func removeRequest(fileMap: MediaBoxFileMap, index: Int) -> [(Range<Int>, MediaBoxFetchPriority)]? {
+    func removeRequest(fileMap: MediaBoxFileMap, index: Int) -> [(Range<Int64>, MediaBoxFetchPriority)]? {
         self.requestedRanges.remove(index)
         return self.update(fileMap: fileMap)
     }
     
-    private func update(fileMap: MediaBoxFileMap) -> [(Range<Int>, MediaBoxFetchPriority)]? {
-        var byPriority: [MediaBoxFetchPriority: IndexSet] = [:]
-        var flattened = IndexSet()
+    private func update(fileMap: MediaBoxFileMap) -> [(Range<Int64>, MediaBoxFetchPriority)]? {
+        var byPriority: [MediaBoxFetchPriority: RangeSet<Int64>] = [:]
+        var flattened = RangeSet<Int64>()
         for item in self.requestedRanges.copyItems() {
-            let intRange: Range<Int> = Int(item.range.lowerBound) ..< Int(item.range.upperBound)
+            let intRange: Range<Int64> = item.range
             if byPriority[item.priority] == nil {
-                byPriority[item.priority] = IndexSet()
+                byPriority[item.priority] = RangeSet<Int64>()
             }
-            byPriority[item.priority]!.insert(integersIn: intRange)
-            flattened.insert(integersIn: intRange)
+            byPriority[item.priority]!.insert(contentsOf: intRange)
+            flattened.insert(contentsOf: intRange)
         }
         for priority in byPriority.keys {
             byPriority[priority]!.subtract(fileMap.ranges)
@@ -857,7 +936,7 @@ private final class MediaBoxFileMissingRanges {
 }
 
 private enum MediaBoxFileContent {
-    case complete(String, Int)
+    case complete(String, Int64)
     case partial(MediaBoxPartialFile)
 }
 
@@ -883,7 +962,7 @@ final class MediaBoxFileContext {
         self.partialPath = partialPath
         self.metaPath = metaPath
         
-        var completeImpl: ((Int32) -> Void)?
+        var completeImpl: ((Int64) -> Void)?
         if let size = fileSize(path) {
             self.content = .complete(path, size)
         } else if let file = MediaBoxPartialFile(queue: queue, path: partialPath, metaPath: metaPath, completePath: path, completed: { size in
@@ -893,7 +972,7 @@ final class MediaBoxFileContext {
             completeImpl = { [weak self] size in
                 queue.async {
                     if let strongSelf = self {
-                        strongSelf.content = .complete(path, Int(size))
+                        strongSelf.content = .complete(path, size)
                     }
                 }
             }
@@ -914,35 +993,35 @@ final class MediaBoxFileContext {
         self.references.remove(index)
     }
     
-    func data(range: Range<Int32>, waitUntilAfterInitialFetch: Bool, next: @escaping (MediaResourceData) -> Void) -> Disposable {
+    func data(range: Range<Int64>, waitUntilAfterInitialFetch: Bool, next: @escaping (MediaResourceData) -> Void) -> Disposable {
         switch self.content {
             case let .complete(path, size):
                 var lowerBound = range.lowerBound
                 if lowerBound < 0 {
                     lowerBound = 0
                 }
-                if lowerBound > Int(size) {
-                    lowerBound = Int32(clamping: size)
+                if lowerBound > size {
+                    lowerBound = size
                 }
                 var upperBound = range.upperBound
                 if upperBound < 0 {
                     upperBound = 0
                 }
-                if upperBound > Int(size) {
-                    upperBound = Int32(clamping: size)
+                if upperBound > size {
+                    upperBound = size
                 }
                 if upperBound < lowerBound {
                     upperBound = lowerBound
                 }
                 
-                next(MediaResourceData(path: path, offset: Int(lowerBound), size: Int(upperBound - lowerBound), complete: true))
+                next(MediaResourceData(path: path, offset: lowerBound, size: upperBound - lowerBound, complete: true))
                 return EmptyDisposable
             case let .partial(file):
                 return file.data(range: range, waitUntilAfterInitialFetch: waitUntilAfterInitialFetch, next: next)
         }
     }
     
-    func fetched(range: Range<Int32>, priority: MediaBoxFetchPriority, fetch: @escaping (Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
+    func fetched(range: Range<Int64>, priority: MediaBoxFetchPriority, fetch: @escaping (Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         switch self.content {
             case .complete:
                 return EmptyDisposable
@@ -951,7 +1030,7 @@ final class MediaBoxFileContext {
         }
     }
     
-    func fetchedFullRange(fetch: @escaping (Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
+    func fetchedFullRange(fetch: @escaping (Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         switch self.content {
             case .complete:
                 return EmptyDisposable
@@ -969,10 +1048,10 @@ final class MediaBoxFileContext {
         }
     }
     
-    func rangeStatus(next: @escaping (IndexSet) -> Void, completed: @escaping () -> Void) -> Disposable {
+    func rangeStatus(next: @escaping (RangeSet<Int64>) -> Void, completed: @escaping () -> Void) -> Disposable {
         switch self.content {
             case let .complete(_, size):
-                next(IndexSet(integersIn: 0 ..< size))
+                next(RangeSet<Int64>(0 ..< size))
                 completed()
                 return EmptyDisposable
             case let .partial(file):
@@ -980,7 +1059,7 @@ final class MediaBoxFileContext {
         }
     }
     
-    func status(next: @escaping (MediaResourceStatus) -> Void, completed: @escaping () -> Void, size: Int32?) -> Disposable {
+    func status(next: @escaping (MediaResourceStatus) -> Void, completed: @escaping () -> Void, size: Int64?) -> Disposable {
         switch self.content {
             case .complete:
                 next(.Local)

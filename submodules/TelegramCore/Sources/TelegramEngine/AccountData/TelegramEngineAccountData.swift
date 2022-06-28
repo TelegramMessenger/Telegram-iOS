@@ -14,10 +14,6 @@ public extension TelegramEngine {
 		    return _internal_acceptTermsOfService(account: self.account, id: id)
 		}
 
-		public func resetAccountDueTermsOfService() -> Signal<Void, NoError> {
-			return _internal_resetAccountDueTermsOfService(network: self.account.network)
-		}
-
         public func requestChangeAccountPhoneNumberVerification(phoneNumber: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
             return _internal_requestChangeAccountPhoneNumberVerification(account: self.account, phoneNumber: phoneNumber)
         }

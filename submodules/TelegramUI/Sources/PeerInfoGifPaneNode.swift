@@ -875,12 +875,11 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
         self.animationTimer = animationTimer
         animationTimer.start()
 
-        self.statusPromise.set(context.account.postbox.combinedView(keys: [PostboxViewKey.historyTagSummaryView(tag: tagMaskForType(self.contentType), peerId: peerId, namespace: Namespaces.Message.Cloud)])
-        |> map { [weak self] views -> PeerInfoStatusData? in
-            guard let strongSelf = self else {
-                return nil
-            }
-            let count: Int32 = (views.views[PostboxViewKey.historyTagSummaryView(tag: tagMaskForType(strongSelf.contentType), peerId: peerId, namespace: Namespaces.Message.Cloud)] as? MessageHistoryTagSummaryView)?.count ?? 0
+        self.statusPromise.set(context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: tagMaskForType(self.contentType))
+        )
+        |> map { count -> PeerInfoStatusData? in
+            let count: Int = count ?? 0
             if count == 0 {
                 return nil
             }

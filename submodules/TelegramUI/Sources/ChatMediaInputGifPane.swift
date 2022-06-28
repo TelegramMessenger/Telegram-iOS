@@ -290,22 +290,16 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         let filesSignal: Signal<(MultiplexedVideoNodeFiles, String?), NoError>
         switch self.mode {
         case .recent:
-            filesSignal = combineLatest(self.trendingPromise.get(), self.context.account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)]))
-            |> map { trending, view -> (MultiplexedVideoNodeFiles, String?) in
-                var recentGifs: OrderedItemListView?
-                if let orderedView = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)] {
-                    recentGifs = orderedView as? OrderedItemListView
-                }
-                
+            filesSignal = combineLatest(
+                self.trendingPromise.get(),
+                self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
+            )
+            |> map { trending, cloudRecentGifs -> (MultiplexedVideoNodeFiles, String?) in
                 var saved: [MultiplexedVideoNodeFile] = []
                 
-                if let recentGifs = recentGifs {
-                    saved = recentGifs.items.map { item in
-                        let file = item.contents.get(RecentMediaItem.self)!.media
-                        return MultiplexedVideoNodeFile(file: .savedGif(media: file), contextResult: nil)
-                    }
-                } else {
-                    saved = []
+                saved = cloudRecentGifs.map { item in
+                    let file = item.contents.get(RecentMediaItem.self)!.media
+                    return MultiplexedVideoNodeFile(file: .savedGif(media: file), contextResult: nil)
                 }
                 
                 return (MultiplexedVideoNodeFiles(saved: saved, trending: trending?.files ?? [], isSearch: false, canLoadMore: false, isStale: false), nil)
