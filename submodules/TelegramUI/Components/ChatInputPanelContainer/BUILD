@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "AnimationCache",
-    module_name = "AnimationCache",
+    name = "ChatInputPanelContainer",
+    module_name = "ChatInputPanelContainer",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -11,9 +11,8 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
-        "//submodules/CryptoUtils:CryptoUtils",
-        "//submodules/ManagedFile:ManagedFile",
-        "//submodules/TelegramUI/Components/AnimationCache/ImageDCT:ImageDCT",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/Display:Display",
     ],
     visibility = [
         "//visibility:public",

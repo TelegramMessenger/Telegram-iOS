@@ -33,6 +33,11 @@ swift_library(
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/StickerResources:StickerResources",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/ContextUI:ContextUI",
+        "//submodules/PremiumUI:PremiumUI",
+        "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
+        "//submodules/UndoUI:UndoUI",
     ],
     visibility = [
         "//visibility:public",

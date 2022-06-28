@@ -10,6 +10,14 @@ import Postbox
 import TelegramCore
 import ReactionSelectionNode
 
+private func convertAnimatingSourceRect(_ rect: CGRect, fromView: UIView, toView: UIView?) -> CGRect {
+    if let presentationLayer = fromView.layer.presentation() {
+        return presentationLayer.convert(rect, to: toView?.layer)
+    } else {
+        return fromView.layer.convert(rect, to: toView?.layer)
+    }
+}
+
 private final class OverlayTransitionContainerNode: ViewControllerTracingNode {
     override init() {
         super.init()
@@ -430,7 +438,7 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
                     sourceAbsoluteRect = sourceItemNode.view.convert(sourceItemNode.imageNode.frame, to: self.view)
                 case let .universal(sourceContainerView, sourceRect, sourceLayer):
                     stickerSource = Sticker(imageNode: nil, animationNode: nil, placeholderNode: nil, imageLayer: sourceLayer, relativeSourceRect: sourceLayer.frame)
-                    sourceAbsoluteRect = sourceContainerView.convert(sourceRect, to: self.view)
+                    sourceAbsoluteRect = convertAnimatingSourceRect(sourceRect, fromView: sourceContainerView, toView: self.view)
                 case let .inputPanelSearch(sourceItemNode):
                     stickerSource = Sticker(imageNode: sourceItemNode.imageNode, animationNode: sourceItemNode.animationNode, placeholderNode: nil, imageLayer: nil, relativeSourceRect: sourceItemNode.imageNode.frame)
                     sourceAbsoluteRect = sourceItemNode.view.convert(sourceItemNode.imageNode.frame, to: self.view)

@@ -1840,7 +1840,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         } else {
             mediaInputDisabled = false
         }
-        self.actionButtons.micButton.fadeDisabled = mediaInputDisabled
+        
+        var mediaInputIsActive = false
+        if case .media = interfaceState.inputMode {
+            mediaInputIsActive = true
+        }
+        
+        self.actionButtons.micButton.fadeDisabled = mediaInputDisabled || mediaInputIsActive
         
         self.updateActionButtons(hasText: inputHasText, hideMicButton: hideMicButton, animated: transition.isAnimated)
         
@@ -2294,7 +2300,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         if mediaInputIsActive {
-            hideMicButton = true
+            //hideMicButton = true
         }
         
         if hideMicButton {

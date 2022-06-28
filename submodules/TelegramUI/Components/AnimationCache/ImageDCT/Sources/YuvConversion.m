@@ -1,4 +1,4 @@
-#import <DCT/YuvConversion.h>
+#import <ImageDCT/YuvConversion.h>
 
 #import <Foundation/Foundation.h>
 #import <Accelerate/Accelerate.h>

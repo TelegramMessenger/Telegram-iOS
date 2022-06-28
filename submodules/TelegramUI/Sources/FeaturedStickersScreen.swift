@@ -478,7 +478,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                     if let item = item as? StickerPreviewPeekItem {
                         return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                         |> deliverOnMainQueue
-                        |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                        |> map { isStarred -> (UIView, CGRect, PeekControllerContent)? in
                             if let strongSelf = self {
                                 var menuItems: [ContextMenuItem] = []
                                 menuItems = [
@@ -550,7 +550,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                         }
                                     }))
                                 ]
-                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
+                                return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -570,7 +570,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             if let (itemNode, item) = itemNodeAndItem {
                 return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                 |> deliverOnMainQueue
-                |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                |> map { isStarred -> (UIView, CGRect, PeekControllerContent)? in
                     if let strongSelf = self {
                         var menuItems: [ContextMenuItem] = []
                         menuItems = [
@@ -638,7 +638,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                 }
                             }))
                         ]
-                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item), menu: menuItems, openPremiumIntro: { [weak self] in
+                        return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
                             guard let strongSelf = self else {
                                 return
                             }
@@ -651,10 +651,10 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 }
             }
             return nil
-        }, present: { [weak self] content, sourceNode in
+        }, present: { [weak self] content, sourceView, sourceRect in
             if let strongSelf = self {
-                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
-                    return sourceNode
+                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceView: {
+                    return (sourceView, sourceRect)
                 })
                 strongSelf.peekController = controller
                 strongSelf.controller?.presentInGlobalOverlay(controller)
@@ -1180,7 +1180,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 let _ = strongSelf.sendSticker?(file, sourceView, sourceRect)
             }
         }, getItemIsPreviewed: { item in
-            return inputNodeInteraction.previewedStickerPackItem == .pack(item)
+            return inputNodeInteraction.previewedStickerPackItem == .pack(item.file)
         })
         
         self._ready.set(.single(Void()))
@@ -1426,7 +1426,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 return (itemNode, StickerPreviewPeekItem.found(stickerItem))
             } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                 if let (node, item) = itemNode.itemAt(point: self.view.convert(point, to: itemNode.view)) {
-                    return (node, StickerPreviewPeekItem.pack(item))
+                    return (node, StickerPreviewPeekItem.pack(item.file))
                 }
             }
         }

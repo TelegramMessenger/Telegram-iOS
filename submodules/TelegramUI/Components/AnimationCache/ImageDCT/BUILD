@@ -1,10 +1,13 @@
 
 objc_library(
-    name = "DCT",
+    name = "ImageDCT",
     enable_modules = True,
-    module_name = "DCT",
+    module_name = "ImageDCT",
     srcs = glob([
         "Sources/**/*.m",
+        "Sources/**/*.mm",
+        "Sources/**/*.c",
+        "Sources/**/*.cpp",
         "Sources/**/*.h",
     ]),
     hdrs = glob([

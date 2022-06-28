@@ -938,7 +938,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     rootModalFrame.updateDismissal(transition: transition, progress: effectiveRootModalDismissProgress, additionalProgress: additionalModalFrameProgress, completion: {})
                     forceStatusBarAnimation = true
                 } else {
-                    rootModalFrame = NavigationModalFrame(theme: self.theme)
+                    rootModalFrame = NavigationModalFrame()
                     self.rootModalFrame = rootModalFrame
                     if let rootContainer = self.rootContainer {
                         var rootContainerNode: ASDisplayNode

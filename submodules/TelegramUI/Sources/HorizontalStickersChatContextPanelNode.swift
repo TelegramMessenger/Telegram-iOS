@@ -16,7 +16,7 @@ import PremiumUI
 import UndoUI
 
 final class HorizontalStickersChatContextPanelInteraction {
-    var previewedStickerItem: StickerPackItem?
+    var previewedStickerItem: TelegramMediaFile?
 }
 
 private func backgroundCenterImage(_ theme: PresentationTheme) -> UIImage? {
@@ -173,7 +173,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                 if let itemNode = strongSelf.gridNode.itemNodeAtPoint(strongSelf.view.convert(point, to: strongSelf.gridNode.view)) as? HorizontalStickerGridItemNode, let item = itemNode.stickerItem {
                     return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                     |> deliverOnMainQueue
-                    |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                    |> map { isStarred -> (UIView, CGRect, PeekControllerContent)? in
                         if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                             var menuItems: [ContextMenuItem] = []
                             menuItems = [
@@ -241,7 +241,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                     }
                                 }))
                             ]
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems, openPremiumIntro: { [weak self] in
+                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -255,11 +255,11 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                 }
             }
             return nil
-            }, present: { [weak self] content, sourceNode in
+            }, present: { [weak self] content, sourceView, sourceRect in
                 if let strongSelf = self {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
-                        return sourceNode
+                    let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
+                        return (sourceView, sourceRect)
                     })
                     strongSelf.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
                     return controller
@@ -267,11 +267,11 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                 return nil
             }, updateContent: { [weak self] content in
                 if let strongSelf = self {
-                    var item: StickerPackItem?
+                    var file: TelegramMediaFile?
                     if let content = content as? StickerPreviewPeekContent, case let .pack(contentItem) = content.item {
-                        item = contentItem
+                        file = contentItem
                     }
-                    strongSelf.updatePreviewingItem(item: item, animated: true)
+                    strongSelf.updatePreviewingItem(file: file, animated: true)
                 }
         }))
     }
@@ -366,9 +366,9 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         return super.hitTest(point, with: event)
     }
     
-    private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
-        if self.stickersInteraction.previewedStickerItem != item {
-            self.stickersInteraction.previewedStickerItem = item
+    private func updatePreviewingItem(file: TelegramMediaFile?, animated: Bool) {
+        if self.stickersInteraction.previewedStickerItem?.fileId != file?.fileId {
+            self.stickersInteraction.previewedStickerItem = file
             
             self.gridNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? HorizontalStickerGridItemNode {

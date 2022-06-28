@@ -958,7 +958,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         getItemIsPreviewedImpl = { [weak self] item in
             if let strongSelf = self {
-                return strongSelf.inputNodeInteraction.previewedStickerPackItem == .pack(item)
+                return strongSelf.inputNodeInteraction.previewedStickerPackItem == .pack(item.file)
             }
             return false
         }
@@ -1592,7 +1592,7 @@ final class ChatMediaInputNode: ChatInputNode {
                         if let item = item as? StickerPreviewPeekItem {
                             return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                             |> deliverOnMainQueue
-                            |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                            |> map { isStarred -> (UIView, CGRect, PeekControllerContent)? in
                                 if let strongSelf = self {
                                     var menuItems: [ContextMenuItem] = []                                    
                                     if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
@@ -1694,7 +1694,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }
                                     })))
-                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
+                                    return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
                                         guard let strongSelf = self else {
                                             return
                                         }
@@ -1744,7 +1744,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                     }
                                 )
                                 |> deliverOnMainQueue
-                                |> map { isStarred, hasPremium -> (ASDisplayNode, PeekControllerContent)? in
+                                |> map { isStarred, hasPremium -> (UIView, CGRect, PeekControllerContent)? in
                                     if let strongSelf = self {
                                         var menuItems: [ContextMenuItem] = []
                                         if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
@@ -1849,7 +1849,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }))
                                         )
-                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: { [weak self] in
+                                        return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: { [weak self] in
                                             guard let strongSelf = self else {
                                                 return
                                             }
@@ -1866,11 +1866,11 @@ final class ChatMediaInputNode: ChatInputNode {
                 }
             }
             return nil
-        }, present: { [weak self] content, sourceNode in
+        }, present: { [weak self] content, sourceView, sourceRect in
             if let strongSelf = self {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
-                    return sourceNode
+                let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
+                    return (sourceView, sourceRect)
                 })
                 controller.visibilityUpdated = { [weak self] visible in
                     self?.previewingStickersPromise.set(visible)

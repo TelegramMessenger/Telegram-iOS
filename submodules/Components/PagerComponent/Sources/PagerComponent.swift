@@ -532,14 +532,13 @@ public final class PagerComponent<ChildEnvironmentType: Equatable>: Component {
             }
             
             var removedIds: [AnyHashable] = []
-            for (id, contentView) in self.contentViews {
+            for (id, _) in self.contentViews {
                 if !validIds.contains(id) {
                     removedIds.append(id)
-                    contentView.view.removeFromSuperview()
                 }
             }
             for id in removedIds {
-                self.contentViews.removeValue(forKey: id)
+                self.contentViews.removeValue(forKey: id)?.view.removeFromSuperview()
             }
             
             if let panelStateUpdated = component.panelStateUpdated {

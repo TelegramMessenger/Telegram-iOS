@@ -63,7 +63,8 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                 let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
                     item: EmojiPagerContentComponent.Item(
                         emoji: "",
-                        file: component.file
+                        file: component.file,
+                        stickerPackItem: nil
                     ),
                     context: component.context,
                     groupId: "topPanel",
@@ -72,6 +73,8 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                     cache: component.animationCache,
                     renderer: component.animationRenderer,
                     placeholderColor: .lightGray,
+                    blurredBadgeColor: .clear,
+                    displayPremiumBadgeIfAvailable: false,
                     pointSize: CGSize(width: 28.0, height: 28.0)
                 )
                 self.itemLayer = itemLayer
