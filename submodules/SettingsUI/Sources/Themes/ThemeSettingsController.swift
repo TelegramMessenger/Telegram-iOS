@@ -424,7 +424,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     }
     
     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-    if premiumConfiguration.isPremiumDisabled {
+    if premiumConfiguration.isPremiumDisabled || context.account.testingEnvironment {
         appIcons = appIcons.filter { !$0.isPremium } 
     }
     

@@ -7797,6 +7797,8 @@ Sorry for the inconvenience.";
 "DeleteAccount.ConfirmationAlertText" = "Deleting your account will permanently delete your data!\n\nIt is imposible to reverse this action!";
 "DeleteAccount.ConfirmationAlertDelete" = "Delete My Account";
 
+"DeleteAccount.Success" = "The account has been successfully deleted.";
+
 "PeerInfo.GiftPremium" = "Gift Premium";
 
 "Premium.Gift.Title" = "Gift Telegram Premium";

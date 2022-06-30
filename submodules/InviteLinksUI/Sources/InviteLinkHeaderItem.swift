@@ -114,7 +114,12 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
         
         return { item, params, neighbors in
             let leftInset: CGFloat = 24.0 + params.leftInset
-            let iconSize = CGSize(width: 140.0, height: 140.0)
+            let iconSize: CGSize
+            if params.width > params.availableHeight && params.width > 320.0 {
+                iconSize = CGSize(width: 140.0, height: 140.0)
+            } else {
+                iconSize = CGSize(width: 124.0, height: 124.0)
+            }
             let topInset: CGFloat = iconSize.height - 4.0
             let spacing: CGFloat = 5.0
             
