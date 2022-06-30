@@ -1271,7 +1271,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         let badgeNode = ASImageNode()
         badgeNode.displaysAsynchronously = false
-        badgeNode.image = UIImage(bundleImageName: "Components/BadgeTest")
+        badgeNode.image = UIImage(bundleImageName: "Components/AppBadge")
         self.badgeNode = badgeNode
         self.displayNode.addSubnode(badgeNode)
     }

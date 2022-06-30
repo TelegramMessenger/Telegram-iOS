@@ -410,7 +410,7 @@ class PremiumStarComponent: Component {
             
             if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particles = scene.rootNode.childNode(withName: "particles", recursively: false) {
                 if let particleSystem = particles.particleSystems?.first {
-                    particleSystem.particleColorVariation = SCNVector4(0.15, 0.2, 0.35, 0.3)
+                    particleSystem.particleColorVariation = SCNVector4(0.15, 0.2, 0.15, 0.3)
                     particleSystem.speedFactor = 2.0
                     particleSystem.particleVelocity = 2.2
                     particleSystem.birthRate = 4.0

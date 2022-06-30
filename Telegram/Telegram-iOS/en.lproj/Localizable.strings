@@ -868,7 +868,6 @@
 "MessageTimer.Years_2" = "%@ years";
 "MessageTimer.Years_3_10" = "%@ years";
 "MessageTimer.Years_any" = "%@ years";
-"MessageTimer.Months_many" = "%@ years";
 
 "MessageTimer.ShortSeconds_1" = "%@s";
 "MessageTimer.ShortSeconds_2" = "%@s";
@@ -7725,7 +7724,6 @@ Sorry for the inconvenience.";
 "Premium.Restore.Success" = "Done";
 "Premium.Restore.ErrorUnknown" = "An error occurred. Please try again.";
 
-
 "Settings.Premium" = "Telegram Premium";
 
 "Settings.AddAnotherAccount.PremiumHelp" = "You can add up to four accounts with different phone numbers.";
@@ -7735,3 +7733,67 @@ Sorry for the inconvenience.";
 "Appearance.AppIconPremium" = "Premium";
 "Appearance.AppIconBlack" = "Black";
 "Appearance.AppIconTurbo" = "Turbo";
+
+"PrivacySettings.DeleteAccountNow" = "Delete Account Now";
+
+"DeleteAccount.AlternativeOptionsTitle" = "Alternative Options";
+
+"DeleteAccount.Options.ChangePhoneNumberTitle" = "Change Phone Number";
+"DeleteAccount.Options.ChangePhoneNumberText" = "Move your contacts, chats and media to a new number.";
+
+"DeleteAccount.Options.AddAccountTitle" = "Add Another Account";
+"DeleteAccount.Options.AddAccountText" = "You can use up to 3 accounts in one app at the same time.";
+"DeleteAccount.Options.AddAccountPremiumText" = "You can use up to 4 accounts in one app at the same time.";
+
+"DeleteAccount.Options.ChangePrivacyTitle" = "Change Your Privacy Settings";
+"DeleteAccount.Options.ChangePrivacyText" = "Choose who exactly can see which of your info.";
+
+"DeleteAccount.Options.SetTwoStepAuthTitle" = "Enable Two-Step Verification";
+"DeleteAccount.Options.SetTwoStepAuthText" = "Set a password that will be required each time you log in.";
+
+"DeleteAccount.Options.SetPasscodeTitle" = "Set a Passcode";
+"DeleteAccount.Options.SetPasscodeText" = "Lock the app with a passcode so that others can't open it.";
+
+"DeleteAccount.Options.ClearCacheTitle" = "Clear Cache";
+"DeleteAccount.Options.ClearCacheText" = "Free up disk space on your device; your media will stay in the cloud.";
+
+"DeleteAccount.Options.ClearSyncedContactsTitle" = "Clear Synced Contacts";
+"DeleteAccount.Options.ClearSyncedContactsText" = "Remove any unnecessary contacts you may have synced.";
+
+"DeleteAccount.Options.DeleteChatsTitle" = "Quickly Delete Your Chats";
+"DeleteAccount.Options.DeleteChatsText" = "Learn how to remove any info you don’t need in a few taps.";
+
+"DeleteAccount.Options.ContactSupportTitle" = "Contact Support";
+"DeleteAccount.Options.ContactSupportText" = "Tell us about any issues; deleting account doesn't usually help.";
+
+"DeleteAccount.DeleteMyAccountTitle" = "Delete My Account";
+"DeleteAccount.DeleteMyAccount" = "Delete My Account";
+
+"DeleteAccount.SavedMessages" = "Saved";
+
+"DeleteAccount.ComeBackLater" = "Come Back Later";
+"DeleteAccount.Continue" = "Continue";
+
+"DeleteAccount.CloudStorageTitle" = "Your Free Cloud Storage";
+"DeleteAccount.CloudStorageText" = "You will lose access to all your Saved Messages as well as all messages, media and files from your chats.";
+
+"DeleteAccount.GroupsAndChannelsTitle" = "Your Groups and Channels";
+"DeleteAccount.GroupsAndChannelsText" = "The groups and channels you created will either get new admins or become orphaned.";
+"DeleteAccount.GroupsAndChannelsInfo" = "You can transfer group and channel ownership to other users via Chat Info > Edit > Admins.";
+
+"DeleteAccount.MessageHistoryTitle" = "Your Message History";
+"DeleteAccount.MessageHistoryText" = "Your chat partners will keep their message history with you, including the messages you shared in secret chats.\n\nYou can remove any messages for both sides at any time, but this will not be possible if you delete your account.";
+
+"DeleteAccount.DeleteMessagesURL" = "https://telegram.org/faq#q-can-i-delete-my-messages";
+
+"DeleteAccount.EnterPhoneNumber" = "Enter Your Phone Number";
+"DeleteAccount.InvalidPhoneNumberError" = "Invalid phone number. Please try again.";
+
+"DeleteAccount.EnterPassword" = "Enter Your Password";
+"DeleteAccount.InvalidPasswordError" = "Invalid password. Please try again.";
+
+"DeleteAccount.ConfirmationAlertTitle" = "Proceed to Delete Your Account?";
+"DeleteAccount.ConfirmationAlertText" = "Deleting your account will permanently delete your data!\n\nIt is imposible to reverse this action!";
+"DeleteAccount.ConfirmationAlertDelete" = "Delete My Account";
+
+"DeleteAccount.Success" = "The account has been successfully deleted.";

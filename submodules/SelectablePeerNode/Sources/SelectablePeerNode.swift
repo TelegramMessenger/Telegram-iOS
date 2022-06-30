@@ -84,6 +84,8 @@ public final class SelectablePeerNode: ASDisplayNode {
     
     private var peer: EngineRenderedPeer?
     
+    public var compact = false
+    
     public var theme: SelectablePeerNodeTheme = SelectablePeerNodeTheme(textColor: .black, secretTextColor: .green, selectedTextColor: .blue, checkBackgroundColor: .white, checkFillColor: .blue, checkColor: .white, avatarPlaceholderColor: .white) {
         didSet {
             if !self.theme.isEqual(to: oldValue) {
@@ -147,7 +149,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         let text: String
         var overrideImage: AvatarNodeImageOverride?
         if peer.peerId == context.account.peerId {
-            text = strings.DialogList_SavedMessages
+            text = self.compact ? strings.DeleteAccount_SavedMessages : strings.DialogList_SavedMessages
             overrideImage = .savedMessagesIcon
         } else if peer.peerId.isReplies {
             text = strings.DialogList_Replies
