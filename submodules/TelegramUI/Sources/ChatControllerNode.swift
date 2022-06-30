@@ -2209,6 +2209,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
         
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let inputMediaNode = self.inputMediaNode, self.inputNode === inputMediaNode {
+            let convertedPoint = self.view.convert(point, to: inputMediaNode.view)
+            if inputMediaNode.point(inside: convertedPoint, with: event) {
+                return inputMediaNode.hitTest(convertedPoint, with: event)
+            }
+        }
         switch self.chatPresentationInterfaceState.mode {
         case .standard(previewing: true):
             if let result = self.historyNode.view.hitTest(self.view.convert(point, to: self.historyNode.view), with: event), let node = result.asyncdisplaykit_node, node is ChatMessageSelectionNode || node is GridMessageSelectionNode {

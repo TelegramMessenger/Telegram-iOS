@@ -7797,3 +7797,5 @@ Sorry for the inconvenience.";
 "DeleteAccount.ConfirmationAlertDelete" = "Delete My Account";
 
 "DeleteAccount.Success" = "The account has been successfully deleted.";
+
+"SettingsSearch.DeleteAccount.DeleteMyAccount" = " ";
