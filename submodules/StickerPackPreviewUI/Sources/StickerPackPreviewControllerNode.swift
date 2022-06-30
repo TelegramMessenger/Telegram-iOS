@@ -197,7 +197,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
         }
-        self.contentGridNode.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>? in
+        self.contentGridNode.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(UIView, CGRect, PeekControllerContent)?, NoError>? in
             if let strongSelf = self {
                 if let itemNode = strongSelf.contentGridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode, let item = itemNode.stickerPackItem {
                     let accountPeerId = strongSelf.context.account.peerId
@@ -212,7 +212,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                         }
                     )
                     |> deliverOnMainQueue
-                    |> map { isStarred, hasPremium -> (ASDisplayNode, PeekControllerContent)? in
+                    |> map { isStarred, hasPremium -> (UIView, CGRect, PeekControllerContent)? in
                         if let strongSelf = self {
                             var menuItems: [ContextMenuItem] = []
                             if let stickerPack = strongSelf.stickerPack, case let .result(info, _, _) = stickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
@@ -238,7 +238,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                                     }
                                 })))
                             }
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: {
+                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item.file), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: {
                                 
                             }))
                         } else {
@@ -248,10 +248,10 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                 }
             }
             return nil
-        }, present: { [weak self] content, sourceNode in
+        }, present: { [weak self] content, sourceView, sourceRect in
             if let strongSelf = self {
-                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
-                    return sourceNode
+                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceView: {
+                    return (sourceView, sourceRect)
                 })
                 controller.visibilityUpdated = { [weak self] visible in
                     if let strongSelf = self {

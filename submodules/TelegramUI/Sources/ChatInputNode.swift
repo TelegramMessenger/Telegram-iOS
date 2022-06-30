@@ -16,6 +16,9 @@ class ChatInputNode: ASDisplayNode {
     var topBackgroundExtension: CGFloat = 41.0
     var topBackgroundExtensionUpdated: ((ContainedViewLayoutTransition) -> Void)?
     
+    var expansionFraction: CGFloat = 0.0
+    var expansionFractionUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    
     func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
         return (0.0, 0.0)
     }

@@ -32,7 +32,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
-    static func inputData(context: AccountContext, interfaceInteraction: ChatPanelInterfaceInteraction, controllerInteraction: ChatControllerInteraction) -> Signal<InputData, NoError> {
+    static func inputData(context: AccountContext, interfaceInteraction: ChatPanelInterfaceInteraction, controllerInteraction: ChatControllerInteraction, chatPeerId: PeerId?) -> Signal<InputData, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
@@ -67,7 +67,35 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 interfaceInteraction.backwardsDeleteText()
             },
             openStickerSettings: {
-            }
+            },
+            pushController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.navigationController()?.pushViewController(controller)
+            },
+            presentController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.presentController(controller, nil)
+            },
+            presentGlobalOverlayController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.presentGlobalOverlayController(controller, nil)
+            },
+            navigationController: { [weak controllerInteraction] in
+                return controllerInteraction?.navigationController()
+            },
+            sendSticker: { [weak controllerInteraction] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                let _ = controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer)
+            },
+            chatPeerId: chatPeerId
         )
         let stickerInputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { [weak interfaceInteraction] item, view, rect, layer in
@@ -89,7 +117,35 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 let controller = installedStickerPacksController(context: context, mode: .modal)
                 controller.navigationPresentation = .modal
                 controllerInteraction.navigationController()?.pushViewController(controller)
-            }
+            },
+            pushController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.navigationController()?.pushViewController(controller)
+            },
+            presentController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.presentController(controller, nil)
+            },
+            presentGlobalOverlayController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.presentGlobalOverlayController(controller, nil)
+            },
+            navigationController: { [weak controllerInteraction] in
+                return controllerInteraction?.navigationController()
+            },
+            sendSticker: { [weak controllerInteraction] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                let _ = controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer)
+            },
+            chatPeerId: chatPeerId
         )
         let gifInputInteraction = GifPagerContentComponent.InputInteraction(
             performItemAction: { [weak controllerInteraction] item, view, rect in
@@ -134,7 +190,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     if emojiCollectionIds.contains(entry.index.collectionId) {
                         let resultItem = EmojiPagerContentComponent.Item(
                             emoji: "",
-                            file: item.file
+                            file: item.file,
+                            stickerPackItem: nil
                         )
                         
                         let groupId = entry.index.collectionId
@@ -221,7 +278,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     
                     let resultItem = EmojiPagerContentComponent.Item(
                         emoji: "",
-                        file: item.file
+                        file: item.file,
+                        stickerPackItem: nil
                     )
                     
                     let groupId = "saved"
@@ -246,7 +304,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     
                     let resultItem = EmojiPagerContentComponent.Item(
                         emoji: "",
-                        file: item.media
+                        file: item.media,
+                        stickerPackItem: nil
                     )
                     
                     let groupId = "recent"
@@ -294,7 +353,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     
                     let resultItem = EmojiPagerContentComponent.Item(
                         emoji: "",
-                        file: item.media
+                        file: item.media,
+                        stickerPackItem: nil
                     )
                     
                     let groupId = "premium"
@@ -313,7 +373,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
                 let resultItem = EmojiPagerContentComponent.Item(
                     emoji: "",
-                    file: item.file
+                    file: item.file,
+                    stickerPackItem: item
                 )
                 let groupId = entry.index.collectionId
                 if let groupIndex = itemGroupIndexById[groupId] {
@@ -385,11 +446,16 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private let entityKeyboardView: ComponentHostView<Empty>
     
+    private let defaultToEmojiTab: Bool
     private var currentInputData: InputData
     private var inputDataDisposable: Disposable?
     
-    init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>) {
+    private var currentState: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool)?
+    
+    init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool) {
         self.currentInputData = currentInputData
+        self.defaultToEmojiTab = defaultToEmojiTab
+        
         self.entityKeyboardView = ComponentHostView<Empty>()
         
         super.init()
@@ -404,6 +470,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 return
             }
             strongSelf.currentInputData = inputData
+            strongSelf.performLayout()
         })
     }
     
@@ -411,7 +478,18 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         self.inputDataDisposable?.dispose()
     }
     
+    private func performLayout() {
+        guard let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.currentState else {
+            return
+        }
+        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
+    }
+    
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
+        self.currentState = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible)
+        
+        let expandedHeight = standardInputHeight + self.expansionFraction * (maximumHeight - standardInputHeight)
+        
         let entityKeyboardSize = self.entityKeyboardView.update(
             transition: Transition(transition),
             component: AnyComponent(EntityKeyboardComponent(
@@ -420,6 +498,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 emojiContent: self.currentInputData.emoji,
                 stickerContent: self.currentInputData.stickers,
                 gifContent: self.currentInputData.gifs,
+                defaultToEmojiTab: self.defaultToEmojiTab,
                 externalTopPanelContainer: self.externalTopPanelContainer,
                 topPanelExtensionUpdated: { [weak self] topPanelExtension, transition in
                     guard let strongSelf = self else {
@@ -432,10 +511,10 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             )),
             environment: {},
-            containerSize: CGSize(width: width, height: standardInputHeight)
+            containerSize: CGSize(width: width, height: expandedHeight)
         )
         transition.updateFrame(view: self.entityKeyboardView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: entityKeyboardSize))
         
-        return (standardInputHeight, 0.0)
+        return (expandedHeight, 0.0)
     }
 }

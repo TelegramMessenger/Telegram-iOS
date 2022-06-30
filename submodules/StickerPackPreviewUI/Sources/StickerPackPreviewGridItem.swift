@@ -343,7 +343,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, maybeItem) = self.currentState, let interaction = self.interaction, let item = maybeItem {
-            isPreviewing = interaction.previewedItem == .pack(item)
+            isPreviewing = interaction.previewedItem == .pack(item.file)
         }
         if self.currentIsPreviewing != isPreviewing {
             self.currentIsPreviewing = isPreviewing

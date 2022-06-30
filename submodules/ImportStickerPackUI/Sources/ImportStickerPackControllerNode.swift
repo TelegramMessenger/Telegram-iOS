@@ -240,7 +240,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
         }
-        self.contentGridNode.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>? in
+        self.contentGridNode.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(UIView, CGRect, PeekControllerContent)?, NoError>? in
             if let strongSelf = self {
                 if let itemNode = strongSelf.contentGridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode, let item = itemNode.stickerPackItem {
                     var menuItems: [ContextMenuItem] = []
@@ -259,14 +259,14 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                             }
                         })))
                     }
-                    return .single((itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems)))
+                    return .single((itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems)))
                 }
             }
             return nil
-        }, present: { [weak self] content, sourceNode in
+        }, present: { [weak self] content, sourceView, sourceRect in
             if let strongSelf = self {
-                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
-                    return sourceNode
+                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceView: {
+                    return (sourceView, sourceRect)
                 })
                 controller.visibilityUpdated = { [weak self] visible in
                     if let strongSelf = self {

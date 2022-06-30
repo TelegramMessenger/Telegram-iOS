@@ -186,7 +186,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         self.strings = strings
         
         self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
-            return inputNodeInteraction?.previewedStickerPackItem == .pack(item)
+            return inputNodeInteraction?.previewedStickerPackItem == .pack(item.file)
         }, isPane: false)
         
         self.gridNode = GridNode()
@@ -324,7 +324,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
             }
         }, getItemIsPreviewed: { item in
-            return inputNodeInteraction.previewedStickerPackItem == .pack(item)
+            return inputNodeInteraction.previewedStickerPackItem == .pack(item.file)
         })
         
         self._ready.set(self.trendingPane.ready)
@@ -561,7 +561,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     func itemAt(point: CGPoint) -> (ASDisplayNode, Any)? {
         if !self.trendingPane.isHidden {
             if let (itemNode, item) = self.trendingPane.itemAt(point: self.view.convert(point, to: self.trendingPane.view)) {
-                return (itemNode, StickerPreviewPeekItem.pack(item))
+                return (itemNode, StickerPreviewPeekItem.pack(item.file))
             }
         } else {
             if let itemNode = self.gridNode.itemNodeAtPoint(self.view.convert(point, to: self.gridNode.view)) {
@@ -569,7 +569,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                     return (itemNode, StickerPreviewPeekItem.found(stickerItem))
                 } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                     if let (node, item) = itemNode.itemAt(point: self.view.convert(point, to: itemNode.view)) {
-                        return (node, StickerPreviewPeekItem.pack(item))
+                        return (node, StickerPreviewPeekItem.pack(item.file))
                     }
                 }
             }

@@ -162,7 +162,7 @@ final class StickersChatInputContextPanelItemNode: ListViewItemNode {
         
         var previewingIndex: Int? = nil
         for i in 0 ..< item.files.count {
-            if item.stickersInteraction.previewedStickerItem == self.stickerItem(at: i) {
+            if item.stickersInteraction.previewedStickerItem?.fileId == self.stickerItem(at: i)?.file.fileId {
                 previewingIndex = i
                 break
             }

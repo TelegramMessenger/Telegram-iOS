@@ -42,7 +42,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     
     private weak var peekController: PeekController?
     
-    var previewedStickerItem: StickerPackItem?
+    var previewedStickerItem: TelegramMediaFile?
     
     var updateBackgroundOffset: ((CGFloat, Bool, ContainedViewLayoutTransition) -> Void)?
     var sendSticker: ((FileMediaReference, UIView, CGRect) -> Void)?
@@ -101,7 +101,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                 if let itemNode = selectedNode, let item = itemNode.stickerItem {
                     return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                     |> deliverOnMainQueue
-                    |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                    |> map { isStarred -> (UIView, CGRect, PeekControllerContent)? in
                         if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
                             var menuItems: [ContextMenuItem] = []
                             
@@ -196,7 +196,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                     }
                                 }))
                             )
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems, openPremiumIntro: { [weak self] in
+                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
                                 guard let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() else {
                                     return
                                 }
@@ -210,11 +210,11 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                 }
             }
             return nil
-            }, present: { [weak self] content, sourceNode in
+            }, present: { [weak self] content, sourceView, sourceRect in
                 if let strongSelf = self {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
-                        return sourceNode
+                    let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
+                        return (sourceView, sourceRect)
                     })
                     controller.visibilityUpdated = { [weak self] visible in
                         self?.previewingStickersPromise.set(visible)
@@ -226,18 +226,18 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                 return nil
             }, updateContent: { [weak self] content in
                 if let strongSelf = self {
-                    var item: StickerPackItem?
+                    var item: TelegramMediaFile?
                     if let content = content as? StickerPreviewPeekContent, case let .pack(contentItem) = content.item {
                         item = contentItem
                     }
-                    strongSelf.updatePreviewingItem(item: item, animated: true)
+                    strongSelf.updatePreviewingItem(file: item, animated: true)
                 }
         }))
     }
     
-    private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
-        if self.previewedStickerItem != item {
-            self.previewedStickerItem = item
+    private func updatePreviewingItem(file: TelegramMediaFile?, animated: Bool) {
+        if self.previewedStickerItem?.fileId != file?.fileId {
+            self.previewedStickerItem = file
             
             for (_, itemNode) in self.itemNodes {
                 itemNode.updatePreviewing(animated: animated)
@@ -433,7 +433,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                         file: item.file,
                         theme: self.theme,
                         isPreviewed: { [weak self] item in
-                            return item.file.fileId == self?.previewedStickerItem?.file.fileId
+                            return item.file.fileId == self?.previewedStickerItem?.fileId
                         }, sendSticker: { [weak self] file, view, rect in
                             self?.sendSticker?(file, view, rect)
                         }

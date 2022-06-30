@@ -1523,6 +1523,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
             strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                 if let strongSelf = self {
+                    strongSelf.chatDisplayNode.inputPanelContainerNode.collapse()
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
                         var current = current
                         current = current.updatedInterfaceState { interfaceState in
@@ -5313,7 +5314,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, backgroundNode: self.chatBackgroundNode, controller: self)
+        self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, statusBar: self.statusBar, backgroundNode: self.chatBackgroundNode, controller: self)
         
         if let currentItem = self.tempVoicePlaylistCurrentItem {
             self.chatDisplayNode.historyNode.voicePlaylistItemChanged(nil, currentItem)
@@ -9926,6 +9927,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.updateSlowmodeStatus()
         
+        switch updatedChatPresentationInterfaceState.inputMode {
+        case .media:
+            break
+        default:
+            self.chatDisplayNode.inputPanelContainerNode.collapse()
+        }
+        
         if self.isNodeLoaded {
             self.chatDisplayNode.updateChatPresentationInterfaceState(updatedChatPresentationInterfaceState, transition: transition, interactive: interactive, completion: completion)
         } else {
@@ -9974,20 +9982,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 self.updateItemNodesSelectionStates(animated: transition.isAnimated)
             }
-        }
-        
-        switch updatedChatPresentationInterfaceState.mode {
-            case .standard:
-                if self.hasEmbeddedTitleContent {
-                    self.statusBar.statusBarStyle = .White
-                } else {
-                    self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-                }
-                self.deferScreenEdgeGestures = []
-            case .overlay:
-                self.deferScreenEdgeGestures = [.top]
-            case .inline:
-                self.statusBar.statusBarStyle = .Ignore
         }
         
         if saveInterfaceState {

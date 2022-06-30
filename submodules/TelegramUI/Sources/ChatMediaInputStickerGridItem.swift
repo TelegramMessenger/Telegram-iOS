@@ -454,7 +454,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState, let interaction = self.inputNodeInteraction {
-            isPreviewing = interaction.previewedStickerPackItem == .pack(item)
+            isPreviewing = interaction.previewedStickerPackItem == .pack(item.file)
         }
         if self.currentIsPreviewing != isPreviewing {
             self.currentIsPreviewing = isPreviewing

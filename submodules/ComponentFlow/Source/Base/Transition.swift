@@ -120,6 +120,8 @@ private extension Transition.Animation.Curve {
         switch self {
         case .easeInOut:
             return CAMediaTimingFunction(name: .easeInEaseOut)
+        case let .custom(a, b, c, d):
+            return CAMediaTimingFunction(controlPoints: a, b, c, d)
         case .spring:
             preconditionFailure()
         }
@@ -131,6 +133,7 @@ public struct Transition {
         public enum Curve {
             case easeInOut
             case spring
+            case custom(Float, Float, Float, Float)
         }
 
         case none

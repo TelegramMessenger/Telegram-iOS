@@ -10,8 +10,8 @@ public extension Transition.Animation.Curve {
             self = .easeInOut
         case .easeInOut:
             self = .easeInOut
-        case .custom:
-            self = .spring
+        case let .custom(a, b, c, d):
+            self = .custom(a, b, c, d)
         case .customSpring:
             self = .spring
         case .spring:
@@ -21,10 +21,12 @@ public extension Transition.Animation.Curve {
     
     var containedViewLayoutTransitionCurve: ContainedViewLayoutTransitionCurve {
         switch self {
-            case .easeInOut:
-                return .easeInOut
-            case .spring:
-                return .spring
+        case .easeInOut:
+            return .easeInOut
+        case .spring:
+            return .spring
+        case let .custom(a, b, c, d):
+            return .custom(a, b, c, d)
         }
     }
 }

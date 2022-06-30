@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
-import DCT
+import ImageDCT
 
 final class ImagePlane {
     let width: Int
@@ -134,13 +134,11 @@ extension ImageYUVA420 {
 
 final class DctData {
     let quality: Int
-    let dctData: Data
-    let idctData: Data
+    let dct: ImageDCT
     
     init(quality: Int) {
         self.quality = quality
-        self.dctData = generateForwardDctData(Int32(quality))!
-        self.idctData = generateInverseDctData(Int32(quality))!
+        self.dct = ImageDCT(quality: quality)
     }
 }
 
@@ -174,7 +172,7 @@ extension ImageYUVA420 {
                 targetPlane.data.withUnsafeMutableBytes { bytes in
                     let coefficients = bytes.baseAddress!.assumingMemoryBound(to: Int16.self)
                     
-                    performForwardDct(sourcePixels, coefficients, Int32(sourcePlane.width), Int32(sourcePlane.height), Int32(sourcePlane.bytesPerRow), dctData.dctData)
+                    dctData.dct.forward(withPixels: sourcePixels, coefficients: coefficients, width: sourcePlane.width, height: sourcePlane.height, bytesPerRow: sourcePlane.bytesPerRow)
                 }
             }
         }
@@ -217,7 +215,7 @@ extension DctCoefficientsYUVA420 {
                 targetPlane.data.withUnsafeMutableBytes { bytes in
                     let pixels = bytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                     
-                    performInverseDct(coefficients, pixels, Int32(sourcePlane.width), Int32(sourcePlane.height), Int32(targetPlane.bytesPerRow), Int32(sourcePlane.width), dctData.idctData)
+                    dctData.dct.inverse(withCoefficients: coefficients, pixels: pixels, width: sourcePlane.width, height: sourcePlane.height, coefficientsPerRow: targetPlane.width,  bytesPerRow: targetPlane.width)
                 }
             }
         }

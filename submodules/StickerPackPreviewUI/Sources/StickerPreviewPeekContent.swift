@@ -15,13 +15,13 @@ import AccountContext
 import AppBundle
 
 public enum StickerPreviewPeekItem: Equatable {
-    case pack(StickerPackItem)
+    case pack(TelegramMediaFile)
     case found(FoundStickerItem)
     
     public var file: TelegramMediaFile {
         switch self {
-        case let .pack(item):
-            return item.file
+        case let .pack(file):
+            return file
         case let .found(item):
             return item.file
         }

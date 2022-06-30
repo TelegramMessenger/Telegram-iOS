@@ -31,6 +31,7 @@ public final class EntityKeyboardComponent: Component {
     public let emojiContent: EmojiPagerContentComponent
     public let stickerContent: EmojiPagerContentComponent
     public let gifContent: GifPagerContentComponent
+    public let defaultToEmojiTab: Bool
     public let externalTopPanelContainer: UIView?
     public let topPanelExtensionUpdated: (CGFloat, Transition) -> Void
     
@@ -40,6 +41,7 @@ public final class EntityKeyboardComponent: Component {
         emojiContent: EmojiPagerContentComponent,
         stickerContent: EmojiPagerContentComponent,
         gifContent: GifPagerContentComponent,
+        defaultToEmojiTab: Bool,
         externalTopPanelContainer: UIView?,
         topPanelExtensionUpdated: @escaping (CGFloat, Transition) -> Void
     ) {
@@ -48,6 +50,7 @@ public final class EntityKeyboardComponent: Component {
         self.emojiContent = emojiContent
         self.stickerContent = stickerContent
         self.gifContent = gifContent
+        self.defaultToEmojiTab = defaultToEmojiTab
         self.externalTopPanelContainer = externalTopPanelContainer
         self.topPanelExtensionUpdated = topPanelExtensionUpdated
     }
@@ -66,6 +69,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.gifContent != rhs.gifContent {
+            return false
+        }
+        if lhs.defaultToEmojiTab != rhs.defaultToEmojiTab {
             return false
         }
         if lhs.externalTopPanelContainer != rhs.externalTopPanelContainer {
@@ -232,7 +238,7 @@ public final class EntityKeyboardComponent: Component {
                     contentTopPanels: contentTopPanels,
                     contentIcons: contentIcons,
                     contentAccessoryRightButtons: contentAccessoryRightButtons,
-                    defaultId: "emoji",
+                    defaultId: component.defaultToEmojiTab ? "emoji" : "stickers",
                     contentBackground: AnyComponent(BlurredBackgroundComponent(
                         color: component.theme.chat.inputMediaPanel.stickersBackgroundColor.withMultipliedAlpha(0.75)
                     )),
