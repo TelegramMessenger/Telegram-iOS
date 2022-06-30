@@ -387,7 +387,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
     proceedImpl = { [weak controller] in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        let action: ([EnginePeer]) -> Void = { preloadedPeers in
+        let action: ([EnginePeer], String?) -> Void = { preloadedPeers, password in
             let nextMode: DeleteAccountDataMode?
             switch mode {
                 case .peers:
@@ -423,7 +423,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                     
                     let accountId = context.account.id
                     let accountManager = context.sharedContext.accountManager
-                    let _ = (context.engine.auth.deleteAccount(reason: "Manual")
+                    let _ = (context.engine.auth.deleteAccount(reason: "Manual", password: password)
                     |> deliverOnMainQueue).start(error: { _ in
                         updateState { current in
                             var updated = current
@@ -447,7 +447,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                 let _ = (preloadedGroupPeers.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { peers in
-                    action(peers)
+                    action(peers, nil)
                 })
             case .phone:
                 var phoneNumber: String?
@@ -469,7 +469,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.DeleteAccount_InvalidPhoneNumberError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                                 return
                             }
-                            action([])
+                            action([], nil)
                         }
                     })
                 }
@@ -507,13 +507,13 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                             return updated
                         }
                         
-                        action([])
+                        action([], state.password)
                     })
                     return
                 }
                 
             default:
-                action([])
+                action([], nil)
         }
     }
     
