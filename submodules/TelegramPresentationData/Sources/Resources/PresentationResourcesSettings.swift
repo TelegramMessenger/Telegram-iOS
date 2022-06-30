@@ -36,6 +36,8 @@ public struct PresentationResourcesSettings {
     public static let dataAndStorage = renderIcon(name: "Settings/Menu/DataAndStorage")
     public static let appearance = renderIcon(name: "Settings/Menu/Appearance")
     public static let language = renderIcon(name: "Settings/Menu/Language")
+    
+    public static let deleteAccount = renderIcon(name: "Chat/Info/GroupRemovedIcon")
 
     public static let wallet = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
