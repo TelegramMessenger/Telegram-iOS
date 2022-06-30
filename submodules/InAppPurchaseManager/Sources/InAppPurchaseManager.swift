@@ -307,7 +307,7 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), sending receipt for transactions [\(transactionIds)]")
                 
                 self.disposableSet.set(
-                    self.engine.payments.sendAppStoreReceipt(receipt: getReceiptData() ?? Data(), restore: false).start(error: { [weak self] _ in
+                    self.engine.payments.sendAppStoreReceipt(receipt: getReceiptData() ?? Data(), purpose: .subscription).start(error: { [weak self] _ in
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transactions [\(transactionIds)] failed to assign")
                         for transaction in transactions {
                             self?.stateQueue.async {
@@ -337,7 +337,7 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 
                 if let receiptData = getReceiptData() {
                     self.disposableSet.set(
-                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, restore: true).start(error: { error in
+                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, purpose: .restore).start(error: { error in
                             Queue.mainQueue().async {
                                 if case .serverProvided = error {
                                     onRestoreCompletion(.succeed(true))

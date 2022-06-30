@@ -172,7 +172,7 @@ extension ImageYUVA420 {
                 let sourcePixels = sourceBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                 
                 targetPlane.data.withUnsafeMutableBytes { bytes in
-                    let coefficients = bytes.baseAddress!.assumingMemoryBound(to: UInt16.self)
+                    let coefficients = bytes.baseAddress!.assumingMemoryBound(to: Int16.self)
                     
                     performForwardDct(sourcePixels, coefficients, Int32(sourcePlane.width), Int32(sourcePlane.height), Int32(sourcePlane.bytesPerRow), dctData.dctData)
                 }
@@ -212,7 +212,7 @@ extension DctCoefficientsYUVA420 {
             }
             
             sourcePlane.data.withUnsafeBytes { sourceBytes in
-                let coefficients = sourceBytes.baseAddress!.assumingMemoryBound(to: UInt16.self)
+                let coefficients = sourceBytes.baseAddress!.assumingMemoryBound(to: Int16.self)
                 
                 targetPlane.data.withUnsafeMutableBytes { bytes in
                     let pixels = bytes.baseAddress!.assumingMemoryBound(to: UInt8.self)

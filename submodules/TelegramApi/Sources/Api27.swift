@@ -6229,12 +6229,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.payments {
-                static func assignAppStoreTransaction(flags: Int32, receipt: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func assignAppStoreTransaction(flags: Int32, receipt: Buffer, purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(224186320)
+                    buffer.appendInt32(296120783)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeBytes(receipt, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "payments.assignAppStoreTransaction", parameters: [("flags", String(describing: flags)), ("receipt", String(describing: receipt))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    purpose.serialize(buffer, true)
+                    return (FunctionDescription(name: "payments.assignAppStoreTransaction", parameters: [("flags", String(describing: flags)), ("receipt", String(describing: receipt)), ("purpose", String(describing: purpose))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -6245,11 +6246,12 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
-                static func assignPlayMarketTransaction(purchaseToken: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func assignPlayMarketTransaction(purchaseToken: String, purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1336560365)
+                    buffer.appendInt32(-179907586)
                     serializeString(purchaseToken, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "payments.assignPlayMarketTransaction", parameters: [("purchaseToken", String(describing: purchaseToken))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    purpose.serialize(buffer, true)
+                    return (FunctionDescription(name: "payments.assignPlayMarketTransaction", parameters: [("purchaseToken", String(describing: purchaseToken)), ("purpose", String(describing: purpose))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

@@ -652,6 +652,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case let .webViewData(text):
                 attributedString = NSAttributedString(string: strings.Notification_WebAppSentData(text).string, font: titleFont, textColor: primaryTextColor)
+            case .giftPremium:
+                attributedString = nil
             case .unknown:
                 attributedString = nil
             }
