@@ -37,7 +37,7 @@ public final class InAppPurchaseManager: NSObject {
             } else if #available(iOS 11.2, *) {
                 return self.skProduct.subscriptionPeriod != nil
             } else {
-                return !self.id.contains(".monthly")
+                return self.id.contains(".monthly")
             }
         }
         
@@ -89,9 +89,11 @@ public final class InAppPurchaseManager: NSObject {
     
     private final class PaymentTransactionContext {
         var state: SKPaymentTransactionState?
+        var targetPeerId: PeerId?
         let subscriber: (TransactionState) -> Void
         
-        init(subscriber: @escaping (TransactionState) -> Void) {
+        init(targetPeerId: PeerId?, subscriber: @escaping (TransactionState) -> Void) {
+            self.targetPeerId = targetPeerId
             self.subscriber = subscriber
         }
     }
@@ -120,7 +122,7 @@ public final class InAppPurchaseManager: NSObject {
     
     public init(engine: TelegramEngine) {
         self.engine = engine
-        
+                
         super.init()
         
         SKPaymentQueue.default().add(self)
@@ -169,10 +171,15 @@ public final class InAppPurchaseManager: NSObject {
         }
     }
     
-    public func buyProduct(_ product: Product) -> Signal<PurchaseState, PurchaseError> {
+    public func buyProduct(_ product: Product, targetPeerId: PeerId? = nil) -> Signal<PurchaseState, PurchaseError> {
         if !self.canMakePayments {
             return .fail(.cantMakePayments)
         }
+        
+        if !product.isSubscription && targetPeerId == nil {
+            return .fail(.cantMakePayments)
+        }
+        
         let accountPeerId = "\(self.engine.account.peerId.toInt64())"
         
         Logger.shared.log("InAppPurchaseManager", "Buying: account \(accountPeerId), product \(product.skProduct.productIdentifier), price \(product.price)")
@@ -186,7 +193,7 @@ public final class InAppPurchaseManager: NSObject {
             let disposable = MetaDisposable()
             
             self.stateQueue.async {
-                let paymentContext = PaymentTransactionContext(subscriber: { state in
+                let paymentContext = PaymentTransactionContext(targetPeerId: targetPeerId, subscriber: { state in
                     switch state {
                         case let .purchased(transactionId), let .restored(transactionId):
                             if let transactionId = transactionId {
@@ -264,6 +271,9 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
     public func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
         self.stateQueue.async {
             let accountPeerId = "\(self.engine.account.peerId.toInt64())"
+            
+            let paymentContexts = self.paymentContexts
+            
             var transactionsToAssign: [SKPaymentTransaction] = []
             for transaction in transactions {
                 if let applicationUsername = transaction.payment.applicationUsername, applicationUsername != accountPeerId {
@@ -306,8 +316,19 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 let transactionIds = transactionsToAssign.compactMap({ $0.transactionIdentifier }).joined(separator: ", ")
                 Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), sending receipt for transactions [\(transactionIds)]")
                 
+                let transaction = transactionsToAssign.first
+                
+                
+                let purpose: AppStoreTransactionPurpose
+                if let productIdentifier = transaction?.payment.productIdentifier, let targetPeerId = paymentContexts[productIdentifier]?.targetPeerId {
+                    purpose = .gift(targetPeerId)
+                } else {
+                    purpose = .subscription
+                }
+            
+                let receiptData = getReceiptData() ?? Data()
                 self.disposableSet.set(
-                    self.engine.payments.sendAppStoreReceipt(receipt: getReceiptData() ?? Data(), restore: false).start(error: { [weak self] _ in
+                    self.engine.payments.sendAppStoreReceipt(receipt: receiptData, purpose: purpose).start(error: { [weak self] _ in
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transactions [\(transactionIds)] failed to assign")
                         for transaction in transactions {
                             self?.stateQueue.async {
@@ -337,7 +358,7 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 
                 if let receiptData = getReceiptData() {
                     self.disposableSet.set(
-                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, restore: true).start(error: { error in
+                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, purpose: .restore).start(error: { error in
                             Queue.mainQueue().async {
                                 if case .serverProvided = error {
                                     onRestoreCompletion(.succeed(true))

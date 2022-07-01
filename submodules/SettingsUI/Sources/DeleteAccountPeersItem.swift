@@ -201,15 +201,7 @@ class DeleteAccountPeersItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     func asyncLayout() -> (_ item: DeleteAccountPeersItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let currentItem = self.item
-        
-        return { item, params, neighbors in
-            var themeUpdated = false
-            if currentItem?.theme !== item.theme {
-                themeUpdated = true
-            }
-            print(themeUpdated)
-            
+        return { item, params, neighbors in            
             let contentSize: CGSize
             var insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel

@@ -15,6 +15,7 @@ import UrlHandling
 import InviteLinksUI
 import CountrySelectionUI
 import PhoneInputNode
+import UndoUI
 
 private struct DeleteAccountDataArguments {
     let context: AccountContext
@@ -289,6 +290,24 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
             peers = .single([])
     }
     
+    let cancelImpl = {
+        dismissImpl?()
+        
+        switch mode {
+            case .peers:
+                addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_cloud_cancel")
+            case .groups:
+                addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_groups_cancel")
+            case .messages:
+                addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_messages_cancel")
+            case .phone:
+                addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_phone_cancel")
+            case .password:
+                addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_2fa_cancel")
+        }
+    }
+    
+    var secondaryActionDisabled = false
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
         peers,
@@ -296,7 +315,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
     )
     |> map { presentationData, peers, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-            dismissImpl?()
+            cancelImpl()
         })
 
         var focusItemTag: DeleteAccountEntryTag?
@@ -319,9 +338,12 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
         }
         
         let footerItem = DeleteAccountFooterItem(theme: presentationData.theme, title: buttonTitle, secondaryTitle: presentationData.strings.DeleteAccount_Continue, action: {
-            dismissImpl?()
+            cancelImpl()
         }, secondaryAction: {
-            proceedImpl?()
+            if !secondaryActionDisabled {
+                secondaryActionDisabled = true
+                proceedImpl?()
+            }
         })
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.DeleteAccount_DeleteMyAccountTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
@@ -387,7 +409,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
     proceedImpl = { [weak controller] in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        let action: ([EnginePeer]) -> Void = { preloadedPeers in
+        let action: ([EnginePeer], String?) -> Void = { preloadedPeers, password in
             let nextMode: DeleteAccountDataMode?
             switch mode {
                 case .peers:
@@ -414,7 +436,13 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                 let controller = deleteAccountDataController(context: context, mode: nextMode, twoStepAuthData: twoStepAuthData)
                 replaceTopControllerImpl?(controller)
             } else {
+                addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_confirmation_show")
+                
                 presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.DeleteAccount_ConfirmationAlertTitle, text: presentationData.strings.DeleteAccount_ConfirmationAlertText, actions: [TextAlertAction(type: .destructiveAction, title: presentationData.strings.DeleteAccount_ConfirmationAlertDelete, action: {
+                    addAppLogEvent(postbox: context.account.postbox, type: "deactivate.final")
+                    
+                    invokeAppLogEventsSynchronization(postbox: context.account.postbox)
+                    
                     updateState { current in
                         var updated = current
                         updated.isLoading = true
@@ -423,7 +451,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                     
                     let accountId = context.account.id
                     let accountManager = context.sharedContext.accountManager
-                    let _ = (context.engine.auth.deleteAccount(reason: "Manual")
+                    let _ = (context.engine.auth.deleteAccount(reason: "Manual", password: password)
                     |> deliverOnMainQueue).start(error: { _ in
                         updateState { current in
                             var updated = current
@@ -434,9 +462,17 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                     }, completed: {
                         dismissImpl?()
-                        let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: true).start()
+                                                
+                        let presentGlobalController = context.sharedContext.presentGlobalController
+                        let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: true).start(completed: {
+                            Queue.mainQueue().after(0.1) {
+                                presentGlobalController(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.DeleteAccount_Success), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
+                            }
+                        })
                     })
                 }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                    addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_confirmation_cancel")
+                    
                     dismissImpl?()
                 })]))
             }
@@ -447,7 +483,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                 let _ = (preloadedGroupPeers.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { peers in
-                    action(peers)
+                    action(peers, nil)
                 })
             case .phone:
                 var phoneNumber: String?
@@ -469,7 +505,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.DeleteAccount_InvalidPhoneNumberError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                                 return
                             }
-                            action([])
+                            action([], nil)
                         }
                     })
                 }
@@ -507,14 +543,27 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                             return updated
                         }
                         
-                        action([])
+                        action([], state.password)
                     })
                     return
                 }
                 
             default:
-                action([])
+                action([], nil)
         }
+    }
+    
+    switch mode {
+        case .peers:
+            addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_cloud_show")
+        case .groups:
+            addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_groups_show")
+        case .messages:
+            addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_messages_show")
+        case .phone:
+            addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_phone_show")
+        case .password:
+            addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_2fa_show")
     }
     
     return controller

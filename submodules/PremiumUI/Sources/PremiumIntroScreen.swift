@@ -38,8 +38,9 @@ public enum PremiumSource: Equatable {
     case appIcons
     case deeplink(String?)
     case profile(PeerId)
+    case gift(from: PeerId, to: PeerId, duration: Int32)
     
-    var identifier: String {
+    var identifier: String? {
         switch self {
             case .settings:
                 return "settings"
@@ -73,6 +74,8 @@ public enum PremiumSource: Equatable {
                 return "double_limits__about"
             case let .profile(id):
                 return "profile__\(id.id._internalGetInt64Value())"
+            case .gift:
+                return nil
             case let .deeplink(reference):
                 if let reference = reference {
                     return "deeplink_\(reference)"
@@ -695,22 +698,24 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     strongSelf.promoConfiguration = promoConfiguration
                     strongSelf.updated(transition: .immediate)
                     
-                    var jsonString: String = "{"
-                    jsonString += "\"source\": \"\(source.identifier)\","
-                    
-                    jsonString += "\"data\": {\"premium_promo_order\":["
-                    var isFirst = true
-                    for perk in strongSelf.configuration.perks {
-                        if !isFirst {
-                            jsonString += ","
+                    if let identifier = source.identifier {
+                        var jsonString: String = "{"
+                        jsonString += "\"source\": \"\(identifier)\","
+                        
+                        jsonString += "\"data\": {\"premium_promo_order\":["
+                        var isFirst = true
+                        for perk in strongSelf.configuration.perks {
+                            if !isFirst {
+                                jsonString += ","
+                            }
+                            isFirst = false
+                            jsonString += "\"\(perk.identifier)\""
                         }
-                        isFirst = false
-                        jsonString += "\"\(perk.identifier)\""
-                    }
-                    jsonString += "]}}"
-                    
-                    if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
-                        addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_show", data: json)
+                        jsonString += "]}}"
+                        
+                        if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
+                            addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_show", data: json)
+                        }
                     }
                     
                     for (_, video) in promoConfiguration.videos {
@@ -815,7 +820,15 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             
             let textString: String
             if let _ = context.component.otherPeerName {
-                textString = strings.Premium_PersonalDescription
+                if case let .gift(fromId, _, _) = context.component.source {
+                    if fromId == context.component.context.account.peerId {
+                        textString = strings.Premium_GiftedDescriptionYou
+                    } else {
+                        textString = strings.Premium_GiftedDescription
+                    }
+                } else {
+                    textString = strings.Premium_PersonalDescription
+                }
             } else if context.component.isPremium == true {
                 textString = strings.Premium_SubscribedDescription
             } else {
@@ -1036,8 +1049,17 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 return (TelegramTextAttributes.URL, contents)
             })
                        
+            var isGiftView = false
+            if case let .gift(fromId, _, _) = context.component.source {
+                if fromId == context.component.context.account.peerId {
+                    isGiftView = true
+                }
+            }
+            
             let termsString: MultilineTextComponent.TextContent
-            if let promoConfiguration = context.state.promoConfiguration {
+            if isGiftView {
+                termsString = .plain(NSAttributedString())
+            } else if let promoConfiguration = context.state.promoConfiguration {
                 let attributedString = stringWithAppliedEntities(promoConfiguration.status, entities: promoConfiguration.statusEntities, baseColor: termsTextColor, linkColor: environment.theme.list.itemAccentColor, baseFont: termsFont, linkFont: termsFont, boldFont: boldTermsFont, italicFont: italicTermsFont, boldItalicFont: boldItalicTermsFont, fixedFont: monospaceTermsFont, blockQuoteFont: termsFont)
                 termsString = .plain(attributedString)
             } else {
@@ -1229,7 +1251,14 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             }
             
             let otherPeerName: Signal<String?, NoError>
-            if case let .profile(peerId) = source {
+            if case let .gift(fromPeerId, toPeerId, _) = source {
+                let otherPeerId = fromPeerId != context.account.peerId ? fromPeerId : toPeerId
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: otherPeerId))
+                |> map { peer -> String? in
+                    return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                }
+            } else if case let .profile(peerId) = source {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> map { peer -> String? in
@@ -1418,7 +1447,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             )
             
             let titleString: String
-            if state.isPremium == true {
+            if case .gift = context.component.source {
+                titleString = environment.strings.Premium_GiftedTitle
+            } else if state.isPremium == true {
                 titleString = environment.strings.Premium_SubscribedTitle
             } else {
                 titleString = environment.strings.Premium_Title
@@ -1444,9 +1475,43 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: accentColor), linkAttribute: { _ in
                 return nil
             })
+            
+            let secondaryTitleText: String
+            if let otherPeerName = state.otherPeerName {
+                if case .profile = context.component.source {
+                    secondaryTitleText = environment.strings.Premium_PersonalTitle(otherPeerName).string
+                } else if case let .gift(fromPeerId, _, duration) = context.component.source {
+                    if fromPeerId == context.component.context.account.peerId {
+                        if duration >= 86400 * 365 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitleYou_12Month(otherPeerName).string
+                        } else if duration >= 86400 * 180 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitleYou_6Month(otherPeerName).string
+                        } else if duration >= 86400 * 90 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitleYou_3Month(otherPeerName).string
+                        } else {
+                            secondaryTitleText = ""
+                        }
+                    } else {
+                        if duration >= 86400 * 365 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitle_12Month(otherPeerName).string
+                        } else if duration >= 86400 * 180 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitle_6Month(otherPeerName).string
+                        } else if duration >= 86400 * 90 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitle_3Month(otherPeerName).string
+                        } else {
+                            secondaryTitleText = ""
+                        }
+                    }
+                } else {
+                    secondaryTitleText = ""
+                }
+            } else {
+                secondaryTitleText = ""
+            }
+            
             let secondaryTitle = secondaryTitle.update(
                 component: MultilineTextComponent(
-                    text: .markdown(text: state.otherPeerName.flatMap({ environment.strings.Premium_PersonalTitle($0).string }) ?? "", attributes: markdownAttributes),
+                    text: .markdown(text: secondaryTitleText, attributes: markdownAttributes),
                     horizontalAlignment: .center,
                     truncationType: .end,
                     maximumNumberOfLines: 2,
@@ -1557,8 +1622,15 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 .scale(titleScale)
                 .opacity(max(0.0, 1.0 - titleAlpha * 1.8))
             )
+            
+            var isGiftView = false
+            if case let .gift(fromId, _, _) = context.component.source {
+                if fromId == context.component.context.account.peerId {
+                    isGiftView = true
+                }
+            }
                         
-            if state.isPremium == true {
+            if state.isPremium == true || isGiftView {
                 
             } else {
                 let sideInset: CGFloat = 16.0

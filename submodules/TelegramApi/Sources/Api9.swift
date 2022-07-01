@@ -455,6 +455,64 @@ public extension Api {
     }
 }
 public extension Api {
+    enum InputStorePaymentPurpose: TypeConstructorDescription {
+        case inputStorePaymentGiftPremium(userId: Api.InputUser)
+        case inputStorePaymentPremiumSubscription(flags: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputStorePaymentGiftPremium(let userId):
+                    if boxed {
+                        buffer.appendInt32(1147243133)
+                    }
+                    userId.serialize(buffer, true)
+                    break
+                case .inputStorePaymentPremiumSubscription(let flags):
+                    if boxed {
+                        buffer.appendInt32(-1502273946)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputStorePaymentGiftPremium(let userId):
+                return ("inputStorePaymentGiftPremium", [("userId", String(describing: userId))])
+                case .inputStorePaymentPremiumSubscription(let flags):
+                return ("inputStorePaymentPremiumSubscription", [("flags", String(describing: flags))])
+    }
+    }
+    
+        public static func parse_inputStorePaymentGiftPremium(_ reader: BufferReader) -> InputStorePaymentPurpose? {
+            var _1: Api.InputUser?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputUser
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputStorePaymentPurpose.inputStorePaymentGiftPremium(userId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputStorePaymentPremiumSubscription(_ reader: BufferReader) -> InputStorePaymentPurpose? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputStorePaymentPurpose.inputStorePaymentPremiumSubscription(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputTheme: TypeConstructorDescription {
         case inputTheme(id: Int64, accessHash: Int64)
         case inputThemeSlug(slug: String)

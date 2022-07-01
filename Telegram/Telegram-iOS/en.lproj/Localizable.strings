@@ -7797,6 +7797,8 @@ Sorry for the inconvenience.";
 "DeleteAccount.ConfirmationAlertText" = "Deleting your account will permanently delete your data!\n\nIt is imposible to reverse this action!";
 "DeleteAccount.ConfirmationAlertDelete" = "Delete My Account";
 
+"DeleteAccount.Success" = "The account has been successfully deleted.";
+
 "PeerInfo.GiftPremium" = "Gift Premium";
 
 "Premium.Gift.Title" = "Gift Telegram Premium";
@@ -7812,7 +7814,23 @@ Sorry for the inconvenience.";
 "Premium.Gift.Years_1" = "%@ Year";
 "Premium.Gift.Years_any" = "%@ Years";
 
+"Premium.GiftedTitle" = "Telegram Premium";
+
 "Premium.GiftedTitle.3Month" = "[%@]() has gifted you a 3-month subscription for Telegram Premium";
 "Premium.GiftedTitle.6Month" = "[%@]() has gifted you a 6-month subscription for Telegram Premium";
 "Premium.GiftedTitle.12Month" = "[%@]() has gifted you a 12-month subscription for Telegram Premium";
 "Premium.GiftedDescription" = "You now have access to additional features.";
+
+"Premium.GiftedTitleYou.3Month" = "You gifted [%@]() a 3-month subscription for Telegram Premium";
+"Premium.GiftedTitleYou.6Month" = "You gifted [%@]() a 6-month subscription for Telegram Premium";
+"Premium.GiftedTitleYou.12Month" = "You gifted [%@]() a 12-month subscription for Telegram Premium";
+"Premium.GiftedDescriptionYou" = "They now have access to additional features.";
+
+"SettingsSearch.DeleteAccount.DeleteMyAccount" = " ";
+
+"Notification.PremiumGift.Sent" = "%1$@ sent you a gift for %2$@";
+"Notification.PremiumGift.SentYou" = "You sent a gift for %@";
+
+"Notification.PremiumGift.Title" = "Telegram Premium";
+"Notification.PremiumGift.Subtitle" = "for %@";
+"Notification.PremiumGift.View" = "View";
