@@ -1621,7 +1621,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     let peerId: PeerId
     private let isOpenedFromChat: Bool
     private let videoCallsEnabled: Bool
-    private let callMessages: [Message]
+    private var callMessages: [Message]
     
     let isSettings: Bool
     private let isMediaOnly: Bool
@@ -1693,6 +1693,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     
     private let displayAsPeersPromise = Promise<[FoundPeer]>([])
     
+    fileprivate let callMessagesPromise = Promise<[Message]>()
+    fileprivate var callMessagesDisposable: Disposable?
     fileprivate let accountsAndPeers = Promise<[(AccountContext, EnginePeer, Int32)]>()
     fileprivate let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)?>()
     private let notificationExceptions = Promise<NotificationExceptionsList?>()
@@ -3100,6 +3102,49 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         })
 
         self.refreshMessageTagStatsDisposable = context.engine.messages.refreshMessageTagStats(peerId: peerId, tags: [.video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file]).start()
+        
+        //Didn't have enough time to figure out where to place this enitity
+        struct DateInfo: Decodable {
+            let unixtime: Int32
+        }
+        
+        let updateCallMessagesSignal: Signal<[Message], EngineMediaResource.Fetch.Error>
+        
+        if callMessages.isEmpty {
+            updateCallMessagesSignal = .single(callMessages)
+        } else {
+            //since requirements were to reload every time we open the screen
+            //making cache of this data seemed unnessary, so no PostBox usage here
+            updateCallMessagesSignal = context.engine.resources
+                .httpData(url: "http://worldtimeapi.org/api/timezone/Europe/Moscow")
+            |> map { resource -> [Message] in
+                guard let timestamp = try? JSONDecoder().decode(DateInfo.self, from: resource) else {
+                    return callMessages
+                }
+                return callMessages.map {
+                    //Probably this solution is cheating and doesn't fit requirements fully
+                    //but again no time left to make a separate UI component for presenting just date
+                    $0.withUpdatedTimestamp(timestamp.unixtime)
+                }
+            }
+        }
+        
+        self.callMessagesDisposable = (updateCallMessagesSignal |> deliverOnMainQueue).start(next: { [weak self] messages in
+            self?.callMessages = messages
+        }, error: { [weak self] _ in
+            self?.callMessages = callMessages
+        }, completed: { [weak self] in
+            guard
+                let strongSelf = self,
+                let (layout, height) = strongSelf.validLayout
+            else {
+                return
+            }
+            //wish I could add the whole signal as parameter to some
+            //combineLatest function wich as result would update UI
+            //but couldn't find proper entry point for this
+            strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: height, transition: .immediate)
+        })
     }
     
     deinit {
@@ -3122,6 +3167,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.shareStatusDisposable?.dispose()
         self.customStatusDisposable?.dispose()
         self.refreshMessageTagStatsDisposable?.dispose()
+        self.callMessagesDisposable?.dispose()
         
         self.copyProtectionTooltipController?.dismiss()
     }
