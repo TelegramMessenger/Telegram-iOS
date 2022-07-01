@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import ChatPresentationInterfaceState
+import EntityKeyboard
 
 private let searchBarHeight: CGFloat = 52.0
 
@@ -27,7 +28,7 @@ protocol PaneSearchContentNode {
     func itemAt(point: CGPoint) -> (ASDisplayNode, Any)?
 }
 
-final class PaneSearchContainerNode: ASDisplayNode {
+final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainerNode {
     private let context: AccountContext
     private let mode: ChatMediaInputSearchMode
     public private(set) var contentNode: PaneSearchContentNode & ASDisplayNode
@@ -38,6 +39,8 @@ final class PaneSearchContainerNode: ASDisplayNode {
     private let searchBar: PaneSearchBarNode
     
     private var validLayout: CGSize?
+    
+    var onCancel: (() -> Void)?
     
     var openGifContextMenu: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
     
@@ -75,8 +78,11 @@ final class PaneSearchContainerNode: ASDisplayNode {
             self?.searchBar.activity = active
         }
         
-        self.searchBar.cancel = {
+        self.searchBar.cancel = { [weak self] in
             cancel()
+            
+            self?.searchBar.view.endEditing(true)
+            self?.onCancel?()
         }
         self.searchBar.activate()
         

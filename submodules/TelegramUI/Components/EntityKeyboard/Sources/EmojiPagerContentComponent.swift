@@ -25,14 +25,14 @@ import UndoUI
 
 private let premiumBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
 
-private final class PremiumBadgeView: BlurredBackgroundView {
+private final class PremiumBadgeView: UIView {
     private let iconLayer: SimpleLayer
     
     init() {
         self.iconLayer = SimpleLayer()
         self.iconLayer.contents = premiumBadgeIcon?.cgImage
         
-        super.init(color: .clear, enableBlur: true)
+        super.init(frame: CGRect())
         
         self.layer.addSublayer(self.iconLayer)
     }
@@ -42,11 +42,13 @@ private final class PremiumBadgeView: BlurredBackgroundView {
     }
     
     func update(backgroundColor: UIColor, size: CGSize) {
-        self.updateColor(color: backgroundColor, transition: .immediate)
+        //self.updateColor(color: backgroundColor, transition: .immediate)
+        self.backgroundColor = backgroundColor
+        self.layer.cornerRadius = size.width / 2.0
         
         self.iconLayer.frame = CGRect(origin: CGPoint(), size: size).insetBy(dx: 2.0, dy: 2.0)
         
-        super.update(size: size, cornerRadius: min(size.width / 2.0, size.height / 2.0), transition: .immediate)
+        //super.update(size: size, cornerRadius: min(size.width / 2.0, size.height / 2.0), transition: .immediate)
     }
 }
 
@@ -150,6 +152,7 @@ public final class EmojiPagerContentComponent: Component {
         case detailed
     }
     
+    public let id: AnyHashable
     public let context: AccountContext
     public let animationCache: AnimationCache
     public let animationRenderer: MultiAnimationRenderer
@@ -158,6 +161,7 @@ public final class EmojiPagerContentComponent: Component {
     public let itemLayoutType: ItemLayoutType
     
     public init(
+        id: AnyHashable,
         context: AccountContext,
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
@@ -165,6 +169,7 @@ public final class EmojiPagerContentComponent: Component {
         itemGroups: [ItemGroup],
         itemLayoutType: ItemLayoutType
     ) {
+        self.id = id
         self.context = context
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
@@ -174,6 +179,9 @@ public final class EmojiPagerContentComponent: Component {
     }
     
     public static func ==(lhs: EmojiPagerContentComponent, rhs: EmojiPagerContentComponent) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
         if lhs.context !== rhs.context {
             return false
         }
@@ -196,14 +204,24 @@ public final class EmojiPagerContentComponent: Component {
         return true
     }
     
-    public final class View: UIView, UIScrollViewDelegate {
+    public final class Tag {
+        public let id: AnyHashable
+        
+        public init(id: AnyHashable) {
+            self.id = id
+        }
+    }
+    
+    public final class View: UIView, UIScrollViewDelegate, ComponentTaggedView {
         private struct ItemGroupDescription: Equatable {
+            let id: AnyHashable
             let hasTitle: Bool
             let itemCount: Int
         }
         
         private struct ItemGroupLayout: Equatable {
             let frame: CGRect
+            let id: AnyHashable
             let itemTopOffset: CGFloat
             let itemCount: Int
         }
@@ -230,9 +248,9 @@ public final class EmojiPagerContentComponent: Component {
                     self.verticalSpacing = 9.0
                     minSpacing = 9.0
                 case .detailed:
-                    self.itemSize = 60.0
-                    self.verticalSpacing = 9.0
-                    minSpacing = 9.0
+                    self.itemSize = 76.0
+                    self.verticalSpacing = 2.0
+                    minSpacing = 2.0
                 }
                 
                 self.verticalGroupSpacing = 18.0
@@ -254,6 +272,7 @@ public final class EmojiPagerContentComponent: Component {
                     let groupContentSize = CGSize(width: width, height: itemTopOffset + CGFloat(numRowsInGroup) * self.itemSize + CGFloat(max(0, numRowsInGroup - 1)) * self.verticalSpacing)
                     self.itemGroupLayouts.append(ItemGroupLayout(
                         frame: CGRect(origin: CGPoint(x: 0.0, y: verticalGroupOrigin), size: groupContentSize),
+                        id: itemGroup.id,
                         itemTopOffset: itemTopOffset,
                         itemCount: itemGroup.itemCount
                     ))
@@ -281,8 +300,8 @@ public final class EmojiPagerContentComponent: Component {
                 )
             }
             
-            func visibleItems(for rect: CGRect) -> [(groupIndex: Int, groupItems: Range<Int>)] {
-                var result: [(groupIndex: Int, groupItems: Range<Int>)] = []
+            func visibleItems(for rect: CGRect) -> [(id: AnyHashable, groupIndex: Int, groupItems: Range<Int>)] {
+                var result: [(id: AnyHashable, groupIndex: Int, groupItems: Range<Int>)] = []
                 
                 for groupIndex in 0 ..< self.itemGroupLayouts.count {
                     let group = self.itemGroupLayouts[groupIndex]
@@ -300,6 +319,7 @@ public final class EmojiPagerContentComponent: Component {
                     
                     if maxVisibleIndex >= minVisibleIndex {
                         result.append((
+                            id: group.id,
                             groupIndex: groupIndex,
                             groupItems: minVisibleIndex ..< (maxVisibleIndex + 1)
                         ))
@@ -492,15 +512,19 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
-        private let scrollView: UIScrollView
+        private final class ContentScrollView: UIScrollView, PagerExpandableScrollView {
+        }
+        
+        private let scrollView: ContentScrollView
         
         private var visibleItemLayers: [ItemLayer.Key: ItemLayer] = [:]
-        private var visibleGroupHeaders: [AnyHashable: ComponentHostView<Empty>] = [:]
+        private var visibleGroupHeaders: [AnyHashable: ComponentView<Empty>] = [:]
         private var ignoreScrolling: Bool = false
         
         private var component: EmojiPagerContentComponent?
         private var pagerEnvironment: PagerComponentChildEnvironment?
         private var theme: PresentationTheme?
+        private var activeItemUpdated: ActionSlot<(AnyHashable, Transition)>?
         private var itemLayout: ItemLayout?
         
         private var currentContextGestureItemKey: ItemLayer.Key?
@@ -508,7 +532,7 @@ public final class EmojiPagerContentComponent: Component {
         private weak var peekController: PeekController?
         
         override init(frame: CGRect) {
-            self.scrollView = UIScrollView()
+            self.scrollView = ContentScrollView()
             
             super.init(frame: frame)
             
@@ -703,6 +727,31 @@ public final class EmojiPagerContentComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        public func matches(tag: Any) -> Bool {
+            if let tag = tag as? Tag {
+                if tag.id == self.component?.id {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        public func scrollToItemGroup(groupId: AnyHashable) {
+            guard let itemLayout = self.itemLayout else {
+                return
+            }
+            for group in itemLayout.itemGroupLayouts {
+                if group.id == groupId {
+                    let wasIgnoringScrollingEvents = self.ignoreScrolling
+                    self.ignoreScrolling = true
+                    self.scrollView.setContentOffset(self.scrollView.contentOffset, animated: false)
+                    self.ignoreScrolling = wasIgnoringScrollingEvents
+                    
+                    self.scrollView.scrollRectToVisible(CGRect(origin: group.frame.origin.offsetBy(dx: 0.0, dy: floor(-itemLayout.verticalGroupSpacing / 2.0)), size: CGSize(width: 1.0, height: self.scrollView.bounds.height)), animated: true)
+                }
+            }
+        }
+        
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 if let component = self.component, let (item, itemKey) = self.item(atPoint: recognizer.location(in: self)), let itemLayer = self.visibleItemLayers[itemKey] {
@@ -723,7 +772,12 @@ public final class EmojiPagerContentComponent: Component {
             return nil
         }
         
-        private var previousScrollingOffset: CGFloat?
+        private struct ScrollingOffsetState: Equatable {
+            var value: CGFloat
+            var isDraggingOrDecelerating: Bool
+        }
+        
+        private var previousScrollingOffset: ScrollingOffsetState?
         
         public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             if let presentation = scrollView.layer.presentation() {
@@ -759,21 +813,22 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         private func updateScrollingOffset(transition: Transition) {
+            let isInteracting = scrollView.isDragging || scrollView.isDecelerating
             if let previousScrollingOffsetValue = self.previousScrollingOffset {
                 let currentBounds = scrollView.bounds
                 let offsetToTopEdge = max(0.0, currentBounds.minY - 0.0)
                 let offsetToBottomEdge = max(0.0, scrollView.contentSize.height - currentBounds.maxY)
-                let offsetToClosestEdge = min(offsetToTopEdge, offsetToBottomEdge)
                 
-                let relativeOffset = scrollView.contentOffset.y - previousScrollingOffsetValue
+                let relativeOffset = scrollView.contentOffset.y - previousScrollingOffsetValue.value
                 self.pagerEnvironment?.onChildScrollingUpdate(PagerComponentChildEnvironment.ContentScrollingUpdate(
                     relativeOffset: relativeOffset,
-                    absoluteOffsetToClosestEdge: offsetToClosestEdge,
+                    absoluteOffsetToTopEdge: offsetToTopEdge,
+                    absoluteOffsetToBottomEdge: offsetToBottomEdge,
+                    isInteracting: isInteracting,
                     transition: transition
                 ))
-                self.previousScrollingOffset = scrollView.contentOffset.y
             }
-            self.previousScrollingOffset = scrollView.contentOffset.y
+            self.previousScrollingOffset = ScrollingOffsetState(value: scrollView.contentOffset.y, isDraggingOrDecelerating: isInteracting)
         }
         
         private func snappedContentOffset(proposedOffset: CGFloat) -> CGFloat {
@@ -808,22 +863,27 @@ public final class EmojiPagerContentComponent: Component {
                 return
             }
             
+            var topVisibleGroupId: AnyHashable?
+            
             var validIds = Set<ItemLayer.Key>()
             var validGroupHeaderIds = Set<AnyHashable>()
             
             for groupItems in itemLayout.visibleItems(for: self.scrollView.bounds) {
+                if topVisibleGroupId == nil {
+                    topVisibleGroupId = groupItems.id
+                }
+                
                 let itemGroup = component.itemGroups[groupItems.groupIndex]
                 let itemGroupLayout = itemLayout.itemGroupLayouts[groupItems.groupIndex]
                 
                 if let title = itemGroup.title {
                     validGroupHeaderIds.insert(itemGroup.id)
-                    let groupHeaderView: ComponentHostView<Empty>
+                    let groupHeaderView: ComponentView<Empty>
                     if let current = self.visibleGroupHeaders[itemGroup.id] {
                         groupHeaderView = current
                     } else {
-                        groupHeaderView = ComponentHostView<Empty>()
+                        groupHeaderView = ComponentView<Empty>()
                         self.visibleGroupHeaders[itemGroup.id] = groupHeaderView
-                        self.scrollView.addSubview(groupHeaderView)
                     }
                     let groupHeaderSize = groupHeaderView.update(
                         transition: .immediate,
@@ -833,7 +893,12 @@ public final class EmojiPagerContentComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: itemLayout.contentSize.width - itemLayout.containerInsets.left - itemLayout.containerInsets.right, height: 100.0)
                     )
-                    groupHeaderView.frame = CGRect(origin: CGPoint(x: itemLayout.containerInsets.left, y: itemGroupLayout.frame.minY + 1.0), size: groupHeaderSize)
+                    if let view = groupHeaderView.view {
+                        if view.superview == nil {
+                            self.scrollView.addSubview(view)
+                        }
+                        view.frame = CGRect(origin: CGPoint(x: itemLayout.containerInsets.left, y: itemGroupLayout.frame.minY + 1.0), size: groupHeaderSize)
+                    }
                 }
                 
                 for index in groupItems.groupItems.lowerBound ..< groupItems.groupItems.upperBound {
@@ -848,7 +913,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemLayer = ItemLayer(
                             item: item,
                             context: component.context,
-                            groupId: "keyboard",
+                            groupId: "keyboard-\(Int(itemLayout.itemSize))",
                             attemptSynchronousLoad: attemptSynchronousLoads,
                             file: item.file,
                             cache: component.animationCache,
@@ -884,17 +949,22 @@ public final class EmojiPagerContentComponent: Component {
             for (id, groupHeaderView) in self.visibleGroupHeaders {
                 if !validGroupHeaderIds.contains(id) {
                     removedGroupHeaderIds.append(id)
-                    groupHeaderView.removeFromSuperview()
+                    groupHeaderView.view?.removeFromSuperview()
                 }
             }
             for id in removedGroupHeaderIds {
                 self.visibleGroupHeaders.removeValue(forKey: id)
+            }
+            
+            if let topVisibleGroupId = topVisibleGroupId {
+                self.activeItemUpdated?.invoke((topVisibleGroupId, .immediate))
             }
         }
         
         func update(component: EmojiPagerContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.component = component
             self.theme = environment[EntityKeyboardChildEnvironment.self].value.theme
+            self.activeItemUpdated = environment[EntityKeyboardChildEnvironment.self].value.getContentActiveItemUpdated(component.id)
             
             let pagerEnvironment = environment[PagerComponentChildEnvironment.self].value
             self.pagerEnvironment = pagerEnvironment
@@ -902,6 +972,7 @@ public final class EmojiPagerContentComponent: Component {
             var itemGroups: [ItemGroupDescription] = []
             for itemGroup in component.itemGroups {
                 itemGroups.append(ItemGroupDescription(
+                    id: itemGroup.id,
                     hasTitle: itemGroup.title != nil,
                     itemCount: itemGroup.items.count
                 ))
@@ -918,7 +989,7 @@ public final class EmojiPagerContentComponent: Component {
             if self.scrollView.scrollIndicatorInsets != pagerEnvironment.containerInsets {
                 self.scrollView.scrollIndicatorInsets = pagerEnvironment.containerInsets
             }
-            self.previousScrollingOffset = self.scrollView.contentOffset.y
+            self.previousScrollingOffset = ScrollingOffsetState(value: scrollView.contentOffset.y, isDraggingOrDecelerating: scrollView.isDragging || scrollView.isDecelerating)
             self.ignoreScrolling = false
             
             self.updateVisibleItems(attemptSynchronousLoads: true)

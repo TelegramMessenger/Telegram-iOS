@@ -206,6 +206,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             }
             
             return EmojiPagerContentComponent(
+                id: "emoji",
                 context: context,
                 animationCache: animationCache,
                 animationRenderer: animationRenderer,
@@ -386,6 +387,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             }
             
             return EmojiPagerContentComponent(
+                id: "stickers",
                 context: context,
                 animationCache: animationCache,
                 animationRenderer: animationRenderer,
@@ -393,7 +395,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 itemGroups: itemGroups.map { group -> EmojiPagerContentComponent.ItemGroup in
                     var title: String?
                     if group.id == AnyHashable("saved") {
-                        title = nil
+                        //TODO:localize
+                        title = "Saved".uppercased()
                     } else if group.id == AnyHashable("recent") {
                         //TODO:localize
                         title = "Recently Used".uppercased()
@@ -444,17 +447,29 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
+    private let context: AccountContext
     private let entityKeyboardView: ComponentHostView<Empty>
     
     private let defaultToEmojiTab: Bool
     private var currentInputData: InputData
     private var inputDataDisposable: Disposable?
     
+    private let controllerInteraction: ChatControllerInteraction
+    
+    private var inputNodeInteraction: ChatMediaInputNodeInteraction?
+    
+    private let trendingGifsPromise = Promise<ChatMediaInputGifPaneTrendingState?>(nil)
+    
+    private var isMarkInputCollapsed: Bool = false
+    
     private var currentState: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool)?
     
-    init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool) {
+    init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction) {
+        self.context = context
         self.currentInputData = currentInputData
         self.defaultToEmojiTab = defaultToEmojiTab
+        
+        self.controllerInteraction = controllerInteraction
         
         self.entityKeyboardView = ComponentHostView<Empty>()
         
@@ -472,10 +487,46 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             strongSelf.currentInputData = inputData
             strongSelf.performLayout()
         })
+        
+        self.inputNodeInteraction = ChatMediaInputNodeInteraction(
+            navigateToCollectionId: { _ in
+            },
+            navigateBackToStickers: {
+            },
+            setGifMode: { _ in
+            },
+            openSettings: {
+            },
+            openTrending: { _ in
+            },
+            dismissTrendingPacks: { _ in
+            },
+            toggleSearch: { _, _, _ in
+            },
+            openPeerSpecificSettings: {
+            },
+            dismissPeerSpecificSettings: {
+            },
+            clearRecentlyUsedStickers: {
+            }
+        )
+        
+        self.trendingGifsPromise.set(paneGifSearchForQuery(context: context, query: "", offset: nil, incompleteResults: true, delayRequest: false, updateActivity: nil)
+        |> map { items -> ChatMediaInputGifPaneTrendingState? in
+            if let items = items {
+                return ChatMediaInputGifPaneTrendingState(files: items.files, nextOffset: items.nextOffset)
+            } else {
+                return nil
+            }
+        })
     }
     
     deinit {
         self.inputDataDisposable?.dispose()
+    }
+    
+    func markInputCollapsed() {
+        self.isMarkInputCollapsed = true
     }
     
     private func performLayout() {
@@ -488,10 +539,24 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
         self.currentState = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible)
         
+        let wasMarkedInputCollapsed = self.isMarkInputCollapsed
+        self.isMarkInputCollapsed = false
+        
         let expandedHeight = standardInputHeight + self.expansionFraction * (maximumHeight - standardInputHeight)
         
+        let context = self.context
+        let controllerInteraction = self.controllerInteraction
+        let inputNodeInteraction = self.inputNodeInteraction!
+        let trendingGifsPromise = self.trendingGifsPromise
+        
+        var mappedTransition = Transition(transition)
+        
+        if wasMarkedInputCollapsed {
+            mappedTransition = mappedTransition.withUserData(EntityKeyboardComponent.MarkInputCollapsed())
+        }
+        
         let entityKeyboardSize = self.entityKeyboardView.update(
-            transition: Transition(transition),
+            transition: mappedTransition,
             component: AnyComponent(EntityKeyboardComponent(
                 theme: interfaceState.theme,
                 bottomInset: bottomInset,
@@ -508,7 +573,39 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         strongSelf.topBackgroundExtension = topPanelExtension
                         strongSelf.topBackgroundExtensionUpdated?(transition.containedViewLayoutTransition)
                     }
-                }
+                },
+                hideInputUpdated: { [weak self] hideInput, transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if strongSelf.hideInput != hideInput {
+                        strongSelf.hideInput = hideInput
+                        strongSelf.hideInputUpdated?(transition.containedViewLayoutTransition)
+                    }
+                },
+                makeSearchContainerNode: { content in
+                    let mappedMode: ChatMediaInputSearchMode
+                    switch content {
+                    case .stickers:
+                        mappedMode = .sticker
+                    case .gifs:
+                        mappedMode = .gif
+                    }
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    return PaneSearchContainerNode(
+                        context: context,
+                        theme: presentationData.theme,
+                        strings: presentationData.strings,
+                        controllerInteraction: controllerInteraction,
+                        inputNodeInteraction: inputNodeInteraction,
+                        mode: mappedMode,
+                        trendingGifsPromise: trendingGifsPromise,
+                        cancel: {
+                        }
+                    )
+                },
+                deviceMetrics: deviceMetrics
             )),
             environment: {},
             containerSize: CGSize(width: width, height: expandedHeight)

@@ -192,14 +192,17 @@ public struct Transition {
         }
         switch self.animation {
         case .none:
-            view.frame = frame
+            view.bounds = CGRect(origin: view.bounds.origin, size: frame.size)
+            view.layer.position = CGPoint(x: frame.midX, y: frame.midY)
             view.layer.removeAnimation(forKey: "position")
             view.layer.removeAnimation(forKey: "bounds")
             completion?(true)
         case .curve:
             let previousPosition = view.layer.presentation()?.position ?? view.center
             let previousBounds = view.layer.presentation()?.bounds ?? view.bounds
-            view.frame = frame
+            
+            view.bounds = CGRect(origin: previousBounds.origin, size: frame.size)
+            view.center = CGPoint(x: frame.midX, y: frame.midY)
 
             self.animatePosition(view: view, from: previousPosition, to: view.center, completion: completion)
             self.animateBounds(view: view, from: previousBounds, to: view.bounds)
@@ -293,12 +296,17 @@ public struct Transition {
             view.layer.sublayerTransform = transform
             completion?(true)
         case let .curve(duration, curve):
-            let previousValue = view.layer.sublayerTransform
+            let previousValue: CATransform3D
+            if let presentation = view.layer.presentation() {
+                previousValue = presentation.sublayerTransform
+            } else {
+                previousValue = view.layer.sublayerTransform
+            }
             view.layer.sublayerTransform = transform
             view.layer.animate(
                 from: NSValue(caTransform3D: previousValue),
                 to: NSValue(caTransform3D: transform),
-                keyPath: "transform",
+                keyPath: "sublayerTransform",
                 duration: duration,
                 delay: 0.0,
                 curve: curve,

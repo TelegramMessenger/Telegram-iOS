@@ -34,18 +34,6 @@ open class MultiAnimationRenderTarget: SimpleLayer {
     }
 }
 
-private func convertFrameToImage(frame: AnimationCacheItemFrame) -> UIImage? {
-    switch frame.format {
-    case let .rgba(width, height, bytesPerRow):
-        let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: false, bytesPerRow: bytesPerRow)
-        let range = frame.range
-        frame.data.withUnsafeBytes { bytes -> Void in
-            memcpy(context.bytes, bytes.baseAddress!.advanced(by: range.lowerBound), min(context.length, range.upperBound - range.lowerBound))
-        }
-        return context.generateImage()
-    }
-}
-
 private final class FrameGroup {
     let image: UIImage
     let size: CGSize

@@ -17,17 +17,20 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
     let file: TelegramMediaFile
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
+    let pressed: () -> Void
     
     init(
         context: AccountContext,
         file: TelegramMediaFile,
         animationCache: AnimationCache,
-        animationRenderer: MultiAnimationRenderer
+        animationRenderer: MultiAnimationRenderer,
+        pressed: @escaping () -> Void
     ) {
         self.context = context
         self.file = file
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
+        self.pressed = pressed
     }
     
     static func ==(lhs: EntityKeyboardAnimationTopPanelComponent, rhs: EntityKeyboardAnimationTopPanelComponent) -> Bool {
@@ -49,16 +52,27 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
     
     final class View: UIView {
         var itemLayer: EmojiPagerContentComponent.View.ItemLayer?
+        var component: EntityKeyboardAnimationTopPanelComponent?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
+            
+            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
+        @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+            if case .ended = recognizer.state {
+                self.component?.pressed()
+            }
+        }
+        
         func update(component: EntityKeyboardAnimationTopPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            self.component = component
+            
             if self.itemLayer == nil {
                 let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
                     item: EmojiPagerContentComponent.Item(
@@ -97,7 +111,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
 }
 
 final class EntityKeyboardTopPanelComponent: Component {
-    typealias EnvironmentType = Empty
+    typealias EnvironmentType = EntityKeyboardTopContainerPanelEnvironment
     
     final class Item: Equatable {
         let id: AnyHashable
@@ -122,13 +136,16 @@ final class EntityKeyboardTopPanelComponent: Component {
     
     let theme: PresentationTheme
     let items: [Item]
+    let activeContentItemIdUpdated: ActionSlot<(AnyHashable, Transition)>
     
     init(
         theme: PresentationTheme,
-        items: [Item]
+        items: [Item],
+        activeContentItemIdUpdated: ActionSlot<(AnyHashable, Transition)>
     ) {
         self.theme = theme
         self.items = items
+        self.activeContentItemIdUpdated = activeContentItemIdUpdated
     }
     
     static func ==(lhs: EntityKeyboardTopPanelComponent, rhs: EntityKeyboardTopPanelComponent) -> Bool {
@@ -136,6 +153,9 @@ final class EntityKeyboardTopPanelComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.activeContentItemIdUpdated !== rhs.activeContentItemIdUpdated {
             return false
         }
         
@@ -187,6 +207,8 @@ final class EntityKeyboardTopPanelComponent: Component {
         
         private var itemLayout: ItemLayout?
         private var ignoreScrolling: Bool = false
+        
+        private var visibilityFraction: CGFloat = 1.0
         
         private var component: EntityKeyboardTopPanelComponent?
         
@@ -296,15 +318,62 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
             self.ignoreScrolling = false
             
-            if let _ = component.items.first {
-                self.highlightedIconBackgroundView.isHidden = false
-                let itemFrame = itemLayout.containerFrame(at: 0)
-                transition.setFrame(view: self.highlightedIconBackgroundView, frame: itemFrame)
-            }
-            
             self.updateVisibleItems(attemptSynchronousLoads: true)
             
+            environment[EntityKeyboardTopContainerPanelEnvironment.self].value.visibilityFractionUpdated.connect { [weak self] (fraction, transition) in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.visibilityFractionUpdated(value: fraction, transition: transition)
+            }
+            
+            component.activeContentItemIdUpdated.connect { [weak self] (itemId, transition) in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.activeContentItemIdUpdated(itemId: itemId, transition: transition)
+            }
+            
             return CGSize(width: availableSize.width, height: height)
+        }
+        
+        private func visibilityFractionUpdated(value: CGFloat, transition: Transition) {
+            if self.visibilityFraction == value {
+                return
+            }
+            
+            self.visibilityFraction = value
+            
+            let scale = max(0.01, self.visibilityFraction)
+            
+            transition.setScale(view: self.highlightedIconBackgroundView, scale: scale)
+            transition.setAlpha(view: self.highlightedIconBackgroundView, alpha: self.visibilityFraction)
+            
+            for (_, itemView) in self.itemViews {
+                transition.setSublayerTransform(view: itemView, transform: CATransform3DMakeScale(scale, scale, 1.0))
+                transition.setAlpha(view: itemView, alpha: self.visibilityFraction)
+            }
+        }
+        
+        private func activeContentItemIdUpdated(itemId: AnyHashable, transition: Transition) {
+            guard let component = self.component, let itemLayout = self.itemLayout else {
+                return
+            }
+
+            var found = false
+            for i in 0 ..< component.items.count {
+                if component.items[i].id == itemId {
+                    found = true
+                    self.highlightedIconBackgroundView.isHidden = false
+                    let itemFrame = itemLayout.containerFrame(at: i)
+                    transition.setFrame(view: self.highlightedIconBackgroundView, frame: itemFrame)
+                    
+                    break
+                }
+            }
+            if !found {
+                self.highlightedIconBackgroundView.isHidden = true
+            }
         }
     }
     
