@@ -457,7 +457,7 @@ public extension Api {
 public extension Api {
     enum InputStorePaymentPurpose: TypeConstructorDescription {
         case inputStorePaymentGiftPremium(userId: Api.InputUser)
-        case inputStorePaymentPremiumSubscription
+        case inputStorePaymentPremiumSubscription(flags: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -467,11 +467,11 @@ public extension Api {
                     }
                     userId.serialize(buffer, true)
                     break
-                case .inputStorePaymentPremiumSubscription:
+                case .inputStorePaymentPremiumSubscription(let flags):
                     if boxed {
-                        buffer.appendInt32(-764193027)
+                        buffer.appendInt32(-1502273946)
                     }
-                    
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -480,8 +480,8 @@ public extension Api {
         switch self {
                 case .inputStorePaymentGiftPremium(let userId):
                 return ("inputStorePaymentGiftPremium", [("userId", String(describing: userId))])
-                case .inputStorePaymentPremiumSubscription:
-                return ("inputStorePaymentPremiumSubscription", [])
+                case .inputStorePaymentPremiumSubscription(let flags):
+                return ("inputStorePaymentPremiumSubscription", [("flags", String(describing: flags))])
     }
     }
     
@@ -499,7 +499,15 @@ public extension Api {
             }
         }
         public static func parse_inputStorePaymentPremiumSubscription(_ reader: BufferReader) -> InputStorePaymentPurpose? {
-            return Api.InputStorePaymentPurpose.inputStorePaymentPremiumSubscription
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputStorePaymentPurpose.inputStorePaymentPremiumSubscription(flags: _1!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

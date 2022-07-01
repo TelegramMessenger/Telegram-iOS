@@ -17,15 +17,14 @@ public enum AppStoreTransactionPurpose {
 }
 
 func _internal_sendAppStoreReceipt(account: Account, receipt: Data, purpose: AppStoreTransactionPurpose) -> Signal<Never, AssignAppStoreTransactionError> {
-    var flags: Int32 = 0
-    if case .restore = purpose {
-        flags |= (1 << 0)
-    }
-        
     var purposeSignal: Signal<Api.InputStorePaymentPurpose, NoError>
     switch purpose {
     case .subscription, .restore:
-        purposeSignal = .single(.inputStorePaymentPremiumSubscription)
+        var flags: Int32 = 0
+        if case .restore = purpose {
+            flags |= (1 << 0)
+        }
+        purposeSignal = .single(.inputStorePaymentPremiumSubscription(flags: flags))
     case let .gift(peerId):
         purposeSignal = account.postbox.loadedPeerWithId(peerId)
         |> mapToSignal { peer -> Signal<Api.InputStorePaymentPurpose, NoError> in
@@ -40,7 +39,7 @@ func _internal_sendAppStoreReceipt(account: Account, receipt: Data, purpose: App
     return purposeSignal
     |> castError(AssignAppStoreTransactionError.self)
     |> mapToSignal { purpose -> Signal<Never, AssignAppStoreTransactionError> in
-        return account.network.request(Api.functions.payments.assignAppStoreTransaction(flags: flags, receipt: Buffer(data: receipt), purpose: purpose))
+        return account.network.request(Api.functions.payments.assignAppStoreTransaction(receipt: Buffer(data: receipt), purpose: purpose))
         |> mapError { error -> AssignAppStoreTransactionError in
             if error.errorCode == 406 {
                 return .serverProvided

@@ -307,6 +307,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
         }
     }
     
+    var secondaryActionDisabled = false
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
         peers,
@@ -339,7 +340,10 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
         let footerItem = DeleteAccountFooterItem(theme: presentationData.theme, title: buttonTitle, secondaryTitle: presentationData.strings.DeleteAccount_Continue, action: {
             cancelImpl()
         }, secondaryAction: {
-            proceedImpl?()
+            if !secondaryActionDisabled {
+                secondaryActionDisabled = true
+                proceedImpl?()
+            }
         })
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.DeleteAccount_DeleteMyAccountTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
@@ -462,7 +466,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                         let presentGlobalController = context.sharedContext.presentGlobalController
                         let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: true).start(completed: {
                             Queue.mainQueue().after(0.1) {
-                                presentGlobalController(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.DeleteAccount_Success), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                presentGlobalController(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.DeleteAccount_Success), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
                             }
                         })
                     })

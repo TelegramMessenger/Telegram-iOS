@@ -652,8 +652,15 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case let .webViewData(text):
                 attributedString = NSAttributedString(string: strings.Notification_WebAppSentData(text).string, font: titleFont, textColor: primaryTextColor)
-            case .giftPremium:
-                attributedString = nil
+            case let .giftPremium(currency, amount, _):
+                let price = formatCurrencyAmount(amount, currency: currency)
+                if message.author?.id == accountPeerId {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_SentYou(price)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                } else {
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    attributes[1] = boldAttributes
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_Sent(authorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                }
             case .unknown:
                 attributedString = nil
             }
