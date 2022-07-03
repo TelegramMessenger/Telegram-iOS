@@ -18,15 +18,17 @@ public class InviteLinkHeaderItem: ListViewItem, ItemListItem {
     public let title: String?
     public let text: String
     public let animationName: String
+    public let hideOnSmallScreens: Bool
     public let sectionId: ItemListSectionId
     public let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     
-    public init(context: AccountContext, theme: PresentationTheme, title: String? = nil, text: String, animationName: String, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
+    public init(context: AccountContext, theme: PresentationTheme, title: String? = nil, text: String, animationName: String, hideOnSmallScreens: Bool = false, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
         self.context = context
         self.theme = theme
         self.title = title
         self.text = text
         self.animationName = animationName
+        self.hideOnSmallScreens = hideOnSmallScreens
         self.sectionId = sectionId
         self.linkAction = linkAction
     }
@@ -118,7 +120,11 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
             if params.width > params.availableHeight && params.width > 320.0 {
                 iconSize = CGSize(width: 140.0, height: 140.0)
             } else {
-                iconSize = CGSize(width: 124.0, height: 124.0)
+                if item.hideOnSmallScreens {
+                    iconSize = .zero
+                } else {
+                    iconSize = CGSize(width: 124.0, height: 124.0)
+                }
             }
             let topInset: CGFloat = iconSize.height - 4.0
             let spacing: CGFloat = 5.0
@@ -137,6 +143,7 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
             if let _ = item.title {
                 contentSize.height += titleLayout.size.height + spacing
             }
+                        
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)

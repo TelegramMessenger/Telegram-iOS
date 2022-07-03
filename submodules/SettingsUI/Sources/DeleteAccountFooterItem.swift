@@ -118,8 +118,17 @@ final class DeleteAccountFooterItemNode: ItemListControllerFooterItemNode {
         let buttonWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - buttonInset * 2.0
         let buttonHeight = self.buttonNode.updateLayout(width: buttonWidth, transition: transition)
         let topInset: CGFloat = 9.0
-        let bottomInset: CGFloat = 23.0
-        let spacing: CGFloat = 23.0
+        
+        let bottomInset: CGFloat
+        let spacing: CGFloat
+        
+        if layout.size.width > 320.0 {
+            bottomInset = 23.0
+            spacing = 23.0
+        } else {
+            bottomInset = 16.0
+            spacing = 16.0
+        }
         
         let insets = layout.insets(options: [.input])
         
