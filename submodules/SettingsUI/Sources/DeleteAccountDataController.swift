@@ -44,7 +44,7 @@ private enum DeleteAccountEntryTag: Equatable, ItemListItemTag {
 
 
 private enum DeleteAccountDataEntry: ItemListNodeEntry, Equatable {
-    case header(PresentationTheme, String, String, String)
+    case header(PresentationTheme, String, String, String, Bool)
     case peers(PresentationTheme, [EnginePeer])
     case phone(PresentationTheme, PresentationStrings)
     case password(PresentationTheme, String)
@@ -76,8 +76,8 @@ private enum DeleteAccountDataEntry: ItemListNodeEntry, Equatable {
 
     static func == (lhs: DeleteAccountDataEntry, rhs: DeleteAccountDataEntry) -> Bool {
         switch lhs {
-            case let .header(lhsTheme, lhsAnimation, lhsTitle, lhsText):
-                if case let .header(rhsTheme, rhsAnimation, rhsTitle, rhsText) = rhs, lhsTheme === rhsTheme, lhsAnimation == rhsAnimation, lhsTitle == rhsTitle, lhsText == rhsText {
+            case let .header(lhsTheme, lhsAnimation, lhsTitle, lhsText, lhsHideOnSmallScreens):
+                if case let .header(rhsTheme, rhsAnimation, rhsTitle, rhsText, rhsHideOnSmallScreens) = rhs, lhsTheme === rhsTheme, lhsAnimation == rhsAnimation, lhsTitle == rhsTitle, lhsText == rhsText, lhsHideOnSmallScreens == rhsHideOnSmallScreens {
                     return true
                 } else {
                     return false
@@ -117,8 +117,8 @@ private enum DeleteAccountDataEntry: ItemListNodeEntry, Equatable {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! DeleteAccountDataArguments
         switch self {
-            case let .header(theme, animation, title, text):
-                return InviteLinkHeaderItem(context: arguments.context, theme: theme, title: title, text: text, animationName: animation, sectionId: self.section, linkAction: nil)
+            case let .header(theme, animation, title, text, hideOnSmallScreens):
+                return InviteLinkHeaderItem(context: arguments.context, theme: theme, title: title, text: text, animationName: animation, hideOnSmallScreens: hideOnSmallScreens, sectionId: self.section, linkAction: nil)
             case let .peers(_, peers):
                 return DeleteAccountPeersItem(context: arguments.context, theme: presentationData.theme, strings: presentationData.strings, peers: peers, sectionId: self.section)
             case let .info(_, text):
@@ -145,6 +145,7 @@ private func deleteAccountDataEntries(presentationData: PresentationData, mode: 
     let headerTitle: String
     let headerText: String
     let headerAnimation: String
+    var hideOnSmallScreen = false
     
     switch mode {
     case .peers:
@@ -163,13 +164,15 @@ private func deleteAccountDataEntries(presentationData: PresentationData, mode: 
         headerAnimation = "Delete4"
         headerTitle = presentationData.strings.DeleteAccount_EnterPhoneNumber
         headerText = ""
+        hideOnSmallScreen = true
     case .password:
         headerAnimation = "Delete5"
         headerTitle = presentationData.strings.DeleteAccount_EnterPassword
         headerText = ""
+        hideOnSmallScreen = true
     }
     
-    entries.append(.header(presentationData.theme, headerAnimation, headerTitle, headerText))
+    entries.append(.header(presentationData.theme, headerAnimation, headerTitle, headerText, hideOnSmallScreen))
     
     switch mode {
         case .peers:
