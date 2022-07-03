@@ -234,7 +234,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     previous = CachedUserData()
                                 }
                                 switch fullUser {
-                                    case let .userFull(userFullFlags, _, userFullAbout, userFullSettings, profilePhoto, _, userFullBotInfo, userFullPinnedMsgId, userFullCommonChatsCount, _, userFullTtlPeriod, userFullThemeEmoticon, _, _, _, giftPremiumUrl):
+                                    case let .userFull(userFullFlags, _, userFullAbout, userFullSettings, profilePhoto, _, userFullBotInfo, userFullPinnedMsgId, userFullCommonChatsCount, _, userFullTtlPeriod, userFullThemeEmoticon, _, _, _, userPremiumGiftOptions):
                                         let botInfo = userFullBotInfo.flatMap(BotInfo.init(apiBotInfo:))
                                         let isBlocked = (userFullFlags & (1 << 0)) != 0
                                         let voiceCallsAvailable = (userFullFlags & (1 << 4)) != 0
@@ -252,11 +252,25 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     
                                         let photo = profilePhoto.flatMap { telegramMediaImageFromApiPhoto($0) }
                                     
+                                        let premiumGiftOptions: [CachedPremiumGiftOption]
+                                        if let userPremiumGiftOptions = userPremiumGiftOptions {
+                                            premiumGiftOptions = userPremiumGiftOptions.map { apiOption in
+                                                let option: CachedPremiumGiftOption
+                                                switch apiOption {
+                                                    case let .premiumGiftOption(_, months, currency, amount, botUrl, storeProduct):
+                                                        option = CachedPremiumGiftOption(months: months, currency: currency, amount: amount, botUrl: botUrl, storeProductId: storeProduct)
+                                                }
+                                                return option
+                                            }
+                                        } else {
+                                            premiumGiftOptions = []
+                                        }
+                                    
                                         return previous.withUpdatedAbout(userFullAbout).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFullCommonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
                                             .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                                             .withUpdatedThemeEmoticon(userFullThemeEmoticon)
                                             .withUpdatedPhoto(photo)
-                                            .withUpdatedGiftPremiumUrl(giftPremiumUrl)
+                                            .withUpdatedPremiumGiftOptions(premiumGiftOptions)
                                 }
                             })
                         }
