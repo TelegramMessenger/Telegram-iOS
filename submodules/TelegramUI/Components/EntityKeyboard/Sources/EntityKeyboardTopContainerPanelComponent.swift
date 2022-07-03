@@ -7,8 +7,25 @@ import TelegramPresentationData
 import TelegramCore
 import Postbox
 
+final class EntityKeyboardTopContainerPanelEnvironment: Equatable {
+    let visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>
+    
+    init(
+        visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>
+    ) {
+        self.visibilityFractionUpdated = visibilityFractionUpdated
+    }
+    
+    static func ==(lhs: EntityKeyboardTopContainerPanelEnvironment, rhs: EntityKeyboardTopContainerPanelEnvironment) -> Bool {
+        if lhs.visibilityFractionUpdated !== rhs.visibilityFractionUpdated {
+            return false
+        }
+        return true
+    }
+}
+
 final class EntityKeyboardTopContainerPanelComponent: Component {
-    typealias EnvironmentType = PagerComponentPanelEnvironment
+    typealias EnvironmentType = PagerComponentPanelEnvironment<EntityKeyboardTopContainerPanelEnvironment>
     
     let theme: PresentationTheme
     
@@ -26,12 +43,19 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
         return true
     }
     
+    private final class PanelView {
+        let view = ComponentHostView<EntityKeyboardTopContainerPanelEnvironment>()
+        let visibilityFractionUpdated = ActionSlot<(CGFloat, Transition)>()
+    }
+    
     final class View: UIView {
-        private var panelViews: [AnyHashable: ComponentHostView<Empty>] = [:]
+        private var panelViews: [AnyHashable: PanelView] = [:]
         
         private var component: EntityKeyboardTopContainerPanelComponent?
-        private var panelEnvironment: PagerComponentPanelEnvironment?
+        private var panelEnvironment: PagerComponentPanelEnvironment<EntityKeyboardTopContainerPanelEnvironment>?
         private weak var state: EmptyComponentState?
+        
+        private var visibilityFraction: CGFloat = 1.0
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -84,26 +108,30 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                         validPanelIds.insert(panel.id)
                         
                         var panelTransition = transition
-                        let panelView: ComponentHostView<Empty>
+                        let panelView: PanelView
                         if let current = self.panelViews[panel.id] {
                             panelView = current
                         } else {
                             panelTransition = .immediate
-                            panelView = ComponentHostView<Empty>()
+                            panelView = PanelView()
                             self.panelViews[panel.id] = panelView
-                            self.addSubview(panelView)
+                            self.addSubview(panelView.view)
                         }
                         
-                        let _ = panelView.update(
+                        let _ = panelView.view.update(
                             transition: panelTransition,
                             component: panel.component,
-                            environment: {},
+                            environment: {
+                                EntityKeyboardTopContainerPanelEnvironment(
+                                    visibilityFractionUpdated: panelView.visibilityFractionUpdated
+                                )
+                            },
                             containerSize: panelFrame.size
                         )
                         if isInBounds {
-                            transition.animatePosition(view: panelView, from: CGPoint(x: transitionOffsetFraction * availableSize.width, y: 0.0), to: CGPoint(), additive: true, completion: nil)
+                            transition.animatePosition(view: panelView.view, from: CGPoint(x: transitionOffsetFraction * availableSize.width, y: 0.0), to: CGPoint(), additive: true, completion: nil)
                         }
-                        panelTransition.setFrame(view: panelView, frame: panelFrame, completion: { [weak self] completed in
+                        panelTransition.setFrame(view: panelView.view, frame: panelFrame, completion: { [weak self] completed in
                             if isPartOfTransition && completed {
                                 self?.state?.updated(transition: .immediate)
                             }
@@ -115,14 +143,33 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             for (id, panelView) in self.panelViews {
                 if !validPanelIds.contains(id) {
                     removedPanelIds.append(id)
-                    panelView.removeFromSuperview()
+                    panelView.view.removeFromSuperview()
                 }
             }
             for id in removedPanelIds {
                 self.panelViews.removeValue(forKey: id)
             }
             
+            environment[PagerComponentPanelEnvironment.self].value.visibilityFractionUpdated.connect { [weak self] (fraction, transition) in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.updateVisibilityFraction(value: fraction, transition: transition)
+            }
+            
             return CGSize(width: availableSize.width, height: height)
+        }
+        
+        private func updateVisibilityFraction(value: CGFloat, transition: Transition) {
+            if self.visibilityFraction == value {
+                return
+            }
+            
+            self.visibilityFraction = value
+            for (_, panelView) in self.panelViews {
+                panelView.visibilityFractionUpdated.invoke((value, transition))
+                transition.setSublayerTransform(view: panelView.view, transform: CATransform3DMakeTranslation(0.0, -panelView.view.bounds.height / 2.0 * (1.0 - value), 0.0))
+            }
         }
     }
     

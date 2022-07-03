@@ -16,6 +16,9 @@ class ChatInputNode: ASDisplayNode {
     var topBackgroundExtension: CGFloat = 41.0
     var topBackgroundExtensionUpdated: ((ContainedViewLayoutTransition) -> Void)?
     
+    var hideInput: Bool = false
+    var hideInputUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    
     var expansionFraction: CGFloat = 0.0
     var expansionFractionUpdated: ((ContainedViewLayoutTransition) -> Void)?
     

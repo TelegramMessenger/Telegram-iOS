@@ -2454,10 +2454,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             } else {
                 switch presentationInterfaceState.inputMode {
-                case .text, .media:
+                case .text:
                     self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { _ in
                         return (.none, nil)
                     }
+                case .media:
+                    break
                 default:
                     break
                 }

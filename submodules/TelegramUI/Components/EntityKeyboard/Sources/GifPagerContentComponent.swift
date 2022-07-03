@@ -453,16 +453,18 @@ public final class GifPagerContentComponent: Component {
         }
         
         private func updateScrollingOffset(transition: Transition) {
+            let isInteracting = scrollView.isDragging || scrollView.isTracking || scrollView.isDecelerating
             if let previousScrollingOffsetValue = self.previousScrollingOffset {
                 let currentBounds = scrollView.bounds
                 let offsetToTopEdge = max(0.0, currentBounds.minY - 0.0)
                 let offsetToBottomEdge = max(0.0, scrollView.contentSize.height - currentBounds.maxY)
-                let offsetToClosestEdge = min(offsetToTopEdge, offsetToBottomEdge)
                 
                 let relativeOffset = scrollView.contentOffset.y - previousScrollingOffsetValue
                 self.pagerEnvironment?.onChildScrollingUpdate(PagerComponentChildEnvironment.ContentScrollingUpdate(
                     relativeOffset: relativeOffset,
-                    absoluteOffsetToClosestEdge: offsetToClosestEdge,
+                    absoluteOffsetToTopEdge: offsetToTopEdge,
+                    absoluteOffsetToBottomEdge: offsetToBottomEdge,
+                    isInteracting: isInteracting,
                     transition: transition
                 ))
                 self.previousScrollingOffset = scrollView.contentOffset.y

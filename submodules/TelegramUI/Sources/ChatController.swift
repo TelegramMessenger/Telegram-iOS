@@ -1529,7 +1529,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
             strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                 if let strongSelf = self {
-                    strongSelf.chatDisplayNode.inputPanelContainerNode.collapse()
+                    strongSelf.chatDisplayNode.collapseInput()
+                    
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
                         var current = current
                         current = current.updatedInterfaceState { interfaceState in
@@ -1620,6 +1621,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }.updatedInputMode { current in
                                 if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil  {
@@ -9937,7 +9940,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .media:
             break
         default:
-            self.chatDisplayNode.inputPanelContainerNode.collapse()
+            self.chatDisplayNode.collapseInput()
         }
         
         if self.isNodeLoaded {

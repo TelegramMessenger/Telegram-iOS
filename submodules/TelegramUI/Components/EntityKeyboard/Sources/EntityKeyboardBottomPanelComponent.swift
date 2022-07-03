@@ -81,7 +81,7 @@ private final class BottomPanelIconComponent: Component {
 }
 
 final class EntityKeyboardBottomPanelComponent: Component {
-    typealias EnvironmentType = PagerComponentPanelEnvironment
+    typealias EnvironmentType = PagerComponentPanelEnvironment<EntityKeyboardTopContainerPanelEnvironment>
     
     let theme: PresentationTheme
     let bottomInset: CGFloat
@@ -111,16 +111,19 @@ final class EntityKeyboardBottomPanelComponent: Component {
     final class View: UIView {
         private final class AccessoryButtonView {
             let id: AnyHashable
+            var component: AnyComponent<Empty>
             let view: ComponentHostView<Empty>
             
-            init(id: AnyHashable, view: ComponentHostView<Empty>) {
+            init(id: AnyHashable, component: AnyComponent<Empty>, view: ComponentHostView<Empty>) {
                 self.id = id
+                self.component = component
                 self.view = view
             }
         }
         
         private let backgroundView: BlurredBackgroundView
         private let separatorView: UIView
+        private var leftAccessoryButton: AccessoryButtonView?
         private var rightAccessoryButton: AccessoryButtonView?
         
         private var iconViews: [AnyHashable: ComponentHostView<Empty>] = [:]
@@ -160,8 +163,60 @@ final class EntityKeyboardBottomPanelComponent: Component {
             let intrinsicHeight: CGFloat = 38.0
             let height = intrinsicHeight + component.bottomInset
             
-            let panelEnvironment = environment[PagerComponentPanelEnvironment.self].value
+            let panelEnvironment = environment[PagerComponentPanelEnvironment<EntityKeyboardTopContainerPanelEnvironment>.self].value
             let activeContentId = panelEnvironment.activeContentId
+            
+            var leftAccessoryButtonComponent: AnyComponentWithIdentity<Empty>?
+            for contentAccessoryLeftButton in panelEnvironment.contentAccessoryLeftButtons {
+                if contentAccessoryLeftButton.id == activeContentId {
+                    leftAccessoryButtonComponent = contentAccessoryLeftButton
+                    break
+                }
+            }
+            let previousLeftAccessoryButton = self.leftAccessoryButton
+            
+            if let leftAccessoryButtonComponent = leftAccessoryButtonComponent {
+                var leftAccessoryButtonTransition = transition
+                let leftAccessoryButton: AccessoryButtonView
+                if let current = self.leftAccessoryButton, (current.id == leftAccessoryButtonComponent.id || current.component == leftAccessoryButtonComponent.component) {
+                    leftAccessoryButton = current
+                    leftAccessoryButton.component = leftAccessoryButtonComponent.component
+                } else {
+                    leftAccessoryButtonTransition = .immediate
+                    leftAccessoryButton = AccessoryButtonView(id: leftAccessoryButtonComponent.id, component: leftAccessoryButtonComponent.component, view: ComponentHostView<Empty>())
+                    self.leftAccessoryButton = leftAccessoryButton
+                    self.addSubview(leftAccessoryButton.view)
+                }
+                
+                let leftAccessoryButtonSize = leftAccessoryButton.view.update(
+                    transition: leftAccessoryButtonTransition,
+                    component: leftAccessoryButtonComponent.component,
+                    environment: {},
+                    containerSize: CGSize(width: .greatestFiniteMagnitude, height: intrinsicHeight)
+                )
+                leftAccessoryButtonTransition.setFrame(view: leftAccessoryButton.view, frame: CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: leftAccessoryButtonSize))
+            } else {
+                self.leftAccessoryButton = nil
+            }
+            
+            if previousLeftAccessoryButton?.view !== self.leftAccessoryButton?.view {
+                if case .none = transition.animation {
+                    previousLeftAccessoryButton?.view.removeFromSuperview()
+                } else {
+                    if let previousLeftAccessoryButton = previousLeftAccessoryButton {
+                        let previousLeftAccessoryButtonView = previousLeftAccessoryButton.view
+                        previousLeftAccessoryButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                        previousLeftAccessoryButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousLeftAccessoryButtonView] _ in
+                            previousLeftAccessoryButtonView?.removeFromSuperview()
+                        })
+                    }
+                    
+                    if let leftAccessoryButtonView = self.leftAccessoryButton?.view {
+                        leftAccessoryButtonView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                        leftAccessoryButtonView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+            }
             
             var rightAccessoryButtonComponent: AnyComponentWithIdentity<Empty>?
             for contentAccessoryRightButton in panelEnvironment.contentAccessoryRightButtons {
@@ -175,11 +230,12 @@ final class EntityKeyboardBottomPanelComponent: Component {
             if let rightAccessoryButtonComponent = rightAccessoryButtonComponent {
                 var rightAccessoryButtonTransition = transition
                 let rightAccessoryButton: AccessoryButtonView
-                if let current = self.rightAccessoryButton, current.id == rightAccessoryButtonComponent.id {
+                if let current = self.rightAccessoryButton, (current.id == rightAccessoryButtonComponent.id || current.component == rightAccessoryButtonComponent.component) {
                     rightAccessoryButton = current
+                    current.component = rightAccessoryButtonComponent.component
                 } else {
                     rightAccessoryButtonTransition = .immediate
-                    rightAccessoryButton = AccessoryButtonView(id: rightAccessoryButtonComponent.id, view: ComponentHostView<Empty>())
+                    rightAccessoryButton = AccessoryButtonView(id: rightAccessoryButtonComponent.id, component: rightAccessoryButtonComponent.component, view: ComponentHostView<Empty>())
                     self.rightAccessoryButton = rightAccessoryButton
                     self.addSubview(rightAccessoryButton.view)
                 }
@@ -195,7 +251,7 @@ final class EntityKeyboardBottomPanelComponent: Component {
                 self.rightAccessoryButton = nil
             }
             
-            if previousRightAccessoryButton !== self.rightAccessoryButton?.view {
+            if previousRightAccessoryButton?.view !== self.rightAccessoryButton?.view {
                 if case .none = transition.animation {
                     previousRightAccessoryButton?.view.removeFromSuperview()
                 } else {

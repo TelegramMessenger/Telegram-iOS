@@ -605,7 +605,7 @@ private func loadItem(path: String) -> AnimationCacheItem? {
     }
     let decompressedSize = readUInt32(data: compressedData, offset: 0)
     
-    if decompressedSize <= 0 || decompressedSize > 20 * 1024 * 1024 {
+    if decompressedSize <= 0 || decompressedSize > 40 * 1024 * 1024 {
         return nil
     }
     guard let data = decompressData(data: compressedData, range: 4 ..< compressedData.count, decompressedSize: Int(decompressedSize)) else {
