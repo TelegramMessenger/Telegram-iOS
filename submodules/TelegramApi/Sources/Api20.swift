@@ -566,13 +566,13 @@ public extension Api {
 }
 public extension Api {
     enum UserFull: TypeConstructorDescription {
-        case userFull(flags: Int32, id: Int64, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?, privateForwardName: String?, botGroupAdminRights: Api.ChatAdminRights?, botBroadcastAdminRights: Api.ChatAdminRights?, giftPremiumUrl: String?)
+        case userFull(flags: Int32, id: Int64, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?, privateForwardName: String?, botGroupAdminRights: Api.ChatAdminRights?, botBroadcastAdminRights: Api.ChatAdminRights?, premiumGifts: [Api.PremiumGiftOption]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .userFull(let flags, let id, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let giftPremiumUrl):
+                case .userFull(let flags, let id, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let premiumGifts):
                     if boxed {
-                        buffer.appendInt32(-1514584156)
+                        buffer.appendInt32(-994968513)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -589,15 +589,19 @@ public extension Api {
                     if Int(flags) & Int(1 << 16) != 0 {serializeString(privateForwardName!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 17) != 0 {botGroupAdminRights!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 18) != 0 {botBroadcastAdminRights!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 19) != 0 {serializeString(giftPremiumUrl!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 19) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(premiumGifts!.count))
+                    for item in premiumGifts! {
+                        item.serialize(buffer, true)
+                    }}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .userFull(let flags, let id, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let giftPremiumUrl):
-                return ("userFull", [("flags", String(describing: flags)), ("id", String(describing: id)), ("about", String(describing: about)), ("settings", String(describing: settings)), ("profilePhoto", String(describing: profilePhoto)), ("notifySettings", String(describing: notifySettings)), ("botInfo", String(describing: botInfo)), ("pinnedMsgId", String(describing: pinnedMsgId)), ("commonChatsCount", String(describing: commonChatsCount)), ("folderId", String(describing: folderId)), ("ttlPeriod", String(describing: ttlPeriod)), ("themeEmoticon", String(describing: themeEmoticon)), ("privateForwardName", String(describing: privateForwardName)), ("botGroupAdminRights", String(describing: botGroupAdminRights)), ("botBroadcastAdminRights", String(describing: botBroadcastAdminRights)), ("giftPremiumUrl", String(describing: giftPremiumUrl))])
+                case .userFull(let flags, let id, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let premiumGifts):
+                return ("userFull", [("flags", String(describing: flags)), ("id", String(describing: id)), ("about", String(describing: about)), ("settings", String(describing: settings)), ("profilePhoto", String(describing: profilePhoto)), ("notifySettings", String(describing: notifySettings)), ("botInfo", String(describing: botInfo)), ("pinnedMsgId", String(describing: pinnedMsgId)), ("commonChatsCount", String(describing: commonChatsCount)), ("folderId", String(describing: folderId)), ("ttlPeriod", String(describing: ttlPeriod)), ("themeEmoticon", String(describing: themeEmoticon)), ("privateForwardName", String(describing: privateForwardName)), ("botGroupAdminRights", String(describing: botGroupAdminRights)), ("botBroadcastAdminRights", String(describing: botBroadcastAdminRights)), ("premiumGifts", String(describing: premiumGifts))])
     }
     }
     
@@ -644,8 +648,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 18) != 0 {if let signature = reader.readInt32() {
                 _15 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
             } }
-            var _16: String?
-            if Int(_1!) & Int(1 << 19) != 0 {_16 = parseString(reader) }
+            var _16: [Api.PremiumGiftOption]?
+            if Int(_1!) & Int(1 << 19) != 0 {if let _ = reader.readInt32() {
+                _16 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PremiumGiftOption.self)
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
@@ -663,7 +669,7 @@ public extension Api {
             let _c15 = (Int(_1!) & Int(1 << 18) == 0) || _15 != nil
             let _c16 = (Int(_1!) & Int(1 << 19) == 0) || _16 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 {
-                return Api.UserFull.userFull(flags: _1!, id: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10, ttlPeriod: _11, themeEmoticon: _12, privateForwardName: _13, botGroupAdminRights: _14, botBroadcastAdminRights: _15, giftPremiumUrl: _16)
+                return Api.UserFull.userFull(flags: _1!, id: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10, ttlPeriod: _11, themeEmoticon: _12, privateForwardName: _13, botGroupAdminRights: _14, botBroadcastAdminRights: _15, premiumGifts: _16)
             }
             else {
                 return nil

@@ -1005,7 +1005,7 @@ public extension Api {
         case messageActionEmpty
         case messageActionGameScore(gameId: Int64, score: Int32)
         case messageActionGeoProximityReached(fromId: Api.Peer, toId: Api.Peer, distance: Int32)
-        case messageActionGiftPremium(currency: String, amount: Int64, duration: Int32)
+        case messageActionGiftPremium(currency: String, amount: Int64, months: Int32)
         case messageActionGroupCall(flags: Int32, call: Api.InputGroupCall, duration: Int32?)
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionHistoryClear
@@ -1139,13 +1139,13 @@ public extension Api {
                     toId.serialize(buffer, true)
                     serializeInt32(distance, buffer: buffer, boxed: false)
                     break
-                case .messageActionGiftPremium(let currency, let amount, let duration):
+                case .messageActionGiftPremium(let currency, let amount, let months):
                     if boxed {
-                        buffer.appendInt32(380460460)
+                        buffer.appendInt32(-1415514682)
                     }
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(amount, buffer: buffer, boxed: false)
-                    serializeInt32(duration, buffer: buffer, boxed: false)
+                    serializeInt32(months, buffer: buffer, boxed: false)
                     break
                 case .messageActionGroupCall(let flags, let call, let duration):
                     if boxed {
@@ -1306,8 +1306,8 @@ public extension Api {
                 return ("messageActionGameScore", [("gameId", String(describing: gameId)), ("score", String(describing: score))])
                 case .messageActionGeoProximityReached(let fromId, let toId, let distance):
                 return ("messageActionGeoProximityReached", [("fromId", String(describing: fromId)), ("toId", String(describing: toId)), ("distance", String(describing: distance))])
-                case .messageActionGiftPremium(let currency, let amount, let duration):
-                return ("messageActionGiftPremium", [("currency", String(describing: currency)), ("amount", String(describing: amount)), ("duration", String(describing: duration))])
+                case .messageActionGiftPremium(let currency, let amount, let months):
+                return ("messageActionGiftPremium", [("currency", String(describing: currency)), ("amount", String(describing: amount)), ("months", String(describing: months))])
                 case .messageActionGroupCall(let flags, let call, let duration):
                 return ("messageActionGroupCall", [("flags", String(describing: flags)), ("call", String(describing: call)), ("duration", String(describing: duration))])
                 case .messageActionGroupCallScheduled(let call, let scheduleDate):
@@ -1532,7 +1532,7 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.MessageAction.messageActionGiftPremium(currency: _1!, amount: _2!, duration: _3!)
+                return Api.MessageAction.messageActionGiftPremium(currency: _1!, amount: _2!, months: _3!)
             }
             else {
                 return nil
