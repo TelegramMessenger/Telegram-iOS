@@ -462,12 +462,13 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                             return updated
                         }
                         
+                        secondaryActionDisabled = false
                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                     }, completed: {
                         dismissImpl?()
                                                 
                         let presentGlobalController = context.sharedContext.presentGlobalController
-                        let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: true).start(completed: {
+                        let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: false).start(completed: {
                             Queue.mainQueue().after(0.1) {
                                 presentGlobalController(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.DeleteAccount_Success), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
                             }
@@ -492,7 +493,11 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                 var phoneNumber: String?
                 controller?.forEachItemNode { itemNode in
                     if let itemNode = itemNode as? DeleteAccountPhoneItemNode {
-                        phoneNumber = itemNode.phoneNumber
+                        var phoneValue = itemNode.phoneNumber
+                        if phoneValue.hasPrefix("+939998") {
+                            phoneValue = phoneValue.replacingOccurrences(of: "+939998", with: "+9998")
+                        }
+                        phoneNumber = phoneValue
                     }
                 }
             
@@ -505,6 +510,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                                 phone = "+\(phone)"
                             }
                             if phone != phoneNumber  {
+                                secondaryActionDisabled = false
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.DeleteAccount_InvalidPhoneNumberError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                                 return
                             }
@@ -523,6 +529,8 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                     
                     let _ = (context.engine.auth.requestTwoStepVerifiationSettings(password: state.password)
                     |> deliverOnMainQueue).start(error: { error in
+                        secondaryActionDisabled = false
+                        
                         updateState { current in
                             var updated = current
                             updated.isLoading = false
