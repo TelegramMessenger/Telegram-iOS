@@ -231,7 +231,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     break
                 }
             }
-            if item.message.id.namespace == Namespaces.Message.Local {
+            if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal {
                 notConsumed = true
             }
             
