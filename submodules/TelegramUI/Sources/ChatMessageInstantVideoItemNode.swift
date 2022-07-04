@@ -81,7 +81,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         
         self.interactiveVideoNode.shouldOpen = { [weak self] in
             if let strongSelf = self {
-                if let item = strongSelf.item, item.message.id.namespace == Namespaces.Message.Local {
+                if let item = strongSelf.item, (item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal) {
                     return false
                 }
                 return !strongSelf.animatingHeight

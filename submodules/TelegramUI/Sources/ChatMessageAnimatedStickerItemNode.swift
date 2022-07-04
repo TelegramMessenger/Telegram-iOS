@@ -474,10 +474,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     override func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         super.setupItem(item, synchronousLoad: synchronousLoad)
         
-        if item.message.id.namespace == Namespaces.Message.Local {
+        if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal {
             self.wasPending = true
         }
-        if self.wasPending && item.message.id.namespace != Namespaces.Message.Local {
+        if self.wasPending && (item.message.id.namespace != Namespaces.Message.Local && item.message.id.namespace != Namespaces.Message.ScheduledLocal) {
             self.didChangeFromPendingToSent = true
         }
                 
