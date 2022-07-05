@@ -1312,6 +1312,8 @@ public final class ChatListNode: ListView {
                     switch activity {
                     case .interactingWithEmoji:
                         return true
+                    case .speakingInGroupCall:
+                        return true
                     default:
                         return false
                     }
@@ -1343,9 +1345,9 @@ public final class ChatListNode: ListView {
                 return engine.data.get(EngineDataMap(
                     activitiesByPeerId.keys.filter { key in
                         if case .global = key.category {
-                            return false
-                        } else {
                             return true
+                        } else {
+                            return false
                         }
                     }.map { key in
                         return TelegramEngine.EngineData.Item.Peer.Peer(id: key.peerId)
