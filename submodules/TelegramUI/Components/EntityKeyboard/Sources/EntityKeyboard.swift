@@ -47,11 +47,14 @@ public final class EntityKeyboardComponent: Component {
     public let stickerContent: EmojiPagerContentComponent
     public let gifContent: GifPagerContentComponent
     public let defaultToEmojiTab: Bool
-    public let externalTopPanelContainer: UIView?
+    public let externalTopPanelContainer: PagerExternalTopPanelContainer?
     public let topPanelExtensionUpdated: (CGFloat, Transition) -> Void
-    public let hideInputUpdated: (Bool, Transition) -> Void
+    public let hideInputUpdated: (Bool, Bool, Transition) -> Void
+    public let switchToTextInput: () -> Void
     public let makeSearchContainerNode: (EntitySearchContentType) -> EntitySearchContainerNode
     public let deviceMetrics: DeviceMetrics
+    public let hiddenInputHeight: CGFloat
+    public let isExpanded: Bool
     
     public init(
         theme: PresentationTheme,
@@ -60,11 +63,14 @@ public final class EntityKeyboardComponent: Component {
         stickerContent: EmojiPagerContentComponent,
         gifContent: GifPagerContentComponent,
         defaultToEmojiTab: Bool,
-        externalTopPanelContainer: UIView?,
+        externalTopPanelContainer: PagerExternalTopPanelContainer?,
         topPanelExtensionUpdated: @escaping (CGFloat, Transition) -> Void,
-        hideInputUpdated: @escaping (Bool, Transition) -> Void,
+        hideInputUpdated: @escaping (Bool, Bool, Transition) -> Void,
+        switchToTextInput: @escaping () -> Void,
         makeSearchContainerNode: @escaping (EntitySearchContentType) -> EntitySearchContainerNode,
-        deviceMetrics: DeviceMetrics
+        deviceMetrics: DeviceMetrics,
+        hiddenInputHeight: CGFloat,
+        isExpanded: Bool
     ) {
         self.theme = theme
         self.bottomInset = bottomInset
@@ -75,8 +81,11 @@ public final class EntityKeyboardComponent: Component {
         self.externalTopPanelContainer = externalTopPanelContainer
         self.topPanelExtensionUpdated = topPanelExtensionUpdated
         self.hideInputUpdated = hideInputUpdated
+        self.switchToTextInput = switchToTextInput
         self.makeSearchContainerNode = makeSearchContainerNode
         self.deviceMetrics = deviceMetrics
+        self.hiddenInputHeight = hiddenInputHeight
+        self.isExpanded = isExpanded
     }
     
     public static func ==(lhs: EntityKeyboardComponent, rhs: EntityKeyboardComponent) -> Bool {
@@ -104,6 +113,12 @@ public final class EntityKeyboardComponent: Component {
         if lhs.deviceMetrics != rhs.deviceMetrics {
             return false
         }
+        if lhs.hiddenInputHeight != rhs.hiddenInputHeight {
+            return false
+        }
+        if lhs.isExpanded != rhs.isExpanded {
+            return false
+        }
         
         return true
     }
@@ -118,13 +133,14 @@ public final class EntityKeyboardComponent: Component {
         private var searchComponent: EntitySearchContentComponent?
         
         private var topPanelExtension: CGFloat?
+        private var isTopPanelExpanded: Bool = false
         
         override init(frame: CGRect) {
             self.pagerView = ComponentHostView<EntityKeyboardChildEnvironment>()
             
             super.init(frame: frame)
             
-            self.clipsToBounds = true
+            //self.clipsToBounds = true
             self.disablesInteractiveTransitionGestureRecognizer = true
             
             self.addSubview(self.pagerView)
@@ -146,7 +162,8 @@ public final class EntityKeyboardComponent: Component {
             let gifsContentItemIdUpdated = ActionSlot<(AnyHashable, Transition)>()
             contents.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(component.gifContent)))
             var topGifItems: [EntityKeyboardTopPanelComponent.Item] = []
-            topGifItems.append(EntityKeyboardTopPanelComponent.Item(
+            topGifItems.removeAll()
+            /*topGifItems.append(EntityKeyboardTopPanelComponent.Item(
                 id: "recent",
                 content: AnyComponent(BundleIconComponent(
                     name: "Chat/Input/Media/RecentTabIcon",
@@ -161,7 +178,7 @@ public final class EntityKeyboardComponent: Component {
                     tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
                     maxSize: CGSize(width: 30.0, height: 30.0))
                 )
-            ))
+            ))*/
             contentTopPanels.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(EntityKeyboardTopPanelComponent(
                 theme: component.theme,
                 items: topGifItems,
@@ -199,20 +216,21 @@ public final class EntityKeyboardComponent: Component {
                         "recent": "Chat/Input/Media/RecentTabIcon",
                         "premium": "Chat/Input/Media/PremiumIcon"
                     ]
-                    if let iconName = iconMapping[id] {
+                    let titleMapping: [String: String] = [
+                        "recent": "Recent",
+                        "premium": "Premium"
+                    ]
+                    if let iconName = iconMapping[id], let title = titleMapping[id] {
                         topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
                             id: itemGroup.id,
-                            content: AnyComponent(Button(
-                                content: AnyComponent(BundleIconComponent(
-                                    name: iconName,
-                                    tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
-                                    maxSize: CGSize(width: 30.0, height: 30.0)
-                                )),
-                                action: { [weak self] in
+                            content: AnyComponent(EntityKeyboardIconTopPanelComponent(
+                                imageName: iconName,
+                                theme: component.theme,
+                                title: title,
+                                pressed: { [weak self] in
                                     self?.scrollToItemGroup(contentId: "stickers", groupId: itemGroup.id)
                                 }
-                            ).minSize(CGSize(width: 30.0, height: 30.0))
-                            )
+                            ))
                         ))
                     }
                 } else {
@@ -224,6 +242,8 @@ public final class EntityKeyboardComponent: Component {
                                 file: itemGroup.items[0].file,
                                 animationCache: component.stickerContent.animationCache,
                                 animationRenderer: component.stickerContent.animationRenderer,
+                                theme: component.theme,
+                                title: itemGroup.title ?? "",
                                 pressed: { [weak self] in
                                     self?.scrollToItemGroup(contentId: "stickers", groupId: itemGroup.id)
                                 }
@@ -277,6 +297,8 @@ public final class EntityKeyboardComponent: Component {
                             file: itemGroup.items[0].file,
                             animationCache: component.emojiContent.animationCache,
                             animationRenderer: component.emojiContent.animationRenderer,
+                            theme: component.theme,
+                            title: itemGroup.title ?? "",
                             pressed: { [weak self] in
                                 self?.scrollToItemGroup(contentId: "emoji", groupId: itemGroup.id)
                             }
@@ -294,6 +316,20 @@ public final class EntityKeyboardComponent: Component {
                 tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
                 maxSize: nil
             ))))
+            contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(Button(
+                content: AnyComponent(BundleIconComponent(
+                    name: "Chat/Input/Media/EntityInputGlobeIcon",
+                    tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+                    maxSize: nil
+                )),
+                action: { [weak self] in
+                    guard let strongSelf = self, let component = strongSelf.component else {
+                        return
+                    }
+                    component.switchToTextInput()
+                }
+            ).minSize(CGSize(width: 38.0, height: 38.0)))))
+            let deleteBackwards = component.emojiContent.inputInteraction.deleteBackwards
             contentAccessoryRightButtons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(Button(
                 content: AnyComponent(BundleIconComponent(
                     name: "Chat/Input/Media/EntityInputClearIcon",
@@ -301,9 +337,20 @@ public final class EntityKeyboardComponent: Component {
                     maxSize: nil
                 )),
                 action: {
-                    component.emojiContent.inputInteraction.deleteBackwards()
+                    deleteBackwards()
                 }
-            ).minSize(CGSize(width: 38.0, height: 38.0)))))
+            ).withHoldAction({
+                deleteBackwards()
+            }).minSize(CGSize(width: 38.0, height: 38.0)))))
+            
+            let panelHideBehavior: PagerComponentPanelHideBehavior
+            if self.searchComponent != nil {
+                panelHideBehavior = .hide
+            } else if component.isExpanded {
+                panelHideBehavior = .show
+            } else {
+                panelHideBehavior = .hideOnScroll
+            }
             
             let pagerSize = self.pagerView.update(
                 transition: transition,
@@ -319,7 +366,8 @@ public final class EntityKeyboardComponent: Component {
                         color: component.theme.chat.inputMediaPanel.stickersBackgroundColor.withMultipliedAlpha(0.75)
                     )),
                     topPanel: AnyComponent(EntityKeyboardTopContainerPanelComponent(
-                        theme: component.theme
+                        theme: component.theme,
+                        overflowHeight: component.hiddenInputHeight
                     )),
                     externalTopPanelContainer: component.externalTopPanelContainer,
                     bottomPanel: AnyComponent(EntityKeyboardBottomPanelComponent(
@@ -335,7 +383,13 @@ public final class EntityKeyboardComponent: Component {
                         }
                         strongSelf.topPanelExtensionUpdated(height: panelState.topPanelHeight, transition: transition)
                     },
-                    hidePanels: self.searchComponent != nil
+                    isTopPanelExpandedUpdated: { [weak self] isExpanded, transition in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.isTopPanelExpandedUpdated(isExpanded: isExpanded, transition: transition)
+                    },
+                    panelHideBehavior: panelHideBehavior
                 )),
                 environment: {
                     EntityKeyboardChildEnvironment(
@@ -426,6 +480,18 @@ public final class EntityKeyboardComponent: Component {
             }
         }
         
+        private func isTopPanelExpandedUpdated(isExpanded: Bool, transition: Transition) {
+            if self.isTopPanelExpanded != isExpanded {
+                self.isTopPanelExpanded = isExpanded
+            }
+            
+            guard let component = self.component else {
+                return
+            }
+            
+            component.hideInputUpdated(self.isTopPanelExpanded, false, transition)
+        }
+        
         private func openSearch() {
             guard let component = self.component else {
                 return
@@ -451,7 +517,7 @@ public final class EntityKeyboardComponent: Component {
                     }
                 )
                 //self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-                component.hideInputUpdated(true, Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                component.hideInputUpdated(true, true, Transition(animation: .curve(duration: 0.3, curve: .spring)))
             }
         }
         
@@ -464,7 +530,7 @@ public final class EntityKeyboardComponent: Component {
             }
             self.searchComponent = nil
             //self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-            component.hideInputUpdated(false, Transition(animation: .curve(duration: 0.4, curve: .spring)))
+            component.hideInputUpdated(false, false, Transition(animation: .curve(duration: 0.4, curve: .spring)))
         }
         
         private func scrollToItemGroup(contentId: String, groupId: AnyHashable) {

@@ -249,6 +249,8 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                         string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Timecode), value: TelegramTimecode(time: time, text: text), range: range)
                     }
                 }
+            case let .CustomEmoji(stickerPack, fileId):
+                string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId), range: range)
             default:
                 break
         }

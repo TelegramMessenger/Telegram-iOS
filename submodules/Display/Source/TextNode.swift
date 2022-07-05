@@ -1435,6 +1435,10 @@ public class TextNode: ASDisplayNode {
                     for run in glyphRuns {
                         let run = run as! CTRun
                         let glyphCount = CTRunGetGlyphCount(run)
+                        let attributes = CTRunGetAttributes(run) as NSDictionary
+                        if attributes["Attribute__EmbeddedItem"] != nil {
+                            continue
+                        }
                         CTRunDraw(run, context, CFRangeMake(0, glyphCount))
                     }
                 }

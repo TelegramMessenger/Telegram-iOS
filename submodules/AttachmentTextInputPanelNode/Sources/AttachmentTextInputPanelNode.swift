@@ -352,7 +352,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         guard let presentationInterfaceState = self.presentationInterfaceState else {
             return 0.0
         }
-        return self.updateLayout(width: size.width, leftInset: sideInset, rightInset: sideInset, bottomInset: 0.0, additionalSideInsets: UIEdgeInsets(), maxHeight: size.height, isSecondary: false, transition: .immediate, interfaceState: presentationInterfaceState, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact))
+        return self.updateLayout(width: size.width, leftInset: sideInset, rightInset: sideInset, bottomInset: 0.0, additionalSideInsets: UIEdgeInsets(), maxHeight: size.height, isSecondary: false, transition: .immediate, interfaceState: presentationInterfaceState, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), isMediaInputExpanded: false)
     }
     
     public func setCaption(_ caption: NSAttributedString?) {
@@ -496,7 +496,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         return minimalHeight
     }
     
-    public func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+    public func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
         let hadLayout = self.validLayout != nil
         let previousAdditionalSideInsets = self.validLayout?.3
         self.validLayout = (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary)
@@ -1110,7 +1110,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         self.focusUpdated?(true)
         
         if self.isCaption, let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary) = self.validLayout, let presentationInterfaceState = self.presentationInterfaceState {
-            let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: 0.0, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .animated(duration: 0.3, curve: .easeInOut), interfaceState: presentationInterfaceState, metrics: metrics)
+            let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: 0.0, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .animated(duration: 0.3, curve: .easeInOut), interfaceState: presentationInterfaceState, metrics: metrics, isMediaInputExpanded: false)
         }
     }
     
@@ -1121,7 +1121,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         self.focusUpdated?(false)
         
         if self.isCaption, let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary) = self.validLayout, let presentationInterfaceState = self.presentationInterfaceState {
-            let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: 0.0, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .animated(duration: 0.3, curve: .easeInOut), interfaceState: presentationInterfaceState, metrics: metrics)
+            let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: 0.0, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .animated(duration: 0.3, curve: .easeInOut), interfaceState: presentationInterfaceState, metrics: metrics, isMediaInputExpanded: false)
         }
     }
     

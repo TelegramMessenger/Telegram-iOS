@@ -51,6 +51,9 @@ private func chatInputStateString(attributedString: NSAttributedString) -> NSAtt
         if let _ = attributes[.underlineStyle] {
             string.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: range)
         }
+        if let value = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
+            string.addAttribute(ChatTextInputAttributes.customEmoji, value: value, range: range)
+        }
     })
     return string
 }

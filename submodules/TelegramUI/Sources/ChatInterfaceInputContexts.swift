@@ -302,6 +302,9 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     }
                     
                     var stickersEnabled = true
+                    
+                    let stickersAreEmoji = !isTextEmpty
+                    
                     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                         if isTextEmpty, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
                             accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
@@ -318,7 +321,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         accessoryItems.append(.commands)
                     }
                     
-                    accessoryItems.append(.stickers(stickersEnabled))
+                    accessoryItems.append(.stickers(isEnabled: stickersEnabled, isEmoji: stickersAreEmoji))
                     
                     if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
                         accessoryItems.append(.inputButtons)

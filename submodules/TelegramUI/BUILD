@@ -291,6 +291,8 @@ swift_library(
         "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
         "//submodules/Media/ConvertOpusToAAC:ConvertOpusToAAC",
         "//submodules/Media/LocalAudioTranscription:LocalAudioTranscription",
+        "//submodules/Components/PagerComponent:PagerComponent",
+        "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
