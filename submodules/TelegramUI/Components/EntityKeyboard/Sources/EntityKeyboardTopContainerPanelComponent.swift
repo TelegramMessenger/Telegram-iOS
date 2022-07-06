@@ -9,11 +9,14 @@ import Postbox
 
 final class EntityKeyboardTopContainerPanelEnvironment: Equatable {
     let visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>
+    let isExpandedUpdated: (Bool, Transition) -> Void
     
     init(
-        visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>
+        visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>,
+        isExpandedUpdated: @escaping (Bool, Transition) -> Void
     ) {
         self.visibilityFractionUpdated = visibilityFractionUpdated
+        self.isExpandedUpdated = isExpandedUpdated
     }
     
     static func ==(lhs: EntityKeyboardTopContainerPanelEnvironment, rhs: EntityKeyboardTopContainerPanelEnvironment) -> Bool {
@@ -28,15 +31,21 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
     typealias EnvironmentType = PagerComponentPanelEnvironment<EntityKeyboardTopContainerPanelEnvironment>
     
     let theme: PresentationTheme
+    let overflowHeight: CGFloat
     
     init(
-        theme: PresentationTheme
+        theme: PresentationTheme,
+        overflowHeight: CGFloat
     ) {
         self.theme = theme
+        self.overflowHeight = overflowHeight
     }
     
     static func ==(lhs: EntityKeyboardTopContainerPanelComponent, rhs: EntityKeyboardTopContainerPanelComponent) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.overflowHeight != rhs.overflowHeight {
             return false
         }
         
@@ -46,6 +55,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
     private final class PanelView {
         let view = ComponentHostView<EntityKeyboardTopContainerPanelEnvironment>()
         let visibilityFractionUpdated = ActionSlot<(CGFloat, Transition)>()
+        var isExpanded: Bool = false
     }
     
     final class View: UIView {
@@ -57,8 +67,13 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
         
         private var visibilityFraction: CGFloat = 1.0
         
+        private var hasExpandedPanels: Bool = false
+        
         override init(frame: CGRect) {
             super.init(frame: frame)
+            
+            self.disablesInteractiveKeyboardGestureRecognizer = true
+            self.disablesInteractiveTransitionGestureRecognizer = true
         }
         
         required init?(coder: NSCoder) {
@@ -94,7 +109,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                     let panel = panelEnvironment.contentTopPanels[index]
                     let indexOffset = index - centralIndex
                     
-                    let panelFrame = CGRect(origin: CGPoint(x: CGFloat(indexOffset) * availableSize.width, y: 0.0), size: CGSize(width: availableSize.width, height: intrinsicHeight))
+                    let panelFrame = CGRect(origin: CGPoint(x: CGFloat(indexOffset) * availableSize.width, y: -component.overflowHeight), size: CGSize(width: availableSize.width, height: intrinsicHeight + component.overflowHeight))
                     
                     let isInBounds = visibleBounds.intersects(panelFrame)
                     let isPartOfTransition: Bool
@@ -118,12 +133,19 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                             self.addSubview(panelView.view)
                         }
                         
+                        let panelId = panel.id
                         let _ = panelView.view.update(
                             transition: panelTransition,
                             component: panel.component,
                             environment: {
                                 EntityKeyboardTopContainerPanelEnvironment(
-                                    visibilityFractionUpdated: panelView.visibilityFractionUpdated
+                                    visibilityFractionUpdated: panelView.visibilityFractionUpdated,
+                                    isExpandedUpdated: { [weak self] isExpanded, transition in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.panelIsExpandedUpdated(id: panelId, isExpanded: isExpanded, transition: transition)
+                                    }
                                 )
                             },
                             containerSize: panelFrame.size
@@ -169,6 +191,45 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             for (_, panelView) in self.panelViews {
                 panelView.visibilityFractionUpdated.invoke((value, transition))
                 transition.setSublayerTransform(view: panelView.view, transform: CATransform3DMakeTranslation(0.0, -panelView.view.bounds.height / 2.0 * (1.0 - value), 0.0))
+            }
+        }
+        
+        private func panelIsExpandedUpdated(id: AnyHashable, isExpanded: Bool, transition: Transition) {
+            guard let panelView = self.panelViews[id] else {
+                return
+            }
+            panelView.isExpanded = isExpanded
+            
+            var hasExpanded = false
+            for (_, panel) in self.panelViews {
+                if panel.isExpanded {
+                    hasExpanded = true
+                    break
+                }
+            }
+            
+            if self.hasExpandedPanels != hasExpanded {
+                self.hasExpandedPanels = hasExpanded
+                
+                self.panelEnvironment?.isExpandedUpdated(self.hasExpandedPanels, transition)
+            }
+        }
+        
+        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if self.alpha.isZero {
+                return nil
+            }
+            for view in self.subviews.reversed() {
+                if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
+                    return result
+                }
+            }
+            
+            let result = super.hitTest(point, with: event)
+            if result != self {
+                return result
+            } else {
+                return nil
             }
         }
     }

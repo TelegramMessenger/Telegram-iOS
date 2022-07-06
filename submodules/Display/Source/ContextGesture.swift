@@ -36,7 +36,7 @@ public func cancelParentGestures(view: UIView, ignore: [UIGestureRecognizer] = [
         node.highligthedChanged(false)
     }
     if let superview = view.superview {
-        cancelParentGestures(view: superview)
+        cancelParentGestures(view: superview, ignore: ignore)
     }
 }
 

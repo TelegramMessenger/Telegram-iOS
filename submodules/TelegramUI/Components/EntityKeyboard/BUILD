@@ -38,6 +38,7 @@ swift_library(
         "//submodules/PremiumUI:PremiumUI",
         "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
     ],
     visibility = [
         "//visibility:public",

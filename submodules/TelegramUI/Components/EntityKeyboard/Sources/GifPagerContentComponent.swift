@@ -464,6 +464,7 @@ public final class GifPagerContentComponent: Component {
                     relativeOffset: relativeOffset,
                     absoluteOffsetToTopEdge: offsetToTopEdge,
                     absoluteOffsetToBottomEdge: offsetToBottomEdge,
+                    isReset: false,
                     isInteracting: isInteracting,
                     transition: transition
                 ))

@@ -9,11 +9,15 @@ public protocol PagerExpandableScrollView: UIScrollView {
 public protocol PagerPanGestureRecognizer: UIGestureRecognizer {
 }
 
+open class PagerExternalTopPanelContainer: SparseContainerView {
+}
+
 public final class PagerComponentChildEnvironment: Equatable {
     public struct ContentScrollingUpdate {
         public var relativeOffset: CGFloat
         public var absoluteOffsetToTopEdge: CGFloat?
         public var absoluteOffsetToBottomEdge: CGFloat?
+        public var isReset: Bool
         public var isInteracting: Bool
         public var transition: Transition
         
@@ -21,12 +25,14 @@ public final class PagerComponentChildEnvironment: Equatable {
             relativeOffset: CGFloat,
             absoluteOffsetToTopEdge: CGFloat?,
             absoluteOffsetToBottomEdge: CGFloat?,
+            isReset: Bool,
             isInteracting: Bool,
             transition: Transition
         ) {
             self.relativeOffset = relativeOffset
             self.absoluteOffsetToTopEdge = absoluteOffsetToTopEdge
             self.absoluteOffsetToBottomEdge = absoluteOffsetToBottomEdge
+            self.isReset = isReset
             self.isInteracting = isInteracting
             self.transition = transition
         }
@@ -61,6 +67,7 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
     public let activeContentId: AnyHashable?
     public let navigateToContentId: (AnyHashable) -> Void
     public let visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>
+    public let isExpandedUpdated: (Bool, Transition) -> Void
     
     init(
         contentOffset: CGFloat,
@@ -70,7 +77,8 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
         contentAccessoryRightButtons: [AnyComponentWithIdentity<Empty>],
         activeContentId: AnyHashable?,
         navigateToContentId: @escaping (AnyHashable) -> Void,
-        visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>
+        visibilityFractionUpdated: ActionSlot<(CGFloat, Transition)>,
+        isExpandedUpdated: @escaping (Bool, Transition) -> Void
     ) {
         self.contentOffset = contentOffset
         self.contentTopPanels = contentTopPanels
@@ -80,6 +88,7 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
         self.activeContentId = activeContentId
         self.navigateToContentId = navigateToContentId
         self.visibilityFractionUpdated = visibilityFractionUpdated
+        self.isExpandedUpdated = isExpandedUpdated
     }
     
     public static func ==(lhs: PagerComponentPanelEnvironment, rhs: PagerComponentPanelEnvironment) -> Bool {
@@ -122,6 +131,12 @@ public final class PagerComponentViewTag {
     }
 }
 
+public enum PagerComponentPanelHideBehavior {
+    case hideOnScroll
+    case show
+    case hide
+}
+
 public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvironment: Equatable>: Component {
     public typealias EnvironmentType = ChildEnvironmentType
     
@@ -134,10 +149,11 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
     public let defaultId: AnyHashable?
     public let contentBackground: AnyComponent<Empty>?
     public let topPanel: AnyComponent<PagerComponentPanelEnvironment<TopPanelEnvironment>>?
-    public let externalTopPanelContainer: UIView?
+    public let externalTopPanelContainer: PagerExternalTopPanelContainer?
     public let bottomPanel: AnyComponent<PagerComponentPanelEnvironment<TopPanelEnvironment>>?
     public let panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?
-    public let hidePanels: Bool
+    public let isTopPanelExpandedUpdated: (Bool, Transition) -> Void
+    public let panelHideBehavior: PagerComponentPanelHideBehavior
     
     public init(
         contentInsets: UIEdgeInsets,
@@ -149,10 +165,11 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         defaultId: AnyHashable?,
         contentBackground: AnyComponent<Empty>?,
         topPanel: AnyComponent<PagerComponentPanelEnvironment<TopPanelEnvironment>>?,
-        externalTopPanelContainer: UIView?,
+        externalTopPanelContainer: PagerExternalTopPanelContainer?,
         bottomPanel: AnyComponent<PagerComponentPanelEnvironment<TopPanelEnvironment>>?,
         panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?,
-        hidePanels: Bool
+        isTopPanelExpandedUpdated: @escaping (Bool, Transition) -> Void,
+        panelHideBehavior: PagerComponentPanelHideBehavior
     ) {
         self.contentInsets = contentInsets
         self.contents = contents
@@ -166,7 +183,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         self.externalTopPanelContainer = externalTopPanelContainer
         self.bottomPanel = bottomPanel
         self.panelStateUpdated = panelStateUpdated
-        self.hidePanels = hidePanels
+        self.isTopPanelExpandedUpdated = isTopPanelExpandedUpdated
+        self.panelHideBehavior = panelHideBehavior
     }
     
     public static func ==(lhs: PagerComponent, rhs: PagerComponent) -> Bool {
@@ -197,7 +215,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         if lhs.bottomPanel != rhs.bottomPanel {
             return false
         }
-        if lhs.hidePanels != rhs.hidePanels {
+        if lhs.panelHideBehavior != rhs.panelHideBehavior {
             return false
         }
         
@@ -240,6 +258,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         private weak var state: EmptyComponentState?
         
         private var panRecognizer: PagerPanGestureRecognizerImpl?
+        
+        private var isTopPanelExpanded: Bool = false
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -309,6 +329,13 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         }
         
         func update(component: PagerComponent<ChildEnvironmentType, TopPanelEnvironment>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            let previousPanelHideBehavior = self.component?.panelHideBehavior
+            
+            var panelStateTransition = transition
+            if let previousPanelHideBehavior = previousPanelHideBehavior, previousPanelHideBehavior != component.panelHideBehavior, panelStateTransition.animation.isImmediate {
+                panelStateTransition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+            }
+            
             self.component = component
             self.state = state
             
@@ -345,7 +372,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             var contentInsets = component.contentInsets
             
             var scrollingPanelOffsetFraction: CGFloat
-            if let centralId = centralId, let centralContentView = self.contentViews[centralId] {
+            if case .show = component.panelHideBehavior {
+                scrollingPanelOffsetFraction = 0.0
+            } else if let centralId = centralId, let centralContentView = self.contentViews[centralId] {
                 scrollingPanelOffsetFraction = centralContentView.scrollingPanelOffsetFraction
             } else {
                 scrollingPanelOffsetFraction = 0.0
@@ -354,13 +383,12 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             var topPanelHeight: CGFloat = 0.0
             if let topPanel = component.topPanel {
                 let topPanelView: ComponentHostView<PagerComponentPanelEnvironment<TopPanelEnvironment>>
-                var topPanelTransition = transition
+                var topPanelTransition = panelStateTransition
                 if let current = self.topPanelView {
                     topPanelView = current
                 } else {
                     topPanelTransition = .immediate
                     topPanelView = ComponentHostView<PagerComponentPanelEnvironment<TopPanelEnvironment>>()
-                    topPanelView.clipsToBounds = true
                     self.topPanelView = topPanelView
                 }
                 
@@ -381,7 +409,13 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                             contentAccessoryRightButtons: [],
                             activeContentId: centralId,
                             navigateToContentId: navigateToContentId,
-                            visibilityFractionUpdated: self.topPanelVisibilityFractionUpdated
+                            visibilityFractionUpdated: self.topPanelVisibilityFractionUpdated,
+                            isExpandedUpdated: { [weak self] isExpanded, transition in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.isTopPanelExpandedUpdated(isExpanded: isExpanded, transition: transition)
+                            }
                         )
                     },
                     containerSize: availableSize
@@ -392,26 +426,31 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 var topPanelOffset = topPanelSize.height * scrollingPanelOffsetFraction
                 
                 var topPanelVisibilityFraction: CGFloat = 1.0 - scrollingPanelOffsetFraction
-                if component.hidePanels {
+                switch component.panelHideBehavior {
+                case .hide:
                     topPanelVisibilityFraction = 0.0
+                case .show:
+                    topPanelVisibilityFraction = 1.0
+                case .hideOnScroll:
+                    break
                 }
                 
                 self.topPanelVisibilityFractionUpdated.invoke((topPanelVisibilityFraction, topPanelTransition))
                 
                 topPanelHeight = max(0.0, topPanelSize.height - topPanelOffset)
                 
-                if component.hidePanels {
+                if case .hide = component.panelHideBehavior {
                     topPanelOffset = topPanelSize.height
                 }
                 
                 if component.externalTopPanelContainer != nil {
                     var visibleTopPanelHeight = max(0.0, topPanelSize.height - topPanelOffset)
-                    if component.hidePanels {
+                    if case .hide = component.panelHideBehavior {
                         visibleTopPanelHeight = 0.0
                     }
-                    transition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(), size: CGSize(width: topPanelSize.width, height: visibleTopPanelHeight)))
+                    panelStateTransition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(), size: CGSize(width: topPanelSize.width, height: visibleTopPanelHeight)))
                 } else {
-                    transition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelOffset), size: topPanelSize))
+                    panelStateTransition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelOffset), size: topPanelSize))
                 }
                 
                 contentInsets.top += topPanelSize.height
@@ -428,7 +467,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             var bottomPanelOffset: CGFloat = 0.0
             if let bottomPanel = component.bottomPanel {
                 let bottomPanelView: ComponentHostView<PagerComponentPanelEnvironment<TopPanelEnvironment>>
-                var bottomPanelTransition = transition
+                var bottomPanelTransition = panelStateTransition
                 if let current = self.bottomPanelView {
                     bottomPanelView = current
                 } else {
@@ -449,7 +488,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                             contentAccessoryRightButtons: component.contentAccessoryRightButtons,
                             activeContentId: centralId,
                             navigateToContentId: navigateToContentId,
-                            visibilityFractionUpdated: self.bottomPanelVisibilityFractionUpdated
+                            visibilityFractionUpdated: self.bottomPanelVisibilityFractionUpdated,
+                            isExpandedUpdated: { _, _ in
+                            }
                         )
                     },
                     containerSize: availableSize
@@ -458,11 +499,11 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 self.bottomPanelHeight = bottomPanelSize.height
                 
                 bottomPanelOffset = bottomPanelSize.height * scrollingPanelOffsetFraction
-                if component.hidePanels {
+                if case .hide = component.panelHideBehavior {
                     bottomPanelOffset = bottomPanelSize.height
                 }
                 
-                transition.setFrame(view: bottomPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelSize.height + bottomPanelOffset), size: bottomPanelSize))
+                panelStateTransition.setFrame(view: bottomPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelSize.height + bottomPanelOffset), size: bottomPanelSize))
                 
                 contentInsets.bottom += bottomPanelSize.height
             } else {
@@ -475,11 +516,17 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 self.bottomPanelHeight = 0.0
             }
             
-            let effectiveTopPanelHeight: CGFloat = component.hidePanels ? 0.0 : topPanelHeight
+            let effectiveTopPanelHeight: CGFloat
+            switch component.panelHideBehavior {
+            case .hide:
+                effectiveTopPanelHeight = 0.0
+            case .show, .hideOnScroll:
+                effectiveTopPanelHeight = topPanelHeight
+            }
             
             if let contentBackground = component.contentBackground {
                 let contentBackgroundView: ComponentHostView<Empty>
-                var contentBackgroundTransition = transition
+                var contentBackgroundTransition = panelStateTransition
                 if let current = self.contentBackgroundView {
                     contentBackgroundView = current
                 } else {
@@ -633,7 +680,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     PagerComponentPanelState(
                         topPanelHeight: topPanelHeight
                     ),
-                    transition
+                    panelStateTransition
                 )
             }
             
@@ -647,6 +694,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             
             var offsetDelta: CGFloat?
             offsetDelta = (update.absoluteOffsetToTopEdge ?? 0.0) - contentView.scrollingPanelOffsetToTopEdge
+            if update.isReset {
+                offsetDelta = 0.0
+            }
             
             contentView.scrollingPanelOffsetToTopEdge = update.absoluteOffsetToTopEdge ?? 0.0
             contentView.scrollingPanelOffsetToBottomEdge = update.absoluteOffsetToBottomEdge ?? .greatestFiniteMagnitude
@@ -682,7 +732,21 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     contentView.scrollingPanelOffsetFraction = scrollingPanelOffsetFraction
                     self.state?.updated(transition: transition)
                 }
+                
+                if self.isTopPanelExpanded {
+                    self.isTopPanelExpanded = false
+                    self.component?.isTopPanelExpandedUpdated(self.isTopPanelExpanded, Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                }
             }
+        }
+        
+        private func isTopPanelExpandedUpdated(isExpanded: Bool, transition: Transition) {
+            if self.isTopPanelExpanded == isExpanded {
+                return
+            }
+            self.isTopPanelExpanded = isExpanded
+            
+            self.component?.isTopPanelExpandedUpdated(self.isTopPanelExpanded, transition)
         }
     }
     

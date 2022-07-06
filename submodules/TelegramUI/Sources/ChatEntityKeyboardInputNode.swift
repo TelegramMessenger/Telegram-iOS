@@ -14,6 +14,7 @@ import TelegramCore
 import ComponentDisplayAdapters
 import SettingsUI
 import TextFormat
+import PagerComponent
 
 final class ChatEntityKeyboardInputNode: ChatInputNode {
     struct InputData: Equatable {
@@ -215,11 +216,11 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     var title: String?
                     if group.id == AnyHashable("recent") {
                         //TODO:localize
-                        title = "Recently Used".uppercased()
+                        title = "Recently Used"
                     } else {
                         for (id, info, _) in view.collectionInfos {
                             if AnyHashable(id) == group.id, let info = info as? StickerPackCollectionInfo {
-                                title = info.title.uppercased()
+                                title = info.title
                                 break
                             }
                         }
@@ -396,17 +397,17 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     var title: String?
                     if group.id == AnyHashable("saved") {
                         //TODO:localize
-                        title = "Saved".uppercased()
+                        title = "Saved"
                     } else if group.id == AnyHashable("recent") {
                         //TODO:localize
-                        title = "Recently Used".uppercased()
+                        title = "Recently Used"
                     } else if group.id == AnyHashable("premium") {
                         //TODO:localize
-                        title = "Premium".uppercased()
+                        title = "Premium"
                     } else {
                         for (id, info, _) in view.collectionInfos {
                             if AnyHashable(id) == group.id, let info = info as? StickerPackCollectionInfo {
-                                title = info.title.uppercased()
+                                title = info.title
                                 break
                             }
                         }
@@ -462,7 +463,12 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private var isMarkInputCollapsed: Bool = false
     
-    private var currentState: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool)?
+    var externalTopPanelContainerImpl: PagerExternalTopPanelContainer?
+    override var externalTopPanelContainer: UIView? {
+        return self.externalTopPanelContainerImpl
+    }
+    
+    private var currentState: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool)?
     
     init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction) {
         self.context = context
@@ -477,7 +483,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         self.view.addSubview(self.entityKeyboardView)
         
-        self.externalTopPanelContainer = SparseContainerView()
+        self.externalTopPanelContainerImpl = PagerExternalTopPanelContainer()
         
         self.inputDataDisposable = (updatedInputData
         |> deliverOnMainQueue).start(next: { [weak self] inputData in
@@ -530,19 +536,24 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     }
     
     private func performLayout() {
-        guard let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.currentState else {
+        guard let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded) = self.currentState else {
             return
         }
-        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
+        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
-        self.currentState = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool) -> (CGFloat, CGFloat) {
+        self.currentState = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded)
         
         let wasMarkedInputCollapsed = self.isMarkInputCollapsed
         self.isMarkInputCollapsed = false
         
         let expandedHeight = standardInputHeight + self.expansionFraction * (maximumHeight - standardInputHeight)
+        
+        var hiddenInputHeight: CGFloat = 0.0
+        if self.hideInput && !self.adjustLayoutForHiddenInput {
+            hiddenInputHeight = inputPanelHeight
+        }
         
         let context = self.context
         let controllerInteraction = self.controllerInteraction
@@ -564,7 +575,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 stickerContent: self.currentInputData.stickers,
                 gifContent: self.currentInputData.gifs,
                 defaultToEmojiTab: self.defaultToEmojiTab,
-                externalTopPanelContainer: self.externalTopPanelContainer,
+                externalTopPanelContainer: self.externalTopPanelContainerImpl,
                 topPanelExtensionUpdated: { [weak self] topPanelExtension, transition in
                     guard let strongSelf = self else {
                         return
@@ -574,13 +585,22 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         strongSelf.topBackgroundExtensionUpdated?(transition.containedViewLayoutTransition)
                     }
                 },
-                hideInputUpdated: { [weak self] hideInput, transition in
+                hideInputUpdated: { [weak self] hideInput, adjustLayout, transition in
                     guard let strongSelf = self else {
                         return
                     }
-                    if strongSelf.hideInput != hideInput {
+                    if strongSelf.hideInput != hideInput || strongSelf.adjustLayoutForHiddenInput != adjustLayout {
                         strongSelf.hideInput = hideInput
+                        strongSelf.adjustLayoutForHiddenInput = adjustLayout
                         strongSelf.hideInputUpdated?(transition.containedViewLayoutTransition)
+                    }
+                },
+                switchToTextInput: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.controllerInteraction.updateInputMode { _ in
+                        return .text
                     }
                 },
                 makeSearchContainerNode: { content in
@@ -605,7 +625,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                     )
                 },
-                deviceMetrics: deviceMetrics
+                deviceMetrics: deviceMetrics,
+                hiddenInputHeight: hiddenInputHeight,
+                isExpanded: isExpanded
             )),
             environment: {},
             containerSize: CGSize(width: width, height: expandedHeight)

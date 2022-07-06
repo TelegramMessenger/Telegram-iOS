@@ -106,8 +106,21 @@ public final class ComponentHostView<EnvironmentType>: UIView {
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.alpha.isZero {
+            return nil
+        }
+        for view in self.subviews.reversed() {
+            if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
+                return result
+            }
+        }
+        
         let result = super.hitTest(point, with: event)
-        return result
+        if result != self {
+            return result
+        } else {
+            return nil
+        }
     }
     
     public func findTaggedView(tag: Any) -> UIView? {

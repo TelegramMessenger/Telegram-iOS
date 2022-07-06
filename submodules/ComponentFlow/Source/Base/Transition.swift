@@ -128,6 +128,16 @@ private extension Transition.Animation.Curve {
     }
 }
 
+public extension Transition.Animation {
+    var isImmediate: Bool {
+        if case .none = self {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 public struct Transition {
     public enum Animation {
         public enum Curve {
@@ -245,6 +255,61 @@ public struct Transition {
         }
     }
     
+    public func setBounds(layer: CALayer, bounds: CGRect, completion: ((Bool) -> Void)? = nil) {
+        if layer.bounds == bounds {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            layer.bounds = bounds
+            layer.removeAnimation(forKey: "bounds")
+            completion?(true)
+        case .curve:
+            let previousBounds = layer.presentation()?.bounds ?? layer.bounds
+            layer.bounds = bounds
+
+            self.animateBounds(layer: layer, from: previousBounds, to: layer.bounds, completion: completion)
+        }
+    }
+    
+    public func setPosition(layer: CALayer, position: CGPoint, completion: ((Bool) -> Void)? = nil) {
+        if layer.position == position {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            layer.position = position
+            layer.removeAnimation(forKey: "position")
+            completion?(true)
+        case .curve:
+            let previousPosition = layer.presentation()?.position ?? layer.position
+            layer.position = position
+
+            self.animatePosition(layer: layer, from: previousPosition, to: layer.position, completion: completion)
+        }
+    }
+    
+    public func attachAnimation(view: UIView, completion: @escaping (Bool) -> Void) {
+        switch self.animation {
+        case .none:
+            completion(true)
+        case let .curve(duration, curve):
+            view.layer.animate(
+                from: 0.0 as NSNumber,
+                to: 1.0 as NSNumber,
+                keyPath: "attached\(UInt32.random(in: 0 ... UInt32.max))",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: true,
+                completion: completion
+            )
+        }
+    }
+    
     public func setAlpha(view: UIView, alpha: CGFloat, completion: ((Bool) -> Void)? = nil) {
         if view.alpha == alpha {
             completion?(true)
@@ -356,11 +421,19 @@ public struct Transition {
     }
 
     public func animatePosition(view: UIView, from fromValue: CGPoint, to toValue: CGPoint, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        self.animatePosition(layer: view.layer, from: fromValue, to: toValue, additive: additive, completion: completion)
+    }
+
+    public func animateBounds(view: UIView, from fromValue: CGRect, to toValue: CGRect, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        self.animateBounds(layer: view.layer, from: fromValue, to: toValue, additive: additive, completion: completion)
+    }
+    
+    public func animatePosition(layer: CALayer, from fromValue: CGPoint, to toValue: CGPoint, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
             completion?(true)
         case let .curve(duration, curve):
-            view.layer.animate(
+            layer.animate(
                 from: NSValue(cgPoint: fromValue),
                 to: NSValue(cgPoint: toValue),
                 keyPath: "position",
@@ -374,12 +447,12 @@ public struct Transition {
         }
     }
 
-    public func animateBounds(view: UIView, from fromValue: CGRect, to toValue: CGRect, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    public func animateBounds(layer: CALayer, from fromValue: CGRect, to toValue: CGRect, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
             break
         case let .curve(duration, curve):
-            view.layer.animate(
+            layer.animate(
                 from: NSValue(cgRect: fromValue),
                 to: NSValue(cgRect: toValue),
                 keyPath: "bounds",

@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Display
 import AnimationCache
+import Accelerate
 
 public protocol MultiAnimationRenderer: AnyObject {
     func add(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable
@@ -36,6 +37,7 @@ open class MultiAnimationRenderTarget: SimpleLayer {
 
 private final class FrameGroup {
     let image: UIImage
+    let badgeImage: UIImage?
     let size: CGSize
     let timestamp: Double
     
@@ -50,6 +52,27 @@ private final class FrameGroup {
                 
             firstFrame.data.withUnsafeBytes { bytes -> Void in
                 memcpy(context.bytes, bytes.baseAddress!.advanced(by: firstFrame.range.lowerBound), height * bytesPerRow)
+                
+                /*var sourceBuffer = vImage_Buffer()
+                sourceBuffer.width = UInt(width)
+                sourceBuffer.height = UInt(height)
+                sourceBuffer.data = UnsafeMutableRawPointer(mutating: bytes.baseAddress!.advanced(by: firstFrame.range.lowerBound))
+                sourceBuffer.rowBytes = bytesPerRow
+                
+                var destinationBuffer = vImage_Buffer()
+                destinationBuffer.width = UInt(32)
+                destinationBuffer.height = UInt(32)
+                destinationBuffer.data = context.bytes
+                destinationBuffer.rowBytes = bytesPerRow
+                
+                vImageBoxConvolve_ARGB8888(&sourceBuffer,
+                                           &destinationBuffer,
+                                           nil,
+                                           UInt(width - 32 - 16), UInt(height - 32 - 16),
+                                           UInt32(31),
+                                           UInt32(31),
+                                           nil,
+                                           vImage_Flags(kvImageEdgeExtend))*/
             }
             
             guard let image = context.generateImage() else {
@@ -59,6 +82,7 @@ private final class FrameGroup {
             self.image = image
             self.size = CGSize(width: CGFloat(width), height: CGFloat(height))
             self.timestamp = timestamp
+            self.badgeImage = nil
         }
     }
 }

@@ -157,9 +157,6 @@ public final class LottieAnimationComponent: Component {
                         
                         for (key, value) in component.animation.colors {
                             view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
-                            /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
-                            self.colorCallbacks.append(colorCallback)
-                            view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                         }
                         
                         self.animationView = view

@@ -355,8 +355,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
                         updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
                         updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId))
+                        updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId)
                         
-                        let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}\u{00a0}]", attributes: updatedAttributes)
+                        let insertString = NSAttributedString(string: updatedString.attributedSubstring(from: range).string, attributes: updatedAttributes)
                         updatedString.replaceCharacters(in: range, with: insertString)
                     }
                     attributedText = updatedString
