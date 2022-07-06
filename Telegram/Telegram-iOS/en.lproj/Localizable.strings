@@ -7834,3 +7834,6 @@ Sorry for the inconvenience.";
 "Notification.PremiumGift.Title" = "Telegram Premium";
 "Notification.PremiumGift.Subtitle" = "for %@";
 "Notification.PremiumGift.View" = "View";
+
+"Gallery.AirPlay" = "AirPlay";
+"Gallery.AirPlayPlaceholder" = "This video is playing on the TV using AirPlay";
