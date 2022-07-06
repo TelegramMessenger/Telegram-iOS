@@ -109,8 +109,11 @@ public final class ComponentHostView<EnvironmentType>: UIView {
         if self.alpha.isZero {
             return nil
         }
+        if !self.isUserInteractionEnabled {
+            return nil
+        }
         for view in self.subviews.reversed() {
-            if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
+            if view.isUserInteractionEnabled, view.alpha != 0.0, let result = view.hitTest(self.convert(point, to: view), with: event) {
                 return result
             }
         }

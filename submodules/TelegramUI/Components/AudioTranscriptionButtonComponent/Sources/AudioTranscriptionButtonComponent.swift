@@ -48,13 +48,14 @@ public final class AudioTranscriptionButtonComponent: Component {
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
             self.animationView = ComponentHostView<Empty>()
-            self.animationView.isUserInteractionEnabled = false
             
             super.init(frame: frame)
             
             self.backgroundLayer.masksToBounds = true
             self.backgroundLayer.cornerRadius = 10.0
             self.layer.addSublayer(self.backgroundLayer)
+            
+            self.animationView.isUserInteractionEnabled = false
             
             self.addSubview(self.animationView)
             
