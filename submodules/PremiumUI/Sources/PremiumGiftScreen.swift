@@ -538,7 +538,6 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
         let fade = Child(RoundedRectangle.self)
         let text = Child(MultilineTextComponent.self)
         let section = Child(ProductGroupComponent.self)
-        let termsText = Child(MultilineTextComponent.self)
         
         return { context in
             let sideInset: CGFloat = 16.0
@@ -687,55 +686,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             size.height += section.size.height
             size.height += 23.0
             
-            let textSideInset: CGFloat = 16.0
             
-            let termsFont = Font.regular(13.0)
-            let termsTextColor = environment.theme.list.freeTextColor
-            let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
-                return (TelegramTextAttributes.URL, contents)
-            })
-                       
-            let termsString: MultilineTextComponent.TextContent = .markdown(
-                text: strings.Premium_Gift_Info,
-                attributes: termsMarkdownAttributes
-            )
-            
-            let accountContext = component.context
-            let peerId = component.peer.id
-            let present = component.present
-            
-            let termsText = termsText.update(
-                component: MultilineTextComponent(
-                    text: termsString,
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.0,
-                    highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.3),
-                    highlightAction: { attributes in
-                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                        } else {
-                            return nil
-                        }
-                    },
-                    tapAction: { attributes, _ in
-                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                            let controller = PremiumIntroScreen(context: accountContext, source: .profile(peerId))
-                            present(controller)
-                        }
-                    }
-                ),
-                environment: {},
-                availableSize: CGSize(width: availableWidth - sideInsets - textSideInset * 2.0, height: .greatestFiniteMagnitude),
-                transition: context.transition
-            )
-//            context.add(termsText
-//                .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + termsText.size.width / 2.0, y: size.height + termsText.size.height / 2.0))
-//            )
-            context.add(termsText
-                .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + termsText.size.width / 2.0, y: size.height + 164.0 + termsText.size.height / 2.0))
-            )
-            size.height += termsText.size.height
             size.height += 10.0
             size.height += scrollEnvironment.insets.bottom
             
@@ -885,7 +836,6 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                             strongSelf.updateInProgress(false)
                             
                             strongSelf.updated(transition: .immediate)
-//                            strongSelf.completion(duration)
                             
                             addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
                             
@@ -958,6 +908,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         let bottomPanel = Child(BlurredRectangle.self)
         let bottomSeparator = Child(Rectangle.self)
         let button = Child(SolidRoundedButtonComponent.self)
+        let termsText = Child(MultilineTextComponent.self)
         
         return { context in
             let environment = context.environment[EnvironmentType.self].value
@@ -1098,7 +1049,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 .scale(titleScale)
                 .opacity(titleAlpha)
             )
-                    
+                                
             let price: String?
             if let products = state.products, let selectedProductId = state.selectedProductId, let product = products.first(where: { $0.id == selectedProductId }) {
                 price = product.price
@@ -1192,6 +1143,56 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                     })
                 })
             )
+            
+            if let _ = context.state.peer {
+                let accountContext = context.component.context
+                let present = context.component.present
+                
+                let sideInset: CGFloat = 16.0
+                let textSideInset: CGFloat = 16.0
+                let availableWidth = context.availableSize.width
+                let sideInsets = sideInset * 2.0 + environment.safeInsets.left + environment.safeInsets.right
+                
+                let termsFont = Font.regular(13.0)
+                let termsTextColor = environment.theme.list.freeTextColor
+                let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                })
+                           
+                let termsString: MultilineTextComponent.TextContent = .markdown(
+                    text: environment.strings.Premium_Gift_Info,
+                    attributes: termsMarkdownAttributes
+                )
+                
+                let termsText = termsText.update(
+                    component: MultilineTextComponent(
+                        text: termsString,
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.0,
+                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.3),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { attributes, _ in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                                let controller = PremiumIntroScreen(context: accountContext, source: .giftTerms)
+                                present(controller)
+                            }
+                        }
+                    ),
+                    environment: {},
+                    availableSize: CGSize(width: availableWidth - sideInsets - textSideInset * 2.0, height: .greatestFiniteMagnitude),
+                    transition: context.transition
+                )
+                context.add(termsText
+                    .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + termsText.size.width / 2.0, y: context.availableSize.height - bottomPanel.size.height - termsText.size.height))
+                )
+            }
             
             return context.availableSize
         }

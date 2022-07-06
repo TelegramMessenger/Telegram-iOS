@@ -222,7 +222,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         
         self.subtitleNode.attributedText = subtitle.flatMap { subtitle in
             return NSAttributedString(
-                string: self.item.text,
+                string: subtitle,
                 font: subtitleFont,
                 textColor: subtitleColor
             )

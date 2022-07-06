@@ -723,6 +723,60 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         self.headerColorKey = colorKey
                         self.updateHeaderBackgroundColor(transition: .animated(duration: 0.2, curve: .linear))
                     }
+                case "web_app_open_popup":
+                    if let json = json, let message = json["message"] as? String, let buttons = json["buttons"] as? [Any] {
+                        let presentationData = self.presentationData
+                        
+                        let title = json["title"] as? String
+                        var alertButtons: [TextAlertAction] = []
+                        
+                        for buttonJson in buttons {
+                            if let button = buttonJson as? [String: Any], let id = button["id"] as? String, let type = button["type"] as? String {
+                                let buttonAction = {
+                                    self.sendAlertButtonEvent(id: id)
+                                }
+                                let text = button["text"] as? String
+                                switch type {
+                                    case "default":
+                                        if let text = text {
+                                            alertButtons.append(TextAlertAction(type: .genericAction, title: text, action: {
+                                                buttonAction()
+                                            }))
+                                        }
+                                    case "destructive":
+                                        if let text = text {
+                                            alertButtons.append(TextAlertAction(type: .destructiveAction, title: text, action: {
+                                                buttonAction()
+                                            }))
+                                        }
+                                    case "ok":
+                                        alertButtons.append(TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                            buttonAction()
+                                        }))
+                                    case "cancel":
+                                        alertButtons.append(TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                                            buttonAction()
+                                        }))
+                                    case "close":
+                                        alertButtons.append(TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Close, action: {
+                                            buttonAction()
+                                        }))
+                                    default:
+                                        break
+                                }
+                            }
+                        }
+                        
+                        var actionLayout: TextAlertContentActionLayout = .horizontal
+                        if alertButtons.count > 2 {
+                            actionLayout = .vertical
+                        }
+                        let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: title, text: message, actions: alertButtons, actionLayout: actionLayout)
+                        alertController.dismissed = {
+                            self.sendAlertButtonEvent(id: nil)
+                        }
+                        self.controller?.present(alertController, in: .window(.root))
+                    }
                 default:
                     break
             }
@@ -833,6 +887,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         fileprivate func sendSettingsButtonEvent() {
             self.webView?.sendEvent(name: "settings_button_pressed", data: nil)
+        }
+        
+        fileprivate func sendAlertButtonEvent(id: String?) {
+            var paramsString: String?
+            if let id = id {
+                paramsString = "{id: \"\(id)\"}"
+            }
+            self.webView?.sendEvent(name: "popup_closed", data: paramsString)
         }
     }
     

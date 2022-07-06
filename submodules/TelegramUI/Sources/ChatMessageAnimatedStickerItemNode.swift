@@ -1685,7 +1685,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
                 animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
             }
-            
+                        
+            animationFrame = animationFrame.offsetBy(dx: 0.0, dy: self.insets.top)
             additionalAnimationNode.frame = animationFrame
             if incomingMessage {
                 additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)

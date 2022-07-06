@@ -39,6 +39,7 @@ public enum PremiumSource: Equatable {
     case deeplink(String?)
     case profile(PeerId)
     case gift(from: PeerId, to: PeerId, duration: Int32)
+    case giftTerms
     
     var identifier: String? {
         switch self {
@@ -74,7 +75,7 @@ public enum PremiumSource: Equatable {
                 return "double_limits__about"
             case let .profile(id):
                 return "profile__\(id.id._internalGetInt64Value())"
-            case .gift:
+            case .gift, .giftTerms:
                 return nil
             case let .deeplink(reference):
                 if let reference = reference {
@@ -819,7 +820,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let boldTextFont = Font.semibold(15.0)
             
             let textString: String
-            if let _ = context.component.otherPeerName {
+            if case .giftTerms = context.component.source {
+                textString = strings.Premium_PersonalDescription
+            } else if let _ = context.component.otherPeerName {
                 if case let .gift(fromId, _, _) = context.component.source {
                     if fromId == context.component.context.account.peerId {
                         textString = strings.Premium_GiftedDescriptionYou
@@ -1447,7 +1450,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             )
             
             let titleString: String
-            if case .gift = context.component.source {
+            if case .giftTerms = context.component.source {
+                titleString = environment.strings.Premium_Title
+            } else if case .gift = context.component.source {
                 titleString = environment.strings.Premium_GiftedTitle
             } else if state.isPremium == true {
                 titleString = environment.strings.Premium_SubscribedTitle
