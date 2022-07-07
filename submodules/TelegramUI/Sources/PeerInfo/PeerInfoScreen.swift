@@ -7877,8 +7877,12 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, ReactiveT
                 let activeSessionsContext = context.engine.privacy.activeSessions()
                 let webSessionsContext = context.engine.privacy.webSessions()
                 let otherSessionCount = activeSessionsContext.state
-                |> map { state -> Int in
-                    return state.sessions.filter({ !$0.isCurrent }).count
+                let sharedDataPromise = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings]) |> take(1)
+                let otherSessionCount = combineLatest(activeSessionsContext.state, sharedDataPromise)
+                |> map { state, sharedData -> Int in
+                    let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+
+                    return state.sessions.filter({ !$0.isCurrent }).filter(fakePasscodeHolder.sessionFilter(account: context.account)).count
                 }
                 |> distinctUntilChanged
                 return otherSessionCount

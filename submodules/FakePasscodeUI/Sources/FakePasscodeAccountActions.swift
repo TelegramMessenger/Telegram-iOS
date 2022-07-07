@@ -8,24 +8,31 @@ import FakePasscode
 
 private final class FakePasscodeAccountActionsControllerArguments {
     let logOut: (Bool) -> Void
+    let sessionsToHide: () -> Void
     
-    init(logOut: @escaping (Bool) -> Void) {
+    init(logOut: @escaping (Bool) -> Void, sessionsToHide: @escaping () -> Void) {
         self.logOut = logOut
+        self.sessionsToHide = sessionsToHide
     }
 }
 
 private enum FakePasscodeAccountActionsSection: Int32 {
     case sendTgMessages
     case fakePhoneNumber
+    case sessionActions
     case miscActions
 }
 
 private enum FakePasscodeAccountActionsEntry: ItemListNodeEntry {
     case logOut(PresentationTheme, String, Bool)
+    case sessionsToHide(PresentationTheme, String, String)
+    case sessionsActionsInfo(PresentationTheme, String)
     case miscActionsInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
+            case .sessionsToHide, .sessionsActionsInfo:
+                return FakePasscodeAccountActionsSection.sessionActions.rawValue
             case .logOut, .miscActionsInfo:
                 return FakePasscodeAccountActionsSection.miscActions.rawValue
         }
@@ -33,10 +40,14 @@ private enum FakePasscodeAccountActionsEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .logOut:
+            case .sessionsToHide:
                 return 0
-            case .miscActionsInfo:
+            case .sessionsActionsInfo:
                 return 1
+            case .logOut:
+                return 2
+            case .miscActionsInfo:
+                return 3
         }
     }
 
@@ -47,11 +58,15 @@ private enum FakePasscodeAccountActionsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! FakePasscodeAccountActionsControllerArguments
         switch self {
+            case let .sessionsToHide(_, title, label):
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: label, sectionId: self.section, style: .blocks, action: {
+                    arguments.sessionsToHide()
+                })
             case let .logOut(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.logOut(value)
                 })
-            case let .miscActionsInfo(_, text):
+            case let .miscActionsInfo(_, text), let .sessionsActionsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -67,9 +82,15 @@ private struct FakePasscodeAccountActionsData: Equatable {
 
 private func fakePasscodeAccountActionsControllerEntries(presentationData: PresentationData, settings: FakePasscodeAccountActionsSettings) -> [FakePasscodeAccountActionsEntry] {
     var entries: [FakePasscodeAccountActionsEntry] = []
-    
+
+    let sessionsCount = "\(settings.sessionsToHide.count)"
+    let label = settings.sessionsToHideMode == .selected ? sessionsCount
+        : presentationData.strings.FakePasscodes_AccountActions_AllExceptCount(sessionsCount).string
+
+    entries.append(.sessionsToHide(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, label))
+    entries.append(.sessionsActionsInfo(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsSettingsInfo))
     entries.append(.logOut(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_LogOut, settings.logOut))
-    entries.append(.miscActionsInfo(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_MiscActionsInfo))
+     entries.append(.miscActionsInfo(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_MiscActionsInfo))
     
     return entries
 }
@@ -77,10 +98,11 @@ private func fakePasscodeAccountActionsControllerEntries(presentationData: Prese
 func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, account: FakePasscodeActionsAccount) -> ViewController {
     let actionsDisposable = DisposableSet()
 
+    var pushControllerImpl: ((ViewController) -> Void)?
+
     let accountActionsDataPromise = Promise<FakePasscodeAccountActionsData>()
     accountActionsDataPromise.set(context.sharedContext.accountManager.transaction { transaction -> FakePasscodeAccountActionsData in
-        let fakePasscodeSettings = FakePasscodeSettingsHolder(transaction).settings.first(where: { $0.uuid == uuid })!
-        let settings = fakePasscodeSettings.accountActions.first(where: { $0.peerId == account.peerId && $0.recordId == account.recordId }) ?? .defaultSettings(peerId: account.peerId, recordId: account.recordId)
+        let settings = FakePasscodeSettingsHolder(transaction).getAccountActions(uuid, account)
         return FakePasscodeAccountActionsData(settings: settings)
     })
 
@@ -88,6 +110,10 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
         updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
             return settings.withUpdatedLogOut(enabled)
         }
+    }, sessionsToHide: {
+        pushControllerImpl?(hiddenSessionsController(context: context, uuid: uuid, account: account, updated: { settings in
+            accountActionsDataPromise.set(.single(FakePasscodeAccountActionsData(settings: settings)))
+        }))
     })
 
     let signal = combineLatest(context.sharedContext.presentationData, accountActionsDataPromise.get()) |> deliverOnMainQueue
@@ -104,6 +130,10 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
     let controller = ItemListControllerReactiveToPasscodeSwitch(context: context, state: signal, onPasscodeSwitch: { controller in
         controller.dismiss(animated: false)
     })
+
+    pushControllerImpl = { [weak controller] c in
+        (controller?.navigationController as? NavigationController)?.pushViewController(c)
+    }
 
     return controller
 }

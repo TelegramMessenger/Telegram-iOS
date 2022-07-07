@@ -6,48 +6,6 @@ import SwiftSignalKit
 import TelegramStringFormatting
 import AccountContext
 
-public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
-    public let peerId: PeerId
-    public let recordId: AccountRecordId
-    public let logOut: Bool
-    
-    public static func defaultSettings(peerId: PeerId, recordId: AccountRecordId) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: peerId, recordId: recordId, logOut: false)
-    }
-    
-    public init(peerId: PeerId, recordId: AccountRecordId, logOut: Bool) {
-        self.peerId = peerId
-        self.recordId = recordId
-        self.logOut = logOut
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: StringCodingKey.self)
-
-        self.peerId = try container.decode(PeerId.self, forKey: "pid")
-        self.recordId = try container.decode(AccountRecordId.self, forKey: "rid")
-        self.logOut = (try container.decodeIfPresent(Int32.self, forKey: "lo") ?? 0) != 0
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: StringCodingKey.self)
-
-        try container.encode(self.peerId, forKey: "pid")
-        try container.encode(self.recordId, forKey: "rid")
-        try container.encode((self.logOut ? 1 : 0) as Int32, forKey: "lo")
-    }
-    
-    public func withUpdatedLogOut(_ logOut: Bool) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, logOut: logOut)
-    }
-    
-    public func performActions(accountManager: AccountManager<TelegramAccountManagerTypes>, applicationBindings: TelegramApplicationBindings) {
-        if logOut {
-            applicationBindings.clearAllNotifications()
-            let _ = logoutFromAccount(id: recordId, accountManager: accountManager, alreadyLoggedOutRemotely: false).start()
-        }
-    }
-}
 
 public struct FakePasscodeSmsActionSettings: Codable, Equatable {
     public init() {
@@ -169,6 +127,30 @@ public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably
             }
         }
         return nil
+    }
+
+    public func sessionFilter(account: Account) -> ((RecentAccountSession) -> Bool) {
+        var sessionFilter: ((RecentAccountSession) -> Bool) = { _ in true }
+        if unlockedWithFakePasscode() {
+            let settings = getAccountActions(account: account)
+            if settings.sessionsToHideMode == .selected {
+                sessionFilter = { !settings.sessionsToHide.contains($0.hash) }
+            } else {
+                sessionFilter = { settings.sessionsToHide.contains($0.hash) }
+            }
+        }
+        return sessionFilter
+    }
+
+    public func getAccountActions(account: Account) -> FakePasscodeAccountActionsSettings {
+        guard let settings = activeFakePasscodeSettings() else { return .defaultSettings(peerId: account.peerId, recordId: account.id) }
+        return settings.accountActions.first(where: { $0.peerId == account.peerId && $0.recordId == account.id }) ?? .defaultSettings(peerId: account.peerId, recordId: account.id)
+    }
+
+    public func getAccountActions(_ uuid: UUID, _ account: FakePasscodeActionsAccount) -> FakePasscodeAccountActionsSettings {
+        let fakePasscodeSettings = self.settings.first(where: { $0.uuid == uuid })!
+        let settings = fakePasscodeSettings.accountActions.first(where: { $0.peerId == account.peerId && $0.recordId == account.recordId }) ?? .defaultSettings(peerId: account.peerId, recordId: account.recordId)
+        return settings;
     }
 }
 

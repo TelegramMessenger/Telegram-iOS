@@ -280,13 +280,6 @@ private struct FakePasscodeOptionsControllerState: Equatable {
     var activationMessage: String?
 }
 
-internal struct FakePasscodeActionsAccount: Equatable {
-    let peerId: PeerId
-    let recordId: AccountRecordId
-    let displayName: String
-    let avatar: UIImage?
-}
-
 private func fakePasscodeOptionsControllerEntries(presentationData: PresentationData, settings: FakePasscodeSettings, accounts: [FakePasscodeActionsAccount]) -> [FakePasscodeOptionsEntry] {
     var entries: [FakePasscodeOptionsEntry] = [
         .changeName(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeChangeName, settings.name),

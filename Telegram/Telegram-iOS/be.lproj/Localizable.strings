@@ -43,5 +43,15 @@
 "PasscodeSettings.BadAttempts.FakePasscode" = "Несапраўдны код блакіроўкі";
 "PasscodeSettings.BadAttempts.Clear" = "Ачысціць";
 
+"FakePasscodes.AccountActions.SessionsToHide" = "Сеансы для хавання";
+"FakePasscodes.AccountActions.AllExceptCount" = "Усе (-%1$@)";
+"FakePasscodes.AccountActions.SessionsSettingsInfo" = "Абярыце сеансы, якія будуць бачны ў наладах і/альбо завершаны пасля актывацыі несапраўднага кода блакіроўкі.";
 "FakePasscodes.AccountActions.LogOut" = "Выходзіць з акаўнту";
 "FakePasscodes.AccountActions.MiscActionsInfo" = "Пры ўводзе несапраўднага кода блакіроўкі выконваюцца выбраныя дзеянні.";
+
+"AccountActions.SessionsToHide.Clear" = "Clear";
+"AccountActions.SessionsToHide.CheckAll" = "Выбраць усе";
+"AccountActions.SessionsToHide.Selected" = "Абраныя";
+"AccountActions.SessionsToHide.ExceptSelected" = "Акрамя абраных";
+"AccountActions.SessionsToHide.ActiveSessions" = "Актыўныя сеансы";
+"AccountActions.SessionsToHide.CleanConfirmation" = "Вы ўпэўнены?";

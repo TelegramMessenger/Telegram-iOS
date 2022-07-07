@@ -7780,5 +7780,15 @@ Sorry for the inconvenience.";
 "PasscodeSettings.BadAttempts.FakePasscode" = "Fake Passcode";
 "PasscodeSettings.BadAttempts.Clear" = "Clear";
 
+"FakePasscodes.AccountActions.SessionsToHide" = "Sessions to Hide";
+"FakePasscodes.AccountActions.AllExceptCount" = "All (-%1$@)";
+"FakePasscodes.AccountActions.SessionsSettingsInfo" = "Choose sessions which will be visible in Settings and/or terminated on Fake Passcode Activation";
 "FakePasscodes.AccountActions.LogOut" = "Log Out";
 "FakePasscodes.AccountActions.MiscActionsInfo" = "When a fake passcode is entered, selected actions are performed.";
+
+"AccountActions.SessionsToHide.Clear" = "Clear";
+"AccountActions.SessionsToHide.Selected" = "Selected";
+"AccountActions.SessionsToHide.CheckAll" = "Check all";
+"AccountActions.SessionsToHide.ExceptSelected" = "Except selected";
+"AccountActions.SessionsToHide.ActiveSessions" = "Active sessions";
+"AccountActions.SessionsToHide.CleanConfirmation" = "Are your sure?";
