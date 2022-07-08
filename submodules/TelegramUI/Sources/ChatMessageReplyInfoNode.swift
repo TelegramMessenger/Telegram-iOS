@@ -177,7 +177,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     }
                 }
                 if entities.count > 0 {
-                    messageText = stringWithAppliedEntities(trimToLineCount(arguments.message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                    messageText = stringWithAppliedEntities(trimToLineCount(arguments.message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: arguments.message)
                 } else {
                     messageText = NSAttributedString(string: textString.string, font: textFont, textColor: textColor)
                 }

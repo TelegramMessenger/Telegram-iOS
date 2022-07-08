@@ -684,7 +684,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     break
                 }
             }
-            messageText = galleryCaptionStringWithAppliedEntities(message.text, entities: entities)
+            messageText = galleryCaptionStringWithAppliedEntities(message.text, entities: entities, message: message)
         }
                         
         if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canFullscreen != !self.fullscreenButton.isHidden || canShare != !self.actionButton.isHidden || canEdit != !self.editButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {

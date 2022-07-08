@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -111,7 +112,7 @@ public func messageTextWithAttributes(message: EngineMessage) -> NSAttributedStr
             let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
             var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
             //updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
-            updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId)
+            updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId, file: message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
             
             let insertString = NSAttributedString(string: updatedString.attributedSubstring(from: range).string, attributes: updatedAttributes)
             updatedString.replaceCharacters(in: range, with: insertString)

@@ -544,6 +544,8 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], t
                 break
             case .NoPremium:
                 break
+            case .CustomEmoji:
+                break
         }
     }
     return result
@@ -605,6 +607,8 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
                 break
             case .NoPremium:
                 break
+            case .CustomEmoji:
+                break
         }
     }
     return result
@@ -665,6 +669,8 @@ private func decryptedAttributes101(_ attributes: [TelegramMediaFileAttribute], 
             case .hintIsValidated:
                 break
             case .NoPremium:
+                break
+            case .CustomEmoji:
                 break
         }
     }

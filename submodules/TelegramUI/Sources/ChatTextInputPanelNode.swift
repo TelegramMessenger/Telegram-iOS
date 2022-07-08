@@ -794,7 +794,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     return UIView()
                 }
                 
-                return EmojiTextAttachmentView(context: context, emoji: emoji, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12))
+                return EmojiTextAttachmentView(context: context, emoji: emoji, file: emoji.file, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12))
             }
         }
     }

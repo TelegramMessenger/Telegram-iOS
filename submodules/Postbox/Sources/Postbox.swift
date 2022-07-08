@@ -529,6 +529,11 @@ public final class Transaction {
         return self.postbox?.updateMedia(id, update: update) ?? Set()
     }
     
+    public func storeMediaIfNotPresent(media: Media) {
+        assert(!self.disposed)
+        self.postbox?.storeMediaIfNotPresent(media: media)
+    }
+    
     public func replaceItemCollections(namespace: ItemCollectionId.Namespace, itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])]) {
         assert(!self.disposed)
         self.postbox?.replaceItemCollections(namespace: namespace, itemCollections: itemCollections)
@@ -2293,6 +2298,10 @@ final class PostboxImpl {
         var updatedMessageIndices = Set<MessageIndex>()
         self.messageHistoryTable.updateMedia(id, media: update, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, updatedMessageIndices: &updatedMessageIndices)
         return updatedMessageIndices
+    }
+    
+    fileprivate func storeMediaIfNotPresent(media: Media) {
+        self.messageHistoryTable.storeMediaIfNotPresent(media: media)
     }
     
     fileprivate func replaceItemCollections(namespace: ItemCollectionId.Namespace, itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])]) {

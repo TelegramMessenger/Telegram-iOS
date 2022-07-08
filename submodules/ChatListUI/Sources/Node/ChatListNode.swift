@@ -14,6 +14,9 @@ import ItemListUI
 import SearchUI
 import ChatListSearchItemHeader
 import PremiumUI
+import AnimationCache
+import MultiAnimationRenderer
+import Postbox
 
 public enum ChatListNodeMode {
     case chatList
@@ -75,7 +78,10 @@ public final class ChatListNodeInteraction {
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
     
-    public init(activateSearch: @escaping () -> Void, peerSelected: @escaping (EnginePeer, EnginePeer?, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (EnginePeer) -> Void, togglePeerSelected: @escaping (EnginePeer) -> Void, togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (EnginePeer, EngineMessage, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (EngineChatList.Group) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, setItemPinned: @escaping (EngineChatList.PinnedItem.Id, Bool) -> Void, setPeerMuted: @escaping (EnginePeer.Id, Bool) -> Void, deletePeer: @escaping (EnginePeer.Id, Bool) -> Void, updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void, togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (EnginePeer.Id) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
+    let animationCache: AnimationCache
+    let animationRenderer: MultiAnimationRenderer
+    
+    public init(context: AccountContext, activateSearch: @escaping () -> Void, peerSelected: @escaping (EnginePeer, EnginePeer?, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (EnginePeer) -> Void, togglePeerSelected: @escaping (EnginePeer) -> Void, togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (EnginePeer, EngineMessage, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (EngineChatList.Group) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, setItemPinned: @escaping (EngineChatList.PinnedItem.Id, Bool) -> Void, setPeerMuted: @escaping (EnginePeer.Id, Bool) -> Void, deletePeer: @escaping (EnginePeer.Id, Bool) -> Void, updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void, togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (EnginePeer.Id) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.disabledPeerSelected = disabledPeerSelected
@@ -95,6 +101,11 @@ public final class ChatListNodeInteraction {
         self.hidePsa = hidePsa
         self.activateChatPreview = activateChatPreview
         self.present = present
+        
+        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+            return TempBox.shared.tempFile(fileName: "file").path
+        })
+        self.animationRenderer = MultiAnimationRendererImpl()
     }
 }
 
@@ -733,7 +744,7 @@ public final class ChatListNode: ListView {
         
         self.keepMinimalScrollHeightWithTopInset = navigationBarSearchContentHeight
         
-        let nodeInteraction = ChatListNodeInteraction(activateSearch: { [weak self] in
+        let nodeInteraction = ChatListNodeInteraction(context: context, activateSearch: { [weak self] in
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
                 activateSearch()
             }

@@ -54,7 +54,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
     }
     
-    public init(context: AccountContext, groupId: String, attemptSynchronousLoad: Bool, emoji: ChatTextInputTextCustomEmojiAttribute, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor, pointSize: CGSize) {
+    public init(context: AccountContext, groupId: String, attemptSynchronousLoad: Bool, emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor, pointSize: CGSize) {
         self.context = context
         self.groupId = groupId
         self.emoji = emoji
@@ -68,23 +68,19 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         
         super.init()
         
-        self.infoDisposable = (context.engine.stickers.loadedStickerPack(reference: emoji.stickerPack, forceActualized: false)
-        |> deliverOnMainQueue).start(next: { [weak self] result in
-            guard let strongSelf = self else {
-                return
-            }
-            switch result {
-            case let .result(_, items, _):
-                for item in items {
-                    if item.file.fileId.id == emoji.fileId {
-                        strongSelf.updateFile(file: item.file, attemptSynchronousLoad: false)
-                        break
-                    }
+        if let file = file {
+            self.updateFile(file: file, attemptSynchronousLoad: true)
+        } else {
+            self.infoDisposable = (context.engine.stickers.resolveInlineSticker(fileId: emoji.fileId)
+            |> deliverOnMainQueue).start(next: { [weak self] file in
+                guard let strongSelf = self else {
+                    return
                 }
-            default:
-                break
-            }
-        })
+                if let file = file {
+                    strongSelf.updateFile(file: file, attemptSynchronousLoad: false)
+                }
+            })
+        }
     }
     
     override public init(layer: Any) {
@@ -179,8 +175,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
 public final class EmojiTextAttachmentView: UIView {
     private let contentLayer: InlineStickerItemLayer
     
-    public init(context: AccountContext, emoji: ChatTextInputTextCustomEmojiAttribute, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor) {
-        self.contentLayer = InlineStickerItemLayer(context: context, groupId: "textInputView", attemptSynchronousLoad: true, emoji: emoji, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: 24.0, height: 24.0))
+    public init(context: AccountContext, emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor) {
+        self.contentLayer = InlineStickerItemLayer(context: context, groupId: "textInputView", attemptSynchronousLoad: true, emoji: emoji, file: file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: 24.0, height: 24.0))
         
         super.init(frame: CGRect())
         

@@ -301,7 +301,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let textFont = item.presentationData.messageFont
                 
                 if let entities = entities {
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, message: item.message)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {
@@ -321,7 +321,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
                         var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
                         updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
-                        updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId)
+                        updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId, file: item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
                         
                         let insertString = NSAttributedString(string: updatedString.attributedSubstring(from: range).string, attributes: updatedAttributes)
                         updatedString.replaceCharacters(in: range, with: insertString)

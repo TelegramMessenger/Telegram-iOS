@@ -1060,7 +1060,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             if isGiftView {
                 termsString = .plain(NSAttributedString())
             } else if let promoConfiguration = context.state.promoConfiguration {
-                let attributedString = stringWithAppliedEntities(promoConfiguration.status, entities: promoConfiguration.statusEntities, baseColor: termsTextColor, linkColor: environment.theme.list.itemAccentColor, baseFont: termsFont, linkFont: termsFont, boldFont: boldTermsFont, italicFont: italicTermsFont, boldItalicFont: boldItalicTermsFont, fixedFont: monospaceTermsFont, blockQuoteFont: termsFont)
+                let attributedString = stringWithAppliedEntities(promoConfiguration.status, entities: promoConfiguration.statusEntities, baseColor: termsTextColor, linkColor: environment.theme.list.itemAccentColor, baseFont: termsFont, linkFont: termsFont, boldFont: boldTermsFont, italicFont: italicTermsFont, boldItalicFont: boldItalicTermsFont, fixedFont: monospaceTermsFont, blockQuoteFont: termsFont, message: nil)
                 termsString = .plain(attributedString)
             } else {
                 termsString = .markdown(

@@ -964,7 +964,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var titleAccessoryPanelHeight: CGFloat?
         var titleAccessoryPanelBackgroundHeight: CGFloat?
         var extraTransition = transition
-        if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.titleAccessoryPanelNode, interfaceInteraction: self.interfaceInteraction) {
+        if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.titleAccessoryPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction) {
             if self.titleAccessoryPanelNode != titleAccessoryPanelNode {
                  dismissedTitleAccessoryPanelNode = self.titleAccessoryPanelNode
                 self.titleAccessoryPanelNode = titleAccessoryPanelNode
@@ -2820,7 +2820,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let trimmedInputText = effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines)
                 let peerId = effectivePresentationInterfaceState.chatLocation.peerId
                 if peerId?.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText) {
-                    messages.append(.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+                    messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
                 } else {
                     let inputText = convertMarkdownToAttributes(effectiveInputText)
                     
@@ -2838,14 +2838,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 webpage = self.chatPresentationInterfaceState.urlPreview?.1
                             }
 
-                            messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+                            messages.append(.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
 
                             #if DEBUG
                             if text.string == "sleep" {
                                 messages.removeAll()
 
                                 for i in 0 ..< 5 {
-                                    messages.append(.message(text: "sleep\(i)", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                                    messages.append(.message(text: "sleep\(i)", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
                                 }
                             }
                             #endif

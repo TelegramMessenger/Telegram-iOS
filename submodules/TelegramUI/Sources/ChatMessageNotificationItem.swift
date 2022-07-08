@@ -310,7 +310,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         let textColor = presentationData.theme.inAppNotification.primaryTextColor
         var attributedMessageText: NSAttributedString
         if let messageEntities = messageEntities {
-            attributedMessageText = stringWithAppliedEntities(messageText, entities: messageEntities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+            attributedMessageText = stringWithAppliedEntities(messageText, entities: messageEntities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: item.messages.first)
         } else {
             attributedMessageText = NSAttributedString(string: messageText.replacingOccurrences(of: "\n\n", with: " "), font: textFont, textColor: textColor)
         }

@@ -393,7 +393,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     string.append(NSAttributedString(string: "\n", font: textFont, textColor: messageTheme.primaryTextColor))
                 }
                 if let entities = entities {
-                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont))
+                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont, message: nil))
                 } else {
                     string.append(NSAttributedString(string: text + "\n", font: textFont, textColor: messageTheme.primaryTextColor))
                 }

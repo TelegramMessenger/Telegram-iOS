@@ -11,6 +11,7 @@ private let typeHasLinkedStickers: Int32 = 6
 private let typeHintFileIsLarge: Int32 = 7
 private let typeHintIsValidated: Int32 = 8
 private let typeNoPremium: Int32 = 9
+private let typeCustomEmoji: Int32 = 10
 
 public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
     case id(id: Int64, accessHash: Int64)
@@ -188,6 +189,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
     case hintFileIsLarge
     case hintIsValidated
     case NoPremium
+    case CustomEmoji(isPremium: Bool, alt: String, packReference: StickerPackReference?)
     
     public init(decoder: PostboxDecoder) {
         let type: Int32 = decoder.decodeInt32ForKey("t", orElse: 0)
@@ -217,6 +219,8 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
                 self = .hintIsValidated
             case typeNoPremium:
                 self = .NoPremium
+            case typeCustomEmoji:
+                self = .CustomEmoji(isPremium: decoder.decodeBoolForKey("ip", orElse: true), alt: decoder.decodeStringForKey("dt", orElse: ""), packReference: decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference)
             default:
                 preconditionFailure()
         }
@@ -273,6 +277,15 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
                 encoder.encodeInt32(typeHintIsValidated, forKey: "t")
             case .NoPremium:
                 encoder.encodeInt32(typeNoPremium, forKey: "t")
+            case let .CustomEmoji(isPremium, alt, packReference):
+                encoder.encodeInt32(typeCustomEmoji, forKey: "t")
+                encoder.encodeBool(isPremium, forKey: "ip")
+                encoder.encodeString(alt, forKey: "dt")
+                if let packReference = packReference {
+                    encoder.encodeObject(packReference, forKey: "pr")
+                } else {
+                    encoder.encodeNil(forKey: "pr")
+                }
         }
     }
 }

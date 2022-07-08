@@ -1,5 +1,6 @@
 import SwiftSignalKit
 import Postbox
+import TelegramApi
 
 public extension TelegramEngine {
     final class Stickers {
@@ -154,6 +155,37 @@ public extension TelegramEngine {
                 transaction.replaceItemCollectionInfos(namespace: namespace, itemCollectionInfos: sortedPacks)
             }
             |> ignoreValues
+        }
+        
+        public func resolveInlineSticker(fileId: Int64) -> Signal<TelegramMediaFile?, NoError> {
+            return self.account.postbox.transaction { transaction -> TelegramMediaFile? in
+                return transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile
+            }
+            |> mapToSignal { cachedFile -> Signal<TelegramMediaFile?, NoError> in
+                if let cachedFile = cachedFile {
+                    return .single(cachedFile)
+                }
+                
+                return self.account.network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: [fileId]))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<[Api.Document]?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<TelegramMediaFile?, NoError> in
+                    guard let result = result else {
+                        return .single(nil)
+                    }
+                    return self.account.postbox.transaction { transaction -> TelegramMediaFile? in
+                        for document in result {
+                            if let file = telegramMediaFileFromApiDocument(document) {
+                                transaction.storeMediaIfNotPresent(media: file)
+                            }
+                        }
+                        
+                        return transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile
+                    }
+                }
+            }
         }
     }
 }

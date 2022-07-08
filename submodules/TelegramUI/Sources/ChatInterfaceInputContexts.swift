@@ -272,8 +272,17 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         case .inputButtons:
             return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .none, .text:
-            if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
-                return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
+            if let editMessage = chatPresentationInterfaceState.interfaceState.editMessage {
+                let isTextEmpty = editMessage.inputState.inputText.length == 0
+                
+                let stickersAreEmoji = !isTextEmpty
+                
+                var stickersEnabled = true
+                stickersEnabled = true
+                
+                accessoryItems.append(.stickers(isEnabled: stickersEnabled, isEmoji: stickersAreEmoji))
+                
+                return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             } else {
                 var accessoryItems: [ChatTextInputAccessoryItem] = []
                 var extendedSearchLayout = false

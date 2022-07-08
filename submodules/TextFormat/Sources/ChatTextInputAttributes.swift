@@ -220,19 +220,21 @@ public final class ChatTextInputTextUrlAttribute: NSObject {
 }
 
 public final class ChatTextInputTextCustomEmojiAttribute: NSObject {
-    public let stickerPack: StickerPackReference
+    public let stickerPack: StickerPackReference?
     public let fileId: Int64
+    public let file: TelegramMediaFile?
     
-    public init(stickerPack: StickerPackReference, fileId: Int64) {
+    public init(stickerPack: StickerPackReference?, fileId: Int64, file: TelegramMediaFile?) {
         self.stickerPack = stickerPack
         self.fileId = fileId
+        self.file = file
         
         super.init()
     }
     
     override public func isEqual(_ object: Any?) -> Bool {
         if let other = object as? ChatTextInputTextCustomEmojiAttribute {
-            return self.stickerPack == other.stickerPack && self.fileId == other.fileId
+            return self.stickerPack == other.stickerPack && self.fileId == other.fileId && self.file?.fileId == other.file?.fileId
         } else {
             return false
         }

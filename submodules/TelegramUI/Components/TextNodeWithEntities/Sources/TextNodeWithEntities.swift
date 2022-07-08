@@ -7,13 +7,16 @@ import TextFormat
 import AccountContext
 import AnimationCache
 import MultiAnimationRenderer
+import TelegramCore
 
 private final class InlineStickerItem: Hashable {
     let emoji: ChatTextInputTextCustomEmojiAttribute
+    let file: TelegramMediaFile?
     let fontSize: CGFloat
     
-    init(emoji: ChatTextInputTextCustomEmojiAttribute, fontSize: CGFloat) {
+    init(emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, fontSize: CGFloat) {
         self.emoji = emoji
+        self.file = file
         self.fontSize = fontSize
     }
     
@@ -24,6 +27,9 @@ private final class InlineStickerItem: Hashable {
     
     static func ==(lhs: InlineStickerItem, rhs: InlineStickerItem) -> Bool {
         if lhs.emoji.fileId != rhs.emoji.fileId {
+            return false
+        }
+        if lhs.file?.fileId != rhs.file?.fileId {
             return false
         }
         if lhs.fontSize != rhs.fontSize {
@@ -95,7 +101,7 @@ public final class TextNodeWithEntities {
                 string.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: fullRange, options: [], using: { value, range, _ in
                     if let value = value as? ChatTextInputTextCustomEmojiAttribute {
                         if let font = string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont {
-                            string.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: value.stickerPack, fileId: value.fileId), fontSize: font.pointSize), range: range)
+                            string.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: value, file: value.file, fontSize: font.pointSize), range: range)
                         }
                     }
                 })
@@ -159,7 +165,7 @@ public final class TextNodeWithEntities {
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: false, emoji: stickerItem.emoji, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
+                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: false, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         
@@ -267,7 +273,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
             string.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: fullRange, options: [], using: { value, range, _ in
                 if let value = value as? ChatTextInputTextCustomEmojiAttribute {
                     if let font = string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont {
-                        string.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: value.stickerPack, fileId: value.fileId), fontSize: font.pointSize), range: range)
+                        string.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: value, file: value.file, fontSize: font.pointSize), range: range)
                     }
                 }
             })
@@ -322,7 +328,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: false, emoji: stickerItem.emoji, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
+                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: false, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.layer.addSublayer(itemLayer)
                         

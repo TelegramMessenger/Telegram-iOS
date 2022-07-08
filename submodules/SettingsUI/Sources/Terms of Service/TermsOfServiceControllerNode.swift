@@ -60,7 +60,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         
         let fontSize = floor(presentationData.listsFontSize.baseDisplaySize * 15.0 / 17.0)
         
-        self.contentTextNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: presentationData.theme.list.itemPrimaryTextColor, linkColor: presentationData.theme.list.itemAccentColor, baseFont: Font.regular(fontSize), linkFont: Font.regular(fontSize), boldFont: Font.semibold(fontSize), italicFont: Font.italic(fontSize), boldItalicFont: Font.semiboldItalic(fontSize), fixedFont: Font.monospace(fontSize), blockQuoteFont: Font.regular(fontSize))
+        self.contentTextNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: presentationData.theme.list.itemPrimaryTextColor, linkColor: presentationData.theme.list.itemAccentColor, baseFont: Font.regular(fontSize), linkFont: Font.regular(fontSize), boldFont: Font.semibold(fontSize), italicFont: Font.italic(fontSize), boldItalicFont: Font.semiboldItalic(fontSize), fixedFont: Font.monospace(fontSize), blockQuoteFont: Font.regular(fontSize), message: nil)
         
         self.toolbarNode = ASDisplayNode()
         self.toolbarSeparatorNode = ASDisplayNode()

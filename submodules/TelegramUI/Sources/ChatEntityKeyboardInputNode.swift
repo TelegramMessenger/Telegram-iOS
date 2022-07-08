@@ -52,7 +52,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     case let .Sticker(displayText, packReference, _):
                         text = displayText
                         if let packReference = packReference {
-                            emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: item.file.fileId.id)
+                            emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: item.file.fileId.id, file: item.file)
                             break loop
                         }
                     default:
