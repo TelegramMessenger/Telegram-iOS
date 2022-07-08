@@ -31,7 +31,8 @@ void ASRecursiveUnfairLockLock(ASRecursiveUnfairLock *l)
   // because only we are `self`. And if it's already `self` then we already have
   // the lock, because we reset it to NULL before we unlock. So (thread == self) is
   // invariant.
-  
+
+#if AS_USE_OS_LOCK
   const pthread_t s = pthread_self();
   if (os_unfair_lock_trylock(&l->_lock)) {
     // Owned by nobody. We now have the lock. Assign self.
@@ -43,14 +44,28 @@ void ASRecursiveUnfairLockLock(ASRecursiveUnfairLock *l)
     os_unfair_lock_lock(&l->_lock);
     rul_set_thread(l, s);
   }
+#else
+    const pthread_t s = pthread_self();
+    if (OSSpinLockTry(&l->_lock)) {
+        // Owned by nobody. We now have the lock. Assign self.
+        rul_set_thread(l, s);
+    } else if (rul_get_thread(l) == s) {
+        // Owned by self (recursive lock). nop.
+    } else {
+        // Owned by other thread. Block and then set thread to self.
+        OSSpinLockLock(&l->_lock);
+        rul_set_thread(l, s);
+    }
+#endif
   
   l->_count++;
 }
 
 BOOL ASRecursiveUnfairLockTryLock(ASRecursiveUnfairLock *l)
 {
-  // Same as Lock above. See comments there.
-  
+    // Same as Lock above. See comments there.
+    
+#if AS_USE_OS_LOCK
   const pthread_t s = pthread_self();
   if (os_unfair_lock_trylock(&l->_lock)) {
     // Owned by nobody. We now have the lock. Assign self.
@@ -61,6 +76,18 @@ BOOL ASRecursiveUnfairLockTryLock(ASRecursiveUnfairLock *l)
     // Owned by other thread. Fail.
     return NO;
   }
+#else
+    const pthread_t s = pthread_self();
+    if (OSSpinLockTry(&l->_lock)) {
+      // Owned by nobody. We now have the lock. Assign self.
+      rul_set_thread(l, s);
+    } else if (rul_get_thread(l) == s) {
+      // Owned by self (recursive lock). nop.
+    } else {
+      // Owned by other thread. Fail.
+      return NO;
+    }
+#endif
   
   l->_count++;
   return YES;
@@ -78,6 +105,10 @@ void ASRecursiveUnfairLockUnlock(ASRecursiveUnfairLock *l)
     // try to re-lock, and fail the -tryLock, and read _thread, then we'll mistakenly
     // think that we still own the lock and proceed without blocking.
     rul_set_thread(l, NULL);
+#if AS_USE_OS_LOCK
     os_unfair_lock_unlock(&l->_lock);
+#else
+    OSSpinLockUnlock(&l->_lock);
+#endif
   }
 }

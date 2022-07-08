@@ -9,7 +9,6 @@
 
 #import <Foundation/Foundation.h>
 
-#import <os/lock.h>
 #import <pthread.h>
 
 #import <AsyncDisplayKit/ASAssert.h>
@@ -148,7 +147,11 @@ namespace AS {
           success = _recursive.try_lock();
           break;
         case Unfair:
+#if AS_USE_OS_LOCK
           success = os_unfair_lock_trylock(&_unfair);
+#else
+          success = OSSpinLockTry(&_unfair);
+#endif
           break;
         case RecursiveUnfair:
           success = ASRecursiveUnfairLockTryLock(&_runfair);
@@ -169,7 +172,11 @@ namespace AS {
           _recursive.lock();
           break;
         case Unfair:
+#if AS_USE_OS_LOCK
           os_unfair_lock_lock(&_unfair);
+#else
+          OSSpinLockLock(&_unfair);
+#endif
           break;
         case RecursiveUnfair:
           ASRecursiveUnfairLockLock(&_runfair);
@@ -188,7 +195,11 @@ namespace AS {
           _recursive.unlock();
           break;
         case Unfair:
+#if AS_USE_OS_LOCK
           os_unfair_lock_unlock(&_unfair);
+#else
+          OSSpinLockUnlock(&_unfair);
+#endif
           break;
         case RecursiveUnfair:
           ASRecursiveUnfairLockUnlock(&_runfair);
@@ -226,7 +237,11 @@ namespace AS {
       } else {
         if (gMutex_unfair) {
           _type = Unfair;
+#if AS_USE_OS_LOCK
           _unfair = OS_UNFAIR_LOCK_INIT;
+#else
+          _unfair = OS_SPINLOCK_INIT;
+#endif
         } else {
           _type = Plain;
           new (&_plain) std::mutex();
@@ -261,7 +276,11 @@ namespace AS {
     
     Type _type;
     union {
-      os_unfair_lock _unfair;
+#if AS_USE_OS_LOCK
+    os_unfair_lock _unfair;
+#else
+    OSSpinLock _unfair;
+#endif
       ASRecursiveUnfairLock _runfair;
       std::mutex _plain;
       std::recursive_mutex _recursive;
