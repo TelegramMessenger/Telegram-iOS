@@ -1487,21 +1487,21 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     secondaryTitleText = environment.strings.Premium_PersonalTitle(otherPeerName).string
                 } else if case let .gift(fromPeerId, _, duration) = context.component.source {
                     if fromPeerId == context.component.context.account.peerId {
-                        if duration >= 86400 * 365 {
+                        if duration == 12 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitleYou_12Month(otherPeerName).string
-                        } else if duration >= 86400 * 180 {
+                        } else if duration == 6  {
                             secondaryTitleText = environment.strings.Premium_GiftedTitleYou_6Month(otherPeerName).string
-                        } else if duration >= 86400 * 90 {
+                        } else if duration == 3 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitleYou_3Month(otherPeerName).string
                         } else {
                             secondaryTitleText = ""
                         }
                     } else {
-                        if duration >= 86400 * 365 {
+                        if duration == 12 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitle_12Month(otherPeerName).string
-                        } else if duration >= 86400 * 180 {
+                        } else if duration == 6 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitle_6Month(otherPeerName).string
-                        } else if duration >= 86400 * 90 {
+                        } else if duration == 3 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitle_3Month(otherPeerName).string
                         } else {
                             secondaryTitleText = ""

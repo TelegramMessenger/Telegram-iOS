@@ -7831,6 +7831,9 @@ Sorry for the inconvenience.";
 "Notification.PremiumGift.Sent" = "%1$@ sent you a gift for %2$@";
 "Notification.PremiumGift.SentYou" = "You sent a gift for %@";
 
+"Notification.PremiumGift.Months_1" = "%@ month";
+"Notification.PremiumGift.Months_any" = "%@ months";
+
 "Notification.PremiumGift.Title" = "Telegram Premium";
 "Notification.PremiumGift.Subtitle" = "for %@";
 "Notification.PremiumGift.View" = "View";

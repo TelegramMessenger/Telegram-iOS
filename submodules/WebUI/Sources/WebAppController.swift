@@ -777,6 +777,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                         self.controller?.present(alertController, in: .window(.root))
                     }
+                case "web_app_setup_closing_behavior":
+                    if let json = json, let _ = json["need_confirmation"] as? String {
+                        
+                    }
                 default:
                     break
             }

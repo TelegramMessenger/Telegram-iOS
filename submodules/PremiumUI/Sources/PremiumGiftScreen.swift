@@ -799,11 +799,11 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             let duration: Int32
             switch product.id {
                 case "org.telegram.telegramPremium.twelveMonths":
-                    duration = 86400 * 365
+                    duration = 12
                 case "org.telegram.telegramPremium.sixMonths":
-                    duration = 86400 * 180
+                    duration = 6
                 case "org.telegram.telegramPremium.threeMonths":
-                    duration = 86400 * 90
+                    duration = 3
                 default:
                     duration = 0
             }
@@ -1259,13 +1259,16 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer {
         }
         
         completionImpl = { [weak self] duration in
-            if let strongSelf = self {
-                let navigationController = strongSelf.navigationController
-                strongSelf.dismiss()
-                let introController = PremiumIntroScreen(context: context, source: .gift(from: context.account.peerId, to: peerId, duration: duration))
-                navigationController?.pushViewController(introController, animated: true)
+            if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+//                let introController = PremiumIntroScreen(context: context, source: .gift(from: context.account.peerId, to: peerId, duration: duration))
+                var controllers = navigationController.viewControllers
+                controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
+                navigationController.setViewControllers(controllers, animated: true)
+                
                 Queue.mainQueue().after(0.1, {
-                    introController.view.addSubview(ConfettiView(frame: introController.view.bounds))
+                    if let topController = navigationController.viewControllers.first {
+                        topController.view.addSubview(ConfettiView(frame: topController.view.bounds))
+                    }
                 })
             }
         }
