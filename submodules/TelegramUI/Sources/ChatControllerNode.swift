@@ -918,7 +918,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 wasDraggingKeyboard = true
             }
             var wasDraggingInputNode = false
-            if let derivedLayoutState = self.derivedLayoutState, let inputNodeHeight = derivedLayoutState.inputNodeHeight, !inputNodeHeight.isZero, let upperInputPositionBound =  derivedLayoutState.upperInputPositionBound {
+            if let derivedLayoutState = self.derivedLayoutState, let inputNodeHeight = derivedLayoutState.inputNodeHeight, !inputNodeHeight.isZero, let upperInputPositionBound = derivedLayoutState.upperInputPositionBound {
                 let normalizedHeight = max(0.0, layout.size.height - upperInputPositionBound)
                 if normalizedHeight < inputNodeHeight {
                     wasDraggingInputNode = true
@@ -1113,7 +1113,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         var accessoryPanelSize: CGSize?
         var immediatelyLayoutAccessoryPanelAndAnimateAppearance = false
-        if let accessoryPanelNode = accessoryPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.accessoryPanelNode, interfaceInteraction: self.interfaceInteraction) {
+        if let accessoryPanelNode = accessoryPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.accessoryPanelNode, chatControllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction) {
             accessoryPanelSize = accessoryPanelNode.measure(CGSize(width: layout.size.width, height: layout.size.height))
             
             accessoryPanelNode.updateState(size: layout.size, inset: layout.safeInsets.left, interfaceState: self.chatPresentationInterfaceState)
@@ -2679,7 +2679,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let keyboardGestureBeginLocation = location
         let accessoryHeight = self.getWindowInputAccessoryHeight()
-        if let inputHeight = derivedLayoutState.inputNodeHeight, !inputHeight.isZero, keyboardGestureBeginLocation.y < validLayout.size.height - inputHeight - accessoryHeight {
+        if let inputHeight = derivedLayoutState.inputNodeHeight, !inputHeight.isZero, keyboardGestureBeginLocation.y < validLayout.size.height - inputHeight - accessoryHeight, !self.inputPanelContainerNode.stableIsExpanded {
             var enableGesture = true
             if let view = self.view.hitTest(location, with: nil) {
                 if doesViewTreeDisableInteractiveTransitionGestureRecognizer(view) {

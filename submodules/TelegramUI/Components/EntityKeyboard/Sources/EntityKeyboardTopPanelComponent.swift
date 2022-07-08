@@ -364,15 +364,18 @@ final class EntityKeyboardTopPanelComponent: Component {
     
     let theme: PresentationTheme
     let items: [Item]
+    let defaultActiveItemId: AnyHashable?
     let activeContentItemIdUpdated: ActionSlot<(AnyHashable, Transition)>
     
     init(
         theme: PresentationTheme,
         items: [Item],
+        defaultActiveItemId: AnyHashable? = nil,
         activeContentItemIdUpdated: ActionSlot<(AnyHashable, Transition)>
     ) {
         self.theme = theme
         self.items = items
+        self.defaultActiveItemId = defaultActiveItemId
         self.activeContentItemIdUpdated = activeContentItemIdUpdated
     }
     
@@ -381,6 +384,9 @@ final class EntityKeyboardTopPanelComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.defaultActiveItemId != rhs.defaultActiveItemId {
             return false
         }
         if lhs.activeContentItemIdUpdated !== rhs.activeContentItemIdUpdated {
@@ -613,6 +619,10 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
             self.component = component
             
+            if let defaultActiveItemId = component.defaultActiveItemId {
+                self.activeContentItemId = defaultActiveItemId
+            }
+            
             let panelEnvironment = environment[EntityKeyboardTopContainerPanelEnvironment.self].value
             self.environment = panelEnvironment
             
@@ -639,8 +649,8 @@ final class EntityKeyboardTopPanelComponent: Component {
                     let previousItemFrame = previousItemLayout.containerFrame(at: previousVisibleRange.minIndex)
                     let updatedItemFrame = itemLayout.containerFrame(at: previousVisibleRange.minIndex)
                     
-                    let previousDistanceToItemFraction = (previousItemFrame.minX - self.scrollView.bounds.minX) / previousItemFrame.width
-                    let newBounds = CGRect(origin: CGPoint(x: updatedItemFrame.minX - floor(previousDistanceToItemFraction * updatedItemFrame.width), y: 0.0), size: availableSize)
+                    let previousDistanceToItem = (previousItemFrame.minX - self.scrollView.bounds.minX)// / previousItemFrame.width
+                    let newBounds = CGRect(origin: CGPoint(x: updatedItemFrame.minX - previousDistanceToItem/* * updatedItemFrame.width)*/, y: 0.0), size: availableSize)
                     updatedBounds = newBounds
                     
                     var updatedVisibleBounds = newBounds

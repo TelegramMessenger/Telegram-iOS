@@ -54,7 +54,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
     }
     
-    public init(context: AccountContext, groupId: String, attemptSynchronousLoad: Bool, emoji: ChatTextInputTextCustomEmojiAttribute, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor) {
+    public init(context: AccountContext, groupId: String, attemptSynchronousLoad: Bool, emoji: ChatTextInputTextCustomEmojiAttribute, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor, pointSize: CGSize) {
         self.context = context
         self.groupId = groupId
         self.emoji = emoji
@@ -63,7 +63,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         self.placeholderColor = placeholderColor
         
         let scale = min(2.0, UIScreenScale)
-        self.pointSize = CGSize(width: 24, height: 24)
+        self.pointSize = pointSize
         self.pixelSize = CGSize(width: self.pointSize.width * scale, height: self.pointSize.height * scale)
         
         super.init()
@@ -180,7 +180,7 @@ public final class EmojiTextAttachmentView: UIView {
     private let contentLayer: InlineStickerItemLayer
     
     public init(context: AccountContext, emoji: ChatTextInputTextCustomEmojiAttribute, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor) {
-        self.contentLayer = InlineStickerItemLayer(context: context, groupId: "textInputView", attemptSynchronousLoad: true, emoji: emoji, cache: cache, renderer: renderer, placeholderColor: placeholderColor)
+        self.contentLayer = InlineStickerItemLayer(context: context, groupId: "textInputView", attemptSynchronousLoad: true, emoji: emoji, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: 24.0, height: 24.0))
         
         super.init(frame: CGRect())
         

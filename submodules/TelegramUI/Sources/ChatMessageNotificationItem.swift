@@ -196,10 +196,10 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 }
                 if messageEntities?.count == 0 {
                     messageEntities = nil
-                    messageText = textString
+                    messageText = textString.string
                 }
             } else {
-                messageText = textString
+                messageText = textString.string
             }
         } else if item.messages.count > 1, let peer = item.messages[0].peers[item.messages[0].id.peerId] {
             var displayAuthor = true

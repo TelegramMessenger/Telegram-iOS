@@ -148,7 +148,23 @@ public final class TextNodeLayoutArguments {
     public let textStroke: (UIColor, CGFloat)?
     public let displaySpoilers: Bool
     
-    public init(attributedString: NSAttributedString?, backgroundColor: UIColor? = nil, minimumNumberOfLines: Int = 0, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment = .natural, verticalAlignment: TextVerticalAlignment = .top, lineSpacing: CGFloat = 0.12, cutout: TextNodeCutout? = nil, insets: UIEdgeInsets = UIEdgeInsets(), lineColor: UIColor? = nil, textShadowColor: UIColor? = nil, textStroke: (UIColor, CGFloat)? = nil, displaySpoilers: Bool = false) {
+    public init(
+        attributedString: NSAttributedString?,
+        backgroundColor: UIColor? = nil,
+        minimumNumberOfLines: Int = 0,
+        maximumNumberOfLines: Int,
+        truncationType: CTLineTruncationType,
+        constrainedSize: CGSize,
+        alignment: NSTextAlignment = .natural,
+        verticalAlignment: TextVerticalAlignment = .top,
+        lineSpacing: CGFloat = 0.12,
+        cutout: TextNodeCutout? = nil,
+        insets: UIEdgeInsets = UIEdgeInsets(),
+        lineColor: UIColor? = nil,
+        textShadowColor: UIColor? = nil,
+        textStroke: (UIColor, CGFloat)? = nil,
+        displaySpoilers: Bool = false
+    ) {
         self.attributedString = attributedString
         self.backgroundColor = backgroundColor
         self.minimumNumberOfLines = minimumNumberOfLines
@@ -164,6 +180,26 @@ public final class TextNodeLayoutArguments {
         self.textShadowColor = textShadowColor
         self.textStroke = textStroke
         self.displaySpoilers = displaySpoilers
+    }
+    
+    public func withAttributedString(_ attributedString: NSAttributedString?) -> TextNodeLayoutArguments {
+        return TextNodeLayoutArguments(
+            attributedString: attributedString,
+            backgroundColor: self.backgroundColor,
+            minimumNumberOfLines: self.minimumNumberOfLines,
+            maximumNumberOfLines: self.maximumNumberOfLines,
+            truncationType: self.truncationType,
+            constrainedSize: self.constrainedSize,
+            alignment: self.alignment,
+            verticalAlignment: self.verticalAlignment,
+            lineSpacing: self.lineSpacing,
+            cutout: self.cutout,
+            insets: self.insets,
+            lineColor: self.lineColor,
+            textShadowColor: self.textShadowColor,
+            textStroke: self.textStroke,
+            displaySpoilers: self.displaySpoilers
+        )
     }
 }
 
@@ -881,7 +917,7 @@ public final class TextAccessibilityOverlayNode: ASDisplayNode {
     }
 }
 
-public class TextNode: ASDisplayNode {
+open class TextNode: ASDisplayNode {
     public internal(set) var cachedLayout: TextNodeLayout?
     
     override public init() {
@@ -892,7 +928,7 @@ public class TextNode: ASDisplayNode {
         self.clipsToBounds = false
     }
     
-    override public func didLoad() {
+    override open func didLoad() {
         super.didLoad()
     }
     
