@@ -5,7 +5,7 @@ import TelegramCore
 import AccountContext
 import ChatPresentationInterfaceState
 
-func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: AccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> AccessoryPanelNode? {
+func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: AccessoryPanelNode?, chatControllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> AccessoryPanelNode? {
     if let _ = chatPresentationInterfaceState.interfaceState.selectionState {
         return nil
     }
@@ -70,7 +70,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             replyPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return replyPanelNode
         } else {
-            let panelNode = ReplyAccessoryPanelNode(context: context, messageId: replyMessageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat)
+            let panelNode = ReplyAccessoryPanelNode(context: context, messageId: replyMessageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat, animationCache: chatControllerInteraction?.presentationContext.animationCache, animationRenderer: chatControllerInteraction?.presentationContext.animationRenderer)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }

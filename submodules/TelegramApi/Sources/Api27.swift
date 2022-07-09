@@ -3966,6 +3966,25 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getCustomEmojiDocuments(documentId: [Int64]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.Document]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-643100844)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(documentId.count))
+                    for item in documentId {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription(name: "messages.getCustomEmojiDocuments", parameters: [("documentId", String(describing: documentId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.Document]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.Document]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getDhConfig(version: Int32, randomLength: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.DhConfig>) {
                     let buffer = Buffer()
                     buffer.appendInt32(651135312)
@@ -4110,6 +4129,21 @@ public extension Api.functions.messages {
                         var result: [Api.EmojiLanguage]?
                         if let _ = reader.readInt32() {
                             result = Api.parseVector(reader, elementSignature: 0, elementType: Api.EmojiLanguage.self)
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func getEmojiStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AllStickers>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-67329649)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getEmojiStickers", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.AllStickers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.AllStickers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.AllStickers
                         }
                         return result
                     })
@@ -6245,12 +6279,12 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
-                static func assignPlayMarketTransaction(purchaseToken: String, purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func assignPlayMarketTransaction(receipt: Api.DataJSON, purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-179907586)
-                    serializeString(purchaseToken, buffer: buffer, boxed: false)
+                    buffer.appendInt32(-537046829)
+                    receipt.serialize(buffer, true)
                     purpose.serialize(buffer, true)
-                    return (FunctionDescription(name: "payments.assignPlayMarketTransaction", parameters: [("purchaseToken", String(describing: purchaseToken)), ("purpose", String(describing: purpose))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "payments.assignPlayMarketTransaction", parameters: [("receipt", String(describing: receipt)), ("purpose", String(describing: purpose))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

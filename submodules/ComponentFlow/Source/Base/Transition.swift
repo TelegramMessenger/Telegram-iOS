@@ -202,20 +202,26 @@ public struct Transition {
         }
         switch self.animation {
         case .none:
-            view.bounds = CGRect(origin: view.bounds.origin, size: frame.size)
-            view.layer.position = CGPoint(x: frame.midX, y: frame.midY)
+            view.frame = frame
+            //view.bounds = CGRect(origin: view.bounds.origin, size: frame.size)
+            //view.layer.position = CGPoint(x: frame.midX, y: frame.midY)
             view.layer.removeAnimation(forKey: "position")
             view.layer.removeAnimation(forKey: "bounds")
             completion?(true)
         case .curve:
-            let previousPosition = view.layer.presentation()?.position ?? view.center
-            let previousBounds = view.layer.presentation()?.bounds ?? view.bounds
+            let previousFrame: CGRect
+            if (view.layer.animation(forKey: "position") != nil || view.layer.animation(forKey: "bounds") != nil), let presentation = view.layer.presentation() {
+                previousFrame = presentation.frame
+            } else {
+                previousFrame = view.frame
+            }
             
-            view.bounds = CGRect(origin: previousBounds.origin, size: frame.size)
-            view.center = CGPoint(x: frame.midX, y: frame.midY)
+            view.frame = frame
+            //view.bounds = CGRect(origin: previousBounds.origin, size: frame.size)
+            //view.center = CGPoint(x: frame.midX, y: frame.midY)
 
-            self.animatePosition(view: view, from: previousPosition, to: view.center, completion: completion)
-            self.animateBounds(view: view, from: previousBounds, to: view.bounds)
+            self.animatePosition(view: view, from: CGPoint(x: previousFrame.midX, y: previousFrame.midY), to: CGPoint(x: frame.midX, y: frame.midY), completion: completion)
+            self.animateBounds(view: view, from: CGRect(origin: view.bounds.origin, size: previousFrame.size), to: CGRect(origin: view.bounds.origin, size: frame.size))
         }
     }
     
@@ -230,7 +236,12 @@ public struct Transition {
             view.layer.removeAnimation(forKey: "bounds")
             completion?(true)
         case .curve:
-            let previousBounds = view.layer.presentation()?.bounds ?? view.bounds
+            let previousBounds: CGRect
+            if view.layer.animation(forKey: "bounds") != nil, let presentation = view.layer.presentation() {
+                previousBounds = presentation.bounds
+            } else {
+                previousBounds = view.layer.bounds
+            }
             view.bounds = bounds
 
             self.animateBounds(view: view, from: previousBounds, to: view.bounds, completion: completion)
@@ -248,7 +259,12 @@ public struct Transition {
             view.layer.removeAnimation(forKey: "position")
             completion?(true)
         case .curve:
-            let previousPosition = view.layer.presentation()?.position ?? view.center
+            let previousPosition: CGPoint
+            if view.layer.animation(forKey: "position") != nil, let presentation = view.layer.presentation() {
+                previousPosition = presentation.position
+            } else {
+                previousPosition = view.layer.position
+            }
             view.center = position
 
             self.animatePosition(view: view, from: previousPosition, to: view.center, completion: completion)
@@ -266,7 +282,12 @@ public struct Transition {
             layer.removeAnimation(forKey: "bounds")
             completion?(true)
         case .curve:
-            let previousBounds = layer.presentation()?.bounds ?? layer.bounds
+            let previousBounds: CGRect
+            if layer.animation(forKey: "bounds") != nil, let presentation = layer.presentation() {
+                previousBounds = presentation.bounds
+            } else {
+                previousBounds = layer.bounds
+            }
             layer.bounds = bounds
 
             self.animateBounds(layer: layer, from: previousBounds, to: layer.bounds, completion: completion)
@@ -284,7 +305,12 @@ public struct Transition {
             layer.removeAnimation(forKey: "position")
             completion?(true)
         case .curve:
-            let previousPosition = layer.presentation()?.position ?? layer.position
+            let previousPosition: CGPoint
+            if layer.animation(forKey: "position") != nil, let presentation = layer.presentation() {
+                previousPosition = presentation.position
+            } else {
+                previousPosition = layer.position
+            }
             layer.position = position
 
             self.animatePosition(layer: layer, from: previousPosition, to: layer.position, completion: completion)

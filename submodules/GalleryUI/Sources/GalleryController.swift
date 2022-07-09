@@ -131,8 +131,8 @@ private let italicFont = Font.italic(16.0)
 private let boldItalicFont = Font.semiboldItalic(16.0)
 private let fixedFont = UIFont(name: "Menlo-Regular", size: 15.0) ?? textFont
 
-public func galleryCaptionStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> NSAttributedString {
-    return stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: UIColor(rgb: 0x5ac8fa), baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: textFont, underlineLinks: false)
+public func galleryCaptionStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], message: Message?) -> NSAttributedString {
+    return stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: UIColor(rgb: 0x5ac8fa), baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: textFont, underlineLinks: false, message: message)
 }
 
 private func galleryMessageCaptionText(_ message: Message) -> String {
@@ -176,7 +176,7 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                     entities = result
                 }
                                 
-                let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities)
+                let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities, message: message)
                 return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, displayInfoOnTop: displayInfoOnTop, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, isSecret: isSecret, landscape: landscape, timecode: timecode, playbackRate: playbackRate, configuration: configuration, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
             } else {
                 if let fileName = file.fileName, (fileName as NSString).pathExtension.lowercased() == "json" {
@@ -224,7 +224,7 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                     if let result = addLocallyGeneratedEntities(descriptionText, enabledTypes: [.timecode], entities: entities, mediaDuration: 86400) {
                         entities = result
                     }
-                    description = galleryCaptionStringWithAppliedEntities(descriptionText, entities: entities)
+                    description = galleryCaptionStringWithAppliedEntities(descriptionText, entities: entities, message: message)
                 }
                 return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), description: description, displayInfoOnTop: displayInfoOnTop, fromPlayingVideo: fromPlayingVideo, isSecret: isSecret, landscape: landscape, timecode: timecode, playbackRate: playbackRate, configuration: configuration, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
             } else {

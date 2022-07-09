@@ -530,13 +530,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     contentNode.visibility = mapVisibility(self.visibility, boundsSize: self.bounds.size, insets: self.insets, to: contentNode)
                 }
                 
-                /*switch self.visibility {
-                case let .visible(_, subRect):
-                    let topEdge = self.bounds.height - self.insets.top - (subRect.origin.y + subRect.height)
-                    self.debugNode.frame = CGRect(origin: CGPoint(x: 0.0, y: topEdge), size: CGSize(width: 100.0, height: 2.0))
-                case .none:
-                    break
-                }*/
+                if let replyInfoNode = self.replyInfoNode {
+                    replyInfoNode.visibility = self.visibility != .none
+                }
             }
         }
     }
@@ -1039,7 +1035,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
-        replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
+        replyInfoLayout: (ChatMessageReplyInfoNode.Arguments) -> (CGSize, () -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
         reactionButtonsLayout: (ChatMessageReactionButtonsNode.Arguments) -> (minWidth: CGFloat, layout: (CGFloat) -> (size: CGSize, apply: (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)),
         mosaicStatusLayout: (ChatMessageDateAndStatusNode.Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)),
@@ -1802,7 +1798,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 } else {
                     headerSize.height += 2.0
                 }
-                let sizeAndApply = replyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .bubble(incoming: incoming), replyMessage, item.message, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
+                let sizeAndApply = replyInfoLayout(ChatMessageReplyInfoNode.Arguments(
+                    presentationData: item.presentationData,
+                    strings: item.presentationData.strings,
+                    context: item.context,
+                    type: .bubble(incoming: incoming),
+                    message: replyMessage,
+                    parentMessage: item.message,
+                    constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude),
+                    animationCache: item.controllerInteraction.presentationContext.animationCache,
+                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                ))
                 replyInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                 
                 replyInfoOriginY = headerSize.height
@@ -2489,6 +2495,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if replyInfoNode.supernode == nil {
                 strongSelf.clippingNode.addSubnode(replyInfoNode)
                 animateFrame = false
+                
+                replyInfoNode.visibility = strongSelf.visibility != .none
             }
             let previousReplyInfoNodeFrame = replyInfoNode.frame
             replyInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: replyInfoSizeApply.0)

@@ -2127,7 +2127,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
             
             let attributedText: NSAttributedString
             if let entities = entities {
-                attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: blockQuoteFont, underlineLinks: false)
+                attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: blockQuoteFont, underlineLinks: false, message: message)
             } else if !message.text.isEmpty {
                 attributedText = NSAttributedString(string: message.text, font: textFont, textColor: messageTheme.primaryTextColor)
             } else {

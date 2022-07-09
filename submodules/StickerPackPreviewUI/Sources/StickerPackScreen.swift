@@ -467,7 +467,7 @@ private final class StickerPackContainer: ASDisplayNode {
         let titleFont = Font.semibold(17.0)
         let title = self.titleNode.attributedText?.string ?? ""
         let entities = generateTextEntities(title, enabledTypes: [.mention])
-        self.titleNode.attributedText = stringWithAppliedEntities(title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
+        self.titleNode.attributedText = stringWithAppliedEntities(title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont, message: nil)
         
         if let (layout, _, _, _) = self.validLayout {
             let _ = self.titleNode.updateLayout(CGSize(width: layout.size.width - max(12.0, self.cancelButtonNode.frame.width) * 2.0 - 40.0, height: .greatestFiniteMagnitude))
@@ -649,7 +649,7 @@ private final class StickerPackContainer: ASDisplayNode {
             
             let titleFont = Font.semibold(17.0)
             let entities = generateTextEntities(info.title, enabledTypes: [.mention])
-            self.titleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
+            self.titleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont, message: nil)
             
             updateLayout = true
             

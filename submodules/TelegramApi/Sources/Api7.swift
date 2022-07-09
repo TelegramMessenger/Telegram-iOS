@@ -1,4 +1,62 @@
 public extension Api {
+    enum InputDialogPeer: TypeConstructorDescription {
+        case inputDialogPeer(peer: Api.InputPeer)
+        case inputDialogPeerFolder(folderId: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputDialogPeer(let peer):
+                    if boxed {
+                        buffer.appendInt32(-55902537)
+                    }
+                    peer.serialize(buffer, true)
+                    break
+                case .inputDialogPeerFolder(let folderId):
+                    if boxed {
+                        buffer.appendInt32(1684014375)
+                    }
+                    serializeInt32(folderId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputDialogPeer(let peer):
+                return ("inputDialogPeer", [("peer", String(describing: peer))])
+                case .inputDialogPeerFolder(let folderId):
+                return ("inputDialogPeerFolder", [("folderId", String(describing: folderId))])
+    }
+    }
+    
+        public static func parse_inputDialogPeer(_ reader: BufferReader) -> InputDialogPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputDialogPeer.inputDialogPeer(peer: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputDialogPeerFolder(_ reader: BufferReader) -> InputDialogPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputDialogPeer.inputDialogPeerFolder(folderId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputDocument: TypeConstructorDescription {
         case inputDocument(id: Int64, accessHash: Int64, fileReference: Buffer)
         case inputDocumentEmpty

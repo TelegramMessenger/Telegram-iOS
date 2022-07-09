@@ -117,6 +117,12 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
 public final class GifPagerContentComponent: Component {
     public typealias EnvironmentType = (EntityKeyboardChildEnvironment, PagerComponentChildEnvironment)
     
+    public enum Subject: Equatable {
+        case recent
+        case trending
+        case emojiSearch(String)
+    }
+    
     public final class InputInteraction {
         public let performItemAction: (Item, UIView, CGRect) -> Void
         
@@ -148,15 +154,18 @@ public final class GifPagerContentComponent: Component {
     
     public let context: AccountContext
     public let inputInteraction: InputInteraction
+    public let subject: Subject
     public let items: [Item]
     
     public init(
         context: AccountContext,
         inputInteraction: InputInteraction,
+        subject: Subject,
         items: [Item]
     ) {
         self.context = context
         self.inputInteraction = inputInteraction
+        self.subject = subject
         self.items = items
     }
     
@@ -165,6 +174,9 @@ public final class GifPagerContentComponent: Component {
             return false
         }
         if lhs.inputInteraction !== rhs.inputInteraction {
+            return false
+        }
+        if lhs.subject != rhs.subject {
             return false
         }
         if lhs.items != rhs.items {
@@ -363,7 +375,10 @@ public final class GifPagerContentComponent: Component {
             }
         }
         
-        private let scrollView: UIScrollView
+        private final class ContentScrollView: UIScrollView, PagerExpandableScrollView {
+        }
+        
+        private let scrollView: ContentScrollView
         
         private var visibleItemLayers: [MediaId: ItemLayer] = [:]
         private var ignoreScrolling: Bool = false
@@ -374,7 +389,7 @@ public final class GifPagerContentComponent: Component {
         private var itemLayout: ItemLayout?
         
         override init(frame: CGRect) {
-            self.scrollView = UIScrollView()
+            self.scrollView = ContentScrollView()
             
             super.init(frame: frame)
             

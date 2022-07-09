@@ -71,7 +71,8 @@ func chatHistoryEntriesForView(
             media: [TelegramMediaAction(action: .joinedByRequest)],
             peers: SimpleDictionary<PeerId, Peer>(),
             associatedMessages: SimpleDictionary<MessageId, Message>(),
-            associatedMessageIds: []
+            associatedMessageIds: [],
+            associatedMedia: [:]
         )
     }
         
@@ -323,7 +324,8 @@ func chatHistoryEntriesForView(
                         media: message.media,
                         peers: message.peers,
                         associatedMessages: message.associatedMessages,
-                        associatedMessageIds: message.associatedMessageIds
+                        associatedMessageIds: message.associatedMessageIds,
+                        associatedMedia: message.associatedMedia
                     )
                     nextAdMessageId += 1
                     entries.append(.MessageEntry(updatedMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false)))

@@ -6,7 +6,16 @@ import MobileCoreServices
 import TextFormat
 
 private func rtfStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> String {
-    let test = stringWithAppliedEntities(text, entities: entities, baseColor: .black, linkColor: .black, baseFont: Font.regular(14.0), linkFont: Font.regular(14.0), boldFont: Font.semibold(14.0), italicFont: Font.italic(14.0), boldItalicFont: Font.semiboldItalic(14.0), fixedFont: Font.monospace(14.0), blockQuoteFont: Font.regular(14.0), underlineLinks: false, external: true)
+    let sourceString = stringWithAppliedEntities(text, entities: entities, baseColor: .black, linkColor: .black, baseFont: Font.regular(14.0), linkFont: Font.regular(14.0), boldFont: Font.semibold(14.0), italicFont: Font.italic(14.0), boldItalicFont: Font.semiboldItalic(14.0), fixedFont: Font.monospace(14.0), blockQuoteFont: Font.regular(14.0), underlineLinks: false, external: true, message: nil)
+    let test = NSMutableAttributedString(attributedString: sourceString)
+    
+    if #available(iOS 15.0, *) {
+        test.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: sourceString.length), using: { value, range, _ in
+            if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                test.addAttribute(NSAttributedString.Key.link, value: URL(string: "tg://emoji?\(value.fileId)")!, range: range)
+            }
+        })
+    }
 
     if let data = try? test.data(from: NSRange(location: 0, length: test.length), documentAttributes: [NSAttributedString.DocumentAttributeKey.documentType: NSAttributedString.DocumentType.rtf]) {
         if var rtf = String(data: data, encoding: .windowsCP1252) {
@@ -60,7 +69,16 @@ private func chatInputStateString(attributedString: NSAttributedString) -> NSAtt
 
 public func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.DocumentType) -> NSAttributedString? {
     if let attributedString = try? NSAttributedString(data: data, options: [NSAttributedString.DocumentReadingOptionKey.documentType: type], documentAttributes: nil) {
-        return chatInputStateString(attributedString: attributedString)
+        let updatedString = NSMutableAttributedString(attributedString: attributedString)
+        updatedString.enumerateAttribute(NSAttributedString.Key.link, in: NSRange(location: 0, length: attributedString.length), using: { value, range, _ in
+            if let url = value as? URL, url.scheme == "tg", url.host == "emoji", let query = url.query {
+                if let fileId = Int64(query) {
+                    updatedString.removeAttribute(NSAttributedString.Key.link, range: range)
+                    updatedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: fileId, file: nil), range: range)
+                }
+            }
+        })
+        return chatInputStateString(attributedString: updatedString)
     }
     return nil
 }

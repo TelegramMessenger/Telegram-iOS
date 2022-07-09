@@ -24,17 +24,23 @@ import TelegramUniversalVideoContent
 import UniversalMediaPlayer
 import GalleryUI
 import HierarchyTrackingLayer
+import TextNodeWithEntities
 
 public enum ChatListItemContent {
     public final class DraftState: Equatable {
         let text: String
+        let entities: [MessageTextEntity]
 
-        public init(text: String) {
-            self.text = text
+        public init(draft: EngineChatList.Draft) {
+            self.text = draft.text
+            self.entities = draft.entities
         }
 
         public static func ==(lhs: DraftState, rhs: DraftState) -> Bool {
             if lhs.text != rhs.text {
+                return false
+            }
+            if lhs.entities != rhs.entities {
                 return false
             }
             return true
@@ -440,7 +446,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let authorNode: TextNode
     let measureNode: TextNode
     private var currentItemHeight: CGFloat?
-    let textNode: TextNode
+    let textNode: TextNodeWithEntities
     var dustNode: InvisibleInkDustNode?
     let inputActivitiesNode: ChatListInputActivitiesNode
     let dateNode: TextNode
@@ -624,6 +630,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     self.videoLoopCount = 0
                 }
                 self.updateVideoVisibility()
+                
+                self.textNode.visibilityRect = self.visibilityStatus ? CGRect.infinite : nil
             }
         }
     }
@@ -663,9 +671,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.authorNode.isUserInteractionEnabled = false
         self.authorNode.displaysAsynchronously = true
         
-        self.textNode = TextNode()
-        self.textNode.isUserInteractionEnabled = false
-        self.textNode.displaysAsynchronously = true
+        self.textNode = TextNodeWithEntities()
+        self.textNode.textNode.isUserInteractionEnabled = false
+        self.textNode.textNode.displaysAsynchronously = true
         
         self.inputActivitiesNode = ChatListInputActivitiesNode()
         self.inputActivitiesNode.isUserInteractionEnabled = false
@@ -707,7 +715,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         self.contextContainer.addSubnode(self.titleNode)
         self.contextContainer.addSubnode(self.authorNode)
-        self.contextContainer.addSubnode(self.textNode)
+        self.contextContainer.addSubnode(self.textNode.textNode)
         self.contextContainer.addSubnode(self.dateNode)
         self.contextContainer.addSubnode(self.statusNode)
         self.contextContainer.addSubnode(self.pinnedIconNode)
@@ -918,7 +926,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     func asyncLayout() -> (_ item: ChatListItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
-        let textLayout = TextNode.asyncLayout(self.textNode)
+        let textLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         let titleLayout = TextNode.asyncLayout(self.titleNode)
         let authorLayout = TextNode.asyncLayout(self.authorNode)
         let makeMeasureLayout = TextNode.asyncLayout(self.measureNode)
@@ -1186,10 +1194,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if inlineAuthorPrefix == nil, let draftState = draftState {
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
-
-                        let draftText: String = draftState.text
                         
-                        attributedText = NSAttributedString(string: foldLineBreaks(draftText.replacingOccurrences(of: "\n\n", with: " ")), font: textFont, textColor: theme.messageTextColor)
+                        let draftText = stringWithAppliedEntities(draftState.text, entities: draftState.entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, message: nil)
+                        
+                        attributedText = foldLineBreaks(draftText)
                     } else if let message = messages.last {
                         var composedString: NSMutableAttributedString
                         
@@ -1198,15 +1206,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         
                         let entities = (message._asMessage().textEntitiesAttribute?.entities ?? []).filter { entity in
-                            if case .Spoiler = entity.type {
+                            switch entity.type {
+                            case .Spoiler, .CustomEmoji:
                                 return true
-                            } else {
+                            default:
                                 return false
                             }
                         }
                         let messageString: NSAttributedString
                         if !message.text.isEmpty && entities.count > 0 {
-                            messageString = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: authorAttributedString == nil ? 2 : 1), entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                            messageString = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: authorAttributedString == nil ? 2 : 1), entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage())
                         } else if let spoilers = spoilers {
                             let mutableString = NSMutableAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
                             for range in spoilers {
@@ -1787,7 +1796,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                   
                     let _ = measureApply()
                     let _ = dateApply()
-                    let _ = textApply()
+                    
+                    let _ = textApply(TextNodeWithEntities.Arguments(
+                        context: item.context,
+                        cache: item.interaction.animationCache,
+                        renderer: item.interaction.animationRenderer,
+                        placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor
+                    ))
+                    
                     let _ = authorApply()
                     let _ = titleApply()
                     let _ = badgeApply(animateBadges, !isMuted)
@@ -1862,7 +1878,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let authorNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height), size: authorLayout.size)
                     strongSelf.authorNode.frame = authorNodeFrame
                     let textNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height - 1.0 + UIScreenPixel + (authorLayout.size.height.isZero ? 0.0 : (authorLayout.size.height - 3.0))), size: textLayout.size)
-                    strongSelf.textNode.frame = textNodeFrame
+                    strongSelf.textNode.textNode.frame = textNodeFrame
                     
                     if !textLayout.spoilers.isEmpty {
                         let dustNode: InvisibleInkDustNode
@@ -1872,7 +1888,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             dustNode = InvisibleInkDustNode(textNode: nil)
                             dustNode.isUserInteractionEnabled = false
                             strongSelf.dustNode = dustNode
-                            strongSelf.contextContainer.insertSubnode(dustNode, aboveSubnode: strongSelf.textNode)
+                            strongSelf.contextContainer.insertSubnode(dustNode, aboveSubnode: strongSelf.textNode.textNode)
                         }
                         dustNode.update(size: textNodeFrame.size, color: theme.messageTextColor, textColor: theme.messageTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) })
                         dustNode.frame = textNodeFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
@@ -1901,13 +1917,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         if strongSelf.inputActivitiesNode.alpha.isZero {
                             strongSelf.inputActivitiesNode.alpha = 1.0
-                            strongSelf.textNode.alpha = 0.0
+                            strongSelf.textNode.textNode.alpha = 0.0
                             strongSelf.authorNode.alpha = 0.0
                             strongSelf.dustNode?.alpha = 0.0
                             
                             if animated || animateContent {
                                 strongSelf.inputActivitiesNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                                strongSelf.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+                                strongSelf.textNode.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                                 strongSelf.authorNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                                 strongSelf.dustNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                             }
@@ -1915,7 +1931,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         if !strongSelf.inputActivitiesNode.alpha.isZero {
                             strongSelf.inputActivitiesNode.alpha = 0.0
-                            strongSelf.textNode.alpha = 1.0
+                            strongSelf.textNode.textNode.alpha = 1.0
                             strongSelf.authorNode.alpha = 1.0
                             strongSelf.dustNode?.alpha = 1.0
                             if animated || animateContent {
@@ -1924,7 +1940,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                         strongSelf.inputActivitiesNode.removeFromSupernode()
                                     }
                                 })
-                                strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                                strongSelf.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                                 strongSelf.authorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                                 strongSelf.dustNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                             } else {
@@ -1983,7 +1999,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let titlePosition = strongSelf.titleNode.position
                         transition.animatePosition(node: strongSelf.titleNode, from: CGPoint(x: titlePosition.x - contentDelta.x, y: titlePosition.y - contentDelta.y))
                         
-                        transition.animatePositionAdditive(node: strongSelf.textNode, offset: CGPoint(x: -contentDelta.x, y: -contentDelta.y))
+                        transition.animatePositionAdditive(node: strongSelf.textNode.textNode, offset: CGPoint(x: -contentDelta.x, y: -contentDelta.y))
                         if let dustNode = strongSelf.dustNode {
                             transition.animatePositionAdditive(node: dustNode, offset: CGPoint(x: -contentDelta.x, y: -contentDelta.y))
                         }
@@ -1995,7 +2011,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if crossfadeContent {
                         strongSelf.authorNode.recursivelyEnsureDisplaySynchronously(true)
                         strongSelf.titleNode.recursivelyEnsureDisplaySynchronously(true)
-                        strongSelf.textNode.recursivelyEnsureDisplaySynchronously(true)
+                        strongSelf.textNode.textNode.recursivelyEnsureDisplaySynchronously(true)
                     }
                     
                     var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleLayout.size.width + 3.0 + titleOffset
@@ -2245,9 +2261,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
             
-            var textFrame = self.textNode.frame
+            var textFrame = self.textNode.textNode.frame
             textFrame.origin.x = contentRect.origin.x
-            transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+            transition.updateFrameAdditive(node: self.textNode.textNode, frame: textFrame)
             
             if let dustNode = self.dustNode {
                 transition.updateFrameAdditive(node: dustNode, frame: textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0))

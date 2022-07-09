@@ -198,7 +198,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             return entries
         }
         
-        let interaction = ChatListNodeInteraction(activateSearch: {
+        let interaction = ChatListNodeInteraction(context: context, activateSearch: {
         }, peerSelected: { _, _, _ in
         }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in

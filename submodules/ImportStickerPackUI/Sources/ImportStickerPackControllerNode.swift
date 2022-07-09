@@ -405,7 +405,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             } else {
                 title = self.presentationData.strings.ImportStickerPack_StickerCount(Int32(self.currentItems.count))
             }
-            self.contentTitleNode.attributedText = stringWithAppliedEntities(title, entities: [], baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
+            self.contentTitleNode.attributedText = stringWithAppliedEntities(title, entities: [], baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont, message: nil)
 
             if !forceTitleUpdate {
                 transaction = StickerPackPreviewGridTransaction(previousList: previousItems, list: self.currentItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme)

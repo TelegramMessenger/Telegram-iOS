@@ -918,7 +918,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 wasDraggingKeyboard = true
             }
             var wasDraggingInputNode = false
-            if let derivedLayoutState = self.derivedLayoutState, let inputNodeHeight = derivedLayoutState.inputNodeHeight, !inputNodeHeight.isZero, let upperInputPositionBound =  derivedLayoutState.upperInputPositionBound {
+            if let derivedLayoutState = self.derivedLayoutState, let inputNodeHeight = derivedLayoutState.inputNodeHeight, !inputNodeHeight.isZero, let upperInputPositionBound = derivedLayoutState.upperInputPositionBound {
                 let normalizedHeight = max(0.0, layout.size.height - upperInputPositionBound)
                 if normalizedHeight < inputNodeHeight {
                     wasDraggingInputNode = true
@@ -964,7 +964,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var titleAccessoryPanelHeight: CGFloat?
         var titleAccessoryPanelBackgroundHeight: CGFloat?
         var extraTransition = transition
-        if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.titleAccessoryPanelNode, interfaceInteraction: self.interfaceInteraction) {
+        if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.titleAccessoryPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction) {
             if self.titleAccessoryPanelNode != titleAccessoryPanelNode {
                  dismissedTitleAccessoryPanelNode = self.titleAccessoryPanelNode
                 self.titleAccessoryPanelNode = titleAccessoryPanelNode
@@ -1113,7 +1113,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         var accessoryPanelSize: CGSize?
         var immediatelyLayoutAccessoryPanelAndAnimateAppearance = false
-        if let accessoryPanelNode = accessoryPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.accessoryPanelNode, interfaceInteraction: self.interfaceInteraction) {
+        if let accessoryPanelNode = accessoryPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.accessoryPanelNode, chatControllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction) {
             accessoryPanelSize = accessoryPanelNode.measure(CGSize(width: layout.size.width, height: layout.size.height))
             
             accessoryPanelNode.updateState(size: layout.size, inset: layout.safeInsets.left, interfaceState: self.chatPresentationInterfaceState)
@@ -2679,7 +2679,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let keyboardGestureBeginLocation = location
         let accessoryHeight = self.getWindowInputAccessoryHeight()
-        if let inputHeight = derivedLayoutState.inputNodeHeight, !inputHeight.isZero, keyboardGestureBeginLocation.y < validLayout.size.height - inputHeight - accessoryHeight {
+        if let inputHeight = derivedLayoutState.inputNodeHeight, !inputHeight.isZero, keyboardGestureBeginLocation.y < validLayout.size.height - inputHeight - accessoryHeight, !self.inputPanelContainerNode.stableIsExpanded {
             var enableGesture = true
             if let view = self.view.hitTest(location, with: nil) {
                 if doesViewTreeDisableInteractiveTransitionGestureRecognizer(view) {
@@ -2820,7 +2820,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let trimmedInputText = effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines)
                 let peerId = effectivePresentationInterfaceState.chatLocation.peerId
                 if peerId?.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText) {
-                    messages.append(.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+                    messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
                 } else {
                     let inputText = convertMarkdownToAttributes(effectiveInputText)
                     
@@ -2838,14 +2838,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 webpage = self.chatPresentationInterfaceState.urlPreview?.1
                             }
 
-                            messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+                            messages.append(.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
 
                             #if DEBUG
                             if text.string == "sleep" {
                                 messages.removeAll()
 
                                 for i in 0 ..< 5 {
-                                    messages.append(.message(text: "sleep\(i)", attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                                    messages.append(.message(text: "sleep\(i)", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
                                 }
                             }
                             #endif

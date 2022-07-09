@@ -288,6 +288,7 @@ swift_library(
         "//submodules/TelegramUI/Components/VideoAnimationCache:VideoAnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/ChatInputPanelContainer:ChatInputPanelContainer",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities:TextNodeWithEntities",
         "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
         "//submodules/Media/ConvertOpusToAAC:ConvertOpusToAAC",
         "//submodules/Media/LocalAudioTranscription:LocalAudioTranscription",

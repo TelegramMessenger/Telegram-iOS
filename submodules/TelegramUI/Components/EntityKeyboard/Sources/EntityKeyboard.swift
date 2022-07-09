@@ -41,16 +41,43 @@ public final class EntityKeyboardComponent: Component {
         }
     }
     
+    public struct GifSearchEmoji: Equatable {
+        public var emoji: String
+        public var file: TelegramMediaFile
+        public var title: String
+        
+        public init(emoji: String, file: TelegramMediaFile, title: String) {
+            self.emoji = emoji
+            self.file = file
+            self.title = title
+        }
+        
+        public static func ==(lhs: GifSearchEmoji, rhs: GifSearchEmoji) -> Bool {
+            if lhs.emoji != rhs.emoji {
+                return false
+            }
+            if lhs.file.fileId != rhs.file.fileId {
+                return false
+            }
+            if lhs.title != rhs.title {
+                return false
+            }
+            return true
+        }
+    }
+    
     public let theme: PresentationTheme
     public let bottomInset: CGFloat
     public let emojiContent: EmojiPagerContentComponent
     public let stickerContent: EmojiPagerContentComponent
     public let gifContent: GifPagerContentComponent
+    public let availableGifSearchEmojies: [GifSearchEmoji]
     public let defaultToEmojiTab: Bool
     public let externalTopPanelContainer: PagerExternalTopPanelContainer?
     public let topPanelExtensionUpdated: (CGFloat, Transition) -> Void
     public let hideInputUpdated: (Bool, Bool, Transition) -> Void
     public let switchToTextInput: () -> Void
+    public let switchToGifSubject: (GifPagerContentComponent.Subject) -> Void
     public let makeSearchContainerNode: (EntitySearchContentType) -> EntitySearchContainerNode
     public let deviceMetrics: DeviceMetrics
     public let hiddenInputHeight: CGFloat
@@ -62,11 +89,13 @@ public final class EntityKeyboardComponent: Component {
         emojiContent: EmojiPagerContentComponent,
         stickerContent: EmojiPagerContentComponent,
         gifContent: GifPagerContentComponent,
+        availableGifSearchEmojies: [GifSearchEmoji],
         defaultToEmojiTab: Bool,
         externalTopPanelContainer: PagerExternalTopPanelContainer?,
         topPanelExtensionUpdated: @escaping (CGFloat, Transition) -> Void,
         hideInputUpdated: @escaping (Bool, Bool, Transition) -> Void,
         switchToTextInput: @escaping () -> Void,
+        switchToGifSubject: @escaping (GifPagerContentComponent.Subject) -> Void,
         makeSearchContainerNode: @escaping (EntitySearchContentType) -> EntitySearchContainerNode,
         deviceMetrics: DeviceMetrics,
         hiddenInputHeight: CGFloat,
@@ -77,11 +106,13 @@ public final class EntityKeyboardComponent: Component {
         self.emojiContent = emojiContent
         self.stickerContent = stickerContent
         self.gifContent = gifContent
+        self.availableGifSearchEmojies = availableGifSearchEmojies
         self.defaultToEmojiTab = defaultToEmojiTab
         self.externalTopPanelContainer = externalTopPanelContainer
         self.topPanelExtensionUpdated = topPanelExtensionUpdated
         self.hideInputUpdated = hideInputUpdated
         self.switchToTextInput = switchToTextInput
+        self.switchToGifSubject = switchToGifSubject
         self.makeSearchContainerNode = makeSearchContainerNode
         self.deviceMetrics = deviceMetrics
         self.hiddenInputHeight = hiddenInputHeight
@@ -102,6 +133,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.gifContent != rhs.gifContent {
+            return false
+        }
+        if lhs.availableGifSearchEmojies != rhs.availableGifSearchEmojies {
             return false
         }
         if lhs.defaultToEmojiTab != rhs.defaultToEmojiTab {
@@ -162,26 +196,58 @@ public final class EntityKeyboardComponent: Component {
             let gifsContentItemIdUpdated = ActionSlot<(AnyHashable, Transition)>()
             contents.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(component.gifContent)))
             var topGifItems: [EntityKeyboardTopPanelComponent.Item] = []
-            topGifItems.removeAll()
-            /*topGifItems.append(EntityKeyboardTopPanelComponent.Item(
+            //TODO:localize
+            topGifItems.append(EntityKeyboardTopPanelComponent.Item(
                 id: "recent",
-                content: AnyComponent(BundleIconComponent(
-                    name: "Chat/Input/Media/RecentTabIcon",
-                    tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
-                    maxSize: CGSize(width: 30.0, height: 30.0))
-                )
+                content: AnyComponent(EntityKeyboardIconTopPanelComponent(
+                    imageName: "Chat/Input/Media/RecentTabIcon",
+                    theme: component.theme,
+                    title: "Recent",
+                    pressed: { [weak self] in
+                        self?.component?.switchToGifSubject(.recent)
+                    }
+                ))
             ))
             topGifItems.append(EntityKeyboardTopPanelComponent.Item(
                 id: "trending",
-                content: AnyComponent(BundleIconComponent(
-                    name: "Chat/Input/Media/TrendingGifs",
-                    tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
-                    maxSize: CGSize(width: 30.0, height: 30.0))
-                )
-            ))*/
+                content: AnyComponent(EntityKeyboardIconTopPanelComponent(
+                    imageName: "Chat/Input/Media/TrendingGifs",
+                    theme: component.theme,
+                    title: "Trending",
+                    pressed: { [weak self] in
+                        self?.component?.switchToGifSubject(.trending)
+                    }
+                ))
+            ))
+            for emoji in component.availableGifSearchEmojies {
+                topGifItems.append(EntityKeyboardTopPanelComponent.Item(
+                    id: emoji.emoji,
+                    content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
+                        context: component.stickerContent.context,
+                        file: emoji.file,
+                        animationCache: component.stickerContent.animationCache,
+                        animationRenderer: component.stickerContent.animationRenderer,
+                        theme: component.theme,
+                        title: emoji.title,
+                        pressed: { [weak self] in
+                            self?.component?.switchToGifSubject(.emojiSearch(emoji.emoji))
+                        }
+                    ))
+                ))
+            }
+            let defaultActiveGifItemId: AnyHashable
+            switch component.gifContent.subject {
+            case .recent:
+                defaultActiveGifItemId = "recent"
+            case .trending:
+                defaultActiveGifItemId = "trending"
+            case let .emojiSearch(value):
+                defaultActiveGifItemId = AnyHashable(value)
+            }
             contentTopPanels.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(EntityKeyboardTopPanelComponent(
                 theme: component.theme,
                 items: topGifItems,
+                defaultActiveItemId: defaultActiveGifItemId,
                 activeContentItemIdUpdated: gifsContentItemIdUpdated
             ))))
             contentIcons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(BundleIconComponent(
