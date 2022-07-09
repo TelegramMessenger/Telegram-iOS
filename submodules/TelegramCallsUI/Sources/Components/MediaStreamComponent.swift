@@ -1197,7 +1197,7 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
                 self.view.layer.cornerCurve = .continuous
             }
             
-            self.view.layer.animatePosition(from: CGPoint(x: 353.0, y: 117.0), to: self.view.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
+            self.view.layer.animatePosition(from: CGPoint(x: self.view.frame.width * 0.9, y: 117.0), to: self.view.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
                 self?.view.layer.cornerRadius = 0.0
             })
             self.view.layer.animateScale(from: 0.001, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
@@ -1247,7 +1247,7 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
                 self.view.layer.cornerCurve = .continuous
             }
             
-            self.view.layer.animatePosition(from: self.view.center, to: CGPoint(x: 353.0, y: 117.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+            self.view.layer.animatePosition(from: self.view.center, to: CGPoint(x: self.view.frame.width * 0.9, y: 117.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
             })
             self.view.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         }

@@ -3139,15 +3139,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.displayPsa(type: type, sourceNode: sourceNode, isAutomatic: false)
         }, displayDiceTooltip: { [weak self] dice in
             self?.displayDiceTooltip(dice: dice)
-        }, animateDiceSuccess: { [weak self] onlyHaptic in
+        }, animateDiceSuccess: { [weak self] haptic, confetti in
             guard let strongSelf = self else {
                 return
             }
             if strongSelf.selectPollOptionFeedback == nil {
                 strongSelf.selectPollOptionFeedback = HapticFeedback()
             }
-            strongSelf.selectPollOptionFeedback?.success()
-            if !onlyHaptic {
+            if haptic {
+                strongSelf.selectPollOptionFeedback?.success()
+            }
+            if confetti {
                 strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
             }
         }, displayPremiumStickerTooltip: { [weak self] file, message in

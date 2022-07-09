@@ -40,6 +40,29 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private var cachedMaskBackgroundImage: (CGPoint, UIImage, [CGRect])?
     private var absoluteRect: (CGRect, CGSize)?
     
+    private var isPlaying: Bool = false
+    private var wasPending: Bool = false
+    private var didChangeFromPendingToSent: Bool = false
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            let wasVisible = oldValue != .none
+            let isVisible = self.visibility != .none
+            
+            if wasVisible != isVisible {
+                self.visibilityStatus = isVisible
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool? {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                self.updateVisibility()
+            }
+        }
+    }
+    
     required init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
@@ -200,10 +223,18 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
                             if strongSelf.item == nil {
-                                strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                                strongSelf.animationNode.visibility = true
+                                strongSelf.animationNode.autoplay = true
+                                strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
                             }
                             strongSelf.item = item
+                            
+                            if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal {
+                                strongSelf.wasPending = true
+                            }
+                            if strongSelf.wasPending && (item.message.id.namespace != Namespaces.Message.Local && item.message.id.namespace != Namespaces.Message.ScheduledLocal) {
+                                strongSelf.didChangeFromPendingToSent = true
+                            }
+                            strongSelf.updateVisibility()
                             
                             strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                             
@@ -382,6 +413,39 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             return .openMessage
         } else {
             return .none
+        }
+    }
+    
+    private func updateVisibility() {
+        guard let item = self.item else {
+            return
+        }
+                
+        let isPlaying = self.visibilityStatus == true
+        if self.isPlaying != isPlaying {
+            self.isPlaying = isPlaying
+            self.animationNode.visibility = isPlaying
+        }
+        
+        if isPlaying {
+            var alreadySeen = true
+            
+            if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
+                if unreadRange.contains(item.message.id.id) {
+                    if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                        alreadySeen = false
+                    }
+                }
+            }
+            
+            if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+                self.animationNode.playOnce()
+            }
+            
+            if !alreadySeen {
+                item.controllerInteraction.animateDiceSuccess(false, true)
+            }
         }
     }
 }

@@ -122,7 +122,7 @@ public final class ChatControllerInteraction {
     let displayPollSolution: (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void
     let displayPsa: (String, ASDisplayNode) -> Void
     let displayDiceTooltip: (TelegramMediaDice) -> Void
-    let animateDiceSuccess: (Bool) -> Void
+    let animateDiceSuccess: (Bool, Bool) -> Void
     let displayPremiumStickerTooltip: (TelegramMediaFile, Message) -> Void
     let openPeerContextMenu: (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let openMessageReplies: (MessageId, Bool, Bool) -> Void
@@ -225,7 +225,7 @@ public final class ChatControllerInteraction {
         displayPollSolution: @escaping (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void,
         displayPsa: @escaping (String, ASDisplayNode) -> Void,
         displayDiceTooltip: @escaping (TelegramMediaDice) -> Void,
-        animateDiceSuccess: @escaping (Bool) -> Void,
+        animateDiceSuccess: @escaping (Bool, Bool) -> Void,
         displayPremiumStickerTooltip: @escaping (TelegramMediaFile, Message) -> Void,
         openPeerContextMenu: @escaping (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,

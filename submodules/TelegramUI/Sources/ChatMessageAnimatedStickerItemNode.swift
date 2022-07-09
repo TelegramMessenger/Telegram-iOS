@@ -423,7 +423,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     animationNode.success = { [weak self] onlyHaptic in
                         if let strongSelf = self, let item = strongSelf.item {
-                            item.controllerInteraction.animateDiceSuccess(onlyHaptic)
+                            item.controllerInteraction.animateDiceSuccess(true, !onlyHaptic)
                         }
                     }
                 }
@@ -433,7 +433,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     animationNode.success = { [weak self] in
                         if let strongSelf = self, let item = strongSelf.item {
-                            item.controllerInteraction.animateDiceSuccess(false)
+                            item.controllerInteraction.animateDiceSuccess(true, true)
                         }
                     }
                 }
