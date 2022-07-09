@@ -846,12 +846,14 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                         }
                     }, completed: { [weak self] in
                         if let strongSelf = self {
-                            let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
-                            strongSelf.inProgress = false
-                            strongSelf.updateInProgress(false)
-                            
-                            strongSelf.updated(transition: .easeInOut(duration: 0.25))
-                            strongSelf.completion(duration)
+                            Queue.mainQueue().after(2.0) {
+                                let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
+                                strongSelf.inProgress = false
+                                strongSelf.updateInProgress(false)
+                                
+                                strongSelf.updated(transition: .easeInOut(duration: 0.25))
+                                strongSelf.completion(duration)
+                            }
                         }
                     }))
                 }
@@ -1265,8 +1267,8 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer {
                 controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
                 navigationController.setViewControllers(controllers, animated: true)
                 
-                Queue.mainQueue().after(0.1, {
-                    if let topController = navigationController.viewControllers.first {
+                Queue.mainQueue().after(2.8, {
+                    if let topController = navigationController.viewControllers.last {
                         topController.view.addSubview(ConfettiView(frame: topController.view.bounds))
                     }
                 })

@@ -1522,7 +1522,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     maximumNumberOfLines: 2,
                     lineSpacing: 0.0
                 ),
-                availableSize: context.availableSize,
+                availableSize: CGSize(width: context.availableSize.width - 32.0, height: context.availableSize.width),
                 transition: context.transition
             )
             

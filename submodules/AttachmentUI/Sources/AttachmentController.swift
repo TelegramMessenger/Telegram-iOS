@@ -83,6 +83,7 @@ public protocol AttachmentContainable: ViewController {
     func prepareForReuse()
     
     func requestDismiss(completion: @escaping () -> Void)
+    func shouldDismissImmediately() -> Bool
 }
 
 public extension AttachmentContainable {
@@ -100,6 +101,10 @@ public extension AttachmentContainable {
     
     func requestDismiss(completion: @escaping () -> Void) {
         completion()
+    }
+    
+    func shouldDismissImmediately() -> Bool {
+         return true
     }
 }
 
@@ -309,6 +314,23 @@ public class AttachmentController: ViewController {
             self.container.isPanningUpdated = { [weak self] value in
                 if let strongSelf = self, let currentController = strongSelf.currentControllers.last, !value {
                     currentController.isContainerPanningUpdated(value)
+                }
+            }
+            
+            self.container.shouldCancelPanGesture = { [weak self] in
+                if let strongSelf = self, let currentController = strongSelf.currentControllers.last {
+                    if !currentController.shouldDismissImmediately() {
+                        currentController.requestDismiss { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.controller?.dismiss(animated: true)
+                            }
+                        }
+                        return true
+                    } else {
+                        return false
+                    }
+                } else {
+                    return false
                 }
             }
             

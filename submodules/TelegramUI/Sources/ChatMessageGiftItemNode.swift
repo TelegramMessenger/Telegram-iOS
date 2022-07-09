@@ -65,8 +65,6 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonNode.cornerRadius = 17.0
                 
         self.animationNode = DefaultAnimatedStickerNodeImpl()
-        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Gift"), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-        self.animationNode.visibility = true
         
         self.buttonStarsNode = PremiumStarsNode()
         
@@ -136,11 +134,22 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 let primaryTextColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
                 
                 var duration: String = ""
+                var animationName: String = ""
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction {
                         switch action.action {
-                        case let .giftPremium(_, _, durationValue):
-                            duration = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(durationValue)).string
+                        case let .giftPremium(_, _, months):
+                            duration = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
+                            switch months {
+                            case 12:
+                                animationName = "Gift2"
+                            case 6:
+                                animationName = "Gift1"
+                            case 3:
+                                animationName = "Gift3"
+                            default:
+                                animationName = "Gift3"
+                            }
                         default:
                             break
                         }
@@ -190,6 +199,10 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
+                            if strongSelf.item == nil {
+                                strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                                strongSelf.animationNode.visibility = true
+                            }
                             strongSelf.item = item
                             
                             strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)

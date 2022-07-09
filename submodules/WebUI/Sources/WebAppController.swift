@@ -778,13 +778,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         self.controller?.present(alertController, in: .window(.root))
                     }
                 case "web_app_setup_closing_behavior":
-                    if let json = json, let _ = json["need_confirmation"] as? String {
-                        
+                    if let json = json, let needConfirmation = json["need_confirmation"] as? Bool {
+                        self.needDismissConfirmation = needConfirmation
                     }
                 default:
                     break
             }
         }
+        
+        fileprivate var needDismissConfirmation = false
         
         private var headerColorKey: String?
         private func updateHeaderBackgroundColor(transition: ContainedViewLayoutTransition) {
@@ -1120,6 +1122,27 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     public func prepareForReuse() {
         self.updateTabBarAlpha(1.0, .immediate)
+    }
+    
+    public func requestDismiss(completion: @escaping () -> Void) {
+        if self.controllerNode.needDismissConfirmation {
+            let controller = textAlertController(context: self.context, title: nil, text: self.presentationData.strings.WebApp_CloseConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.WebApp_CloseAnyway, action: {
+                completion()
+            }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {
+                
+            })], actionLayout: .vertical)
+            self.present(controller, in: .window(.root))
+        } else {
+            completion()
+        }
+    }
+    
+    public func shouldDismissImmediately() -> Bool {
+        if self.controllerNode.needDismissConfirmation {
+            return false
+        } else {
+            return true
+        }
     }
 }
 
