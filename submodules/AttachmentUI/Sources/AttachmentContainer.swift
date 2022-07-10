@@ -234,7 +234,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                     }
                 }
             
-                if translation > 40.0, let shouldCancelPanGesture = self.shouldCancelPanGesture, shouldCancelPanGesture() {
+                if !self.isExpanded, translation > 40.0, let shouldCancelPanGesture = self.shouldCancelPanGesture, shouldCancelPanGesture() {
                     self.cancelPanGesture()
                     return
                 }

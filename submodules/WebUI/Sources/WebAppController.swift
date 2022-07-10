@@ -898,7 +898,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         fileprivate func sendAlertButtonEvent(id: String?) {
             var paramsString: String?
             if let id = id {
-                paramsString = "{id: \"\(id)\"}"
+                paramsString = "{button_id: \"\(id)\"}"
             }
             self.webView?.sendEvent(name: "popup_closed", data: paramsString)
         }
@@ -1013,7 +1013,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
         if case .back = self.cancelButtonNode.state {
             self.controllerNode.sendBackButtonEvent()
         } else {
-            self.dismiss()
+            self.requestDismiss {
+                self.dismiss()
+            }
         }
     }
     
@@ -1126,12 +1128,23 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     public func requestDismiss(completion: @escaping () -> Void) {
         if self.controllerNode.needDismissConfirmation {
-            let controller = textAlertController(context: self.context, title: nil, text: self.presentationData.strings.WebApp_CloseConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.WebApp_CloseAnyway, action: {
-                completion()
-            }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {
-                
-            })], actionLayout: .vertical)
-            self.present(controller, in: .window(.root))
+            let actionSheet = ActionSheetController(presentationData: self.presentationData)
+            actionSheet.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: self.presentationData.strings.WebApp_CloseConfirmation),
+                    ActionSheetButtonItem(title: self.presentationData.strings.WebApp_CloseAnyway, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        completion()
+                    })
+                ]),
+                ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])
+            ])
+            self.present(actionSheet, in: .window(.root))
         } else {
             completion()
         }
