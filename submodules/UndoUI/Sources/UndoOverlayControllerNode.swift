@@ -880,17 +880,17 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
         case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal:
-            if self.textNode.tapAttributeAction != nil {
+            if self.textNode.tapAttributeAction != nil || displayUndo {
                 self.isUserInteractionEnabled = true
             } else {
                 self.isUserInteractionEnabled = false
             }
-        case let .sticker(_, _, _, _, undoText):
-            self.isUserInteractionEnabled = undoText != nil
+        case .sticker:
+            self.isUserInteractionEnabled = displayUndo
         case .dice:
             self.panelWrapperNode.clipsToBounds = true
         case .info:
-            if self.textNode.tapAttributeAction != nil {
+            if self.textNode.tapAttributeAction != nil || displayUndo {
                 self.isUserInteractionEnabled = true
             } else {
                 self.isUserInteractionEnabled = false
