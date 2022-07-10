@@ -38,6 +38,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     var controllerRemoved: ((ViewController) -> Void)?
     
     var shouldCancelPanGesture: (() -> Bool)?
+    var requestDismiss: (() -> Void)?
     
     var updateModalProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
@@ -236,6 +237,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             
                 if !self.isExpanded, translation > 40.0, let shouldCancelPanGesture = self.shouldCancelPanGesture, shouldCancelPanGesture() {
                     self.cancelPanGesture()
+                    self.requestDismiss?()
                     return
                 }
             
@@ -284,8 +286,13 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 let offset = currentTopInset + panOffset
                 let topInset: CGFloat = edgeTopInset
             
+                var ignoreDismiss = false
+                if let shouldCancelPanGesture = self.shouldCancelPanGesture, shouldCancelPanGesture() {
+                    ignoreDismiss = true
+                }
+            
                 var dismissing = false
-                if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0) {
+                if (bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0)) && !ignoreDismiss {
                     self.interactivelyDismissed?()
                     dismissing = true
                 } else if self.isExpanded {

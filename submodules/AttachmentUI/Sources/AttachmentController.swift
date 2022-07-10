@@ -320,17 +320,22 @@ public class AttachmentController: ViewController {
             self.container.shouldCancelPanGesture = { [weak self] in
                 if let strongSelf = self, let currentController = strongSelf.currentControllers.last {
                     if !currentController.shouldDismissImmediately() {
-                        currentController.requestDismiss { [weak self] in
-                            if let strongSelf = self {
-                                strongSelf.controller?.dismiss(animated: true)
-                            }
-                        }
                         return true
                     } else {
                         return false
                     }
                 } else {
                     return false
+                }
+            }
+            
+            self.container.requestDismiss = { [weak self] in
+                if let strongSelf = self, let currentController = strongSelf.currentControllers.last {
+                    currentController.requestDismiss { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.controller?.dismiss(animated: true)
+                        }
+                    }
                 }
             }
             
