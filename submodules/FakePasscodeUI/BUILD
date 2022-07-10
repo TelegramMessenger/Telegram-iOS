@@ -24,6 +24,9 @@ swift_library(
         "//submodules/LocalMediaResources:LocalMediaResources",
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
         "//submodules/AccountUtils:AccountUtils",
+        "//submodules/ContactsPeerItem:ContactsPeerItem",
+        "//submodules/SearchUI:SearchUI",
+        "//submodules/ChatListUI:ChatListUI",
     ],
     visibility = [
         "//visibility:public",

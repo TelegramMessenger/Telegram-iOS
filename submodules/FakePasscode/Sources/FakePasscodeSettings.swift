@@ -5,19 +5,49 @@ import TelegramUIPreferences
 import SwiftSignalKit
 import TelegramStringFormatting
 import AccountContext
+import TelegramIntents
+
+public enum PeerRemovalType: Int32, Codable {
+    case delete
+    case hide
+}
+
+public struct PeerWithRemoveOptions: Codable, Equatable {
+    public let peerId: PeerId
+    public let removalType: PeerRemovalType
+    
+    public init(peerId: PeerId, removalType: PeerRemovalType) {
+        self.peerId = peerId
+        self.removalType = removalType
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        self.peerId = try container.decode(PeerId.self, forKey: "pid")
+        self.removalType = PeerRemovalType(rawValue: try container.decode(Int32.self, forKey: "rt")) ?? .delete
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        try container.encode(self.peerId, forKey: "pid")
+        try container.encode(self.removalType.rawValue, forKey: "rt")
+    }
+}
 
 public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
     public let peerId: PeerId
     public let recordId: AccountRecordId
+    public let chatsToRemove: [PeerWithRemoveOptions]
     public let logOut: Bool
     
     public static func defaultSettings(peerId: PeerId, recordId: AccountRecordId) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: peerId, recordId: recordId, logOut: false)
+        return FakePasscodeAccountActionsSettings(peerId: peerId, recordId: recordId, chatsToRemove: [], logOut: false)
     }
     
-    public init(peerId: PeerId, recordId: AccountRecordId, logOut: Bool) {
+    public init(peerId: PeerId, recordId: AccountRecordId, chatsToRemove: [PeerWithRemoveOptions], logOut: Bool) {
         self.peerId = peerId
         self.recordId = recordId
+        self.chatsToRemove = chatsToRemove
         self.logOut = logOut
     }
 
@@ -26,6 +56,7 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
 
         self.peerId = try container.decode(PeerId.self, forKey: "pid")
         self.recordId = try container.decode(AccountRecordId.self, forKey: "rid")
+        self.chatsToRemove = try container.decodeIfPresent([PeerWithRemoveOptions].self, forKey: "ctr") ?? []
         self.logOut = (try container.decodeIfPresent(Int32.self, forKey: "lo") ?? 0) != 0
     }
 
@@ -34,17 +65,57 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
 
         try container.encode(self.peerId, forKey: "pid")
         try container.encode(self.recordId, forKey: "rid")
+        try container.encode(self.chatsToRemove, forKey: "ctr")
         try container.encode((self.logOut ? 1 : 0) as Int32, forKey: "lo")
     }
     
-    public func withUpdatedLogOut(_ logOut: Bool) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, logOut: logOut)
+    public func withUpdatedChatsToRemove(_ chatsToRemove: [PeerWithRemoveOptions]) -> FakePasscodeAccountActionsSettings {
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: chatsToRemove, logOut: self.logOut)
     }
     
-    public func performActions(accountManager: AccountManager<TelegramAccountManagerTypes>, applicationBindings: TelegramApplicationBindings) {
+    public func withUpdatedLogOut(_ logOut: Bool) -> FakePasscodeAccountActionsSettings {
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: logOut)
+    }
+    
+    public func performActions(context: AccountContext, updateSettings: @escaping (FakePasscodeAccountActionsSettings) -> Void) {
+        let waitingQueueSizeValue = Atomic<Int>(value: 0)
+        let waitingQueueSizePromise = ValuePromise<Int>(0)
+        
+        let updateWaitingQueueSize: ((Int) -> Int) -> Void = { f in
+            waitingQueueSizePromise.set(waitingQueueSizeValue.modify { f($0) })
+        }
+        
+        for chatToRemove in chatsToRemove {
+            switch chatToRemove.removalType {
+            case .delete:
+                if chatToRemove.peerId.namespace == Namespaces.Peer.CloudChannel {
+                    context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: chatToRemove.peerId, memberId: context.account.peerId)
+                }
+                updateWaitingQueueSize({ $0 + 1 })
+                let _ = context.engine.peers.removePeerChat(peerId: chatToRemove.peerId, reportChatSpam: false, deleteGloballyIfPossible: false).start(completed: {
+                    deleteSendMessageIntents(peerId: chatToRemove.peerId)
+                    updateWaitingQueueSize({ $0 - 1 })
+                })
+                break;
+            case .hide:
+                // TODO
+                break;
+            }
+        }
+        
+        let updatedChatsToRemove = chatsToRemove.filter({ !($0.peerId.namespace == Namespaces.Peer.SecretChat && $0.removalType == .delete) })
+        if updatedChatsToRemove != chatsToRemove {
+            updateSettings(self.withUpdatedChatsToRemove(updatedChatsToRemove))
+        }
+        
         if logOut {
-            applicationBindings.clearAllNotifications()
-            let _ = logoutFromAccount(id: recordId, accountManager: accountManager, alreadyLoggedOutRemotely: false).start()
+            let _ = (waitingQueueSizePromise.get()
+            |> filter { $0 == 0 }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { _ in
+                context.sharedContext.applicationBindings.clearAllNotifications()
+                let _ = logoutFromAccount(id: recordId, accountManager: context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start()
+            })
         }
     }
 }
@@ -287,8 +358,20 @@ public struct FakePasscodeSettings: Codable, Equatable {
         return withUpdatedAccountActions(self.accountActions.filter({ $0.peerId != accountAction.peerId }) + [accountAction])
     }
     
-    public func activate(accountManager: AccountManager<TelegramAccountManagerTypes>, applicationBindings: TelegramApplicationBindings) {
-        accountActions.forEach { $0.performActions(accountManager: accountManager, applicationBindings: applicationBindings) }
+    public func activate(sharedAccountContext: SharedAccountContext) {
+        let _ = (sharedAccountContext.activeAccountContexts
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { activeAccounts in
+            for (_, context, _) in activeAccounts.accounts {
+                if let accountAction = accountActions.first(where: { $0.peerId == context.account.peerId && $0.recordId == context.account.id }) {
+                    accountAction.performActions(context: context, updateSettings: { updatedSettings in
+                        let _ = updateFakePasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, { holder in
+                            return holder.withUpdatedSettingsItem(holder.settings.first(where: { $0.uuid == self.uuid })!.withUpdatedAccountActionItem(updatedSettings))
+                        }).start()
+                    })
+                }
+            }
+        })
     }
 }
 

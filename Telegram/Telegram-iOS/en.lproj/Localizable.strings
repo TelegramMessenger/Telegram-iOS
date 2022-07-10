@@ -7780,5 +7780,15 @@ Sorry for the inconvenience.";
 "PasscodeSettings.BadAttempts.FakePasscode" = "Fake Passcode";
 "PasscodeSettings.BadAttempts.Clear" = "Clear";
 
+"FakePasscodes.AccountActions.ChatsToRemove" = "Chats to Remove";
+"FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Chats Configured for Removal";
+"FakePasscodes.AccountActions.ChatsToRemove.AvailableChatsHeader" = "Available Chats";
+"FakePasscodes.AccountActions.ChatsToRemove.EmptyListInfo" = "Chats not found.";
+"FakePasscodes.AccountActions.ChatsToRemove.SettingsTitle" = "Chat Removal Settings";
+"FakePasscodes.AccountActions.ChatsToRemove.SelectedChatsHeader" = "Selected Chats";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHeader" = "Removal Method";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDelete" = "Delete";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHide" = "Hide";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeInfo" = "If the \"Hide\" option is selected, the dialogs (chats, channels) will not be deleted. They will be hidden from the dialog list. Their notifications will also be hidden. After logging in with the original passcode, the dialog will appear in the list. It is safer to use delete.";
 "FakePasscodes.AccountActions.LogOut" = "Log Out";
 "FakePasscodes.AccountActions.MiscActionsInfo" = "When a fake passcode is entered, selected actions are performed.";

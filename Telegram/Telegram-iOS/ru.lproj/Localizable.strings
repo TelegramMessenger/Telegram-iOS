@@ -43,5 +43,15 @@
 "PasscodeSettings.BadAttempts.FakePasscode" = "Ложный код-пароль";
 "PasscodeSettings.BadAttempts.Clear" = "Очистить";
 
+"FakePasscodes.AccountActions.ChatsToRemove" = "Чаты для удаления";
+"FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Чаты настроенные на удаление";
+"FakePasscodes.AccountActions.ChatsToRemove.AvailableChatsHeader" = "Доступные чаты";
+"FakePasscodes.AccountActions.ChatsToRemove.EmptyListInfo" = "Чаты не найдены.";
+"FakePasscodes.AccountActions.ChatsToRemove.SettingsTitle" = "Настройки удаления чатов";
+"FakePasscodes.AccountActions.ChatsToRemove.SelectedChatsHeader" = "Выбранные чаты";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHeader" = "Способ удаления";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDelete" = "Удалить";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHide" = "Скрыть";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeInfo" = "Если была выбрана опция \"Скрыть\", диалоги (чаты, каналы) не будут удалены. Они будут скрыты из списка диалогов. Их уведомления также будут скрыты. После входа с оригинальным код-паролем диалоги (чаты, каналы) появятся в списке. Более безопасно использовать удаление.";
 "FakePasscodes.AccountActions.LogOut" = "Выходить из аккаунта";
 "FakePasscodes.AccountActions.MiscActionsInfo" = "При вводе ложного код-пароля выполняются выбранные действия.";

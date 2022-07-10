@@ -805,6 +805,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 }
             })
             
+            appLockContext.sharedAccountContext = sharedContext
+            
             presentationDataPromise.set(sharedContext.presentationData)
             
             sharedContext.presentGlobalController = { [weak self] c, a in

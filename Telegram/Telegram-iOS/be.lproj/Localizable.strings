@@ -1,4 +1,4 @@
-"PasscodeSettings.AutoLock.IfAwayFor_1second" = "Пасля 1 секунды адсутнасцi";
+"PasscodeSettings.AutoLock.IfAwayFor_1second" = "Пасля 1 секунды адсутнасці";
 
 "PasscodeSettings.FakePasscodes" = "Несапраўдныя кады доступу";
 "PasscodeSettings.FakePasscode" = "Несапраўдны код доступу %1$d";
@@ -43,5 +43,15 @@
 "PasscodeSettings.BadAttempts.FakePasscode" = "Несапраўдны код блакіроўкі";
 "PasscodeSettings.BadAttempts.Clear" = "Ачысціць";
 
+"FakePasscodes.AccountActions.ChatsToRemove" = "Чаты для выдалення";
+"FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Чаты наладжаныя для выдалення";
+"FakePasscodes.AccountActions.ChatsToRemove.AvailableChatsHeader" = "Даступныя чаты";
+"FakePasscodes.AccountActions.ChatsToRemove.EmptyListInfo" = "Чаты не знойдзены.";
+"FakePasscodes.AccountActions.ChatsToRemove.SettingsTitle" = "Налады выдалення чатаў";
+"FakePasscodes.AccountActions.ChatsToRemove.SelectedChatsHeader" = "Выбраныя чаты";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHeader" = "Метад выдалення";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDelete" = "Выдаліць";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHide" = "Схаваць";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeInfo" = "Калі была абраная опцыя \"Схаваць\", дыялогі (чаты, каналы) не будуць выдаленыя. Яны будуць схаваныя са спісу дыялогаў. Іх апавяшчэнні таксама будуць схаваныя. Пасля ўваходу з арыгінальным код-паролем дыялогі (чаты, каналы) з'явяцца ў спісе. Больш бяспечна выкарыстоўваць выдаленне.";
 "FakePasscodes.AccountActions.LogOut" = "Выходзіць з акаўнту";
 "FakePasscodes.AccountActions.MiscActionsInfo" = "Пры ўводзе несапраўднага кода блакіроўкі выконваюцца выбраныя дзеянні.";
