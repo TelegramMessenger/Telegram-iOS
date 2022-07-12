@@ -69,7 +69,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         super.init()
         
         if let file = file {
-            self.updateFile(file: file, attemptSynchronousLoad: true)
+            self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
         } else {
             self.infoDisposable = (context.engine.stickers.resolveInlineSticker(fileId: emoji.fileId)
             |> deliverOnMainQueue).start(next: { [weak self] file in
@@ -130,10 +130,30 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             
             self.loadAnimation()
         } else {
-            self.loadDisposable = self.renderer.loadFirstFrame(groupId: self.groupId, target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, completion: { [weak self] _ in
-                self?.loadAnimation()
+            let pointSize = self.pointSize
+            let placeholderColor = self.placeholderColor
+            self.loadDisposable = self.renderer.loadFirstFrame(groupId: self.groupId, target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, completion: { [weak self] result in
+                if !result {
+                    MultiAnimationRendererImpl.firstFrameQueue.async {
+                        let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: pointSize, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor)
+                        
+                        DispatchQueue.main.async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if let image = image {
+                                strongSelf.contents = image.cgImage
+                            }
+                            strongSelf.loadAnimation()
+                        }
+                    }
+                } else {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.loadAnimation()
+                }
             })
-            self.loadAnimation()
         }
     }
     
@@ -151,7 +171,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                     return
                 }
                 
-                if file.isVideoSticker {
+                if file.isVideoEmoji {
                     cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
                 } else {
                     guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
@@ -162,7 +182,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 }
             })
             
-            let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: stickerPackFileReference(file), resource: file.resource).start()
+            let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .customEmoji(media: file), resource: file.resource).start()
             
             return ActionDisposable {
                 dataDisposable.dispose()

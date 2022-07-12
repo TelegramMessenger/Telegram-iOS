@@ -154,7 +154,7 @@ func _internal_cachedStickerPack(postbox: Postbox, network: Network, reference: 
 }
     
 func cachedStickerPack(transaction: Transaction, reference: StickerPackReference) -> (StickerPackCollectionInfo, [StickerPackItem], Bool)? {
-    let namespaces: [Int32] = [Namespaces.ItemCollection.CloudStickerPacks, Namespaces.ItemCollection.CloudMaskPacks]
+    let namespaces: [Int32] = [Namespaces.ItemCollection.CloudStickerPacks, Namespaces.ItemCollection.CloudMaskPacks, Namespaces.ItemCollection.CloudEmojiPacks]
     switch reference {
         case let .id(id, _):
             for namespace in namespaces {

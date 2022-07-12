@@ -1379,6 +1379,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 let namespace: SynchronizeInstalledStickerPacksOperationNamespace
                 if (flags & (1 << 0)) != 0 {
                     namespace = .masks
+                } else if (flags & (1 << 1)) != 0 {
+                    namespace = .emoji
                 } else {
                     namespace = .stickers
                 }
@@ -3459,9 +3461,11 @@ func replayFinalState(
         }) {
             addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers, content: .sync, noDelay: false)
             addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks, content: .sync, noDelay: false)
+            addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .emoji, content: .sync, noDelay: false)
         } else {
             var syncStickers = false
             var syncMasks = false
+            var syncEmoji = false
             loop: for operation in stickerPackOperations {
                 switch operation {
                     case let .add(apiSet):
@@ -3501,6 +3505,8 @@ func replayFinalState(
                                 case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _):
                                     if (flags & (1 << 3)) != 0 {
                                         namespace = Namespaces.ItemCollection.CloudMaskPacks
+                                    } else if (flags & (1 << 7)) != 0 {
+                                        namespace = Namespaces.ItemCollection.CloudEmojiPacks
                                     } else {
                                         namespace = Namespaces.ItemCollection.CloudStickerPacks
                                     }
@@ -3511,6 +3517,8 @@ func replayFinalState(
                             if namespace == Namespaces.ItemCollection.CloudMaskPacks && syncMasks {
                                 continue loop
                             } else if namespace == Namespaces.ItemCollection.CloudStickerPacks && syncStickers {
+                                continue loop
+                            } else if namespace == Namespaces.ItemCollection.CloudEmojiPacks && syncEmoji {
                                 continue loop
                             }
                             
@@ -3532,6 +3540,8 @@ func replayFinalState(
                                 collectionNamespace = Namespaces.ItemCollection.CloudStickerPacks
                             case .masks:
                                 collectionNamespace = Namespaces.ItemCollection.CloudMaskPacks
+                            case .emoji:
+                                collectionNamespace = Namespaces.ItemCollection.CloudEmojiPacks
                         }
                         let currentInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
                         if Set(currentInfos.map { $0.id.id }) != Set(ids) {
@@ -3540,6 +3550,8 @@ func replayFinalState(
                                     syncStickers = true
                                 case .masks:
                                     syncMasks = true
+                                case .emoji:
+                                    syncEmoji = true
                             }
                         } else {
                             var currentDict: [ItemCollectionId: StickerPackCollectionInfo] = [:]
@@ -3556,6 +3568,7 @@ func replayFinalState(
                     case .sync:
                         syncStickers = true
                         syncMasks = true
+                        syncEmoji = true
                         break loop
                 }
             }
@@ -3564,6 +3577,9 @@ func replayFinalState(
             }
             if syncMasks {
                 addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .masks, content: .sync, noDelay: false)
+            }
+            if syncEmoji {
+                addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .emoji, content: .sync, noDelay: false)
             }
         }
     }

@@ -625,8 +625,8 @@ public extension ContainedViewLayoutTransition {
         } else {
             switch self {
             case .immediate:
-                view.layer.removeAnimation(forKey: "position")
-                view.layer.removeAnimation(forKey: "bounds")
+                //view.layer.removeAnimation(forKey: "position")
+                //view.layer.removeAnimation(forKey: "bounds")
                 view.frame = frame
                 if let completion = completion {
                     completion(true)

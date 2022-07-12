@@ -249,6 +249,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         }
                     }
+                    
+                    if let updatingMedia = item.attributes.updatingMedia {
+                        messageEntities = updatingMedia.entities?.entities ?? []
+                    }
                 }
                 
                 var entities: [MessageTextEntity]?
@@ -404,7 +408,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                     boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
                     
-                    return (boundingSize, { [weak self] animation, _, _ in
+                    return (boundingSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             if let updatedCachedChatMessageText = updatedCachedChatMessageText {
@@ -432,7 +436,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
-                            let _ = textApply(TextNodeWithEntities.Arguments(context: item.context, cache: item.controllerInteraction.presentationContext.animationCache, renderer: item.controllerInteraction.presentationContext.animationRenderer, placeholderColor: messageTheme.mediaPlaceholderColor))
+                            let _ = textApply(TextNodeWithEntities.Arguments(context: item.context, cache: item.controllerInteraction.presentationContext.animationCache, renderer: item.controllerInteraction.presentationContext.animationRenderer, placeholderColor: messageTheme.mediaPlaceholderColor, attemptSynchronous: synchronousLoads))
                             animation.animator.updateFrame(layer: strongSelf.textNode.textNode.layer, frame: textFrame, completion: nil)
                             
                             if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {

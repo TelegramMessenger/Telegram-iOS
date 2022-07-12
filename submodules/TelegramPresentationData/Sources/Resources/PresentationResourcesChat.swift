@@ -1281,4 +1281,10 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotWebApp"), color: theme.chat.inputButtonPanel.buttonTextColor)
         })
     }
+    
+    public static func chatEntityKeyboardLock(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatEntityKeyboardLock.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: theme.chat.inputMediaPanel.stickersSectionTextColor)
+        })
+    }
 }

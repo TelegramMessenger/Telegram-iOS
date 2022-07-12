@@ -26,3 +26,9 @@ public func cacheLottieAnimation(data: Data, width: Int, height: Int, writer: An
         writer.finish()
     }
 }
+
+public func cacheStillSticker(path: String, width: Int, height: Int, writer: AnimationCacheItemWriter) {
+    writer.queue.async {
+        writer.finish()
+    }
+}

@@ -301,7 +301,15 @@ class ChatPresentationContext {
         self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
             return TempBox.shared.tempFile(fileName: "file").path
         })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        
+        let animationRenderer: MultiAnimationRenderer
+        /*if #available(iOS 13.0, *) {
+            animationRenderer = MultiAnimationMetalRendererImpl()
+        } else {*/
+            animationRenderer = MultiAnimationRendererImpl()
+        //}
+        
+        self.animationRenderer = animationRenderer
     }
 }
 
@@ -1035,7 +1043,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
-        replyInfoLayout: (ChatMessageReplyInfoNode.Arguments) -> (CGSize, () -> ChatMessageReplyInfoNode),
+        replyInfoLayout: (ChatMessageReplyInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
         reactionButtonsLayout: (ChatMessageReactionButtonsNode.Arguments) -> (minWidth: CGFloat, layout: (CGFloat) -> (size: CGSize, apply: (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)),
         mosaicStatusLayout: (ChatMessageDateAndStatusNode.Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)),
@@ -1691,7 +1699,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var adminNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
         
         var replyInfoOriginY: CGFloat = 0.0
-        var replyInfoSizeApply: (CGSize, () -> ChatMessageReplyInfoNode?) = (CGSize(), { nil })
+        var replyInfoSizeApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode?) = (CGSize(), {  _ in nil })
         
         var forwardInfoOriginY: CGFloat = 0.0
         var forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode?) = (CGSize(), { _ in nil })
@@ -1809,7 +1817,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
                     animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                 ))
-                replyInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
+                replyInfoSizeApply = (sizeAndApply.0, { synchronousLoads in sizeAndApply.1(synchronousLoads) })
                 
                 replyInfoOriginY = headerSize.height
                 headerSize.width = max(headerSize.width, replyInfoSizeApply.0.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
@@ -2283,7 +2291,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         contentUpperRightCorner: CGPoint,
         forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode?),
         forwardInfoOriginY: CGFloat,
-        replyInfoSizeApply: (CGSize, () -> ChatMessageReplyInfoNode?),
+        replyInfoSizeApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode?),
         replyInfoOriginY: CGFloat,
         removedContentNodeIndices: [Int]?,
         addedContentNodes: [(Message, Bool, ChatMessageBubbleContentNode)]?,
@@ -2489,7 +2497,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
-        if let replyInfoNode = replyInfoSizeApply.1() {
+        if let replyInfoNode = replyInfoSizeApply.1(synchronousLoads) {
             strongSelf.replyInfoNode = replyInfoNode
             var animateFrame = true
             if replyInfoNode.supernode == nil {

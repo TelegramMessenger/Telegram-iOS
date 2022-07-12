@@ -90,7 +90,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         self.contentNode.addSubnode(self.lineNode)
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ arguments: Arguments) -> (CGSize, () -> ChatMessageReplyInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (Bool) -> ChatMessageReplyInfoNode) {
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNodeWithEntities.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
@@ -267,7 +267,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let size = CGSize(width: max(titleLayout.size.width - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right) + leftInset, height: titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing)
             
-            return (size, {
+            return (size, { attemptSynchronous in
                 let node: ChatMessageReplyInfoNode
                 if let maybeNode = maybeNode {
                     node = maybeNode
@@ -283,7 +283,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 let titleNode = titleApply()
                 var textArguments: TextNodeWithEntities.Arguments?
                 if let cache = arguments.animationCache, let renderer = arguments.animationRenderer {
-                    textArguments = TextNodeWithEntities.Arguments(context: arguments.context, cache: cache, renderer: renderer, placeholderColor: placeholderColor)
+                    textArguments = TextNodeWithEntities.Arguments(context: arguments.context, cache: cache, renderer: renderer, placeholderColor: placeholderColor, attemptSynchronous: attemptSynchronous)
                 }
                 let textNode = textApply(textArguments)
                 textNode.visibilityRect = node.visibility ? CGRect.infinite : nil

@@ -34,6 +34,7 @@ private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.mono
 private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
     private var item: ChatTextInputAccessoryItem
     private var theme: PresentationTheme
+    private var strings: PresentationStrings
     private var width: CGFloat
     private let iconImageNode: ASImageNode
     private var animationView: ComponentView<Empty>?
@@ -42,6 +43,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
     init(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) {
         self.item = item
         self.theme = theme
+        self.strings = strings
         
         self.iconImageNode = ASImageNode()
         
@@ -89,6 +91,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
+        self.strings = strings
         
         let (image, text, accessibilityLabel, alpha, insets) = AccessoryItemIconButtonNode.imageAndInsets(item: item, theme: theme, strings: strings)
         
@@ -156,6 +159,8 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         self.item = item
         
         if let image = self.iconImageNode.image {
+            self.iconImageNode.image = AccessoryItemIconButtonNode.imageAndInsets(item: item, theme: self.theme, strings: self.strings).0
+            
             let bottomInset: CGFloat = 0.0
             let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0) - bottomInset), size: image.size)
             self.iconImageNode.frame = imageFrame

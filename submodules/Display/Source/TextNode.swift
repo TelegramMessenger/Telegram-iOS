@@ -1126,6 +1126,10 @@ open class TextNode: ASDisplayNode {
                         rightOffset = ceil(secondaryRightOffset)
                     }
                     
+                    if embeddedItems.count > 25 {
+                        assert(true)
+                    }
+                    
                     embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
                 }
                 
@@ -1136,6 +1140,9 @@ open class TextNode: ASDisplayNode {
                     isLastLine = true
                 }
                 if isLastLine {
+                    if attributedString.string.hasPrefix("😀") {
+                        assert(true)
+                    }
                     if first {
                         first = false
                     } else {
@@ -1175,7 +1182,7 @@ open class TextNode: ASDisplayNode {
                         for run in runs {
                             let runAttributes: NSDictionary = CTRunGetAttributes(run)
                             if let _ = runAttributes["CTForegroundColorFromContext"] {
-                                brokenLineRange.length = CTRunGetStringRange(run).location
+                                brokenLineRange.length = CTRunGetStringRange(run).location - brokenLineRange.location
                                 break
                             }
                         }

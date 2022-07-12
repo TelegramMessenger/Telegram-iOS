@@ -685,7 +685,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                             context: strongSelf.context,
                             cache: cache,
                             renderer: renderer,
-                            placeholderColor: theme.list.mediaPlaceholderColor
+                            placeholderColor: theme.list.mediaPlaceholderColor,
+                            attemptSynchronous: false
                         )
                     }
                     let _ = textApply(textArguments)

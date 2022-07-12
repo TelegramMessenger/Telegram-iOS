@@ -8545,7 +8545,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
         return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
             if let sourceNode = sourceNode {
                 let rect = sourceRect.isEmpty ? sourceNode.bounds : sourceRect
-                return (sourceNode, rect)
+                return (sourceNode.view, rect)
             } else {
                 return nil
             }

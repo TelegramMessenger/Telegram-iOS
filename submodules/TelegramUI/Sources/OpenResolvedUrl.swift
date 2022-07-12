@@ -163,7 +163,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     present(c, a)
                 }, messageId: replyThreadMessage.messageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).start()
             }
-        case let .stickerPack(name):
+        case let .stickerPack(name, _):
             dismissInput()
             /*if false {
                 var mainStickerPack: StickerPackReference?

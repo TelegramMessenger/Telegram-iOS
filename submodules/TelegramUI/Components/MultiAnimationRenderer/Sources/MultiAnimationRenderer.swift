@@ -11,7 +11,11 @@ public protocol MultiAnimationRenderer: AnyObject {
     func loadFirstFrame(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable
 }
 
+private var nextRenderTargetId: Int64 = 1
+
 open class MultiAnimationRenderTarget: SimpleLayer {
+    public let id: Int64
+    
     fileprivate let deinitCallbacks = Bag<() -> Void>()
     fileprivate let updateStateCallbacks = Bag<() -> Void>()
     
@@ -23,6 +27,29 @@ open class MultiAnimationRenderTarget: SimpleLayer {
                 }
             }
         }
+    }
+    
+    public override init() {
+        assert(Thread.isMainThread)
+        
+        self.id = nextRenderTargetId
+        nextRenderTargetId += 1
+        
+        super.init()
+    }
+    
+    public override init(layer: Any) {
+        guard let layer = layer as? MultiAnimationRenderTarget else {
+            preconditionFailure()
+        }
+        
+        self.id = layer.id
+        
+        super.init(layer: layer)
+    }
+    
+    required public init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
     deinit {
@@ -369,7 +396,8 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
     }
     
-    private let firstFrameQueue: Queue
+    public static let firstFrameQueue = Queue(name: "MultiAnimationRenderer-FirstFrame", qos: .userInteractive)
+    
     private var groupContexts: [String: GroupContext] = [:]
     private var frameSkip: Int
     private var displayLink: ConstantDisplayLinkAnimator?
@@ -399,8 +427,6 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
     }
     
     public init() {
-        self.firstFrameQueue = Queue(name: "MultiAnimationRenderer-FirstFrame", qos: .userInteractive)
-        
         if !ProcessInfo.processInfo.isLowPowerModeEnabled && ProcessInfo.processInfo.activeProcessorCount > 2 {
             self.frameSkip = 1
         } else {
@@ -413,7 +439,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         if let current = self.groupContexts[groupId] {
             groupContext = current
         } else {
-            groupContext = GroupContext(firstFrameQueue: self.firstFrameQueue, stateUpdated: { [weak self] in
+            groupContext = GroupContext(firstFrameQueue: MultiAnimationRendererImpl.firstFrameQueue, stateUpdated: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -434,7 +460,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         if let current = self.groupContexts[groupId] {
             groupContext = current
         } else {
-            groupContext = GroupContext(firstFrameQueue: self.firstFrameQueue, stateUpdated: { [weak self] in
+            groupContext = GroupContext(firstFrameQueue: MultiAnimationRendererImpl.firstFrameQueue, stateUpdated: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -451,7 +477,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         if let current = self.groupContexts[groupId] {
             groupContext = current
         } else {
-            groupContext = GroupContext(firstFrameQueue: self.firstFrameQueue, stateUpdated: { [weak self] in
+            groupContext = GroupContext(firstFrameQueue: MultiAnimationRendererImpl.firstFrameQueue, stateUpdated: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -475,14 +501,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         self.isPlaying = isPlaying
     }
     
-    private var previousTimestamp: Double?
-    
     private func animationTick() {
-        let timestamp = CFAbsoluteTimeGetCurrent()
-        if let _ = self.previousTimestamp {
-        }
-        self.previousTimestamp = timestamp
-        
         let secondsPerFrame = Double(self.frameSkip) / 60.0
         
         var tasks: [LoadFrameGroupTask] = []

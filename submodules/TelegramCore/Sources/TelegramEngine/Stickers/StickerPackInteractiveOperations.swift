@@ -11,6 +11,8 @@ func _internal_addStickerPackInteractively(postbox: Postbox, info: StickerPackCo
                 namespace = .stickers
             case Namespaces.ItemCollection.CloudMaskPacks:
                 namespace = .masks
+            case Namespaces.ItemCollection.CloudEmojiPacks:
+                namespace = .emoji
             default:
                 namespace = nil
         }
@@ -57,6 +59,8 @@ func _internal_removeStickerPacksInteractively(postbox: Postbox, ids: [ItemColle
                     namespace = .stickers
                 case Namespaces.ItemCollection.CloudMaskPacks:
                     namespace = .masks
+                case Namespaces.ItemCollection.CloudEmojiPacks:
+                    namespace = .emoji
                 default:
                     namespace = nil
             }

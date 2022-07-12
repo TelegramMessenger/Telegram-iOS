@@ -298,6 +298,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 if let paneTransitionGestureState = self.paneTransitionGestureState {
                     self.paneTransitionGestureState = nil
                     
+                    var updateTopPanelExpanded = false
+                    
                     if paneTransitionGestureState.fraction != 0.0, let component = self.component, let centralId = self.centralId, let centralIndex = component.contents.firstIndex(where: { $0.id == centralId }) {
                         let fraction = recognizer.translation(in: self).x / self.bounds.width
                         let velocity = recognizer.velocity(in: self)
@@ -318,10 +320,18 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                         }
                         if updatedCentralIndex != centralIndex {
                             self.centralId = component.contents[updatedCentralIndex].id
+                            
+                            if self.isTopPanelExpanded {
+                                updateTopPanelExpanded = true
+                            }
                         }
                     }
                     
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                    if updateTopPanelExpanded {
+                        self.isTopPanelExpandedUpdated(isExpanded: false, transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                    } else {
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                    }
                 }
             default:
                 break
@@ -343,8 +353,19 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 guard let strongSelf = self else {
                     return
                 }
+                
+                var updateTopPanelExpanded = false
                 if strongSelf.centralId != id {
                     strongSelf.centralId = id
+                    
+                    if strongSelf.isTopPanelExpanded {
+                        updateTopPanelExpanded = true
+                    }
+                }
+                
+                if updateTopPanelExpanded {
+                    strongSelf.isTopPanelExpandedUpdated(isExpanded: false, transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                } else {
                     strongSelf.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                 }
             }

@@ -805,7 +805,7 @@ public final class MediaStreamComponent: CombinedComponent {
                                     "Point 3.Group 1.Fill 1": whiteColor,
                                     "Point 1.Group 1.Fill 1": whiteColor
                                 ],
-                                mode: .still
+                                mode: .still(position: .begin)
                             ),
                             size: CGSize(width: 22.0, height: 22.0)
                         ).tagged(moreAnimationTag))),
