@@ -4,6 +4,7 @@ import AnimationCache
 import Display
 import RLottieBinding
 import GZip
+import WebPBinding
 
 public func cacheLottieAnimation(data: Data, width: Int, height: Int, writer: AnimationCacheItemWriter) {
     writer.queue.async {
@@ -29,6 +30,18 @@ public func cacheLottieAnimation(data: Data, width: Int, height: Int, writer: An
 
 public func cacheStillSticker(path: String, width: Int, height: Int, writer: AnimationCacheItemWriter) {
     writer.queue.async {
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let image = WebP.convert(fromWebP: data) {
+            writer.add(with: { surface in
+                let context = DrawingContext(size: CGSize(width: CGFloat(surface.width), height: CGFloat(surface.height)), scale: 1.0, opaque: false, clear: true, bytesPerRow: surface.bytesPerRow)
+                context.withContext { c in
+                    UIGraphicsPushContext(c)
+                    c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: context.size))
+                    UIGraphicsPopContext()
+                }
+                memcpy(surface.argb, context.bytes, surface.height * surface.bytesPerRow)
+            }, proposedWidth: width, proposedHeight: height, duration: 1.0)
+        }
+        
         writer.finish()
     }
 }

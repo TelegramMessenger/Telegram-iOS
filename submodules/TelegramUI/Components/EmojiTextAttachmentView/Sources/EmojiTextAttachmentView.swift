@@ -163,32 +163,51 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
         
         let context = self.context
-        self.disposable = renderer.add(groupId: self.groupId, target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: { size, writer in
-            let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
-            
-            let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
-                guard let result = result else {
-                    return
-                }
+        if file.isAnimatedSticker || file.isVideoEmoji {
+            self.disposable = renderer.add(groupId: self.groupId, target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: { size, writer in
+                let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
                 
-                if file.isVideoEmoji {
-                    cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
-                } else {
-                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
-                        writer.finish()
+                let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
+                    guard let result = result else {
                         return
                     }
-                    cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
+                    
+                    if file.isVideoEmoji {
+                        cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
+                    } else {
+                        guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
+                            writer.finish()
+                            return
+                        }
+                        cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
+                    }
+                })
+                
+                let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .customEmoji(media: file), resource: file.resource).start()
+                
+                return ActionDisposable {
+                    dataDisposable.dispose()
+                    fetchDisposable.dispose()
                 }
             })
-            
-            let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .customEmoji(media: file), resource: file.resource).start()
-            
-            return ActionDisposable {
-                dataDisposable.dispose()
-                fetchDisposable.dispose()
-            }
-        })
+        } else {
+            self.disposable = renderer.add(groupId: self.groupId, target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: { size, writer in
+                let dataDisposable = context.account.postbox.mediaBox.resourceData(file.resource).start(next: { result in
+                    guard result.complete else {
+                        return
+                    }
+                    
+                    cacheStillSticker(path: result.path, width: Int(size.width), height: Int(size.height), writer: writer)
+                })
+                
+                let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .customEmoji(media: file), resource: file.resource).start()
+                
+                return ActionDisposable {
+                    dataDisposable.dispose()
+                    fetchDisposable.dispose()
+                }
+            })
+        }
     }
 }
 
