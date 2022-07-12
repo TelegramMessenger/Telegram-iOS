@@ -50,11 +50,11 @@ private func generateDiffuseTexture() -> UIImage {
 
 class GiftAvatarComponent: Component {
     let context: AccountContext
-    let peer: EnginePeer
+    let peer: EnginePeer?
     let isVisible: Bool
     let hasIdleAnimations: Bool
         
-    init(context: AccountContext, peer: EnginePeer, isVisible: Bool, hasIdleAnimations: Bool) {
+    init(context: AccountContext, peer: EnginePeer?, isVisible: Bool, hasIdleAnimations: Bool) {
         self.context = context
         self.peer = peer
         self.isVisible = isVisible
@@ -62,7 +62,7 @@ class GiftAvatarComponent: Component {
     }
     
     static func ==(lhs: GiftAvatarComponent, rhs: GiftAvatarComponent) -> Bool {
-        return lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
+        return lhs.peer == rhs.peer && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
     final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -276,7 +276,9 @@ class GiftAvatarComponent: Component {
             
             self.hasIdleAnimations = component.hasIdleAnimations
             let avatarSize = CGSize(width: 100.0, height: 100.0)
-            self.avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: component.peer, size: avatarSize, font: avatarPlaceholderFont(size: 43.0), fullSize: true))
+            if let peer = component.peer {
+                self.avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: peer, size: avatarSize, font: avatarPlaceholderFont(size: 43.0), fullSize: true))
+            }
             self.avatarNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - avatarSize.width) / 2.0), y: 63.0), size: avatarSize)
             
             return availableSize

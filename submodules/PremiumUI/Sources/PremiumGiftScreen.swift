@@ -500,14 +500,14 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
     typealias EnvironmentType = (ViewControllerComponentContainer.Environment, ScrollChildEnvironment)
     
     let context: AccountContext
-    let peer: EnginePeer
-    let products: [InAppPurchaseManager.Product]
-    let selectedProductId: String
+    let peer: EnginePeer?
+    let products: [InAppPurchaseManager.Product]?
+    let selectedProductId: String?
     
     let present: (ViewController) -> Void
     let selectProduct: (String) -> Void
     
-    init(context: AccountContext, peer: EnginePeer, products: [InAppPurchaseManager.Product], selectedProductId: String, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void) {
+    init(context: AccountContext, peer: EnginePeer?, products: [InAppPurchaseManager.Product]?, selectedProductId: String?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void) {
         self.context = context
         self.peer = peer
         self.products = products
@@ -538,7 +538,6 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
         let fade = Child(RoundedRectangle.self)
         let text = Child(MultilineTextComponent.self)
         let section = Child(ProductGroupComponent.self)
-        let termsText = Child(MultilineTextComponent.self)
         
         return { context in
             let sideInset: CGFloat = 16.0
@@ -584,7 +583,6 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             
             let textColor = theme.list.itemPrimaryTextColor
             let subtitleColor = theme.list.itemSecondaryTextColor
-//            let arrowColor = theme.list.disclosureArrowColor
             
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
@@ -595,7 +593,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             let text = text.update(
                 component: MultilineTextComponent(
                     text: .markdown(
-                        text: strings.Premium_Gift_Description(component.peer.compactDisplayTitle).string,
+                        text: strings.Premium_Gift_Description(component.peer?.compactDisplayTitle ?? "").string,
                         attributes: markdownAttributes
                     ),
                     horizontalAlignment: .center,
@@ -621,52 +619,54 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             ]
             
             var i = 0
-            for product in component.products {
-                let monthsCount: Int
-                let giftTitle: String
-                let discount: String
-                switch product.id {
-                    case "org.telegram.telegramPremium.twelveMonths":
-                        giftTitle = strings.Premium_Gift_Years(1)
-                        monthsCount = 12
-                        discount = "-15%"
-                    case "org.telegram.telegramPremium.sixMonths":
-                        giftTitle = strings.Premium_Gift_Months(6)
-                        monthsCount = 6
-                        discount = "-10%"
-                    case "org.telegram.telegramPremium.threeMonths":
-                        giftTitle = strings.Premium_Gift_Months(3)
-                        monthsCount = 3
-                        discount = "-7%"
-                    default:
-                        giftTitle = ""
-                        monthsCount = 1
-                        discount = ""
-                }
-                
-                items.append(ProductGroupComponent.Item(
-                    AnyComponentWithIdentity(
-                        id: product.id,
-                        component: AnyComponent(
-                            GiftComponent(
-                                title: giftTitle,
-                                totalPrice: product.price,
-                                perMonthPrice: strings.Premium_Gift_PricePerMonth(product.pricePerMonth(monthsCount)).string,
-                                discount: discount,
-                                selected: product.id == component.selectedProductId,
-                                primaryTextColor: textColor,
-                                secondaryTextColor: subtitleColor,
-                                accentColor: gradientColors[i],
-                                checkForegroundColor: environment.theme.list.itemCheckColors.foregroundColor,
-                                checkBorderColor: environment.theme.list.itemCheckColors.strokeColor
+            if let products = component.products {
+                for product in products {
+                    let monthsCount: Int
+                    let giftTitle: String
+                    let discount: String
+                    switch product.id {
+                        case "org.telegram.telegramPremium.twelveMonths":
+                            giftTitle = strings.Premium_Gift_Years(1)
+                            monthsCount = 12
+                            discount = "-15%"
+                        case "org.telegram.telegramPremium.sixMonths":
+                            giftTitle = strings.Premium_Gift_Months(6)
+                            monthsCount = 6
+                            discount = "-10%"
+                        case "org.telegram.telegramPremium.threeMonths":
+                            giftTitle = strings.Premium_Gift_Months(3)
+                            monthsCount = 3
+                            discount = "-7%"
+                        default:
+                            giftTitle = ""
+                            monthsCount = 1
+                            discount = ""
+                    }
+                    
+                    items.append(ProductGroupComponent.Item(
+                        AnyComponentWithIdentity(
+                            id: product.id,
+                            component: AnyComponent(
+                                GiftComponent(
+                                    title: giftTitle,
+                                    totalPrice: product.price,
+                                    perMonthPrice: strings.Premium_Gift_PricePerMonth(product.pricePerMonth(monthsCount)).string,
+                                    discount: discount,
+                                    selected: product.id == component.selectedProductId,
+                                    primaryTextColor: textColor,
+                                    secondaryTextColor: subtitleColor,
+                                    accentColor: gradientColors[i],
+                                    checkForegroundColor: environment.theme.list.itemCheckColors.foregroundColor,
+                                    checkBorderColor: environment.theme.list.itemCheckColors.strokeColor
+                                )
                             )
-                        )
-                    ),
-                    action: {
-                        component.selectProduct(product.id)
-                    })
-                )
-                i += 1
+                        ),
+                        action: {
+                            component.selectProduct(product.id)
+                        })
+                    )
+                    i += 1
+                }
             }
             
             let section = section.update(
@@ -687,55 +687,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             size.height += section.size.height
             size.height += 23.0
             
-            let textSideInset: CGFloat = 16.0
             
-            let termsFont = Font.regular(13.0)
-            let termsTextColor = environment.theme.list.freeTextColor
-            let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
-                return (TelegramTextAttributes.URL, contents)
-            })
-                       
-            let termsString: MultilineTextComponent.TextContent = .markdown(
-                text: strings.Premium_Gift_Info,
-                attributes: termsMarkdownAttributes
-            )
-            
-            let accountContext = component.context
-            let peerId = component.peer.id
-            let present = component.present
-            
-            let termsText = termsText.update(
-                component: MultilineTextComponent(
-                    text: termsString,
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.0,
-                    highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.3),
-                    highlightAction: { attributes in
-                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                        } else {
-                            return nil
-                        }
-                    },
-                    tapAction: { attributes, _ in
-                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                            let controller = PremiumIntroScreen(context: accountContext, source: .profile(peerId))
-                            present(controller)
-                        }
-                    }
-                ),
-                environment: {},
-                availableSize: CGSize(width: availableWidth - sideInsets - textSideInset * 2.0, height: .greatestFiniteMagnitude),
-                transition: context.transition
-            )
-//            context.add(termsText
-//                .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + termsText.size.width / 2.0, y: size.height + termsText.size.height / 2.0))
-//            )
-            context.add(termsText
-                .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + termsText.size.width / 2.0, y: size.height + 164.0 + termsText.size.height / 2.0))
-            )
-            size.height += termsText.size.height
             size.height += 10.0
             size.height += scrollEnvironment.insets.bottom
             
@@ -848,11 +800,11 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             let duration: Int32
             switch product.id {
                 case "org.telegram.telegramPremium.twelveMonths":
-                    duration = 86400 * 365
+                    duration = 12
                 case "org.telegram.telegramPremium.sixMonths":
-                    duration = 86400 * 180
+                    duration = 6
                 case "org.telegram.telegramPremium.threeMonths":
-                    duration = 86400 * 90
+                    duration = 3
                 default:
                     duration = 0
             }
@@ -885,7 +837,6 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                             strongSelf.updateInProgress(false)
                             
                             strongSelf.updated(transition: .immediate)
-//                            strongSelf.completion(duration)
                             
                             addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
                             
@@ -896,12 +847,14 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                         }
                     }, completed: { [weak self] in
                         if let strongSelf = self {
-                            let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
-                            strongSelf.inProgress = false
-                            strongSelf.updateInProgress(false)
-                            
-                            strongSelf.updated(transition: .easeInOut(duration: 0.25))
-                            strongSelf.completion(duration)
+                            Queue.mainQueue().after(2.0) {
+                                let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
+                                strongSelf.inProgress = false
+                                strongSelf.updateInProgress(false)
+                                
+                                strongSelf.updated(transition: .easeInOut(duration: 0.25))
+                                strongSelf.completion(duration)
+                            }
                         }
                     }))
                 }
@@ -958,6 +911,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         let bottomPanel = Child(BlurredRectangle.self)
         let bottomSeparator = Child(Rectangle.self)
         let button = Child(SolidRoundedButtonComponent.self)
+        let termsText = Child(MultilineTextComponent.self)
         
         return { context in
             let environment = context.environment[EnvironmentType.self].value
@@ -1007,45 +961,43 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
             )
             
-            if let peer = state.peer, let products = state.products, let selectedProductId = state.selectedProductId {
-                let scrollContent = scrollContent.update(
-                    component: ScrollComponent<EnvironmentType>(
-                        content: AnyComponent(PremiumGiftScreenContentComponent(
-                            context: context.component.context,
-                            peer: peer,
-                            products: products,
-                            selectedProductId: selectedProductId,
-                            present: context.component.present,
-                            selectProduct: { [weak state] productId in
-                                state?.selectProduct(id: productId)
-                            }
-                        )),
-                        contentInsets: UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: bottomPanelHeight, right: 0.0),
-                        contentOffsetUpdated: { [weak state] topContentOffset, bottomContentOffset in
-                            state?.topContentOffset = topContentOffset
-                            state?.bottomContentOffset = bottomContentOffset
-                            Queue.mainQueue().justDispatch {
-                                state?.updated(transition: .immediate)
-                            }
-                        },
-                        contentOffsetWillCommit: { targetContentOffset in
-                            if targetContentOffset.pointee.y < 100.0 {
-                                targetContentOffset.pointee = CGPoint(x: 0.0, y: 0.0)
-                            } else if targetContentOffset.pointee.y < 123.0 {
-                                targetContentOffset.pointee = CGPoint(x: 0.0, y: 123.0)
-                            }
+            let scrollContent = scrollContent.update(
+                component: ScrollComponent<EnvironmentType>(
+                    content: AnyComponent(PremiumGiftScreenContentComponent(
+                        context: context.component.context,
+                        peer: state.peer,
+                        products: state.products,
+                        selectedProductId: state.selectedProductId,
+                        present: context.component.present,
+                        selectProduct: { [weak state] productId in
+                            state?.selectProduct(id: productId)
                         }
-                    ),
-                    environment: { environment },
-                    availableSize: context.availableSize,
-                    transition: context.transition
-                )
-                
-                context.add(scrollContent
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
-                )
-            }
-                        
+                    )),
+                    contentInsets: UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: bottomPanelHeight, right: 0.0),
+                    contentOffsetUpdated: { [weak state] topContentOffset, bottomContentOffset in
+                        state?.topContentOffset = topContentOffset
+                        state?.bottomContentOffset = bottomContentOffset
+                        Queue.mainQueue().justDispatch {
+                            state?.updated(transition: .immediate)
+                        }
+                    },
+                    contentOffsetWillCommit: { targetContentOffset in
+                        if targetContentOffset.pointee.y < 100.0 {
+                            targetContentOffset.pointee = CGPoint(x: 0.0, y: 0.0)
+                        } else if targetContentOffset.pointee.y < 123.0 {
+                            targetContentOffset.pointee = CGPoint(x: 0.0, y: 123.0)
+                        }
+                    }
+                ),
+                environment: { environment },
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
+            context.add(scrollContent
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+            )
+            
             let topPanelAlpha: CGFloat
             let titleOffset: CGFloat
             let titleScale: CGFloat
@@ -1066,23 +1018,21 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 titleAlpha = 1.0
             }
             
-            if let peer = context.state.peer {
-                let star = star.update(
-                    component: GiftAvatarComponent(
-                        context: context.component.context,
-                        peer: peer,
-                        isVisible: starIsVisible,
-                        hasIdleAnimations: state.hasIdleAnimations
-                    ),
-                    availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
-                    transition: context.transition
-                )
-            
-                context.add(star
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: topInset + star.size.height / 2.0 - 30.0 - titleOffset * titleScale))
-                    .scale(titleScale)
-                )
-            }
+            let star = star.update(
+                component: GiftAvatarComponent(
+                    context: context.component.context,
+                    peer: context.state.peer,
+                    isVisible: starIsVisible,
+                    hasIdleAnimations: state.hasIdleAnimations
+                ),
+                availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
+                transition: context.transition
+            )
+        
+            context.add(star
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: topInset + star.size.height / 2.0 - 30.0 - titleOffset * titleScale))
+                .scale(titleScale)
+            )
             
             context.add(topPanel
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: topPanel.size.height / 2.0))
@@ -1098,7 +1048,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 .scale(titleScale)
                 .opacity(titleAlpha)
             )
-                    
+                                
             let price: String?
             if let products = state.products, let selectedProductId = state.selectedProductId, let product = products.first(where: { $0.id == selectedProductId }) {
                 price = product.price
@@ -1193,6 +1143,56 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 })
             )
             
+            if let _ = context.state.peer {
+                let accountContext = context.component.context
+                let present = context.component.present
+                
+                let sideInset: CGFloat = 16.0
+                let textSideInset: CGFloat = 16.0
+                let availableWidth = context.availableSize.width
+                let sideInsets = sideInset * 2.0 + environment.safeInsets.left + environment.safeInsets.right
+                
+                let termsFont = Font.regular(13.0)
+                let termsTextColor = environment.theme.list.freeTextColor
+                let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                })
+                           
+                let termsString: MultilineTextComponent.TextContent = .markdown(
+                    text: environment.strings.Premium_Gift_Info,
+                    attributes: termsMarkdownAttributes
+                )
+                
+                let termsText = termsText.update(
+                    component: MultilineTextComponent(
+                        text: termsString,
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.0,
+                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.3),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { attributes, _ in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                                let controller = PremiumIntroScreen(context: accountContext, source: .giftTerms)
+                                present(controller)
+                            }
+                        }
+                    ),
+                    environment: {},
+                    availableSize: CGSize(width: availableWidth - sideInsets - textSideInset * 2.0, height: .greatestFiniteMagnitude),
+                    transition: context.transition
+                )
+                context.add(termsText
+                    .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + termsText.size.width / 2.0, y: context.availableSize.height - bottomPanel.size.height - termsText.size.height))
+                )
+            }
+            
             return context.availableSize
         }
     }
@@ -1248,24 +1248,16 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer {
                 strongSelf.view.disablesInteractiveModalDismiss = inProgress
             }
         }
-        
-//        presentImpl = { [weak self] c in
-//            self?.present(c, in: .window(.root))
-//        }
-        
+                
         pushImpl = { [weak self] c in
             self?.push(c)
         }
         
         completionImpl = { [weak self] duration in
-            if let strongSelf = self {
-                let navigationController = strongSelf.navigationController
-                strongSelf.dismiss()
-                let introController = PremiumIntroScreen(context: context, source: .gift(from: context.account.peerId, to: peerId, duration: duration))
-                navigationController?.pushViewController(introController, animated: true)
-                Queue.mainQueue().after(0.1, {
-                    introController.view.addSubview(ConfettiView(frame: introController.view.bounds))
-                })
+            if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                var controllers = navigationController.viewControllers
+                controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
+                navigationController.setViewControllers(controllers, animated: true)
             }
         }
     }

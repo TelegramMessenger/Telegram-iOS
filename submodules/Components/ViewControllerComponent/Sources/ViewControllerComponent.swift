@@ -176,7 +176,7 @@ open class ViewControllerComponentContainer: ViewController {
     private let component: AnyComponent<ViewControllerComponentContainer.Environment>
     
     private var presentationDataDisposable: Disposable?
-    private var validLayout: ContainerViewLayout?
+    public private(set) var validLayout: ContainerViewLayout?
     
     public init<C: Component>(context: AccountContext, component: C, navigationBarAppearance: NavigationBarAppearance, statusBarStyle: StatusBarStyle = .default, theme: PresentationTheme? = nil) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
         self.context = context

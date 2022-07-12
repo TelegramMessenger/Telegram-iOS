@@ -39,6 +39,7 @@ public enum PremiumSource: Equatable {
     case deeplink(String?)
     case profile(PeerId)
     case gift(from: PeerId, to: PeerId, duration: Int32)
+    case giftTerms
     
     var identifier: String? {
         switch self {
@@ -74,7 +75,7 @@ public enum PremiumSource: Equatable {
                 return "double_limits__about"
             case let .profile(id):
                 return "profile__\(id.id._internalGetInt64Value())"
-            case .gift:
+            case .gift, .giftTerms:
                 return nil
             case let .deeplink(reference):
                 if let reference = reference {
@@ -819,7 +820,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let boldTextFont = Font.semibold(15.0)
             
             let textString: String
-            if let _ = context.component.otherPeerName {
+            if case .giftTerms = context.component.source {
+                textString = strings.Premium_PersonalDescription
+            } else if let _ = context.component.otherPeerName {
                 if case let .gift(fromId, _, _) = context.component.source {
                     if fromId == context.component.context.account.peerId {
                         textString = strings.Premium_GiftedDescriptionYou
@@ -1447,7 +1450,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             )
             
             let titleString: String
-            if case .gift = context.component.source {
+            if case .giftTerms = context.component.source {
+                titleString = environment.strings.Premium_Title
+            } else if case .gift = context.component.source {
                 titleString = environment.strings.Premium_GiftedTitle
             } else if state.isPremium == true {
                 titleString = environment.strings.Premium_SubscribedTitle
@@ -1482,21 +1487,21 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     secondaryTitleText = environment.strings.Premium_PersonalTitle(otherPeerName).string
                 } else if case let .gift(fromPeerId, _, duration) = context.component.source {
                     if fromPeerId == context.component.context.account.peerId {
-                        if duration >= 86400 * 365 {
+                        if duration == 12 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitleYou_12Month(otherPeerName).string
-                        } else if duration >= 86400 * 180 {
+                        } else if duration == 6  {
                             secondaryTitleText = environment.strings.Premium_GiftedTitleYou_6Month(otherPeerName).string
-                        } else if duration >= 86400 * 90 {
+                        } else if duration == 3 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitleYou_3Month(otherPeerName).string
                         } else {
                             secondaryTitleText = ""
                         }
                     } else {
-                        if duration >= 86400 * 365 {
+                        if duration == 12 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitle_12Month(otherPeerName).string
-                        } else if duration >= 86400 * 180 {
+                        } else if duration == 6 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitle_6Month(otherPeerName).string
-                        } else if duration >= 86400 * 90 {
+                        } else if duration == 3 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitle_3Month(otherPeerName).string
                         } else {
                             secondaryTitleText = ""
@@ -1517,7 +1522,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     maximumNumberOfLines: 2,
                     lineSpacing: 0.0
                 ),
-                availableSize: context.availableSize,
+                availableSize: CGSize(width: context.availableSize.width - 32.0, height: context.availableSize.width),
                 transition: context.transition
             )
             

@@ -1335,6 +1335,14 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
     }
     
+    public func shouldDismissImmediately() -> Bool {
+        if let selectionState = self.interaction?.selectionState, selectionState.count() > 0 {
+            return false
+        } else {
+            return true
+        }
+    }
+    
     @objc private func cancelPressed() {
         self.dismissAllTooltips()
         

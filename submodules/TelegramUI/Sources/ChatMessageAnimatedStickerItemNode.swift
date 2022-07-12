@@ -423,7 +423,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     animationNode.success = { [weak self] onlyHaptic in
                         if let strongSelf = self, let item = strongSelf.item {
-                            item.controllerInteraction.animateDiceSuccess(onlyHaptic)
+                            item.controllerInteraction.animateDiceSuccess(true, !onlyHaptic)
                         }
                     }
                 }
@@ -433,7 +433,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     animationNode.success = { [weak self] in
                         if let strongSelf = self, let item = strongSelf.item {
-                            item.controllerInteraction.animateDiceSuccess(false)
+                            item.controllerInteraction.animateDiceSuccess(true, true)
                         }
                     }
                 }
@@ -1695,7 +1695,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
                 animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
             }
-            
+                        
+            animationFrame = animationFrame.offsetBy(dx: 0.0, dy: self.insets.top)
             additionalAnimationNode.frame = animationFrame
             if incomingMessage {
                 additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
