@@ -606,6 +606,7 @@ public extension Api {
         case inputPrivacyKeyPhoneP2P
         case inputPrivacyKeyProfilePhoto
         case inputPrivacyKeyStatusTimestamp
+        case inputPrivacyKeyVoiceMessages
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -657,6 +658,12 @@ public extension Api {
                     }
                     
                     break
+                case .inputPrivacyKeyVoiceMessages:
+                    if boxed {
+                        buffer.appendInt32(-1360618136)
+                    }
+                    
+                    break
     }
     }
     
@@ -678,6 +685,8 @@ public extension Api {
                 return ("inputPrivacyKeyProfilePhoto", [])
                 case .inputPrivacyKeyStatusTimestamp:
                 return ("inputPrivacyKeyStatusTimestamp", [])
+                case .inputPrivacyKeyVoiceMessages:
+                return ("inputPrivacyKeyVoiceMessages", [])
     }
     }
     
@@ -705,173 +714,8 @@ public extension Api {
         public static func parse_inputPrivacyKeyStatusTimestamp(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyStatusTimestamp
         }
-    
-    }
-}
-public extension Api {
-    enum InputPrivacyRule: TypeConstructorDescription {
-        case inputPrivacyValueAllowAll
-        case inputPrivacyValueAllowChatParticipants(chats: [Int64])
-        case inputPrivacyValueAllowContacts
-        case inputPrivacyValueAllowUsers(users: [Api.InputUser])
-        case inputPrivacyValueDisallowAll
-        case inputPrivacyValueDisallowChatParticipants(chats: [Int64])
-        case inputPrivacyValueDisallowContacts
-        case inputPrivacyValueDisallowUsers(users: [Api.InputUser])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputPrivacyValueAllowAll:
-                    if boxed {
-                        buffer.appendInt32(407582158)
-                    }
-                    
-                    break
-                case .inputPrivacyValueAllowChatParticipants(let chats):
-                    if boxed {
-                        buffer.appendInt32(-2079962673)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }
-                    break
-                case .inputPrivacyValueAllowContacts:
-                    if boxed {
-                        buffer.appendInt32(218751099)
-                    }
-                    
-                    break
-                case .inputPrivacyValueAllowUsers(let users):
-                    if boxed {
-                        buffer.appendInt32(320652927)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .inputPrivacyValueDisallowAll:
-                    if boxed {
-                        buffer.appendInt32(-697604407)
-                    }
-                    
-                    break
-                case .inputPrivacyValueDisallowChatParticipants(let chats):
-                    if boxed {
-                        buffer.appendInt32(-380694650)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }
-                    break
-                case .inputPrivacyValueDisallowContacts:
-                    if boxed {
-                        buffer.appendInt32(195371015)
-                    }
-                    
-                    break
-                case .inputPrivacyValueDisallowUsers(let users):
-                    if boxed {
-                        buffer.appendInt32(-1877932953)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputPrivacyValueAllowAll:
-                return ("inputPrivacyValueAllowAll", [])
-                case .inputPrivacyValueAllowChatParticipants(let chats):
-                return ("inputPrivacyValueAllowChatParticipants", [("chats", String(describing: chats))])
-                case .inputPrivacyValueAllowContacts:
-                return ("inputPrivacyValueAllowContacts", [])
-                case .inputPrivacyValueAllowUsers(let users):
-                return ("inputPrivacyValueAllowUsers", [("users", String(describing: users))])
-                case .inputPrivacyValueDisallowAll:
-                return ("inputPrivacyValueDisallowAll", [])
-                case .inputPrivacyValueDisallowChatParticipants(let chats):
-                return ("inputPrivacyValueDisallowChatParticipants", [("chats", String(describing: chats))])
-                case .inputPrivacyValueDisallowContacts:
-                return ("inputPrivacyValueDisallowContacts", [])
-                case .inputPrivacyValueDisallowUsers(let users):
-                return ("inputPrivacyValueDisallowUsers", [("users", String(describing: users))])
-    }
-    }
-    
-        public static func parse_inputPrivacyValueAllowAll(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueAllowAll
-        }
-        public static func parse_inputPrivacyValueAllowChatParticipants(_ reader: BufferReader) -> InputPrivacyRule? {
-            var _1: [Int64]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPrivacyRule.inputPrivacyValueAllowChatParticipants(chats: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPrivacyValueAllowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueAllowContacts
-        }
-        public static func parse_inputPrivacyValueAllowUsers(_ reader: BufferReader) -> InputPrivacyRule? {
-            var _1: [Api.InputUser]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputUser.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPrivacyRule.inputPrivacyValueAllowUsers(users: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPrivacyValueDisallowAll(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueDisallowAll
-        }
-        public static func parse_inputPrivacyValueDisallowChatParticipants(_ reader: BufferReader) -> InputPrivacyRule? {
-            var _1: [Int64]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPrivacyRule.inputPrivacyValueDisallowChatParticipants(chats: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPrivacyValueDisallowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
-            return Api.InputPrivacyRule.inputPrivacyValueDisallowContacts
-        }
-        public static func parse_inputPrivacyValueDisallowUsers(_ reader: BufferReader) -> InputPrivacyRule? {
-            var _1: [Api.InputUser]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputUser.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputPrivacyRule.inputPrivacyValueDisallowUsers(users: _1!)
-            }
-            else {
-                return nil
-            }
+        public static func parse_inputPrivacyKeyVoiceMessages(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyVoiceMessages
         }
     
     }

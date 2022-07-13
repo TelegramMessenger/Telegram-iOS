@@ -32,7 +32,7 @@ func telegramStickerPackThumbnailRepresentationFromApiSizes(datacenterId: Int32,
 extension StickerPackCollectionInfo {
     convenience init(apiSet: Api.StickerSet, namespace: ItemCollectionId.Namespace) {
         switch apiSet {
-            case let .stickerSet(flags, _, id, accessHash, title, shortName, thumbs, thumbDcId, thumbVersion, count, nHash):
+            case let .stickerSet(flags, _, id, accessHash, title, shortName, thumbs, thumbDcId, thumbVersion, thumbDocumentId, count, nHash):
                 var setFlags: StickerPackCollectionInfoFlags = StickerPackCollectionInfoFlags()
                 if (flags & (1 << 2)) != 0 {
                     setFlags.insert(.isOfficial)
@@ -57,6 +57,8 @@ extension StickerPackCollectionInfo {
                     thumbnailRepresentation = representations.first
                     immediateThumbnailData = data
                 }
+            
+                let _ = thumbDocumentId
                 
                 self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, thumbnail: thumbnailRepresentation, immediateThumbnailData: immediateThumbnailData, hash: nHash, count: count)
         }
