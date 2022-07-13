@@ -303,11 +303,11 @@ class ChatPresentationContext {
         })
         
         let animationRenderer: MultiAnimationRenderer
-        if #available(iOS 13.0, *) {
+        /*if #available(iOS 13.0, *) {
             animationRenderer = MultiAnimationMetalRendererImpl()
-        } else {
+        } else {*/
             animationRenderer = MultiAnimationRendererImpl()
-        }
+        //}
         
         self.animationRenderer = animationRenderer
     }
