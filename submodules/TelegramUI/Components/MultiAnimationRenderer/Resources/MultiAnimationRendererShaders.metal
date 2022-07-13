@@ -31,7 +31,10 @@ vertex Varyings multiAnimationVertex(
 
 fragment half4 multiAnimationFragment(
     Varyings in[[stage_in]],
-    texture2d<float, access::sample> texture[[texture(0)]]
+    texture2d<float, access::sample> textureY[[texture(0)]],
+    texture2d<float, access::sample> textureU[[texture(1)]],
+    texture2d<float, access::sample> textureV[[texture(2)]],
+    texture2d<float, access::sample> textureA[[texture(3)]]
 ) {
     constexpr sampler s(address::clamp_to_edge, filter::linear);
     return half4(texture.sample(s, in.texCoord));

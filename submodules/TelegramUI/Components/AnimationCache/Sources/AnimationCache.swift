@@ -6,18 +6,34 @@ import ManagedFile
 import Compression
 
 public final class AnimationCacheItemFrame {
-    public enum Format {
-        case rgba(width: Int, height: Int, bytesPerRow: Int)
+    public enum RequestedFormat {
+        case rgba
+        case yuva
     }
     
-    public let data: Data
-    public let range: Range<Int>
+    public final class Plane {
+        public let data: Data
+        public let width: Int
+        public let height: Int
+        public let bytesPerRow: Int
+        
+        public init(data: Data, width: Int, height: Int, bytesPerRow: Int) {
+            self.data = data
+            self.width = width
+            self.height = height
+            self.bytesPerRow = bytesPerRow
+        }
+    }
+    
+    public enum Format {
+        case rgba(data: Data, width: Int, height: Int, bytesPerRow: Int)
+        case yuva(y: Plane, u: Plane, v: Plane, a: Plane)
+    }
+    
     public let format: Format
     public let duration: Double
     
-    public init(data: Data, range: Range<Int>, format: Format, duration: Double) {
-        self.data = data
-        self.range = range
+    public init(format: Format, duration: Double) {
         self.format = format
         self.duration = duration
     }
@@ -25,22 +41,22 @@ public final class AnimationCacheItemFrame {
 
 public final class AnimationCacheItem {
     public let numFrames: Int
-    private let getFrameImpl: (Int) -> AnimationCacheItemFrame?
+    private let getFrameImpl: (Int, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?
     private let getFrameIndexImpl: (Double) -> Int
     
-    public init(numFrames: Int, getFrame: @escaping (Int) -> AnimationCacheItemFrame?, getFrameIndexImpl: @escaping (Double) -> Int) {
+    public init(numFrames: Int, getFrame: @escaping (Int, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?, getFrameIndexImpl: @escaping (Double) -> Int) {
         self.numFrames = numFrames
         self.getFrameImpl = getFrame
         self.getFrameIndexImpl = getFrameIndexImpl
     }
     
-    public func getFrame(index: Int) -> AnimationCacheItemFrame? {
-        return self.getFrameImpl(index)
+    public func getFrame(index: Int, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
+        return self.getFrameImpl(index, requestedFormat)
     }
     
-    public func getFrame(at duration: Double) -> AnimationCacheItemFrame? {
+    public func getFrame(at duration: Double, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
         let index = self.getFrameIndexImpl(duration)
-        return self.getFrameImpl(index)
+        return self.getFrameImpl(index, requestedFormat)
     }
 }
 
@@ -495,12 +511,10 @@ private final class AnimationCacheItemAccessor {
         self.currentDctCoefficients = DctCoefficientsYUVA420(width: width, height: height)
     }
     
-    func getFrame(index: Int) -> AnimationCacheItemFrame? {
+    func getFrame(index: Int, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
         guard let frameInfo = self.frameMapping[index] else {
             return nil
         }
-        
-        let currentSurface = ImageARGB(width: self.currentYUVASurface.yPlane.width, height: self.currentYUVASurface.yPlane.height)
         
         var frameDataOffset = 0
         let frameLength = frameInfo.range.upperBound - frameInfo.range.lowerBound
@@ -531,9 +545,47 @@ private final class AnimationCacheItemAccessor {
         }
         
         self.currentDctCoefficients.idct(dctData: self.currentDctData, target: self.currentYUVASurface)
-        self.currentYUVASurface.toARGB(target: currentSurface)
         
-        return AnimationCacheItemFrame(data: currentSurface.argbPlane.data, range: 0 ..< currentSurface.argbPlane.data.count, format: .rgba(width: currentSurface.argbPlane.width, height: currentSurface.argbPlane.height, bytesPerRow: currentSurface.argbPlane.bytesPerRow), duration: frameInfo.duration)
+        switch requestedFormat {
+        case .rgba:
+            let currentSurface = ImageARGB(width: self.currentYUVASurface.yPlane.width, height: self.currentYUVASurface.yPlane.height)
+            self.currentYUVASurface.toARGB(target: currentSurface)
+            
+            return AnimationCacheItemFrame(format: .rgba(data: currentSurface.argbPlane.data, width: currentSurface.argbPlane.width, height: currentSurface.argbPlane.height, bytesPerRow: currentSurface.argbPlane.bytesPerRow), duration: frameInfo.duration)
+        case .yuva:
+            let currentYUVASurface = self.currentYUVASurface
+            self.currentYUVASurface = ImageYUVA420(width: currentYUVASurface.yPlane.width, height: currentYUVASurface.yPlane.height)
+            
+            return AnimationCacheItemFrame(
+                format: .yuva(
+                    y: AnimationCacheItemFrame.Plane(
+                        data: currentYUVASurface.yPlane.data,
+                        width: currentYUVASurface.yPlane.width,
+                        height: currentYUVASurface.yPlane.height,
+                        bytesPerRow: currentYUVASurface.yPlane.bytesPerRow
+                    ),
+                    u: AnimationCacheItemFrame.Plane(
+                        data: currentYUVASurface.uPlane.data,
+                        width: currentYUVASurface.uPlane.width,
+                        height: currentYUVASurface.uPlane.height,
+                        bytesPerRow: currentYUVASurface.uPlane.bytesPerRow
+                    ),
+                    v: AnimationCacheItemFrame.Plane(
+                        data: currentYUVASurface.vPlane.data,
+                        width: currentYUVASurface.vPlane.width,
+                        height: currentYUVASurface.vPlane.height,
+                        bytesPerRow: currentYUVASurface.vPlane.bytesPerRow
+                    ),
+                    a: AnimationCacheItemFrame.Plane(
+                        data: currentYUVASurface.aPlane.data,
+                        width: currentYUVASurface.aPlane.width,
+                        height: currentYUVASurface.aPlane.height,
+                        bytesPerRow: currentYUVASurface.aPlane.bytesPerRow
+                    )
+                ),
+                duration: frameInfo.duration
+            )
+        }
     }
     
     func getFrameIndex(duration: Double) -> Int {
@@ -675,8 +727,8 @@ private func loadItem(path: String) -> AnimationCacheItem? {
     
     let itemAccessor = AnimationCacheItemAccessor(data: data, frameMapping: frameMapping, width: Int(width), height: Int(height), dctQuality: Int(dctQuality))
     
-    return AnimationCacheItem(numFrames: Int(numFrames), getFrame: { index in
-        return itemAccessor.getFrame(index: index)
+    return AnimationCacheItem(numFrames: Int(numFrames), getFrame: { index, requestedFormat in
+        return itemAccessor.getFrame(index: index, requestedFormat: requestedFormat)
     }, getFrameIndexImpl: { duration in
         return itemAccessor.getFrameIndex(duration: duration)
     })

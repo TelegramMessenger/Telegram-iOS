@@ -16,8 +16,8 @@ private var nextRenderTargetId: Int64 = 1
 open class MultiAnimationRenderTarget: SimpleLayer {
     public let id: Int64
     
-    fileprivate let deinitCallbacks = Bag<() -> Void>()
-    fileprivate let updateStateCallbacks = Bag<() -> Void>()
+    let deinitCallbacks = Bag<() -> Void>()
+    let updateStateCallbacks = Bag<() -> Void>()
     
     public final var shouldBeAnimating: Bool = false {
         didSet {
@@ -69,16 +69,16 @@ private final class FrameGroup {
     let timestamp: Double
     
     init?(item: AnimationCacheItem, timestamp: Double) {
-        guard let firstFrame = item.getFrame(at: timestamp) else {
+        guard let firstFrame = item.getFrame(at: timestamp, requestedFormat: .rgba) else {
             return nil
         }
         
         switch firstFrame.format {
-        case let .rgba(width, height, bytesPerRow):
+        case let .rgba(data, width, height, bytesPerRow):
             let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: false, bytesPerRow: bytesPerRow)
                 
-            firstFrame.data.withUnsafeBytes { bytes -> Void in
-                memcpy(context.bytes, bytes.baseAddress!.advanced(by: firstFrame.range.lowerBound), height * bytesPerRow)
+            data.withUnsafeBytes { bytes -> Void in
+                memcpy(context.bytes, bytes.baseAddress!, height * bytesPerRow)
                 
                 /*var sourceBuffer = vImage_Buffer()
                 sourceBuffer.width = UInt(width)
@@ -110,6 +110,8 @@ private final class FrameGroup {
             self.size = CGSize(width: CGFloat(width), height: CGFloat(height))
             self.timestamp = timestamp
             self.badgeImage = nil
+        default:
+            return nil
         }
     }
 }

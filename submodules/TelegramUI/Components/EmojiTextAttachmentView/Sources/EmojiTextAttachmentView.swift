@@ -101,10 +101,11 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     override public func action(forKey event: String) -> CAAction? {
         if event == kCAOnOrderIn {
             self.isInHierarchyValue = true
+            self.updatePlayback()
         } else if event == kCAOnOrderOut {
             self.isInHierarchyValue = false
+            self.updatePlayback()
         }
-        self.updatePlayback()
         return nullAction
     }
     
