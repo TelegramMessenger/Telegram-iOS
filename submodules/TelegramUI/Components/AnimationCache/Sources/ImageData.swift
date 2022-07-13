@@ -9,20 +9,20 @@ final class ImagePlane {
     let components: Int
     var data: Data
     
-    init(width: Int, height: Int, components: Int) {
+    init(width: Int, height: Int, components: Int, bytesPerRow: Int?) {
         self.width = width
         self.height = height
-        self.bytesPerRow = width * components
+        self.bytesPerRow = bytesPerRow ?? (width * components)
         self.components = components
-        self.data = Data(count: width * components * height)
+        self.data = Data(count: self.bytesPerRow * height)
     }
 }
 
 final class ImageARGB {
     let argbPlane: ImagePlane
     
-    init(width: Int, height: Int) {
-        self.argbPlane = ImagePlane(width: width, height: height, components: 4)
+    init(width: Int, height: Int, bytesPerRow: Int?) {
+        self.argbPlane = ImagePlane(width: width, height: height, components: 4, bytesPerRow: bytesPerRow)
     }
 }
 
@@ -32,11 +32,11 @@ final class ImageYUVA420 {
     let vPlane: ImagePlane
     let aPlane: ImagePlane
     
-    init(width: Int, height: Int) {
-        self.yPlane = ImagePlane(width: width, height: height, components: 1)
-        self.uPlane = ImagePlane(width: width / 2, height: height / 2, components: 1)
-        self.vPlane = ImagePlane(width: width / 2, height: height / 2, components: 1)
-        self.aPlane = ImagePlane(width: width, height: height, components: 1)
+    init(width: Int, height: Int, bytesPerRow: Int?) {
+        self.yPlane = ImagePlane(width: width, height: height, components: 1, bytesPerRow: bytesPerRow)
+        self.uPlane = ImagePlane(width: width / 2, height: height / 2, components: 1, bytesPerRow: bytesPerRow)
+        self.vPlane = ImagePlane(width: width / 2, height: height / 2, components: 1, bytesPerRow: bytesPerRow)
+        self.aPlane = ImagePlane(width: width, height: height, components: 1, bytesPerRow: bytesPerRow)
     }
 }
 
@@ -92,8 +92,8 @@ extension ImageARGB {
         }
     }
     
-    func toYUVA420() -> ImageYUVA420 {
-        let resultImage = ImageYUVA420(width: self.argbPlane.width, height: self.argbPlane.height)
+    func toYUVA420(bytesPerRow: Int?) -> ImageYUVA420 {
+        let resultImage = ImageYUVA420(width: self.argbPlane.width, height: self.argbPlane.height, bytesPerRow: bytesPerRow)
         self.toYUVA420(target: resultImage)
         return resultImage
     }
@@ -125,8 +125,8 @@ extension ImageYUVA420 {
         }
     }
     
-    func toARGB() -> ImageARGB {
-        let resultImage = ImageARGB(width: self.yPlane.width, height: self.yPlane.height)
+    func toARGB(bytesPerRow: Int?) -> ImageARGB {
+        let resultImage = ImageARGB(width: self.yPlane.width, height: self.yPlane.height, bytesPerRow: bytesPerRow)
         self.toARGB(target: resultImage)
         return resultImage
     }
@@ -215,14 +215,14 @@ extension DctCoefficientsYUVA420 {
                 targetPlane.data.withUnsafeMutableBytes { bytes in
                     let pixels = bytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                     
-                    dctData.dct.inverse(withCoefficients: coefficients, pixels: pixels, width: sourcePlane.width, height: sourcePlane.height, coefficientsPerRow: targetPlane.width,  bytesPerRow: targetPlane.width)
+                    dctData.dct.inverse(withCoefficients: coefficients, pixels: pixels, width: sourcePlane.width, height: sourcePlane.height, coefficientsPerRow: targetPlane.width, bytesPerRow: targetPlane.bytesPerRow)
                 }
             }
         }
     }
     
-    func idct(dctData: DctData) -> ImageYUVA420 {
-        let resultImage = ImageYUVA420(width: self.yPlane.width, height: self.yPlane.height)
+    func idct(dctData: DctData, bytesPerRow: Int?) -> ImageYUVA420 {
+        let resultImage = ImageYUVA420(width: self.yPlane.width, height: self.yPlane.height, bytesPerRow: bytesPerRow)
         self.idct(dctData: dctData, target: resultImage)
         return resultImage
     }

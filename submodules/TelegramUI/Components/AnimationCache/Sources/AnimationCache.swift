@@ -5,10 +5,17 @@ import CryptoUtils
 import ManagedFile
 import Compression
 
+private func alignUp(size: Int, align: Int) -> Int {
+    precondition(((align - 1) & align) == 0, "Align must be a power of two")
+
+    let alignmentMask = align - 1
+    return (size + alignmentMask) & ~alignmentMask
+}
+
 public final class AnimationCacheItemFrame {
     public enum RequestedFormat {
         case rgba
-        case yuva
+        case yuva(bytesPerRow: Int)
     }
     
     public final class Plane {
@@ -279,7 +286,7 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
             } else {
                 isFirstFrame = true
                 
-                surface = ImageARGB(width: width, height: height)
+                surface = ImageARGB(width: width, height: height, bytesPerRow: alignUp(size: width * 4, align: 32))
                 self.currentSurface = surface
             }
             
@@ -292,7 +299,7 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
                     return
                 }
             } else {
-                yuvaSurface = ImageYUVA420(width: width, height: height)
+                yuvaSurface = ImageYUVA420(width: width, height: height, bytesPerRow: nil)
                 self.currentYUVASurface = yuvaSurface
             }
             
@@ -484,7 +491,7 @@ private final class AnimationCacheItemAccessor {
     private let durationMapping: [Double]
     private let totalDuration: Double
     
-    private var currentYUVASurface: ImageYUVA420
+    private var currentYUVASurface: ImageYUVA420?
     private var currentDctData: DctData
     private var currentDctCoefficients: DctCoefficientsYUVA420
     
@@ -506,7 +513,6 @@ private final class AnimationCacheItemAccessor {
         self.durationMapping = durationMapping
         self.totalDuration = totalDuration
         
-        self.currentYUVASurface = ImageYUVA420(width: width, height: height)
         self.currentDctData = DctData(quality: dctQuality)
         self.currentDctCoefficients = DctCoefficientsYUVA420(width: width, height: height)
     }
@@ -544,43 +550,53 @@ private final class AnimationCacheItemAccessor {
             frameDataOffset += dctPlane.data.count
         }
         
-        self.currentDctCoefficients.idct(dctData: self.currentDctData, target: self.currentYUVASurface)
+        let yuvaSurface: ImageYUVA420
+        switch requestedFormat {
+        case .rgba:
+            if let currentYUVASurface = self.currentYUVASurface {
+                yuvaSurface = currentYUVASurface
+            } else {
+                yuvaSurface = ImageYUVA420(width: self.currentDctCoefficients.yPlane.width, height: self.currentDctCoefficients.yPlane.height, bytesPerRow: nil)
+            }
+        case let .yuva(preferredBytesPerRow):
+            yuvaSurface = ImageYUVA420(width: self.currentDctCoefficients.yPlane.width, height: self.currentDctCoefficients.yPlane.height, bytesPerRow: preferredBytesPerRow)
+        }
+        
+        self.currentDctCoefficients.idct(dctData: self.currentDctData, target: yuvaSurface)
         
         switch requestedFormat {
         case .rgba:
-            let currentSurface = ImageARGB(width: self.currentYUVASurface.yPlane.width, height: self.currentYUVASurface.yPlane.height)
-            self.currentYUVASurface.toARGB(target: currentSurface)
+            let currentSurface = ImageARGB(width: yuvaSurface.yPlane.width, height: yuvaSurface.yPlane.height, bytesPerRow: alignUp(size: yuvaSurface.yPlane.width * 4, align: 32))
+            yuvaSurface.toARGB(target: currentSurface)
+            self.currentYUVASurface = yuvaSurface
             
             return AnimationCacheItemFrame(format: .rgba(data: currentSurface.argbPlane.data, width: currentSurface.argbPlane.width, height: currentSurface.argbPlane.height, bytesPerRow: currentSurface.argbPlane.bytesPerRow), duration: frameInfo.duration)
         case .yuva:
-            let currentYUVASurface = self.currentYUVASurface
-            self.currentYUVASurface = ImageYUVA420(width: currentYUVASurface.yPlane.width, height: currentYUVASurface.yPlane.height)
-            
             return AnimationCacheItemFrame(
                 format: .yuva(
                     y: AnimationCacheItemFrame.Plane(
-                        data: currentYUVASurface.yPlane.data,
-                        width: currentYUVASurface.yPlane.width,
-                        height: currentYUVASurface.yPlane.height,
-                        bytesPerRow: currentYUVASurface.yPlane.bytesPerRow
+                        data: yuvaSurface.yPlane.data,
+                        width: yuvaSurface.yPlane.width,
+                        height: yuvaSurface.yPlane.height,
+                        bytesPerRow: yuvaSurface.yPlane.bytesPerRow
                     ),
                     u: AnimationCacheItemFrame.Plane(
-                        data: currentYUVASurface.uPlane.data,
-                        width: currentYUVASurface.uPlane.width,
-                        height: currentYUVASurface.uPlane.height,
-                        bytesPerRow: currentYUVASurface.uPlane.bytesPerRow
+                        data: yuvaSurface.uPlane.data,
+                        width: yuvaSurface.uPlane.width,
+                        height: yuvaSurface.uPlane.height,
+                        bytesPerRow: yuvaSurface.uPlane.bytesPerRow
                     ),
                     v: AnimationCacheItemFrame.Plane(
-                        data: currentYUVASurface.vPlane.data,
-                        width: currentYUVASurface.vPlane.width,
-                        height: currentYUVASurface.vPlane.height,
-                        bytesPerRow: currentYUVASurface.vPlane.bytesPerRow
+                        data: yuvaSurface.vPlane.data,
+                        width: yuvaSurface.vPlane.width,
+                        height: yuvaSurface.vPlane.height,
+                        bytesPerRow: yuvaSurface.vPlane.bytesPerRow
                     ),
                     a: AnimationCacheItemFrame.Plane(
-                        data: currentYUVASurface.aPlane.data,
-                        width: currentYUVASurface.aPlane.width,
-                        height: currentYUVASurface.aPlane.height,
-                        bytesPerRow: currentYUVASurface.aPlane.bytesPerRow
+                        data: yuvaSurface.aPlane.data,
+                        width: yuvaSurface.aPlane.width,
+                        height: yuvaSurface.aPlane.height,
+                        bytesPerRow: yuvaSurface.aPlane.bytesPerRow
                     )
                 ),
                 duration: frameInfo.duration
