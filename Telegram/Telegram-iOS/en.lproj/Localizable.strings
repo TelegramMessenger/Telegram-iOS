@@ -7843,3 +7843,18 @@ Sorry for the inconvenience.";
 
 "WebApp.CloseConfirmation" = "Changes that you made may not be saved.";
 "WebApp.CloseAnyway" = "Close Anyway";
+
+"Privacy.VoiceMessages" = "Voice Messages";
+
+"Privacy.VoiceMessages.WhoCanSend" = "WHO CAN SEND ME VOICE MESSAGES";
+"Privacy.VoiceMessages.CustomHelp" = "You can restrict who can send you voice messages with granular precision.";
+"Privacy.VoiceMessages.AlwaysAllow.Title" = "Always Allow";
+"Privacy.VoiceMessages.NeverAllow.Title" = "Never Allow";
+"Privacy.VoiceMessages.CustomShareHelp" = "These users will or will not be able to send you voice messages regardless of the settings above.";
+
+"Premium.AnimatedEmoji" = "Animated Emoji";
+"Premium.AnimatedEmojiInfo" = "Include animated emoji from different emoji sets in any message you send.";
+
+"ChatContextMenu.EmojiSetSingle" = "This message contains %@ emoji.";
+"ChatContextMenu.EmojiSet_1" = "This message contains emoji from %@ pack.";
+"ChatContextMenu.EmojiSet_many" = "This message contains emoji from %@ packs.";

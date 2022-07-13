@@ -2226,6 +2226,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         case textSelection
         case messageViewsPrivacy
         case messageCopyProtection(isChannel: Bool)
+        case animatedEmoji(packs: [StickerPackItem])
     }
 
     public final class ActionsHeight {

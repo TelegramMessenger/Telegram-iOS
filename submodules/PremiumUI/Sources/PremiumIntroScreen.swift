@@ -99,6 +99,7 @@ enum PremiumPerk: CaseIterable {
     case profileBadge
     case animatedUserpics
     case appIcons
+    case animatedEmoji
     
     static var allCases: [PremiumPerk] {
         return [
@@ -112,7 +113,8 @@ enum PremiumPerk: CaseIterable {
             .advancedChatManagement,
             .profileBadge,
             .animatedUserpics,
-            .appIcons
+            .appIcons,
+            .animatedEmoji
         ]
     }
     
@@ -150,6 +152,8 @@ enum PremiumPerk: CaseIterable {
                 return "animated_userpics"
             case .appIcons:
                 return "app_icon"
+            case .animatedEmoji:
+                return "animated_emoji"
         }
     }
     
@@ -177,6 +181,8 @@ enum PremiumPerk: CaseIterable {
                 return strings.Premium_Avatar
             case .appIcons:
                 return strings.Premium_AppIcon
+            case .animatedEmoji:
+                return strings.Premium_AnimatedEmoji
         }
     }
     
@@ -204,6 +210,8 @@ enum PremiumPerk: CaseIterable {
                 return strings.Premium_AvatarInfo
             case .appIcons:
                 return strings.Premium_AppIconInfo
+            case .animatedEmoji:
+                return strings.Premium_AnimatedEmojiInfo
         }
     }
     
@@ -231,6 +239,8 @@ enum PremiumPerk: CaseIterable {
                 return "Premium/Perk/Avatar"
             case .appIcons:
                 return "Premium/Perk/AppIcon"
+            case .animatedEmoji:
+                return "Premium/Perk/AppIcon"
         }
     }
 }
@@ -248,7 +258,8 @@ private struct PremiumIntroConfiguration {
             .advancedChatManagement,
             .profileBadge,
             .animatedUserpics,
-            .appIcons
+            .appIcons,
+            .animatedEmoji
         ])
     }
     
@@ -872,6 +883,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x7561EB),
                 UIColor(rgb: 0x5A6EEE),
                 UIColor(rgb: 0x548DFF),
+                UIColor(rgb: 0x54A3FF),
                 UIColor(rgb: 0x54A3FF)
             ]
             
@@ -943,6 +955,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             demoSubject = .animatedUserpics
                         case .appIcons:
                             demoSubject = .appIcons
+                        case .animatedEmoji:
+                            demoSubject = .animatedEmoji
                         }
                         
                         let controller = PremiumDemoScreen(

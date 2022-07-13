@@ -19,6 +19,7 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
     case animatedEmoji
     case dice(String)
     case animatedEmojiAnimations
+    case premiumGifts
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -32,6 +33,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
                 self = .dice(decoder.decodeStringForKey("e", orElse: "🎲"))
             case 4:
                 self = .animatedEmojiAnimations
+            case 5:
+                self = .premiumGifts
             default:
                 self = .name("")
                 assertionFailure()
@@ -53,6 +56,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
             self = .dice((try? container.decode(String.self, forKey: "e")) ?? "🎲")
         case 4:
             self = .animatedEmojiAnimations
+        case 5:
+            self = .premiumGifts
         default:
             self = .name("")
             assertionFailure()
@@ -75,6 +80,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
                 encoder.encodeString(emoji, forKey: "e")
             case .animatedEmojiAnimations:
                 encoder.encodeInt32(4, forKey: "r")
+            case .premiumGifts:
+                encoder.encodeInt32(5, forKey: "r")
         }
     }
     
@@ -96,6 +103,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
             try container.encode(emoji, forKey: "e")
         case .animatedEmojiAnimations:
             try container.encode(4 as Int32, forKey: "r")
+        case .premiumGifts:
+            try container.encode(5 as Int32, forKey: "r")
         }
     }
     
@@ -127,6 +136,12 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
                 }
             case .animatedEmojiAnimations:
                 if case .animatedEmojiAnimations = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .premiumGifts:
+                if case .premiumGifts = rhs {
                     return true
                 } else {
                     return false

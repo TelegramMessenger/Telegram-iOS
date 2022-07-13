@@ -551,7 +551,7 @@ private final class DemoSheetContent: CombinedComponent {
                 self.context.engine.stickers.availableReactions(),
                 self.context.account.postbox.combinedView(keys: [stickersKey])
                 |> map { views -> [OrderedItemListEntry]? in
-                    if let view = views.views[stickersKey] as? OrderedItemListView, !view.items.isEmpty {
+                    if let view = views.views[stickersKey] as? OrderedItemListView {
                         return view.items
                     } else {
                         return nil
@@ -897,6 +897,25 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
+                availableItems[.animatedEmoji] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.animatedEmoji,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["profile_badge"],
+                                    decoration: .emoji
+                                )),
+                                title: strings.Premium_AnimatedEmoji,
+                                text: strings.Premium_AnimatedEmojiInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
                 let index: Int
                 switch component.source {
@@ -1146,6 +1165,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case profileBadge
         case animatedUserpics
         case appIcons
+        case animatedEmoji
     }
     
     public enum Source: Equatable {

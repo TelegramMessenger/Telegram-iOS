@@ -12,7 +12,7 @@ public enum AssignAppStoreTransactionError {
 
 public enum AppStoreTransactionPurpose {
     case subscription
-    case gift(EnginePeer.Id)
+    case gift(peerId: EnginePeer.Id, currency: String, amount: Int64)
     case restore
 }
 
@@ -25,11 +25,11 @@ func _internal_sendAppStoreReceipt(account: Account, receipt: Data, purpose: App
             flags |= (1 << 0)
         }
         purposeSignal = .single(.inputStorePaymentPremiumSubscription(flags: flags))
-    case let .gift(peerId):
+    case let .gift(peerId, currency, amount):
         purposeSignal = account.postbox.loadedPeerWithId(peerId)
         |> mapToSignal { peer -> Signal<Api.InputStorePaymentPurpose, NoError> in
             if let inputUser = apiInputUser(peer) {
-                return .single(.inputStorePaymentGiftPremium(userId: inputUser))
+                return .single(.inputStorePaymentGiftPremium(userId: inputUser, currency: currency, amount: amount))
             } else {
                 return .complete()
             }

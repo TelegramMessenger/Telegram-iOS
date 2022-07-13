@@ -4,6 +4,7 @@ import SwiftSignalKit
 import StoreKit
 import Postbox
 import TelegramCore
+import TelegramStringFormatting
 
 private let productIdentifiers = [
     "org.telegram.telegramPremium.monthly",
@@ -52,6 +53,15 @@ public final class InAppPurchaseManager: NSObject {
         
         public var priceValue: NSDecimalNumber {
             return self.skProduct.price
+        }
+        
+        public var priceCurrencyAndAmount: (currency: String, amount: Int64) {
+            if let currencyCode = self.numberFormatter.currencyCode,
+               let amount = fractionalToCurrencyAmount(value: self.priceValue.doubleValue, currency: currencyCode) {
+                return (currencyCode, amount)
+            } else {
+                return ("", 0)
+            }
         }
         
         public static func ==(lhs: Product, rhs: Product) -> Bool {
@@ -317,18 +327,32 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), sending receipt for transactions [\(transactionIds)]")
                 
                 let transaction = transactionsToAssign.first
-                
-                
-                let purpose: AppStoreTransactionPurpose
+                let purposeSignal: Signal<AppStoreTransactionPurpose, NoError>
                 if let productIdentifier = transaction?.payment.productIdentifier, let targetPeerId = paymentContexts[productIdentifier]?.targetPeerId {
-                    purpose = .gift(targetPeerId)
+                    purposeSignal = self.availableProducts
+                    |> filter { products in
+                        return !products.isEmpty
+                    }
+                    |> take(1)
+                    |> map { products -> AppStoreTransactionPurpose in
+                        if let product = products.first(where: { $0.id == productIdentifier }) {
+                            let (currency, amount) = product.priceCurrencyAndAmount
+                            return .gift(peerId: targetPeerId, currency: currency, amount: amount)
+                        } else {
+                            return .gift(peerId: targetPeerId, currency: "", amount: 0)
+                        }
+                    }
                 } else {
-                    purpose = .subscription
+                    purposeSignal = .single(.subscription)
                 }
             
                 let receiptData = getReceiptData() ?? Data()
                 self.disposableSet.set(
-                    self.engine.payments.sendAppStoreReceipt(receipt: receiptData, purpose: purpose).start(error: { [weak self] _ in
+                    (purposeSignal
+                    |> castError(AssignAppStoreTransactionError.self)
+                    |> mapToSignal { purpose -> Signal<Never, AssignAppStoreTransactionError> in
+                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, purpose: purpose)
+                    }).start(error: { [weak self] _ in
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transactions [\(transactionIds)] failed to assign")
                         for transaction in transactions {
                             self?.stateQueue.async {

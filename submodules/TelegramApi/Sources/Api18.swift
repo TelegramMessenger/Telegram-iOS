@@ -1,351 +1,43 @@
 public extension Api {
-    enum SendMessageAction: TypeConstructorDescription {
-        case sendMessageCancelAction
-        case sendMessageChooseContactAction
-        case sendMessageChooseStickerAction
-        case sendMessageEmojiInteraction(emoticon: String, msgId: Int32, interaction: Api.DataJSON)
-        case sendMessageEmojiInteractionSeen(emoticon: String)
-        case sendMessageGamePlayAction
-        case sendMessageGeoLocationAction
-        case sendMessageHistoryImportAction(progress: Int32)
-        case sendMessageRecordAudioAction
-        case sendMessageRecordRoundAction
-        case sendMessageRecordVideoAction
-        case sendMessageTypingAction
-        case sendMessageUploadAudioAction(progress: Int32)
-        case sendMessageUploadDocumentAction(progress: Int32)
-        case sendMessageUploadPhotoAction(progress: Int32)
-        case sendMessageUploadRoundAction(progress: Int32)
-        case sendMessageUploadVideoAction(progress: Int32)
-        case speakingInGroupCallAction
+    enum SavedContact: TypeConstructorDescription {
+        case savedPhoneContact(phone: String, firstName: String, lastName: String, date: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sendMessageCancelAction:
+                case .savedPhoneContact(let phone, let firstName, let lastName, let date):
                     if boxed {
-                        buffer.appendInt32(-44119819)
+                        buffer.appendInt32(289586518)
                     }
-                    
-                    break
-                case .sendMessageChooseContactAction:
-                    if boxed {
-                        buffer.appendInt32(1653390447)
-                    }
-                    
-                    break
-                case .sendMessageChooseStickerAction:
-                    if boxed {
-                        buffer.appendInt32(-1336228175)
-                    }
-                    
-                    break
-                case .sendMessageEmojiInteraction(let emoticon, let msgId, let interaction):
-                    if boxed {
-                        buffer.appendInt32(630664139)
-                    }
-                    serializeString(emoticon, buffer: buffer, boxed: false)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    interaction.serialize(buffer, true)
-                    break
-                case .sendMessageEmojiInteractionSeen(let emoticon):
-                    if boxed {
-                        buffer.appendInt32(-1234857938)
-                    }
-                    serializeString(emoticon, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageGamePlayAction:
-                    if boxed {
-                        buffer.appendInt32(-580219064)
-                    }
-                    
-                    break
-                case .sendMessageGeoLocationAction:
-                    if boxed {
-                        buffer.appendInt32(393186209)
-                    }
-                    
-                    break
-                case .sendMessageHistoryImportAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(-606432698)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageRecordAudioAction:
-                    if boxed {
-                        buffer.appendInt32(-718310409)
-                    }
-                    
-                    break
-                case .sendMessageRecordRoundAction:
-                    if boxed {
-                        buffer.appendInt32(-1997373508)
-                    }
-                    
-                    break
-                case .sendMessageRecordVideoAction:
-                    if boxed {
-                        buffer.appendInt32(-1584933265)
-                    }
-                    
-                    break
-                case .sendMessageTypingAction:
-                    if boxed {
-                        buffer.appendInt32(381645902)
-                    }
-                    
-                    break
-                case .sendMessageUploadAudioAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(-212740181)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageUploadDocumentAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(-1441998364)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageUploadPhotoAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(-774682074)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageUploadRoundAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(608050278)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageUploadVideoAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(-378127636)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .speakingInGroupCallAction:
-                    if boxed {
-                        buffer.appendInt32(-651419003)
-                    }
-                    
+                    serializeString(phone, buffer: buffer, boxed: false)
+                    serializeString(firstName, buffer: buffer, boxed: false)
+                    serializeString(lastName, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sendMessageCancelAction:
-                return ("sendMessageCancelAction", [])
-                case .sendMessageChooseContactAction:
-                return ("sendMessageChooseContactAction", [])
-                case .sendMessageChooseStickerAction:
-                return ("sendMessageChooseStickerAction", [])
-                case .sendMessageEmojiInteraction(let emoticon, let msgId, let interaction):
-                return ("sendMessageEmojiInteraction", [("emoticon", String(describing: emoticon)), ("msgId", String(describing: msgId)), ("interaction", String(describing: interaction))])
-                case .sendMessageEmojiInteractionSeen(let emoticon):
-                return ("sendMessageEmojiInteractionSeen", [("emoticon", String(describing: emoticon))])
-                case .sendMessageGamePlayAction:
-                return ("sendMessageGamePlayAction", [])
-                case .sendMessageGeoLocationAction:
-                return ("sendMessageGeoLocationAction", [])
-                case .sendMessageHistoryImportAction(let progress):
-                return ("sendMessageHistoryImportAction", [("progress", String(describing: progress))])
-                case .sendMessageRecordAudioAction:
-                return ("sendMessageRecordAudioAction", [])
-                case .sendMessageRecordRoundAction:
-                return ("sendMessageRecordRoundAction", [])
-                case .sendMessageRecordVideoAction:
-                return ("sendMessageRecordVideoAction", [])
-                case .sendMessageTypingAction:
-                return ("sendMessageTypingAction", [])
-                case .sendMessageUploadAudioAction(let progress):
-                return ("sendMessageUploadAudioAction", [("progress", String(describing: progress))])
-                case .sendMessageUploadDocumentAction(let progress):
-                return ("sendMessageUploadDocumentAction", [("progress", String(describing: progress))])
-                case .sendMessageUploadPhotoAction(let progress):
-                return ("sendMessageUploadPhotoAction", [("progress", String(describing: progress))])
-                case .sendMessageUploadRoundAction(let progress):
-                return ("sendMessageUploadRoundAction", [("progress", String(describing: progress))])
-                case .sendMessageUploadVideoAction(let progress):
-                return ("sendMessageUploadVideoAction", [("progress", String(describing: progress))])
-                case .speakingInGroupCallAction:
-                return ("speakingInGroupCallAction", [])
+                case .savedPhoneContact(let phone, let firstName, let lastName, let date):
+                return ("savedPhoneContact", [("phone", String(describing: phone)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName)), ("date", String(describing: date))])
     }
     }
     
-        public static func parse_sendMessageCancelAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageCancelAction
-        }
-        public static func parse_sendMessageChooseContactAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageChooseContactAction
-        }
-        public static func parse_sendMessageChooseStickerAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageChooseStickerAction
-        }
-        public static func parse_sendMessageEmojiInteraction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SendMessageAction.sendMessageEmojiInteraction(emoticon: _1!, msgId: _2!, interaction: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageEmojiInteractionSeen(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageEmojiInteractionSeen(emoticon: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageGamePlayAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageGamePlayAction
-        }
-        public static func parse_sendMessageGeoLocationAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageGeoLocationAction
-        }
-        public static func parse_sendMessageHistoryImportAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageHistoryImportAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageRecordAudioAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageRecordAudioAction
-        }
-        public static func parse_sendMessageRecordRoundAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageRecordRoundAction
-        }
-        public static func parse_sendMessageRecordVideoAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageRecordVideoAction
-        }
-        public static func parse_sendMessageTypingAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageTypingAction
-        }
-        public static func parse_sendMessageUploadAudioAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadAudioAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageUploadDocumentAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadDocumentAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageUploadPhotoAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadPhotoAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageUploadRoundAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadRoundAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageUploadVideoAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadVideoAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_speakingInGroupCallAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.speakingInGroupCallAction
-        }
-    
-    }
-}
-public extension Api {
-    enum ShippingOption: TypeConstructorDescription {
-        case shippingOption(id: String, title: String, prices: [Api.LabeledPrice])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .shippingOption(let id, let title, let prices):
-                    if boxed {
-                        buffer.appendInt32(-1239335713)
-                    }
-                    serializeString(id, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(prices.count))
-                    for item in prices {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .shippingOption(let id, let title, let prices):
-                return ("shippingOption", [("id", String(describing: id)), ("title", String(describing: title)), ("prices", String(describing: prices))])
-    }
-    }
-    
-        public static func parse_shippingOption(_ reader: BufferReader) -> ShippingOption? {
+        public static func parse_savedPhoneContact(_ reader: BufferReader) -> SavedContact? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
             _2 = parseString(reader)
-            var _3: [Api.LabeledPrice]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.LabeledPrice.self)
-            }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ShippingOption.shippingOption(id: _1!, title: _2!, prices: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.SavedContact.savedPhoneContact(phone: _1!, firstName: _2!, lastName: _3!, date: _4!)
             }
             else {
                 return nil
@@ -355,313 +47,33 @@ public extension Api {
     }
 }
 public extension Api {
-    enum SimpleWebViewResult: TypeConstructorDescription {
-        case simpleWebViewResultUrl(url: String)
+    enum SearchResultsCalendarPeriod: TypeConstructorDescription {
+        case searchResultsCalendarPeriod(date: Int32, minMsgId: Int32, maxMsgId: Int32, count: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .simpleWebViewResultUrl(let url):
+                case .searchResultsCalendarPeriod(let date, let minMsgId, let maxMsgId, let count):
                     if boxed {
-                        buffer.appendInt32(-2010155333)
+                        buffer.appendInt32(-911191137)
                     }
-                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(minMsgId, buffer: buffer, boxed: false)
+                    serializeInt32(maxMsgId, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .simpleWebViewResultUrl(let url):
-                return ("simpleWebViewResultUrl", [("url", String(describing: url))])
+                case .searchResultsCalendarPeriod(let date, let minMsgId, let maxMsgId, let count):
+                return ("searchResultsCalendarPeriod", [("date", String(describing: date)), ("minMsgId", String(describing: minMsgId)), ("maxMsgId", String(describing: maxMsgId)), ("count", String(describing: count))])
     }
     }
     
-        public static func parse_simpleWebViewResultUrl(_ reader: BufferReader) -> SimpleWebViewResult? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SimpleWebViewResult.simpleWebViewResultUrl(url: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum SponsoredMessage: TypeConstructorDescription {
-        case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer?, chatInvite: Api.ChatInvite?, chatInviteHash: String?, channelPost: Int32?, startParam: String?, message: String, entities: [Api.MessageEntity]?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let message, let entities):
-                    if boxed {
-                        buffer.appendInt32(981691896)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeBytes(randomId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 3) != 0 {fromId!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 4) != 0 {chatInvite!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 4) != 0 {serializeString(chatInviteHash!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(channelPost!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
-                    serializeString(message, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(entities!.count))
-                    for item in entities! {
-                        item.serialize(buffer, true)
-                    }}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let message, let entities):
-                return ("sponsoredMessage", [("flags", String(describing: flags)), ("randomId", String(describing: randomId)), ("fromId", String(describing: fromId)), ("chatInvite", String(describing: chatInvite)), ("chatInviteHash", String(describing: chatInviteHash)), ("channelPost", String(describing: channelPost)), ("startParam", String(describing: startParam)), ("message", String(describing: message)), ("entities", String(describing: entities))])
-    }
-    }
-    
-        public static func parse_sponsoredMessage(_ reader: BufferReader) -> SponsoredMessage? {
+        public static func parse_searchResultsCalendarPeriod(_ reader: BufferReader) -> SearchResultsCalendarPeriod? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            var _3: Api.Peer?
-            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Peer
-            } }
-            var _4: Api.ChatInvite?
-            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.ChatInvite
-            } }
-            var _5: String?
-            if Int(_1!) & Int(1 << 4) != 0 {_5 = parseString(reader) }
-            var _6: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
-            var _7: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_7 = parseString(reader) }
-            var _8: String?
-            _8 = parseString(reader)
-            var _9: [Api.MessageEntity]?
-            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 0) == 0) || _7 != nil
-            let _c8 = _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, fromId: _3, chatInvite: _4, chatInviteHash: _5, channelPost: _6, startParam: _7, message: _8!, entities: _9)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum StatsAbsValueAndPrev: TypeConstructorDescription {
-        case statsAbsValueAndPrev(current: Double, previous: Double)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsAbsValueAndPrev(let current, let previous):
-                    if boxed {
-                        buffer.appendInt32(-884757282)
-                    }
-                    serializeDouble(current, buffer: buffer, boxed: false)
-                    serializeDouble(previous, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsAbsValueAndPrev(let current, let previous):
-                return ("statsAbsValueAndPrev", [("current", String(describing: current)), ("previous", String(describing: previous))])
-    }
-    }
-    
-        public static func parse_statsAbsValueAndPrev(_ reader: BufferReader) -> StatsAbsValueAndPrev? {
-            var _1: Double?
-            _1 = reader.readDouble()
-            var _2: Double?
-            _2 = reader.readDouble()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StatsAbsValueAndPrev.statsAbsValueAndPrev(current: _1!, previous: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum StatsDateRangeDays: TypeConstructorDescription {
-        case statsDateRangeDays(minDate: Int32, maxDate: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsDateRangeDays(let minDate, let maxDate):
-                    if boxed {
-                        buffer.appendInt32(-1237848657)
-                    }
-                    serializeInt32(minDate, buffer: buffer, boxed: false)
-                    serializeInt32(maxDate, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsDateRangeDays(let minDate, let maxDate):
-                return ("statsDateRangeDays", [("minDate", String(describing: minDate)), ("maxDate", String(describing: maxDate))])
-    }
-    }
-    
-        public static func parse_statsDateRangeDays(_ reader: BufferReader) -> StatsDateRangeDays? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StatsDateRangeDays.statsDateRangeDays(minDate: _1!, maxDate: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum StatsGraph: TypeConstructorDescription {
-        case statsGraph(flags: Int32, json: Api.DataJSON, zoomToken: String?)
-        case statsGraphAsync(token: String)
-        case statsGraphError(error: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsGraph(let flags, let json, let zoomToken):
-                    if boxed {
-                        buffer.appendInt32(-1901828938)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    json.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(zoomToken!, buffer: buffer, boxed: false)}
-                    break
-                case .statsGraphAsync(let token):
-                    if boxed {
-                        buffer.appendInt32(1244130093)
-                    }
-                    serializeString(token, buffer: buffer, boxed: false)
-                    break
-                case .statsGraphError(let error):
-                    if boxed {
-                        buffer.appendInt32(-1092839390)
-                    }
-                    serializeString(error, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsGraph(let flags, let json, let zoomToken):
-                return ("statsGraph", [("flags", String(describing: flags)), ("json", String(describing: json)), ("zoomToken", String(describing: zoomToken))])
-                case .statsGraphAsync(let token):
-                return ("statsGraphAsync", [("token", String(describing: token))])
-                case .statsGraphError(let error):
-                return ("statsGraphError", [("error", String(describing: error))])
-    }
-    }
-    
-        public static func parse_statsGraph(_ reader: BufferReader) -> StatsGraph? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            var _3: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.StatsGraph.statsGraph(flags: _1!, json: _2!, zoomToken: _3)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_statsGraphAsync(_ reader: BufferReader) -> StatsGraph? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.StatsGraph.statsGraphAsync(token: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_statsGraphError(_ reader: BufferReader) -> StatsGraph? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.StatsGraph.statsGraphError(error: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum StatsGroupTopAdmin: TypeConstructorDescription {
-        case statsGroupTopAdmin(userId: Int64, deleted: Int32, kicked: Int32, banned: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsGroupTopAdmin(let userId, let deleted, let kicked, let banned):
-                    if boxed {
-                        buffer.appendInt32(-682079097)
-                    }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeInt32(deleted, buffer: buffer, boxed: false)
-                    serializeInt32(kicked, buffer: buffer, boxed: false)
-                    serializeInt32(banned, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsGroupTopAdmin(let userId, let deleted, let kicked, let banned):
-                return ("statsGroupTopAdmin", [("userId", String(describing: userId)), ("deleted", String(describing: deleted)), ("kicked", String(describing: kicked)), ("banned", String(describing: banned))])
-    }
-    }
-    
-        public static func parse_statsGroupTopAdmin(_ reader: BufferReader) -> StatsGroupTopAdmin? {
-            var _1: Int64?
-            _1 = reader.readInt64()
             var _2: Int32?
             _2 = reader.readInt32()
             var _3: Int32?
@@ -673,7 +85,7 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
-                return Api.StatsGroupTopAdmin.statsGroupTopAdmin(userId: _1!, deleted: _2!, kicked: _3!, banned: _4!)
+                return Api.SearchResultsCalendarPeriod.searchResultsCalendarPeriod(date: _1!, minMsgId: _2!, maxMsgId: _3!, count: _4!)
             }
             else {
                 return nil
@@ -683,72 +95,32 @@ public extension Api {
     }
 }
 public extension Api {
-    enum StatsGroupTopInviter: TypeConstructorDescription {
-        case statsGroupTopInviter(userId: Int64, invitations: Int32)
+    enum SearchResultsPosition: TypeConstructorDescription {
+        case searchResultPosition(msgId: Int32, date: Int32, offset: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .statsGroupTopInviter(let userId, let invitations):
+                case .searchResultPosition(let msgId, let date, let offset):
                     if boxed {
-                        buffer.appendInt32(1398765469)
+                        buffer.appendInt32(2137295719)
                     }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeInt32(invitations, buffer: buffer, boxed: false)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(offset, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .statsGroupTopInviter(let userId, let invitations):
-                return ("statsGroupTopInviter", [("userId", String(describing: userId)), ("invitations", String(describing: invitations))])
+                case .searchResultPosition(let msgId, let date, let offset):
+                return ("searchResultPosition", [("msgId", String(describing: msgId)), ("date", String(describing: date)), ("offset", String(describing: offset))])
     }
     }
     
-        public static func parse_statsGroupTopInviter(_ reader: BufferReader) -> StatsGroupTopInviter? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StatsGroupTopInviter.statsGroupTopInviter(userId: _1!, invitations: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum StatsGroupTopPoster: TypeConstructorDescription {
-        case statsGroupTopPoster(userId: Int64, messages: Int32, avgChars: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsGroupTopPoster(let userId, let messages, let avgChars):
-                    if boxed {
-                        buffer.appendInt32(-1660637285)
-                    }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeInt32(messages, buffer: buffer, boxed: false)
-                    serializeInt32(avgChars, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsGroupTopPoster(let userId, let messages, let avgChars):
-                return ("statsGroupTopPoster", [("userId", String(describing: userId)), ("messages", String(describing: messages)), ("avgChars", String(describing: avgChars))])
-    }
-    }
-    
-        public static func parse_statsGroupTopPoster(_ reader: BufferReader) -> StatsGroupTopPoster? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+        public static func parse_searchResultPosition(_ reader: BufferReader) -> SearchResultsPosition? {
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
             var _3: Int32?
@@ -757,7 +129,7 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.StatsGroupTopPoster.statsGroupTopPoster(userId: _1!, messages: _2!, avgChars: _3!)
+                return Api.SearchResultsPosition.searchResultPosition(msgId: _1!, date: _2!, offset: _3!)
             }
             else {
                 return nil
@@ -767,37 +139,41 @@ public extension Api {
     }
 }
 public extension Api {
-    enum StatsPercentValue: TypeConstructorDescription {
-        case statsPercentValue(part: Double, total: Double)
+    enum SecureCredentialsEncrypted: TypeConstructorDescription {
+        case secureCredentialsEncrypted(data: Buffer, hash: Buffer, secret: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .statsPercentValue(let part, let total):
+                case .secureCredentialsEncrypted(let data, let hash, let secret):
                     if boxed {
-                        buffer.appendInt32(-875679776)
+                        buffer.appendInt32(871426631)
                     }
-                    serializeDouble(part, buffer: buffer, boxed: false)
-                    serializeDouble(total, buffer: buffer, boxed: false)
+                    serializeBytes(data, buffer: buffer, boxed: false)
+                    serializeBytes(hash, buffer: buffer, boxed: false)
+                    serializeBytes(secret, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .statsPercentValue(let part, let total):
-                return ("statsPercentValue", [("part", String(describing: part)), ("total", String(describing: total))])
+                case .secureCredentialsEncrypted(let data, let hash, let secret):
+                return ("secureCredentialsEncrypted", [("data", String(describing: data)), ("hash", String(describing: hash)), ("secret", String(describing: secret))])
     }
     }
     
-        public static func parse_statsPercentValue(_ reader: BufferReader) -> StatsPercentValue? {
-            var _1: Double?
-            _1 = reader.readDouble()
-            var _2: Double?
-            _2 = reader.readDouble()
+        public static func parse_secureCredentialsEncrypted(_ reader: BufferReader) -> SecureCredentialsEncrypted? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: Buffer?
+            _3 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StatsPercentValue.statsPercentValue(part: _1!, total: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureCredentialsEncrypted.secureCredentialsEncrypted(data: _1!, hash: _2!, secret: _3!)
             }
             else {
                 return nil
@@ -807,33 +183,237 @@ public extension Api {
     }
 }
 public extension Api {
-    enum StatsURL: TypeConstructorDescription {
-        case statsURL(url: String)
+    enum SecureData: TypeConstructorDescription {
+        case secureData(data: Buffer, dataHash: Buffer, secret: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .statsURL(let url):
+                case .secureData(let data, let dataHash, let secret):
                     if boxed {
-                        buffer.appendInt32(1202287072)
+                        buffer.appendInt32(-1964327229)
                     }
-                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeBytes(data, buffer: buffer, boxed: false)
+                    serializeBytes(dataHash, buffer: buffer, boxed: false)
+                    serializeBytes(secret, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .statsURL(let url):
-                return ("statsURL", [("url", String(describing: url))])
+                case .secureData(let data, let dataHash, let secret):
+                return ("secureData", [("data", String(describing: data)), ("dataHash", String(describing: dataHash)), ("secret", String(describing: secret))])
     }
     }
     
-        public static func parse_statsURL(_ reader: BufferReader) -> StatsURL? {
+        public static func parse_secureData(_ reader: BufferReader) -> SecureData? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureData.secureData(data: _1!, dataHash: _2!, secret: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum SecureFile: TypeConstructorDescription {
+        case secureFile(id: Int64, accessHash: Int64, size: Int64, dcId: Int32, date: Int32, fileHash: Buffer, secret: Buffer)
+        case secureFileEmpty
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .secureFile(let id, let accessHash, let size, let dcId, let date, let fileHash, let secret):
+                    if boxed {
+                        buffer.appendInt32(2097791614)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeInt64(size, buffer: buffer, boxed: false)
+                    serializeInt32(dcId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeBytes(fileHash, buffer: buffer, boxed: false)
+                    serializeBytes(secret, buffer: buffer, boxed: false)
+                    break
+                case .secureFileEmpty:
+                    if boxed {
+                        buffer.appendInt32(1679398724)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .secureFile(let id, let accessHash, let size, let dcId, let date, let fileHash, let secret):
+                return ("secureFile", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("size", String(describing: size)), ("dcId", String(describing: dcId)), ("date", String(describing: date)), ("fileHash", String(describing: fileHash)), ("secret", String(describing: secret))])
+                case .secureFileEmpty:
+                return ("secureFileEmpty", [])
+    }
+    }
+    
+        public static func parse_secureFile(_ reader: BufferReader) -> SecureFile? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Buffer?
+            _6 = parseBytes(reader)
+            var _7: Buffer?
+            _7 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.SecureFile.secureFile(id: _1!, accessHash: _2!, size: _3!, dcId: _4!, date: _5!, fileHash: _6!, secret: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_secureFileEmpty(_ reader: BufferReader) -> SecureFile? {
+            return Api.SecureFile.secureFileEmpty
+        }
+    
+    }
+}
+public extension Api {
+    enum SecurePasswordKdfAlgo: TypeConstructorDescription {
+        case securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: Buffer)
+        case securePasswordKdfAlgoSHA512(salt: Buffer)
+        case securePasswordKdfAlgoUnknown
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(let salt):
+                    if boxed {
+                        buffer.appendInt32(-1141711456)
+                    }
+                    serializeBytes(salt, buffer: buffer, boxed: false)
+                    break
+                case .securePasswordKdfAlgoSHA512(let salt):
+                    if boxed {
+                        buffer.appendInt32(-2042159726)
+                    }
+                    serializeBytes(salt, buffer: buffer, boxed: false)
+                    break
+                case .securePasswordKdfAlgoUnknown:
+                    if boxed {
+                        buffer.appendInt32(4883767)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(let salt):
+                return ("securePasswordKdfAlgoPBKDF2HMACSHA512iter100000", [("salt", String(describing: salt))])
+                case .securePasswordKdfAlgoSHA512(let salt):
+                return ("securePasswordKdfAlgoSHA512", [("salt", String(describing: salt))])
+                case .securePasswordKdfAlgoUnknown:
+                return ("securePasswordKdfAlgoUnknown", [])
+    }
+    }
+    
+        public static func parse_securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_securePasswordKdfAlgoSHA512(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoSHA512(salt: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_securePasswordKdfAlgoUnknown(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
+            return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoUnknown
+        }
+    
+    }
+}
+public extension Api {
+    enum SecurePlainData: TypeConstructorDescription {
+        case securePlainEmail(email: String)
+        case securePlainPhone(phone: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .securePlainEmail(let email):
+                    if boxed {
+                        buffer.appendInt32(569137759)
+                    }
+                    serializeString(email, buffer: buffer, boxed: false)
+                    break
+                case .securePlainPhone(let phone):
+                    if boxed {
+                        buffer.appendInt32(2103482845)
+                    }
+                    serializeString(phone, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .securePlainEmail(let email):
+                return ("securePlainEmail", [("email", String(describing: email))])
+                case .securePlainPhone(let phone):
+                return ("securePlainPhone", [("phone", String(describing: phone))])
+    }
+    }
+    
+        public static func parse_securePlainEmail(_ reader: BufferReader) -> SecurePlainData? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
             if _c1 {
-                return Api.StatsURL.statsURL(url: _1!)
+                return Api.SecurePlainData.securePlainEmail(email: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_securePlainPhone(_ reader: BufferReader) -> SecurePlainData? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SecurePlainData.securePlainPhone(phone: _1!)
             }
             else {
                 return nil
@@ -843,20 +423,27 @@ public extension Api {
     }
 }
 public extension Api {
-    enum StickerPack: TypeConstructorDescription {
-        case stickerPack(emoticon: String, documents: [Int64])
+    enum SecureRequiredType: TypeConstructorDescription {
+        case secureRequiredType(flags: Int32, type: Api.SecureValueType)
+        case secureRequiredTypeOneOf(types: [Api.SecureRequiredType])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .stickerPack(let emoticon, let documents):
+                case .secureRequiredType(let flags, let type):
                     if boxed {
-                        buffer.appendInt32(313694676)
+                        buffer.appendInt32(-2103600678)
                     }
-                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    type.serialize(buffer, true)
+                    break
+                case .secureRequiredTypeOneOf(let types):
+                    if boxed {
+                        buffer.appendInt32(41187252)
+                    }
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(documents.count))
-                    for item in documents {
-                        serializeInt64(item, buffer: buffer, boxed: false)
+                    buffer.appendInt32(Int32(types.count))
+                    for item in types {
+                        item.serialize(buffer, true)
                     }
                     break
     }
@@ -864,26 +451,699 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .stickerPack(let emoticon, let documents):
-                return ("stickerPack", [("emoticon", String(describing: emoticon)), ("documents", String(describing: documents))])
+                case .secureRequiredType(let flags, let type):
+                return ("secureRequiredType", [("flags", String(describing: flags)), ("type", String(describing: type))])
+                case .secureRequiredTypeOneOf(let types):
+                return ("secureRequiredTypeOneOf", [("types", String(describing: types))])
     }
     }
     
-        public static func parse_stickerPack(_ reader: BufferReader) -> StickerPack? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: [Int64]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+        public static func parse_secureRequiredType(_ reader: BufferReader) -> SecureRequiredType? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.SecureValueType
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.StickerPack.stickerPack(emoticon: _1!, documents: _2!)
+                return Api.SecureRequiredType.secureRequiredType(flags: _1!, type: _2!)
             }
             else {
                 return nil
             }
+        }
+        public static func parse_secureRequiredTypeOneOf(_ reader: BufferReader) -> SecureRequiredType? {
+            var _1: [Api.SecureRequiredType]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureRequiredType.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SecureRequiredType.secureRequiredTypeOneOf(types: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum SecureSecretSettings: TypeConstructorDescription {
+        case secureSecretSettings(secureAlgo: Api.SecurePasswordKdfAlgo, secureSecret: Buffer, secureSecretId: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .secureSecretSettings(let secureAlgo, let secureSecret, let secureSecretId):
+                    if boxed {
+                        buffer.appendInt32(354925740)
+                    }
+                    secureAlgo.serialize(buffer, true)
+                    serializeBytes(secureSecret, buffer: buffer, boxed: false)
+                    serializeInt64(secureSecretId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .secureSecretSettings(let secureAlgo, let secureSecret, let secureSecretId):
+                return ("secureSecretSettings", [("secureAlgo", String(describing: secureAlgo)), ("secureSecret", String(describing: secureSecret)), ("secureSecretId", String(describing: secureSecretId))])
+    }
+    }
+    
+        public static func parse_secureSecretSettings(_ reader: BufferReader) -> SecureSecretSettings? {
+            var _1: Api.SecurePasswordKdfAlgo?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecurePasswordKdfAlgo
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureSecretSettings.secureSecretSettings(secureAlgo: _1!, secureSecret: _2!, secureSecretId: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum SecureValue: TypeConstructorDescription {
+        case secureValue(flags: Int32, type: Api.SecureValueType, data: Api.SecureData?, frontSide: Api.SecureFile?, reverseSide: Api.SecureFile?, selfie: Api.SecureFile?, translation: [Api.SecureFile]?, files: [Api.SecureFile]?, plainData: Api.SecurePlainData?, hash: Buffer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .secureValue(let flags, let type, let data, let frontSide, let reverseSide, let selfie, let translation, let files, let plainData, let hash):
+                    if boxed {
+                        buffer.appendInt32(411017418)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    type.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {data!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {frontSide!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {reverseSide!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {selfie!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 6) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(translation!.count))
+                    for item in translation! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 4) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(files!.count))
+                    for item in files! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 5) != 0 {plainData!.serialize(buffer, true)}
+                    serializeBytes(hash, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .secureValue(let flags, let type, let data, let frontSide, let reverseSide, let selfie, let translation, let files, let plainData, let hash):
+                return ("secureValue", [("flags", String(describing: flags)), ("type", String(describing: type)), ("data", String(describing: data)), ("frontSide", String(describing: frontSide)), ("reverseSide", String(describing: reverseSide)), ("selfie", String(describing: selfie)), ("translation", String(describing: translation)), ("files", String(describing: files)), ("plainData", String(describing: plainData)), ("hash", String(describing: hash))])
+    }
+    }
+    
+        public static func parse_secureValue(_ reader: BufferReader) -> SecureValue? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _3: Api.SecureData?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.SecureData
+            } }
+            var _4: Api.SecureFile?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.SecureFile
+            } }
+            var _5: Api.SecureFile?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.SecureFile
+            } }
+            var _6: Api.SecureFile?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.SecureFile
+            } }
+            var _7: [Api.SecureFile]?
+            if Int(_1!) & Int(1 << 6) != 0 {if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureFile.self)
+            } }
+            var _8: [Api.SecureFile]?
+            if Int(_1!) & Int(1 << 4) != 0 {if let _ = reader.readInt32() {
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureFile.self)
+            } }
+            var _9: Api.SecurePlainData?
+            if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.SecurePlainData
+            } }
+            var _10: Buffer?
+            _10 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 6) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 5) == 0) || _9 != nil
+            let _c10 = _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.SecureValue.secureValue(flags: _1!, type: _2!, data: _3, frontSide: _4, reverseSide: _5, selfie: _6, translation: _7, files: _8, plainData: _9, hash: _10!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum SecureValueError: TypeConstructorDescription {
+        case secureValueError(type: Api.SecureValueType, hash: Buffer, text: String)
+        case secureValueErrorData(type: Api.SecureValueType, dataHash: Buffer, field: String, text: String)
+        case secureValueErrorFile(type: Api.SecureValueType, fileHash: Buffer, text: String)
+        case secureValueErrorFiles(type: Api.SecureValueType, fileHash: [Buffer], text: String)
+        case secureValueErrorFrontSide(type: Api.SecureValueType, fileHash: Buffer, text: String)
+        case secureValueErrorReverseSide(type: Api.SecureValueType, fileHash: Buffer, text: String)
+        case secureValueErrorSelfie(type: Api.SecureValueType, fileHash: Buffer, text: String)
+        case secureValueErrorTranslationFile(type: Api.SecureValueType, fileHash: Buffer, text: String)
+        case secureValueErrorTranslationFiles(type: Api.SecureValueType, fileHash: [Buffer], text: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .secureValueError(let type, let hash, let text):
+                    if boxed {
+                        buffer.appendInt32(-2036501105)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(hash, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorData(let type, let dataHash, let field, let text):
+                    if boxed {
+                        buffer.appendInt32(-391902247)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(dataHash, buffer: buffer, boxed: false)
+                    serializeString(field, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorFile(let type, let fileHash, let text):
+                    if boxed {
+                        buffer.appendInt32(2054162547)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(fileHash, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorFiles(let type, let fileHash, let text):
+                    if boxed {
+                        buffer.appendInt32(1717706985)
+                    }
+                    type.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(fileHash.count))
+                    for item in fileHash {
+                        serializeBytes(item, buffer: buffer, boxed: false)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorFrontSide(let type, let fileHash, let text):
+                    if boxed {
+                        buffer.appendInt32(12467706)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(fileHash, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorReverseSide(let type, let fileHash, let text):
+                    if boxed {
+                        buffer.appendInt32(-2037765467)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(fileHash, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorSelfie(let type, let fileHash, let text):
+                    if boxed {
+                        buffer.appendInt32(-449327402)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(fileHash, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorTranslationFile(let type, let fileHash, let text):
+                    if boxed {
+                        buffer.appendInt32(-1592506512)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(fileHash, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+                case .secureValueErrorTranslationFiles(let type, let fileHash, let text):
+                    if boxed {
+                        buffer.appendInt32(878931416)
+                    }
+                    type.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(fileHash.count))
+                    for item in fileHash {
+                        serializeBytes(item, buffer: buffer, boxed: false)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .secureValueError(let type, let hash, let text):
+                return ("secureValueError", [("type", String(describing: type)), ("hash", String(describing: hash)), ("text", String(describing: text))])
+                case .secureValueErrorData(let type, let dataHash, let field, let text):
+                return ("secureValueErrorData", [("type", String(describing: type)), ("dataHash", String(describing: dataHash)), ("field", String(describing: field)), ("text", String(describing: text))])
+                case .secureValueErrorFile(let type, let fileHash, let text):
+                return ("secureValueErrorFile", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                case .secureValueErrorFiles(let type, let fileHash, let text):
+                return ("secureValueErrorFiles", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                case .secureValueErrorFrontSide(let type, let fileHash, let text):
+                return ("secureValueErrorFrontSide", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                case .secureValueErrorReverseSide(let type, let fileHash, let text):
+                return ("secureValueErrorReverseSide", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                case .secureValueErrorSelfie(let type, let fileHash, let text):
+                return ("secureValueErrorSelfie", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                case .secureValueErrorTranslationFile(let type, let fileHash, let text):
+                return ("secureValueErrorTranslationFile", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                case .secureValueErrorTranslationFiles(let type, let fileHash, let text):
+                return ("secureValueErrorTranslationFiles", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+    }
+    }
+    
+        public static func parse_secureValueError(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueError(type: _1!, hash: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_secureValueErrorData(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.SecureValueError.secureValueErrorData(type: _1!, dataHash: _2!, field: _3!, text: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_secureValueErrorFile(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueErrorFile(type: _1!, fileHash: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_secureValueErrorFiles(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: [Buffer]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueErrorFiles(type: _1!, fileHash: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_secureValueErrorFrontSide(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueErrorFrontSide(type: _1!, fileHash: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_secureValueErrorReverseSide(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueErrorReverseSide(type: _1!, fileHash: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_secureValueErrorSelfie(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueErrorSelfie(type: _1!, fileHash: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_secureValueErrorTranslationFile(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueErrorTranslationFile(type: _1!, fileHash: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_secureValueErrorTranslationFiles(_ reader: BufferReader) -> SecureValueError? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: [Buffer]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SecureValueError.secureValueErrorTranslationFiles(type: _1!, fileHash: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum SecureValueHash: TypeConstructorDescription {
+        case secureValueHash(type: Api.SecureValueType, hash: Buffer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .secureValueHash(let type, let hash):
+                    if boxed {
+                        buffer.appendInt32(-316748368)
+                    }
+                    type.serialize(buffer, true)
+                    serializeBytes(hash, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .secureValueHash(let type, let hash):
+                return ("secureValueHash", [("type", String(describing: type)), ("hash", String(describing: hash))])
+    }
+    }
+    
+        public static func parse_secureValueHash(_ reader: BufferReader) -> SecureValueHash? {
+            var _1: Api.SecureValueType?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.SecureValueType
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.SecureValueHash.secureValueHash(type: _1!, hash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum SecureValueType: TypeConstructorDescription {
+        case secureValueTypeAddress
+        case secureValueTypeBankStatement
+        case secureValueTypeDriverLicense
+        case secureValueTypeEmail
+        case secureValueTypeIdentityCard
+        case secureValueTypeInternalPassport
+        case secureValueTypePassport
+        case secureValueTypePassportRegistration
+        case secureValueTypePersonalDetails
+        case secureValueTypePhone
+        case secureValueTypeRentalAgreement
+        case secureValueTypeTemporaryRegistration
+        case secureValueTypeUtilityBill
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .secureValueTypeAddress:
+                    if boxed {
+                        buffer.appendInt32(-874308058)
+                    }
+                    
+                    break
+                case .secureValueTypeBankStatement:
+                    if boxed {
+                        buffer.appendInt32(-1995211763)
+                    }
+                    
+                    break
+                case .secureValueTypeDriverLicense:
+                    if boxed {
+                        buffer.appendInt32(115615172)
+                    }
+                    
+                    break
+                case .secureValueTypeEmail:
+                    if boxed {
+                        buffer.appendInt32(-1908627474)
+                    }
+                    
+                    break
+                case .secureValueTypeIdentityCard:
+                    if boxed {
+                        buffer.appendInt32(-1596951477)
+                    }
+                    
+                    break
+                case .secureValueTypeInternalPassport:
+                    if boxed {
+                        buffer.appendInt32(-1717268701)
+                    }
+                    
+                    break
+                case .secureValueTypePassport:
+                    if boxed {
+                        buffer.appendInt32(1034709504)
+                    }
+                    
+                    break
+                case .secureValueTypePassportRegistration:
+                    if boxed {
+                        buffer.appendInt32(-1713143702)
+                    }
+                    
+                    break
+                case .secureValueTypePersonalDetails:
+                    if boxed {
+                        buffer.appendInt32(-1658158621)
+                    }
+                    
+                    break
+                case .secureValueTypePhone:
+                    if boxed {
+                        buffer.appendInt32(-1289704741)
+                    }
+                    
+                    break
+                case .secureValueTypeRentalAgreement:
+                    if boxed {
+                        buffer.appendInt32(-1954007928)
+                    }
+                    
+                    break
+                case .secureValueTypeTemporaryRegistration:
+                    if boxed {
+                        buffer.appendInt32(-368907213)
+                    }
+                    
+                    break
+                case .secureValueTypeUtilityBill:
+                    if boxed {
+                        buffer.appendInt32(-63531698)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .secureValueTypeAddress:
+                return ("secureValueTypeAddress", [])
+                case .secureValueTypeBankStatement:
+                return ("secureValueTypeBankStatement", [])
+                case .secureValueTypeDriverLicense:
+                return ("secureValueTypeDriverLicense", [])
+                case .secureValueTypeEmail:
+                return ("secureValueTypeEmail", [])
+                case .secureValueTypeIdentityCard:
+                return ("secureValueTypeIdentityCard", [])
+                case .secureValueTypeInternalPassport:
+                return ("secureValueTypeInternalPassport", [])
+                case .secureValueTypePassport:
+                return ("secureValueTypePassport", [])
+                case .secureValueTypePassportRegistration:
+                return ("secureValueTypePassportRegistration", [])
+                case .secureValueTypePersonalDetails:
+                return ("secureValueTypePersonalDetails", [])
+                case .secureValueTypePhone:
+                return ("secureValueTypePhone", [])
+                case .secureValueTypeRentalAgreement:
+                return ("secureValueTypeRentalAgreement", [])
+                case .secureValueTypeTemporaryRegistration:
+                return ("secureValueTypeTemporaryRegistration", [])
+                case .secureValueTypeUtilityBill:
+                return ("secureValueTypeUtilityBill", [])
+    }
+    }
+    
+        public static func parse_secureValueTypeAddress(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeAddress
+        }
+        public static func parse_secureValueTypeBankStatement(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeBankStatement
+        }
+        public static func parse_secureValueTypeDriverLicense(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeDriverLicense
+        }
+        public static func parse_secureValueTypeEmail(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeEmail
+        }
+        public static func parse_secureValueTypeIdentityCard(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeIdentityCard
+        }
+        public static func parse_secureValueTypeInternalPassport(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeInternalPassport
+        }
+        public static func parse_secureValueTypePassport(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypePassport
+        }
+        public static func parse_secureValueTypePassportRegistration(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypePassportRegistration
+        }
+        public static func parse_secureValueTypePersonalDetails(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypePersonalDetails
+        }
+        public static func parse_secureValueTypePhone(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypePhone
+        }
+        public static func parse_secureValueTypeRentalAgreement(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeRentalAgreement
+        }
+        public static func parse_secureValueTypeTemporaryRegistration(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeTemporaryRegistration
+        }
+        public static func parse_secureValueTypeUtilityBill(_ reader: BufferReader) -> SecureValueType? {
+            return Api.SecureValueType.secureValueTypeUtilityBill
         }
     
     }

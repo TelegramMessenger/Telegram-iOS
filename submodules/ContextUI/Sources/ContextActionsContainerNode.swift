@@ -372,6 +372,10 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             self.text = isChannel ? self.presentationData.strings.Conversation_CopyProtectionInfoChannel : self.presentationData.strings.Conversation_CopyProtectionInfoGroup
             self.targetSelectionIndex = nil
             icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
+        case let .animatedEmoji(packs):
+            self.text = packs.count == 1 ? self.presentationData.strings.ChatContextMenu_EmojiSetSingle("name").string : self.presentationData.strings.ChatContextMenu_EmojiSet(Int32(packs.count))
+            self.targetSelectionIndex = nil
+            icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
         }
         
         self.iconNode = ASImageNode()

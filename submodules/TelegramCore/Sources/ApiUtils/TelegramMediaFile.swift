@@ -62,6 +62,8 @@ extension StickerPackReference {
                 self = .dice(emoticon)
             case .inputStickerSetAnimatedEmojiAnimations:
                 self = .animatedEmojiAnimations
+            case .inputStickerSetPremiumGifts:
+                self = .premiumGifts
         }
     }
 }
