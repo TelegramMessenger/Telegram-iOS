@@ -71,6 +71,7 @@ swift_library(
         "//submodules/PremiumUI:PremiumUI",
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        "//submodules/FakePasscode:FakePasscode",
     ],
     visibility = [
         "//visibility:public",

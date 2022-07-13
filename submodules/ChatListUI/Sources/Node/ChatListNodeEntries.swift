@@ -284,7 +284,7 @@ private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt1
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, hiddenPeerIds: Set<EnginePeer.Id>) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     var pinnedIndexOffset: UInt16 = 0
@@ -315,6 +315,9 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             continue loop
         }
         if state.pendingRemovalPeerIds.contains(entry.index.messageIndex.id.peerId) {
+            continue loop
+        }
+        if hiddenPeerIds.contains(entry.index.messageIndex.id.peerId) {
             continue loop
         }
         var updatedMessages = entry.messages
@@ -369,7 +372,9 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                 }
             }
             
-            result.append(.PeerEntry(index: EngineChatList.Item.Index.absoluteUpperBound.predecessor, presentationData: state.presentationData, messages: [], readState: nil, isRemovedFromTotalUnreadCount: false, draftState: nil, peer: EngineRenderedPeer(peerId: savedMessagesPeer.id, peers: [savedMessagesPeer.id: savedMessagesPeer]), presence: nil, hasUnseenMentions: false, hasUnseenReactions: false, editing: state.editing, hasActiveRevealControls: false, selected: state.selectedPeerIds.contains(savedMessagesPeer.id), inputActivities: nil, promoInfo: nil, hasFailedMessages: false, isContact: false))
+            if !hiddenPeerIds.contains(savedMessagesPeer.id) {
+                result.append(.PeerEntry(index: EngineChatList.Item.Index.absoluteUpperBound.predecessor, presentationData: state.presentationData, messages: [], readState: nil, isRemovedFromTotalUnreadCount: false, draftState: nil, peer: EngineRenderedPeer(peerId: savedMessagesPeer.id, peers: [savedMessagesPeer.id: savedMessagesPeer]), presence: nil, hasUnseenMentions: false, hasUnseenReactions: false, editing: state.editing, hasActiveRevealControls: false, selected: state.selectedPeerIds.contains(savedMessagesPeer.id), inputActivities: nil, promoInfo: nil, hasFailedMessages: false, isContact: false))
+            }
         } else {
             if !filteredAdditionalItemEntries.isEmpty {
                 for item in filteredAdditionalItemEntries.reversed() {

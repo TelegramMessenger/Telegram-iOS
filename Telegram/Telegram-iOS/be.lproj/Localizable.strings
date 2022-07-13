@@ -51,7 +51,11 @@
 "FakePasscodes.AccountActions.ChatsToRemove.SelectedChatsHeader" = "Выбраныя чаты";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHeader" = "Метад выдалення";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDelete" = "Выдаліць";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDeleteForEveryone" = "Выдаліць для ўсіх";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDeleteJustForMe" = "Выдаліць толькі для мяне";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHide" = "Схаваць";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeInfo" = "Калі была абраная опцыя \"Схаваць\", дыялогі (чаты, каналы) не будуць выдаленыя. Яны будуць схаваныя са спісу дыялогаў. Іх апавяшчэнні таксама будуць схаваныя. Пасля ўваходу з арыгінальным код-паролем дыялогі (чаты, каналы) з'явяцца ў спісе. Больш бяспечна выкарыстоўваць выдаленне.";
+"FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanion" = "Выдаліць у суразмоўцы";
+"FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanionInfo" = "Выдаліць дыялогі ў суразмоўцаў. Гэтая опцыя прымяняецца толькі для дыялогаў з карыстальнікамі.";
 "FakePasscodes.AccountActions.LogOut" = "Выходзіць з акаўнту";
 "FakePasscodes.AccountActions.MiscActionsInfo" = "Пры ўводзе несапраўднага кода блакіроўкі выконваюцца выбраныя дзеянні.";

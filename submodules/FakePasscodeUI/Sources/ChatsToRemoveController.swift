@@ -156,7 +156,7 @@ private struct ChatsToRemoveState: Equatable {
     }
 }
 
-private func chatsToRemoveEntries(presentationData: PresentationData, state: ChatsToRemoveState, peerEntries: [PeerId: (index: ChatListIndex, peer: RenderedPeer)], configuredPeers: [PeerId: RenderedPeer]) -> [ChatsToRemoveEntry] {
+private func chatsToRemoveEntries(context: AccountContext, presentationData: PresentationData, state: ChatsToRemoveState, peerEntries: [PeerId: (index: ChatListIndex, peer: RenderedPeer)], configuredPeers: [PeerId: RenderedPeer]) -> [ChatsToRemoveEntry] {
     var entries: [ChatsToRemoveEntry] = []
     
     let configuredList = state.chatsToRemove.compactMap { chatToRemove -> (PeerWithRemoveOptions, RenderedPeer, ChatListIndex)? in
@@ -178,15 +178,25 @@ private func chatsToRemoveEntries(presentationData: PresentationData, state: Cha
     let configuredPeerIds = Set(state.chatsToRemove.map { $0.peerId })
     
     for (index, value) in configuredList.enumerated() {
+        let peer = value.1
+        let removeOptions = value.0
+        
         let title: String
-        switch value.0.removalType {
+        switch removeOptions.removalType {
         case .delete:
-            title = presentationData.strings.FakePasscodes_AccountActions_ChatsToRemove_RemovalTypeDelete
+            if peerShouldHaveOptionDeleteFromCompanion(peer.peer!, context) {
+                if removeOptions.deleteFromCompanion {
+                    title = presentationData.strings.FakePasscodes_AccountActions_ChatsToRemove_RemovalTypeDeleteForEveryone
+                } else {
+                    title = presentationData.strings.FakePasscodes_AccountActions_ChatsToRemove_RemovalTypeDeleteJustForMe
+                }
+            } else {
+                title = presentationData.strings.FakePasscodes_AccountActions_ChatsToRemove_RemovalTypeDelete
+            }
         case .hide:
             title = presentationData.strings.FakePasscodes_AccountActions_ChatsToRemove_RemovalTypeHide
         }
         
-        let peer = value.1
         entries.append(.configuredChat(Int32(index), presentationData.theme, presentationData.nameSortOrder, presentationData.nameDisplayOrder, peer, state.selecting && (state.selectedPeerIds.isEmpty || configuredPeerIds.contains(state.selectedPeerIds.first!)) ? .selectable(selected: state.selectedPeerIds.contains(peer.peer!.id)) : .none, title, !state.selecting, state.revealedPeerId == peer.peer!.id))
     }
     
@@ -205,6 +215,30 @@ private func chatsToRemoveEntries(presentationData: PresentationData, state: Cha
     }
     
     return entries
+}
+
+func peerShouldHaveOptionDeleteFromCompanion(_ peer: Peer, _ context: AccountContext) -> Bool {
+    if case let user as TelegramUser = peer, user.botInfo == nil, peer.id != context.account.peerId {
+        return true
+    }
+    return false
+}
+
+func getPeers(context: AccountContext, peerIds: [PeerId]) -> Signal<[RenderedPeer], NoError> {
+    return context.account.postbox.transaction { transaction in
+        return peerIds.compactMap { peerId in
+            if let peer = transaction.getPeer(peerId) {
+                if let associatedPeerId = peer.associatedPeerId {
+                    if let associatedPeer = transaction.getPeer(associatedPeerId) {
+                        return RenderedPeer(peerId: peerId, peers: SimpleDictionary([peer.id: peer, associatedPeer.id: associatedPeer]))
+                    }
+                } else {
+                    return RenderedPeer(peer: peer)
+                }
+            }
+            return nil
+        }
+    }
 }
 
 public func chatsToRemoveController(context: AccountContext, chatsToRemove: [PeerWithRemoveOptions], updatedSettings: @escaping ([PeerWithRemoveOptions]) -> Void) -> ViewController {
@@ -228,21 +262,25 @@ public func chatsToRemoveController(context: AccountContext, chatsToRemove: [Pee
         
         let peersWithRemoveOptions = state.chatsToRemove.filter({ peerIds.contains($0.peerId) })
         
-        presentControllerImpl?(chatsToRemovePeerSettingsController(context: context, peerIds: peerIds, peersWithRemoveOptions: peersWithRemoveOptions, updatePeersRemoveOptions: { peerIds, removalType in
-            updateState { current in
-                var updatedChatsToRemove = current.chatsToRemove
-                for peerId in peerIds {
-                    let peerRemoveOptions = PeerWithRemoveOptions(peerId: peerId, removalType: removalType)
-                    if let ind = updatedChatsToRemove.firstIndex(where: { $0.peerId == peerId }) {
-                        updatedChatsToRemove[ind] = peerRemoveOptions
-                    } else {
-                        updatedChatsToRemove.append(peerRemoveOptions)
+        let _ = (getPeers(context: context, peerIds: peerIds)
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peers in
+            presentControllerImpl?(chatsToRemovePeerSettingsController(context: context, peers: peers, peersWithRemoveOptions: peersWithRemoveOptions, updatePeersRemoveOptions: { peerIds, removalType, deleteFromCompanion in
+                updateState { current in
+                    var updatedChatsToRemove = current.chatsToRemove
+                    for peerId in peerIds {
+                        let peerRemoveOptions = PeerWithRemoveOptions(peerId: peerId, removalType: removalType, deleteFromCompanion: removalType == .delete && deleteFromCompanion && peerShouldHaveOptionDeleteFromCompanion(peers.first(where: { $0.peerId == peerId })!.peer!, context))
+                        if let ind = updatedChatsToRemove.firstIndex(where: { $0.peerId == peerId }) {
+                            updatedChatsToRemove[ind] = peerRemoveOptions
+                        } else {
+                            updatedChatsToRemove.append(peerRemoveOptions)
+                        }
                     }
+                    updatedSettings(updatedChatsToRemove)
+                    return current.withUpdatedChatsToRemove(updatedChatsToRemove).withUpdatedSelecting(false).withUpdatedSearching(false)
                 }
-                updatedSettings(updatedChatsToRemove)
-                return current.withUpdatedChatsToRemove(updatedChatsToRemove).withUpdatedSelecting(false).withUpdatedSearching(false)
-            }
-        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        })
     }
     
     let selectPeer: (PeerId) -> Void = { peerId in
@@ -287,27 +325,18 @@ public func chatsToRemoveController(context: AccountContext, chatsToRemove: [Pee
     
     let configuredPeersSignal = statePromise.get()
     |> mapToSignal { state in
-        return context.account.postbox.transaction { transaction -> [PeerId: RenderedPeer] in
-            var peers: [PeerId: RenderedPeer] = [:]
-            for peerId in state.chatsToRemove.map({ $0.peerId }) {
-                if let peer = transaction.getPeer(peerId) {
-                    if let associatedPeerId = peer.associatedPeerId {
-                        if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                            peers[peerId] = RenderedPeer(peerId: peerId, peers: SimpleDictionary([peer.id: peer, associatedPeer.id: associatedPeer]))
-                        }
-                    } else {
-                        peers[peerId] = RenderedPeer(peer: peer)
-                    }
-                }
-            }
-            return peers
+        return getPeers(context: context, peerIds: state.chatsToRemove.map({ $0.peerId }))
+    }
+    |> map { peers -> [PeerId: RenderedPeer] in
+        return peers.reduce(into: [:]) { partialResult, peer in
+            partialResult[peer.peerId] = peer
         }
     }
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), ptgAllChats(account: context.account), configuredPeersSignal)
     |> deliverOnMainQueue
     |> map { presentationData, state, allChats, configuredPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let entries = chatsToRemoveEntries(presentationData: presentationData, state: state, peerEntries: allChats, configuredPeers: configuredPeers)
+        let entries = chatsToRemoveEntries(context: context, presentationData: presentationData, state: state, peerEntries: allChats, configuredPeers: configuredPeers)
         
         let leftNavigationButton: ItemListNavigationButton?
         let rightNavigationButton: ItemListNavigationButton?
@@ -525,7 +554,6 @@ final class ChatsToRemoveSearchItem: ItemListControllerSearch {
             let searchContentNode = NavigationBarSearchContentNode(theme: presentationData.theme, placeholder: self.placeholder, activate: {
                 updateActivated(true)
             })
-            searchContentNode.updateExpansionProgress(0.0)
             self.searchContentNodeCreated(searchContentNode)
             return searchContentNode
         }

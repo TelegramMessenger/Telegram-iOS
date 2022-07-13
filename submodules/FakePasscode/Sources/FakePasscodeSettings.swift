@@ -15,22 +15,26 @@ public enum PeerRemovalType: Int32, Codable {
 public struct PeerWithRemoveOptions: Codable, Equatable {
     public let peerId: PeerId
     public let removalType: PeerRemovalType
+    public let deleteFromCompanion: Bool
     
-    public init(peerId: PeerId, removalType: PeerRemovalType) {
+    public init(peerId: PeerId, removalType: PeerRemovalType, deleteFromCompanion: Bool) {
         self.peerId = peerId
         self.removalType = removalType
+        self.deleteFromCompanion = deleteFromCompanion
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
         self.peerId = try container.decode(PeerId.self, forKey: "pid")
         self.removalType = PeerRemovalType(rawValue: try container.decode(Int32.self, forKey: "rt")) ?? .delete
+        self.deleteFromCompanion = (try container.decodeIfPresent(Int32.self, forKey: "dfc") ?? 0) != 0
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
         try container.encode(self.peerId, forKey: "pid")
         try container.encode(self.removalType.rawValue, forKey: "rt")
+        try container.encode((self.deleteFromCompanion ? 1 : 0) as Int32, forKey: "dfc")
     }
 }
 
@@ -91,15 +95,29 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
                 if chatToRemove.peerId.namespace == Namespaces.Peer.CloudChannel {
                     context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: chatToRemove.peerId, memberId: context.account.peerId)
                 }
+                
+                let deleteGloballyIfPossible: Bool
+                switch chatToRemove.peerId.namespace {
+                case Namespaces.Peer.CloudUser:
+                    deleteGloballyIfPossible = chatToRemove.deleteFromCompanion
+                    break
+                case Namespaces.Peer.SecretChat:
+                    deleteGloballyIfPossible = true
+                    break
+                default:
+                    deleteGloballyIfPossible = false
+                    break
+                }
+                
                 updateWaitingQueueSize({ $0 + 1 })
-                let _ = context.engine.peers.removePeerChat(peerId: chatToRemove.peerId, reportChatSpam: false, deleteGloballyIfPossible: false).start(completed: {
+                let _ = context.engine.peers.removePeerChat(peerId: chatToRemove.peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
                     deleteSendMessageIntents(peerId: chatToRemove.peerId)
                     updateWaitingQueueSize({ $0 - 1 })
                 })
-                break;
+                break
+                
             case .hide:
-                // TODO
-                break;
+                break
             }
         }
         
