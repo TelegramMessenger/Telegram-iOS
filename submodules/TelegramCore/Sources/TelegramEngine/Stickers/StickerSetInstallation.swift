@@ -66,7 +66,7 @@ func _internal_requestStickerSet(postbox: Postbox, network: Network, reference: 
                 info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
                 
                 switch set {
-                    case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _):
+                    case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _, _):
                         installed = (flags & (1 << 0) != 0)
                 }
                 

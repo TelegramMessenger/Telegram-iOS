@@ -29,7 +29,7 @@ func _internal_sendAppStoreReceipt(account: Account, receipt: Data, purpose: App
         purposeSignal = account.postbox.loadedPeerWithId(peerId)
         |> mapToSignal { peer -> Signal<Api.InputStorePaymentPurpose, NoError> in
             if let inputUser = apiInputUser(peer) {
-                return .single(.inputStorePaymentGiftPremium(userId: inputUser))
+                return .single(.inputStorePaymentGiftPremium(userId: inputUser, currency: "", amount: 0))
             } else {
                 return .complete()
             }
