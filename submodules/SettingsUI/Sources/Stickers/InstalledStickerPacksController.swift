@@ -26,6 +26,7 @@ private final class InstalledStickerPacksControllerArguments {
     let removePack: (ArchivedStickerPackItem) -> Void
     let openStickersBot: () -> Void
     let openMasks: () -> Void
+    let openEmoji: () -> Void
     let openQuickReaction: () -> Void
     let openFeatured: () -> Void
     let openArchived: ([ArchivedStickerPackItem]?) -> Void
@@ -35,13 +36,14 @@ private final class InstalledStickerPacksControllerArguments {
     let expandTrendingPacks: () -> Void
     let addPack: (StickerPackCollectionInfo) -> Void
     
-    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ArchivedStickerPackItem) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openQuickReaction: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping ([ArchivedStickerPackItem]?) -> Void, openSuggestOptions: @escaping () -> Void, toggleAnimatedStickers: @escaping (Bool) -> Void, togglePackSelected: @escaping (ItemCollectionId) -> Void, expandTrendingPacks: @escaping () -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void) {
+    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, removePack: @escaping (ArchivedStickerPackItem) -> Void, openStickersBot: @escaping () -> Void, openMasks: @escaping () -> Void, openEmoji: @escaping () -> Void, openQuickReaction: @escaping () -> Void, openFeatured: @escaping () -> Void, openArchived: @escaping ([ArchivedStickerPackItem]?) -> Void, openSuggestOptions: @escaping () -> Void, toggleAnimatedStickers: @escaping (Bool) -> Void, togglePackSelected: @escaping (ItemCollectionId) -> Void, expandTrendingPacks: @escaping () -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void) {
         self.account = account
         self.openStickerPack = openStickerPack
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
         self.removePack = removePack
         self.openStickersBot = openStickersBot
         self.openMasks = openMasks
+        self.openEmoji = openEmoji
         self.openQuickReaction = openQuickReaction
         self.openFeatured = openFeatured
         self.openArchived = openArchived
@@ -83,6 +85,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     case trending(PresentationTheme, String, Int32)
     case archived(PresentationTheme, String, Int32, [ArchivedStickerPackItem]?)
     case masks(PresentationTheme, String)
+    case emoji(PresentationTheme, String)
     case quickReaction(String, UIImage?)
     case animatedStickers(PresentationTheme, String, Bool)
     case animatedStickersInfo(PresentationTheme, String)
@@ -95,7 +98,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .suggestOptions, .trending, .masks, .quickReaction, .archived, .animatedStickers, .animatedStickersInfo:
+        case .suggestOptions, .trending, .masks, .emoji, .quickReaction, .archived, .animatedStickers, .animatedStickersInfo:
                 return InstalledStickerPacksSection.service.rawValue
             case .trendingPacksTitle, .trendingPack, .trendingExpand:
                 return InstalledStickerPacksSection.trending.rawValue
@@ -114,24 +117,26 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return .index(2)
             case .masks:
                 return .index(3)
-            case .quickReaction:
+            case .emoji:
                 return .index(4)
-            case .animatedStickers:
+            case .quickReaction:
                 return .index(5)
-            case .animatedStickersInfo:
+            case .animatedStickers:
                 return .index(6)
-            case .trendingPacksTitle:
+            case .animatedStickersInfo:
                 return .index(7)
+            case .trendingPacksTitle:
+                return .index(8)
             case let .trendingPack(_, _, _, info, _, _, _, _, _):
                 return .trendingPack(info.id)
             case .trendingExpand:
-                return .index(8)
-            case .packsTitle:
                 return .index(9)
+            case .packsTitle:
+                return .index(10)
             case let .pack(_, _, _, info, _, _, _, _, _, _):
                 return .pack(info.id)
             case .packsInfo:
-                return .index(10)
+                return .index(11)
         }
     }
     
@@ -151,6 +156,12 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 }
             case let .masks(lhsTheme, lhsCount):
                 if case let .masks(rhsTheme, rhsCount) = rhs, lhsTheme === rhsTheme, lhsCount == rhsCount {
+                    return true
+                } else {
+                    return false
+                }
+            case let .emoji(lhsTheme, lhsCount):
+                if case let .emoji(rhsTheme, rhsCount) = rhs, lhsTheme === rhsTheme, lhsCount == rhsCount {
                     return true
                 } else {
                     return false
@@ -305,30 +316,37 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
+            case .emoji:
+                switch rhs {
+                case .suggestOptions, .trending, .archived, .masks, .emoji:
+                        return false
+                    default:
+                        return true
+                }
             case .quickReaction:
                 switch rhs {
-                    case .suggestOptions, .trending, .archived, .masks, .quickReaction:
+                    case .suggestOptions, .trending, .archived, .masks, .emoji, .quickReaction:
                         return false
                     default:
                         return true
                 }
             case .animatedStickers:
                 switch rhs {
-                    case .suggestOptions, .trending, .archived, .masks, .quickReaction, .animatedStickers:
+                    case .suggestOptions, .trending, .archived, .masks, .emoji, .quickReaction, .animatedStickers:
                         return false
                     default:
                         return true
                 }
             case .animatedStickersInfo:
                 switch rhs {
-                    case .suggestOptions, .trending, .archived, .masks, .quickReaction, .animatedStickers, .animatedStickersInfo:
+                    case .suggestOptions, .trending, .archived, .masks, .emoji, .quickReaction, .animatedStickers, .animatedStickersInfo:
                         return false
                     default:
                         return true
                 }
             case .trendingPacksTitle:
                 switch rhs {
-                    case .suggestOptions, .trending, .masks, .quickReaction, .archived, .animatedStickers, .animatedStickersInfo, .trendingPacksTitle:
+                    case .suggestOptions, .trending, .masks, .emoji, .quickReaction, .archived, .animatedStickers, .animatedStickersInfo, .trendingPacksTitle:
                         return false
                     default:
                         return true
@@ -344,14 +362,14 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 }
             case .trendingExpand:
                 switch rhs {
-                    case .suggestOptions, .trending, .masks, .quickReaction, .archived, .animatedStickers, .animatedStickersInfo, .trendingPacksTitle, .trendingPack, .trendingExpand:
+                    case .suggestOptions, .trending, .masks, .emoji, .quickReaction, .archived, .animatedStickers, .animatedStickersInfo, .trendingPacksTitle, .trendingPack, .trendingExpand:
                         return false
                     default:
                         return true
                 }
             case .packsTitle:
                 switch rhs {
-                    case .suggestOptions, .trending, .masks, .quickReaction, .archived, .animatedStickers, .animatedStickersInfo, .trendingPacksTitle, .trendingPack, .trendingExpand, .packsTitle:
+                    case .suggestOptions, .trending, .masks, .emoji, .quickReaction, .archived, .animatedStickers, .animatedStickersInfo, .trendingPacksTitle, .trendingPack, .trendingExpand, .packsTitle:
                         return false
                     default:
                         return true
@@ -389,6 +407,10 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
             case let .masks(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openMasks()
+                })
+            case let .emoji(_, text):
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
+                    arguments.openEmoji()
                 })
             case let .quickReaction(title, image):
                 let labelStyle: ItemListDisclosureLabelStyle
@@ -505,6 +527,8 @@ private func namespaceForMode(_ mode: InstalledStickerPacksControllerMode) -> It
             return Namespaces.ItemCollection.CloudStickerPacks
         case .masks:
             return Namespaces.ItemCollection.CloudMaskPacks
+        case .emoji:
+            return Namespaces.ItemCollection.CloudEmojiPacks
     }
 }
 
@@ -544,6 +568,9 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
         }
         entries.append(.masks(presentationData.theme, presentationData.strings.MaskStickerSettings_Title))
         
+        //TODO:localize
+        entries.append(.emoji(presentationData.theme, "Emoji"))
+        
         entries.append(.quickReaction(presentationData.strings.Settings_QuickReactionSetup_NavigationTitle, quickReactionImage))
         
         entries.append(.animatedStickers(presentationData.theme, presentationData.strings.StickerPacksSettings_AnimatedStickers, stickerSettings.loopAnimatedStickers))
@@ -575,6 +602,11 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
     case .masks:
         if let archived = archived, !archived.isEmpty {
             entries.append(.archived(presentationData.theme, presentationData.strings.StickerPacksSettings_ArchivedMasks, Int32(archived.count), archived))
+        }
+    case .emoji:
+        if let archived = archived, !archived.isEmpty {
+            //TODO:localize
+            entries.append(.archived(presentationData.theme, "Archived Emoji", Int32(archived.count), archived))
         }
     }
     
@@ -618,6 +650,9 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
             markdownString = presentationData.strings.StickerPacksSettings_ManagingHelp
         case .masks:
             markdownString = presentationData.strings.MaskStickerSettings_Info
+        case .emoji:
+            //TODO:localize
+            markdownString = "Emoji"
     }
     let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
     if let entity = entities.first {
@@ -633,6 +668,7 @@ public enum InstalledStickerPacksControllerMode {
     case general
     case modal
     case masks
+    case emoji
 }
 
 public func installedStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil) -> ViewController {
@@ -731,6 +767,8 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         }))
     }, openMasks: {
         pushControllerImpl?(installedStickerPacksController(context: context, mode: .masks, archivedPacks: archivedPacks, updatedPacks: { _ in}))
+    }, openEmoji: {
+        pushControllerImpl?(installedStickerPacksController(context: context, mode: .emoji, archivedPacks: archivedPacks, updatedPacks: { _ in}))
     }, openQuickReaction: {
         pushControllerImpl?(quickReactionSetupController(
             context: context
@@ -742,6 +780,8 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         switch mode {
             case .masks:
                 archivedMode = .masks
+            case .emoji:
+                archivedMode = .emoji
             default:
                 archivedMode = .stickers
         }
@@ -875,6 +915,10 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         case .masks:
             featured.set(.single([]))
             archivedPromise.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks(namespace: .masks) |> map(Optional.init)))
+            quickReactionImage = .single(nil)
+        case .emoji:
+            featured.set(.single([]))
+            archivedPromise.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks(namespace: .emoji) |> map(Optional.init)))
             quickReactionImage = .single(nil)
     }
 
@@ -1027,6 +1071,9 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 title = presentationData.strings.StickerPacksSettings_Title
             case .masks:
                 title = presentationData.strings.MaskStickerSettings_Title
+            case .emoji:
+                //TODO:localize
+                title = "Emoji"
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)

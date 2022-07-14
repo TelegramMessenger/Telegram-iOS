@@ -76,7 +76,7 @@ public enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
     case peerId(PeerId)
     case privateMessage(messageId: MessageId, threadId: Int32?, timecode: Double?)
-    case stickerPack(String)
+    case stickerPack(name: String, type: StickerPackUrlType)
     case invoice(String)
     case join(String)
     case localization(String)
@@ -263,7 +263,9 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                 return .peerName(peerName, nil)
             } else if pathComponents.count == 2 || pathComponents.count == 3 {
                 if pathComponents[0] == "addstickers" {
-                    return .stickerPack(pathComponents[1])
+                    return .stickerPack(name: pathComponents[1], type: .stickers)
+                } else if pathComponents[0] == "addemoji" {
+                    return .stickerPack(name: pathComponents[1], type: .emoji)
                 } else if pathComponents[0] == "invoice" {
                     return .invoice(pathComponents[1])
                 } else if pathComponents[0] == "joinchat" || pathComponents[0] == "joinchannel" {
@@ -572,8 +574,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                     }
                 }
             }
-        case let .stickerPack(name):
-            return .single(.stickerPack(name: name))
+        case let .stickerPack(name, type):
+            return .single(.stickerPack(name: name, type: type))
         case let .invoice(slug):
             return context.engine.payments.fetchBotPaymentInvoice(source: .slug(slug))
             |> map(Optional.init)
@@ -690,14 +692,14 @@ public func parseStickerPackUrl(_ url: String) -> String? {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])), case let .stickerPack(name) = internalUrl {
+                if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])), case let .stickerPack(name, _) = internalUrl {
                     return name
                 }
             }
         }
     }
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
-        if let internalUrl = parseInternalUrl(query: host + "?" + query), case let .stickerPack(name) = internalUrl {
+        if let internalUrl = parseInternalUrl(query: host + "?" + query), case let .stickerPack(name, _) = internalUrl {
             return name
         }
     }

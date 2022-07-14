@@ -260,6 +260,11 @@ public struct ResolvedBotAdminRights: OptionSet {
     }
 }
 
+public enum StickerPackUrlType {
+    case stickers
+    case emoji
+}
+
 public enum ResolvedUrl {
     case externalUrl(String)
     case urlAuth(String)
@@ -269,7 +274,7 @@ public enum ResolvedUrl {
     case groupBotStart(peerId: PeerId, payload: String, adminRights: ResolvedBotAdminRights?)
     case channelMessage(peerId: PeerId, messageId: MessageId, timecode: Double?)
     case replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage, messageId: MessageId)
-    case stickerPack(name: String)
+    case stickerPack(name: String, type: StickerPackUrlType)
     case instantView(TelegramMediaWebpage, String?)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case join(String)

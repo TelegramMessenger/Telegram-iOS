@@ -295,6 +295,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/addstickers/\(set)"
                         }
                     }
+                } else if parsedUrl.host == "addemoji" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var set: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "set" {
+                                        set = value
+                                    }
+                                }
+                            }
+                        }
+                        if let set = set {
+                            convertedUrl = "https://t.me/addemoji/\(set)"
+                        }
+                    }
                 } else if parsedUrl.host == "invoice" {
                     if let components = URLComponents(string: "/?" + query) {
                         var slug: String?

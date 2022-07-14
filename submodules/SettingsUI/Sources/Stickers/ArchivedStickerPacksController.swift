@@ -17,6 +17,7 @@ import UndoUI
 public enum ArchivedStickerPacksControllerMode {
     case stickers
     case masks
+    case emoji
 }
 
 private final class ArchivedStickerPacksControllerArguments {
@@ -237,6 +238,8 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
     switch mode {
         case .stickers:
             namespace = .stickers
+        case .emoji:
+            namespace = .emoji
         case .masks:
             namespace = .masks
     }

@@ -39,6 +39,8 @@ swift_library(
         "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
         "//submodules/UndoUI:UndoUI",
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
+        "//submodules/Components/SolidRoundedButtonComponent:SolidRoundedButtonComponent",
+        "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
     ],
     visibility = [
         "//visibility:public",

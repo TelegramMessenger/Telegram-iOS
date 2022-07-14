@@ -18,6 +18,7 @@ import PagerComponent
 import SoftwareVideo
 import AVFoundation
 import PhotoResources
+import ContextUI
 
 private class GifVideoLayer: AVSampleBufferDisplayLayer {
     private let context: AccountContext
@@ -125,11 +126,14 @@ public final class GifPagerContentComponent: Component {
     
     public final class InputInteraction {
         public let performItemAction: (Item, UIView, CGRect) -> Void
+        public let openGifContextMenu: (TelegramMediaFile, UIView, CGRect, ContextGesture, Bool) -> Void
         
         public init(
-            performItemAction: @escaping (Item, UIView, CGRect) -> Void
+            performItemAction: @escaping (Item, UIView, CGRect) -> Void,
+            openGifContextMenu: @escaping (TelegramMediaFile, UIView, CGRect, ContextGesture, Bool) -> Void
         ) {
             self.performItemAction = performItemAction
+            self.openGifContextMenu = openGifContextMenu
         }
     }
     
@@ -186,7 +190,7 @@ public final class GifPagerContentComponent: Component {
         return true
     }
     
-    public final class View: UIView, UIScrollViewDelegate {
+    public final class View: ContextControllerSourceView, UIScrollViewDelegate {
         private struct ItemGroupDescription: Equatable {
             let hasTitle: Bool
             let itemCount: Int
@@ -406,10 +410,42 @@ public final class GifPagerContentComponent: Component {
             self.addSubview(self.scrollView)
             
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            
+            self.useSublayerTransformForActivation = false
+            self.shouldBegin = { [weak self] point in
+                guard let strongSelf = self else {
+                    return false
+                }
+                strongSelf.targetLayerForActivationProgress = nil
+                if let (_, itemLayer) = strongSelf.itemLayer(atPoint: point) {
+                    strongSelf.targetLayerForActivationProgress = itemLayer
+                    return true
+                }
+                return false
+            }
+            self.activated = { [weak self] gesture, location in
+                guard let strongSelf = self, let component = strongSelf.component else {
+                    gesture.cancel()
+                    return
+                }
+                guard let (item, itemLayer) = strongSelf.itemLayer(atPoint: location) else {
+                    gesture.cancel()
+                    return
+                }
+                let rect = strongSelf.scrollView.convert(itemLayer.frame, to: strongSelf)
+                component.inputInteraction.openGifContextMenu(item.file, strongSelf, rect, gesture, true)
+            }
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        private func openGifContextMenu(file: TelegramMediaFile, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
+            guard let component = self.component else {
+                return
+            }
+            component.inputInteraction.openGifContextMenu(file, sourceView, sourceRect, gesture, isSaved)
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -426,6 +462,18 @@ public final class GifPagerContentComponent: Component {
             for (_, itemLayer) in self.visibleItemLayers {
                 if itemLayer.frame.contains(localPoint) {
                     return itemLayer.item
+                }
+            }
+            
+            return nil
+        }
+        
+        private func itemLayer(atPoint point: CGPoint) -> (Item, ItemLayer)? {
+            let localPoint = self.convert(point, to: self.scrollView)
+            
+            for (_, itemLayer) in self.visibleItemLayers {
+                if itemLayer.frame.contains(localPoint) {
+                    return (itemLayer.item, itemLayer)
                 }
             }
             
@@ -600,4 +648,3 @@ public final class GifPagerContentComponent: Component {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
-

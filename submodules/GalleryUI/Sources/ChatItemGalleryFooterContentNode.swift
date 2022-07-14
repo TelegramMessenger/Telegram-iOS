@@ -1715,7 +1715,7 @@ private final class PlaybackButtonNode: HighlightTrackingButtonNode {
         self.textNode = ImmediateTextNode()
         self.textNode.attributedText = NSAttributedString(string: "15", font: Font.with(size: 11.0, design: .round, weight: .semibold, traits: []), textColor: .white)
         
-        super.init(pointerStyle: .circle)
+        super.init(pointerStyle: nil)
         
         self.addSubnode(self.backgroundIconNode)
         self.addSubnode(self.textNode)

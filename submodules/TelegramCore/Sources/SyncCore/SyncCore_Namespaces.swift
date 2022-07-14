@@ -47,6 +47,7 @@ public struct Namespaces {
         public static let CloudAnimatedEmojiAnimations: Int32 = 5
         public static let CloudAnimatedEmojiReactions: Int32 = 6
         public static let CloudPremiumGifts: Int32 = 7
+        public static let CloudEmojiPacks: Int32 = 8
     }
     
     public struct OrderedItemList {
@@ -165,6 +166,7 @@ public struct OperationLogTags {
     public static let SynchronizeEmojiKeywords = PeerOperationLogTag(value: 19)
     public static let SynchronizeChatListFilters = PeerOperationLogTag(value: 20)
     public static let SynchronizeMarkAllUnseenReactions = PeerOperationLogTag(value: 21)
+    public static let SynchronizeInstalledEmoji = PeerOperationLogTag(value: 22)
 }
 
 public struct LegacyPeerSummaryCounterTags: OptionSet, Sequence, Hashable {

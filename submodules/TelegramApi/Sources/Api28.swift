@@ -6295,11 +6295,11 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
-                static func canPurchasePremium() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func canPurchasePremium(purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1435856696)
-                    
-                    return (FunctionDescription(name: "payments.canPurchasePremium", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    buffer.appendInt32(-1614700874)
+                    purpose.serialize(buffer, true)
+                    return (FunctionDescription(name: "payments.canPurchasePremium", parameters: [("purpose", String(describing: purpose))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

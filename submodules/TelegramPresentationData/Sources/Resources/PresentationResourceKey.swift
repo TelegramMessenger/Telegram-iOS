@@ -276,6 +276,7 @@ public enum PresentationResourceKey: Int32 {
     case chatKeyboardActionButtonProfileIcon
     case chatKeyboardActionButtonAddToChatIcon
     case chatKeyboardActionButtonWebAppIcon
+    case chatEntityKeyboardLock
     
     case uploadToneIcon
 }

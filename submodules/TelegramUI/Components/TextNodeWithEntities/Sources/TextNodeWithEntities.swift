@@ -45,17 +45,20 @@ public final class TextNodeWithEntities {
         public let cache: AnimationCache
         public let renderer: MultiAnimationRenderer
         public let placeholderColor: UIColor
+        public let attemptSynchronous: Bool
         
         public init(
             context: AccountContext,
             cache: AnimationCache,
             renderer: MultiAnimationRenderer,
-            placeholderColor: UIColor
+            placeholderColor: UIColor,
+            attemptSynchronous: Bool
         ) {
             self.context = context
             self.cache = cache
             self.renderer = renderer
             self.placeholderColor = placeholderColor
+            self.attemptSynchronous = attemptSynchronous
         }
     }
     
@@ -115,7 +118,7 @@ public final class TextNodeWithEntities {
                 
                 if let maybeNode = maybeNode {
                     if let applyArguments = applyArguments {
-                        maybeNode.updateInlineStickers(context: applyArguments.context, cache: applyArguments.cache, renderer: applyArguments.renderer, textLayout: layout, placeholderColor: applyArguments.placeholderColor)
+                        maybeNode.updateInlineStickers(context: applyArguments.context, cache: applyArguments.cache, renderer: applyArguments.renderer, textLayout: layout, placeholderColor: applyArguments.placeholderColor, attemptSynchronousLoad: false)
                     }
                     
                     return maybeNode
@@ -123,7 +126,7 @@ public final class TextNodeWithEntities {
                     let resultNode = TextNodeWithEntities(textNode: result)
                     
                     if let applyArguments = applyArguments {
-                        resultNode.updateInlineStickers(context: applyArguments.context, cache: applyArguments.cache, renderer: applyArguments.renderer, textLayout: layout, placeholderColor: applyArguments.placeholderColor)
+                        resultNode.updateInlineStickers(context: applyArguments.context, cache: applyArguments.cache, renderer: applyArguments.renderer, textLayout: layout, placeholderColor: applyArguments.placeholderColor, attemptSynchronousLoad: false)
                     }
                     
                     return resultNode
@@ -140,7 +143,7 @@ public final class TextNodeWithEntities {
         }
     }
     
-    private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor) {
+    private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor, attemptSynchronousLoad: Bool) {
         var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
         
@@ -165,7 +168,7 @@ public final class TextNodeWithEntities {
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: false, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
+                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: attemptSynchronousLoad, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         

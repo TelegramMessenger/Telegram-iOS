@@ -701,6 +701,8 @@ private final class StickerPackContainer: ASDisplayNode {
                 let text: String
                 if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                     text = self.presentationData.strings.StickerPack_RemoveStickerCount(Int32(entries.count))
+                } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                    text = self.presentationData.strings.StickerPack_RemoveEmojiCount(Int32(entries.count))
                 } else {
                     text = self.presentationData.strings.StickerPack_RemoveMaskCount(Int32(entries.count))
                 }
@@ -710,6 +712,8 @@ private final class StickerPackContainer: ASDisplayNode {
                 let text: String
                 if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                     text = self.presentationData.strings.StickerPack_AddStickerCount(Int32(entries.count))
+                } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                    text = self.presentationData.strings.StickerPack_AddEmojiCount(Int32(entries.count))
                 } else {
                     text = self.presentationData.strings.StickerPack_AddMaskCount(Int32(entries.count))
                 }

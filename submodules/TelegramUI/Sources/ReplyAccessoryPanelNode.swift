@@ -76,7 +76,8 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 context: context,
                 cache: animationCache,
                 renderer: animationRenderer,
-                placeholderColor: theme.list.mediaPlaceholderColor
+                placeholderColor: theme.list.mediaPlaceholderColor,
+                attemptSynchronous: false
             )
         }
         

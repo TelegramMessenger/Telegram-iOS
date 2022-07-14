@@ -7838,6 +7838,12 @@ Sorry for the inconvenience.";
 "Notification.PremiumGift.Subtitle" = "for %@";
 "Notification.PremiumGift.View" = "View";
 
+"StickerPack.AddEmojiCount_1" = "Add 1 Emoji";
+"StickerPack.AddEmojiCount_any" = "Add %@ Emoji";
+
+"StickerPack.RemoveEmojiCount_1" = "Remove 1 Emoji";
+"StickerPack.RemoveEmojiCount_any" = "Remove %@ Emoji";
+
 "Gallery.AirPlay" = "AirPlay";
 "Gallery.AirPlayPlaceholder" = "This video is playing on the TV using AirPlay";
 

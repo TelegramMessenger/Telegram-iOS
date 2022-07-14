@@ -271,7 +271,7 @@ open class ContextControllerSourceView: UIView {
     public weak var additionalActivationProgressLayer: CALayer?
     public var targetNodeForActivationProgress: ASDisplayNode?
     public var targetViewForActivationProgress: UIView?
-    public var targetLayerForActivationProgress: CALayer?
+    public weak var targetLayerForActivationProgress: CALayer?
     public var targetNodeForActivationProgressContentRect: CGRect?
     public var useSublayerTransformForActivation: Bool = true
     

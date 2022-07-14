@@ -278,7 +278,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 context: item.context,
                                 cache: item.controllerInteraction.presentationContext.animationCache,
                                 renderer: item.controllerInteraction.presentationContext.animationRenderer,
-                                placeholderColor: item.presentationData.theme.theme.chat.message.freeform.withWallpaper.reactionInactiveBackground
+                                placeholderColor: item.presentationData.theme.theme.chat.message.freeform.withWallpaper.reactionInactiveBackground,
+                                attemptSynchronous: synchronousLoads
                             ))
                             
                             let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: image != nil ? 2 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)

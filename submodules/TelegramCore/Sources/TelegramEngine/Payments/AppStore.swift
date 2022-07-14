@@ -58,7 +58,7 @@ public enum RestoreAppStoreReceiptError {
     case generic
 }
 
-func _internal_canPurchasePremium(account: Account) -> Signal<Bool, NoError> {
+func _internal_canPurchasePremium(account: Account, purpose: AppStoreTransactionPurpose) -> Signal<Bool, NoError> {
     return account.network.request(Api.functions.payments.canPurchasePremium())
     |> map { result -> Bool in
         switch result {

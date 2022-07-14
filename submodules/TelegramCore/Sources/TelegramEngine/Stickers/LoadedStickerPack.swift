@@ -54,6 +54,8 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
                     case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _):
                         if (flags & (1 << 3)) != 0 {
                             namespace = Namespaces.ItemCollection.CloudMaskPacks
+                        } else if (flags & (1 << 7)) != 0 {
+                            namespace = Namespaces.ItemCollection.CloudEmojiPacks
                         } else {
                             namespace = Namespaces.ItemCollection.CloudStickerPacks
                         }

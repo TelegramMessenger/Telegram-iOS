@@ -1,12 +1,12 @@
 public extension Api {
     enum StickerSet: TypeConstructorDescription {
-        case stickerSet(flags: Int32, installedDate: Int32?, id: Int64, accessHash: Int64, title: String, shortName: String, thumbs: [Api.PhotoSize]?, thumbDcId: Int32?, thumbVersion: Int32?, count: Int32, hash: Int32)
+        case stickerSet(flags: Int32, installedDate: Int32?, id: Int64, accessHash: Int64, title: String, shortName: String, thumbs: [Api.PhotoSize]?, thumbDcId: Int32?, thumbVersion: Int32?, thumbDocumentId: Int64?, count: Int32, hash: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let thumbs, let thumbDcId, let thumbVersion, let count, let hash):
+                case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let thumbs, let thumbDcId, let thumbVersion, let thumbDocumentId, let count, let hash):
                     if boxed {
-                        buffer.appendInt32(-673242758)
+                        buffer.appendInt32(768691932)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(installedDate!, buffer: buffer, boxed: false)}
@@ -21,6 +21,7 @@ public extension Api {
                     }}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(thumbDcId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(thumbVersion!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {serializeInt64(thumbDocumentId!, buffer: buffer, boxed: false)}
                     serializeInt32(count, buffer: buffer, boxed: false)
                     serializeInt32(hash, buffer: buffer, boxed: false)
                     break
@@ -29,8 +30,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let thumbs, let thumbDcId, let thumbVersion, let count, let hash):
-                return ("stickerSet", [("flags", String(describing: flags)), ("installedDate", String(describing: installedDate)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("title", String(describing: title)), ("shortName", String(describing: shortName)), ("thumbs", String(describing: thumbs)), ("thumbDcId", String(describing: thumbDcId)), ("thumbVersion", String(describing: thumbVersion)), ("count", String(describing: count)), ("hash", String(describing: hash))])
+                case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let thumbs, let thumbDcId, let thumbVersion, let thumbDocumentId, let count, let hash):
+                return ("stickerSet", [("flags", String(describing: flags)), ("installedDate", String(describing: installedDate)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("title", String(describing: title)), ("shortName", String(describing: shortName)), ("thumbs", String(describing: thumbs)), ("thumbDcId", String(describing: thumbDcId)), ("thumbVersion", String(describing: thumbVersion)), ("thumbDocumentId", String(describing: thumbDocumentId)), ("count", String(describing: count)), ("hash", String(describing: hash))])
     }
     }
     
@@ -55,10 +56,12 @@ public extension Api {
             if Int(_1!) & Int(1 << 4) != 0 {_8 = reader.readInt32() }
             var _9: Int32?
             if Int(_1!) & Int(1 << 4) != 0 {_9 = reader.readInt32() }
-            var _10: Int32?
-            _10 = reader.readInt32()
+            var _10: Int64?
+            if Int(_1!) & Int(1 << 8) != 0 {_10 = reader.readInt64() }
             var _11: Int32?
             _11 = reader.readInt32()
+            var _12: Int32?
+            _12 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
@@ -68,10 +71,11 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
-            let _c10 = _10 != nil
+            let _c10 = (Int(_1!) & Int(1 << 8) == 0) || _10 != nil
             let _c11 = _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.StickerSet.stickerSet(flags: _1!, installedDate: _2, id: _3!, accessHash: _4!, title: _5!, shortName: _6!, thumbs: _7, thumbDcId: _8, thumbVersion: _9, count: _10!, hash: _11!)
+            let _c12 = _12 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
+                return Api.StickerSet.stickerSet(flags: _1!, installedDate: _2, id: _3!, accessHash: _4!, title: _5!, shortName: _6!, thumbs: _7, thumbDcId: _8, thumbVersion: _9, thumbDocumentId: _10, count: _11!, hash: _12!)
             }
             else {
                 return nil

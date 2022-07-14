@@ -628,7 +628,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
-            case let .sticker(context, file, title, text, customUndoText):
+            case let .sticker(context, file, title, text, customUndoText, _):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -963,7 +963,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     @objc private func undoButtonPressed() {
-        let _ = self.action(.undo)
+        switch self.content {
+        case let .sticker(_, _, _, _, _, customAction):
+            if let customAction = customAction {
+                customAction()
+            }
+        default:
+            let _ = self.action(.undo)
+        }
         self.dismiss()
     }
     

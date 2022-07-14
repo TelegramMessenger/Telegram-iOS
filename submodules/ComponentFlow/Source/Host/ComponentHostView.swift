@@ -203,9 +203,6 @@ public final class ComponentView<EnvironmentType> {
         }
 
         let updatedSize = component._update(view: componentView, availableSize: containerSize, environment: context.erasedEnvironment, transition: transition)
-        if transition.userData(ComponentHostViewSkipSettingFrame.self) == nil {
-            transition.setFrame(view: componentView, frame: CGRect(origin: CGPoint(), size: updatedSize))
-        }
 
         if isEnvironmentUpdated {
             context.erasedEnvironment._isUpdated = false

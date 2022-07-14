@@ -46,6 +46,9 @@ extension StickerPackCollectionInfo {
                 if (flags & (1 << 6)) != 0 {
                     setFlags.insert(.isVideo)
                 }
+                if (flags & (1 << 7)) != 0 {
+                    setFlags.insert(.isEmoji)
+                }
                 
                 var thumbnailRepresentation: TelegramMediaImageRepresentation?
                 var immediateThumbnailData: Data?

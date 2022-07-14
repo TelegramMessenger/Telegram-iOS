@@ -1801,7 +1801,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         context: item.context,
                         cache: item.interaction.animationCache,
                         renderer: item.interaction.animationRenderer,
-                        placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor
+                        placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor,
+                        attemptSynchronous: synchronousLoads
                     ))
                     
                     let _ = authorApply()

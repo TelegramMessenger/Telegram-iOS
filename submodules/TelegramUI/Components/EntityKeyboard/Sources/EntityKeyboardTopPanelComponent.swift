@@ -11,6 +11,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import AccountContext
 import MultilineTextComponent
+import LottieAnimationComponent
 
 final class EntityKeyboardAnimationTopPanelComponent: Component {
     typealias EnvironmentType = EntityKeyboardTopPanelItemEnvironment
@@ -94,14 +95,15 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
             if self.itemLayer == nil {
                 let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
                     item: EmojiPagerContentComponent.Item(
-                        emoji: "",
                         file: component.file,
-                        stickerPackItem: nil
+                        staticEmoji: nil,
+                        subgroupId: nil
                     ),
                     context: component.context,
                     groupId: "topPanel",
                     attemptSynchronousLoad: false,
                     file: component.file,
+                    staticEmoji: nil,
                     cache: component.animationCache,
                     renderer: component.animationRenderer,
                     placeholderColor: .lightGray,
@@ -323,18 +325,415 @@ final class EntityKeyboardIconTopPanelComponent: Component {
     }
 }
 
+final class EntityKeyboardStaticStickersPanelComponent: Component {
+    typealias EnvironmentType = EntityKeyboardTopPanelItemEnvironment
+    
+    let theme: PresentationTheme
+    let pressed: (EmojiPagerContentComponent.StaticEmojiSegment) -> Void
+    
+    init(
+        theme: PresentationTheme,
+        pressed: @escaping (EmojiPagerContentComponent.StaticEmojiSegment) -> Void
+    ) {
+        self.theme = theme
+        self.pressed = pressed
+    }
+    
+    static func ==(lhs: EntityKeyboardStaticStickersPanelComponent, rhs: EntityKeyboardStaticStickersPanelComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        
+        return true
+    }
+    
+    final class View: UIView, UIScrollViewDelegate {
+        private let scrollView: UIScrollView
+        private var visibleItemViews: [EmojiPagerContentComponent.StaticEmojiSegment: ComponentView<Empty>] = [:]
+        
+        private var component: EntityKeyboardStaticStickersPanelComponent?
+        
+        private var ignoreScrolling: Bool = false
+        
+        override init(frame: CGRect) {
+            self.scrollView = UIScrollView()
+            
+            super.init(frame: frame)
+            
+            self.scrollView.layer.anchorPoint = CGPoint()
+            self.scrollView.delaysContentTouches = false
+            self.scrollView.clipsToBounds = false
+            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
+                self.scrollView.contentInsetAdjustmentBehavior = .never
+            }
+            if #available(iOS 13.0, *) {
+                self.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
+            }
+            self.scrollView.showsVerticalScrollIndicator = false
+            self.scrollView.showsHorizontalScrollIndicator = false
+            self.scrollView.alwaysBounceHorizontal = false
+            self.scrollView.delegate = self
+            self.addSubview(self.scrollView)
+            
+            self.clipsToBounds = true
+            
+            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+            if case .ended = recognizer.state {
+                let scrollViewLocation = recognizer.location(in: self.scrollView)
+                for (id, itemView) in self.visibleItemViews {
+                    if let view = itemView.view, view.frame.insetBy(dx: -4.0, dy: -4.0).contains(scrollViewLocation) {
+                        self.component?.pressed(id)
+                        break
+                    }
+                }
+            }
+        }
+        
+        public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            if self.ignoreScrolling {
+                return
+            }
+            self.updateVisibleItems(transition: .immediate, animateAppearingItems: true)
+        }
+        
+        private func updateVisibleItems(transition: Transition, animateAppearingItems: Bool) {
+            guard let component = self.component else {
+                return
+            }
+            
+            let _ = component
+            
+            var validItemIds = Set<EmojiPagerContentComponent.StaticEmojiSegment>()
+            let visibleBounds = self.scrollView.bounds
+            
+            let componentHeight: CGFloat = 32.0
+            
+            let items = EmojiPagerContentComponent.StaticEmojiSegment.allCases
+            let itemSize: CGFloat = 28.0
+            let itemSpacing: CGFloat = 4.0
+            let sideInset: CGFloat = 2.0
+            for i in 0 ..< items.count {
+                let itemFrame = CGRect(origin: CGPoint(x: sideInset + CGFloat(i) * (itemSize + itemSpacing), y: floor(componentHeight - itemSize) / 2.0), size: CGSize(width: itemSize, height: itemSize))
+                if visibleBounds.intersects(itemFrame) {
+                    let item = items[i]
+                    validItemIds.insert(item)
+                    
+                    let itemView: ComponentView<Empty>
+                    if let current = self.visibleItemViews[item] {
+                        itemView = current
+                    } else {
+                        itemView = ComponentView<Empty>()
+                        self.visibleItemViews[item] = itemView
+                    }
+                    
+                    let animationName: String
+                    switch item {
+                    case .people:
+                        animationName = "emojicat_smiles"
+                    case .animalsAndNature:
+                        animationName = "emojicat_animals"
+                    case .foodAndDrink:
+                        animationName = "emojicat_food"
+                    case .activityAndSport:
+                        animationName = "emojicat_activity"
+                    case .travelAndPlaces:
+                        animationName = "emojicat_places"
+                    case .objects:
+                        animationName = "emojicat_objects"
+                    case .symbols:
+                        animationName = "emojicat_symbols"
+                    case .flags:
+                        animationName = "emojicat_flags"
+                    }
+                    
+                    let _ = itemView.update(
+                        transition: .immediate,
+                        component: AnyComponent(LottieAnimationComponent(
+                            animation: LottieAnimationComponent.AnimationItem(
+                                name: animationName,
+                                colors: ["__allcolors__": component.theme.chat.inputMediaPanel.panelIconColor],
+                                mode: animateAppearingItems ? .animating(loop: false) : .still(position: .end)
+                            ),
+                            size: CGSize(width: itemSize, height: itemSize)
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: itemSize, height: itemSize)
+                    )
+                    if let view = itemView.view {
+                        if view.superview == nil {
+                            self.scrollView.addSubview(view)
+                        }
+                        view.frame = itemFrame
+                    }
+                }
+            }
+            
+            var removedItemIds: [EmojiPagerContentComponent.StaticEmojiSegment] = []
+            for (id, itemView) in self.visibleItemViews {
+                if !validItemIds.contains(id) {
+                    removedItemIds.append(id)
+                    itemView.view?.removeFromSuperview()
+                }
+            }
+            for id in removedItemIds {
+                self.visibleItemViews.removeValue(forKey: id)
+            }
+        }
+        
+        func update(component: EntityKeyboardStaticStickersPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            self.layer.cornerRadius = availableSize.height / 2.0
+            
+            let itemEnvironment = environment[EntityKeyboardTopPanelItemEnvironment.self].value
+            
+            self.component = component
+            
+            let itemSize: CGFloat = 28.0
+            let itemSpacing: CGFloat = 4.0
+            let sideInset: CGFloat = 2.0
+            let itemCount = EmojiPagerContentComponent.StaticEmojiSegment.allCases.count
+            
+            self.ignoreScrolling = true
+            self.scrollView.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(availableSize.width, 150.0), height: availableSize.height))
+            self.scrollView.contentSize = CGSize(width: sideInset * 2.0 + itemSize * CGFloat(itemCount) + itemSpacing * CGFloat(itemCount - 1), height: availableSize.height)
+            self.ignoreScrolling = false
+            
+            self.updateVisibleItems(transition: .immediate, animateAppearingItems: false)
+            
+            if !itemEnvironment.isHighlighted && self.scrollView.contentOffset.x != 0.0 {
+                self.scrollView.setContentOffset(CGPoint(), animated: true)
+            }
+            
+            return availableSize
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
 final class EntityKeyboardTopPanelItemEnvironment: Equatable {
     let isExpanded: Bool
+    let isHighlighted: Bool
     
-    init(isExpanded: Bool) {
+    init(isExpanded: Bool, isHighlighted: Bool) {
         self.isExpanded = isExpanded
+        self.isHighlighted = isHighlighted
     }
     
     static func ==(lhs: EntityKeyboardTopPanelItemEnvironment, rhs: EntityKeyboardTopPanelItemEnvironment) -> Bool {
         if lhs.isExpanded != rhs.isExpanded {
             return false
         }
+        if lhs.isHighlighted != rhs.isHighlighted {
+            return false
+        }
         return true
+    }
+}
+
+private final class ReorderGestureRecognizer: UIGestureRecognizer {
+    private let shouldBegin: (CGPoint) -> (allowed: Bool, requiresLongPress: Bool, itemView: ComponentHostView<EntityKeyboardTopPanelItemEnvironment>?)
+    private let willBegin: (CGPoint) -> Void
+    private let began: (ComponentHostView<EntityKeyboardTopPanelItemEnvironment>) -> Void
+    private let ended: () -> Void
+    private let moved: (CGFloat) -> Void
+    private let isActiveUpdated: (Bool) -> Void
+    
+    private var initialLocation: CGPoint?
+    private var longTapTimer: SwiftSignalKit.Timer?
+    private var longPressTimer: SwiftSignalKit.Timer?
+    
+    private var itemView: ComponentHostView<EntityKeyboardTopPanelItemEnvironment>?
+    
+    public init(shouldBegin: @escaping (CGPoint) -> (allowed: Bool, requiresLongPress: Bool, itemView: ComponentHostView<EntityKeyboardTopPanelItemEnvironment>?), willBegin: @escaping (CGPoint) -> Void, began: @escaping (ComponentHostView<EntityKeyboardTopPanelItemEnvironment>) -> Void, ended: @escaping () -> Void, moved: @escaping (CGFloat) -> Void, isActiveUpdated: @escaping (Bool) -> Void) {
+        self.shouldBegin = shouldBegin
+        self.willBegin = willBegin
+        self.began = began
+        self.ended = ended
+        self.moved = moved
+        self.isActiveUpdated = isActiveUpdated
+        
+        super.init(target: nil, action: nil)
+    }
+    
+    deinit {
+        self.longTapTimer?.invalidate()
+        self.longPressTimer?.invalidate()
+    }
+    
+    private func startLongTapTimer() {
+        self.longTapTimer?.invalidate()
+        let longTapTimer = SwiftSignalKit.Timer(timeout: 0.25, repeat: false, completion: { [weak self] in
+            self?.longTapTimerFired()
+        }, queue: Queue.mainQueue())
+        self.longTapTimer = longTapTimer
+        longTapTimer.start()
+    }
+    
+    private func stopLongTapTimer() {
+        self.itemView = nil
+        self.longTapTimer?.invalidate()
+        self.longTapTimer = nil
+    }
+    
+    private func startLongPressTimer() {
+        self.longPressTimer?.invalidate()
+        let longPressTimer = SwiftSignalKit.Timer(timeout: 0.6, repeat: false, completion: { [weak self] in
+            self?.longPressTimerFired()
+        }, queue: Queue.mainQueue())
+        self.longPressTimer = longPressTimer
+        longPressTimer.start()
+    }
+    
+    private func stopLongPressTimer() {
+        self.itemView = nil
+        self.longPressTimer?.invalidate()
+        self.longPressTimer = nil
+    }
+    
+    override public func reset() {
+        super.reset()
+        
+        self.itemView = nil
+        self.stopLongTapTimer()
+        self.stopLongPressTimer()
+        self.initialLocation = nil
+    }
+    
+    private func longTapTimerFired() {
+        guard let location = self.initialLocation else {
+            return
+        }
+        
+        self.longTapTimer?.invalidate()
+        self.longTapTimer = nil
+        
+        self.willBegin(location)
+    }
+    
+    private func longPressTimerFired() {
+        guard let _ = self.initialLocation else {
+            return
+        }
+        
+        self.isActiveUpdated(true)
+        self.state = .began
+        self.longPressTimer?.invalidate()
+        self.longPressTimer = nil
+        self.longTapTimer?.invalidate()
+        self.longTapTimer = nil
+        if let itemView = self.itemView {
+            self.began(itemView)
+        }
+        self.isActiveUpdated(true)
+    }
+    
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        
+        if self.numberOfTouches > 1 {
+            self.isActiveUpdated(false)
+            self.state = .failed
+            self.ended()
+            return
+        }
+        
+        if self.state == .possible {
+            if let location = touches.first?.location(in: self.view) {
+                let (allowed, requiresLongPress, itemView) = self.shouldBegin(location)
+                if allowed {
+                    self.isActiveUpdated(true)
+                    
+                    self.itemView = itemView
+                    self.initialLocation = location
+                    if requiresLongPress {
+                        self.startLongTapTimer()
+                        self.startLongPressTimer()
+                    } else {
+                        self.state = .began
+                        if let itemView = self.itemView {
+                            self.began(itemView)
+                        }
+                    }
+                } else {
+                    self.isActiveUpdated(false)
+                    self.state = .failed
+                }
+            } else {
+                self.isActiveUpdated(false)
+                self.state = .failed
+            }
+        }
+    }
+    
+    override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+        
+        self.initialLocation = nil
+        
+        self.stopLongTapTimer()
+        if self.longPressTimer != nil {
+            self.stopLongPressTimer()
+            self.isActiveUpdated(false)
+            self.state = .failed
+        }
+        if self.state == .began || self.state == .changed {
+            self.isActiveUpdated(false)
+            self.ended()
+            self.state = .failed
+        }
+    }
+    
+    override public func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+        
+        self.initialLocation = nil
+        
+        self.stopLongTapTimer()
+        if self.longPressTimer != nil {
+            self.isActiveUpdated(false)
+            self.stopLongPressTimer()
+            self.state = .failed
+        }
+        if self.state == .began || self.state == .changed {
+            self.isActiveUpdated(false)
+            self.ended()
+            self.state = .failed
+        }
+    }
+    
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesMoved(touches, with: event)
+        
+        if (self.state == .began || self.state == .changed), let initialLocation = self.initialLocation, let location = touches.first?.location(in: self.view) {
+            self.state = .changed
+            let offset = location.x - initialLocation.x
+            self.moved(offset)
+        } else if let touch = touches.first, let initialTapLocation = self.initialLocation, self.longPressTimer != nil {
+            let touchLocation = touch.location(in: self.view)
+            let dX = touchLocation.x - initialTapLocation.x
+            let dY = touchLocation.y - initialTapLocation.y
+            
+            if dX * dX + dY * dY > 3.0 * 3.0 {
+                self.stopLongTapTimer()
+                self.stopLongPressTimer()
+                self.initialLocation = nil
+                self.isActiveUpdated(false)
+                self.state = .failed
+            }
+        }
     }
 }
 
@@ -343,15 +742,20 @@ final class EntityKeyboardTopPanelComponent: Component {
     
     final class Item: Equatable {
         let id: AnyHashable
+        let isReorderable: Bool
         let content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>
         
-        init(id: AnyHashable, content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>) {
+        init(id: AnyHashable, isReorderable: Bool, content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>) {
             self.id = id
+            self.isReorderable = isReorderable
             self.content = content
         }
         
         static func ==(lhs: Item, rhs: Item) -> Bool {
             if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.isReorderable != rhs.isReorderable {
                 return false
             }
             if lhs.content != rhs.content {
@@ -366,17 +770,20 @@ final class EntityKeyboardTopPanelComponent: Component {
     let items: [Item]
     let defaultActiveItemId: AnyHashable?
     let activeContentItemIdUpdated: ActionSlot<(AnyHashable, Transition)>
+    let reorderItems: ([Item]) -> Void
     
     init(
         theme: PresentationTheme,
         items: [Item],
         defaultActiveItemId: AnyHashable? = nil,
-        activeContentItemIdUpdated: ActionSlot<(AnyHashable, Transition)>
+        activeContentItemIdUpdated: ActionSlot<(AnyHashable, Transition)>,
+        reorderItems: @escaping ([Item]) -> Void
     ) {
         self.theme = theme
         self.items = items
         self.defaultActiveItemId = defaultActiveItemId
         self.activeContentItemIdUpdated = activeContentItemIdUpdated
+        self.reorderItems = reorderItems
     }
     
     static func ==(lhs: EntityKeyboardTopPanelComponent, rhs: EntityKeyboardTopPanelComponent) -> Bool {
@@ -398,24 +805,79 @@ final class EntityKeyboardTopPanelComponent: Component {
     
     final class View: UIView, UIScrollViewDelegate {
         private struct ItemLayout {
+            struct ItemDescription {
+                var isStatic: Bool
+                var isStaticExpanded: Bool
+            }
+            
+            struct Item {
+                var frame: CGRect
+                var innerFrame: CGRect
+            }
+            
             let sideInset: CGFloat = 7.0
             let itemSize: CGSize
+            let staticItemSize: CGSize
+            let staticExpandedItemSize: CGSize
             let innerItemSize: CGSize
             let itemSpacing: CGFloat = 15.0
-            let itemCount: Int
             let contentSize: CGSize
             let isExpanded: Bool
+            let items: [Item]
             
-            init(itemCount: Int, isExpanded: Bool, height: CGFloat) {
+            init(isExpanded: Bool, height: CGFloat, items: [ItemDescription]) {
                 self.isExpanded = isExpanded
                 self.itemSize = self.isExpanded ? CGSize(width: 54.0, height: 68.0) : CGSize(width: 32.0, height: 32.0)
+                self.staticItemSize = self.itemSize
+                self.staticExpandedItemSize = self.isExpanded ? CGSize(width: 150.0, height: 68.0) : CGSize(width: 150.0, height: 32.0)
                 self.innerItemSize = self.isExpanded ? CGSize(width: 50.0, height: 62.0) : CGSize(width: 28.0, height: 28.0)
-                self.itemCount = itemCount
-                self.contentSize = CGSize(width: sideInset * 2.0 + CGFloat(itemCount) * self.itemSize.width + CGFloat(max(0, itemCount - 1)) * itemSpacing, height: height)
+                
+                var contentSize = CGSize(width: sideInset, height: height)
+                var resultItems: [Item] = []
+                
+                var isFirst = true
+                let itemY = floor((contentSize.height - self.itemSize.height) / 2.0)
+                for item in items {
+                    if isFirst {
+                        isFirst = false
+                    } else {
+                        contentSize.width += itemSpacing
+                    }
+                    let currentItemSize: CGSize
+                    if item.isStaticExpanded {
+                        currentItemSize = self.staticExpandedItemSize
+                    } else if item.isStatic {
+                        currentItemSize = self.staticItemSize
+                    } else {
+                        currentItemSize = self.itemSize
+                    }
+                    let frame = CGRect(origin: CGPoint(x: contentSize.width, y: itemY), size: currentItemSize)
+                    
+                    var innerFrame = frame
+                    if item.isStaticExpanded {
+                    } else if item.isStatic {
+                    } else {
+                        innerFrame.origin.x += floor((self.itemSize.width - self.innerItemSize.width)) / 2.0
+                        innerFrame.origin.y += floor((self.itemSize.height - self.innerItemSize.height)) / 2.0
+                        innerFrame.size = self.innerItemSize
+                    }
+                    
+                    resultItems.append(Item(
+                        frame: frame,
+                        innerFrame: innerFrame
+                    ))
+                    
+                    contentSize.width += frame.width
+                }
+                
+                contentSize.width += sideInset
+                
+                self.contentSize = contentSize
+                self.items = resultItems
             }
             
             func containerFrame(at index: Int) -> CGRect {
-                return CGRect(origin: CGPoint(x: sideInset + CGFloat(index) * (self.itemSize.width + self.itemSpacing), y: floor((self.contentSize.height - self.itemSize.height) / 2.0)), size: self.itemSize)
+                return self.items[index].frame
             }
             
             func contentFrame(containerFrame: CGRect) -> CGRect {
@@ -427,19 +889,21 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
             
             func contentFrame(at index: Int) -> CGRect {
-                return self.contentFrame(containerFrame: self.containerFrame(at: index))
+                return self.items[index].innerFrame
             }
             
             func visibleItemRange(for rect: CGRect) -> (minIndex: Int, maxIndex: Int) {
-                let offsetRect = rect.offsetBy(dx: -self.sideInset, dy: 0.0)
-                var minVisibleColumn = Int(floor((offsetRect.minX - self.itemSpacing) / (self.itemSize.width + self.itemSpacing)))
-                minVisibleColumn = max(0, minVisibleColumn)
-                let maxVisibleColumn = Int(ceil((offsetRect.maxX - self.itemSpacing) / (self.itemSize.width + self.itemSpacing)))
-
-                let minVisibleIndex = minVisibleColumn
-                let maxVisibleIndex = min(maxVisibleColumn, self.itemCount - 1)
-
-                return (minVisibleIndex, maxVisibleIndex)
+                for i in 0 ..< self.items.count {
+                    if self.items[i].frame.intersects(rect) {
+                        for j in i ..< self.items.count {
+                            if !self.items[j].frame.intersects(rect) {
+                                return (i, j - 1)
+                            }
+                        }
+                        return (i, self.items.count - 1)
+                    }
+                }
+                return (0, -1)
             }
         }
         
@@ -447,10 +911,20 @@ final class EntityKeyboardTopPanelComponent: Component {
         private var itemViews: [AnyHashable: ComponentHostView<EntityKeyboardTopPanelItemEnvironment>] = [:]
         private var highlightedIconBackgroundView: UIView
         
+        private var temporaryReorderingOrderIndex: (id: AnyHashable, index: Int)?
+        
+        private weak var currentReorderingItemView: ComponentHostView<EntityKeyboardTopPanelItemEnvironment>?
+        private var currentReorderingItemId: AnyHashable?
+        private var currentReorderingItemContainerView: UIView?
+        private var initialReorderingItemFrame: CGRect?
+        
         private var itemLayout: ItemLayout?
+        private var items: [Item] = []
         private var ignoreScrolling: Bool = false
         
         private var isDragging: Bool = false
+        private var isReordering: Bool = false
+        private var isDraggingOrReordering: Bool = false
         private var draggingStoppedTimer: SwiftSignalKit.Timer?
         
         private var isExpanded: Bool = false
@@ -460,6 +934,7 @@ final class EntityKeyboardTopPanelComponent: Component {
         private var activeContentItemId: AnyHashable?
         
         private var component: EntityKeyboardTopPanelComponent?
+        weak var state: EmptyComponentState?
         private var environment: EntityKeyboardTopContainerPanelEnvironment?
         
         override init(frame: CGRect) {
@@ -467,8 +942,8 @@ final class EntityKeyboardTopPanelComponent: Component {
             
             self.highlightedIconBackgroundView = UIView()
             self.highlightedIconBackgroundView.isUserInteractionEnabled = false
-            self.highlightedIconBackgroundView.layer.cornerRadius = 10.0
             self.highlightedIconBackgroundView.clipsToBounds = true
+            self.highlightedIconBackgroundView.isHidden = true
             
             super.init(frame: frame)
             
@@ -483,6 +958,7 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
             self.scrollView.showsVerticalScrollIndicator = false
             self.scrollView.showsHorizontalScrollIndicator = false
+            self.scrollView.alwaysBounceHorizontal = true
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
             
@@ -496,6 +972,50 @@ final class EntityKeyboardTopPanelComponent: Component {
                 }
                 return strongSelf.scrollView.contentOffset.x > 0.0
             }
+            
+            self.addGestureRecognizer(ReorderGestureRecognizer(
+                shouldBegin: { [weak self] point in
+                    guard let strongSelf = self else {
+                        return (false, false, nil)
+                    }
+                    if !strongSelf.isExpanded {
+                        return (false, false, nil)
+                    }
+                    let scrollViewLocation = strongSelf.convert(point, to: strongSelf.scrollView)
+                    for (id, itemView) in strongSelf.itemViews {
+                        if itemView.frame.contains(scrollViewLocation) {
+                            for item in strongSelf.items {
+                                if item.id == id, item.isReorderable {
+                                    return (true, true, itemView)
+                                }
+                            }
+                            break
+                        }
+                    }
+                    return (false, false, nil)
+                }, willBegin: { _ in
+                }, began: { [weak self] itemView in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.beginReordering(itemView: itemView)
+                }, ended: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.endReordering()
+                }, moved: { [weak self] value in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.updateReordering(offset: value)
+                }, isActiveUpdated: { [weak self] isActive in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.updateIsReordering(isActive)
+                }
+            ))
         }
         
         required init?(coder: NSCoder) {
@@ -525,8 +1045,20 @@ final class EntityKeyboardTopPanelComponent: Component {
         }
         
         private func updateIsDragging(_ isDragging: Bool) {
-            if !isDragging {
-                if !self.isDragging {
+            self.isDragging = isDragging
+            self.updateIsDraggingOrReordering()
+        }
+        
+        private func updateIsReordering(_ isReordering: Bool) {
+            self.isReordering = isReordering
+            self.updateIsDraggingOrReordering()
+        }
+        
+        private func updateIsDraggingOrReordering() {
+            let isDraggingOrReordering = self.isDragging || self.isReordering
+            
+            if !isDraggingOrReordering {
+                if !self.isDraggingOrReordering {
                     return
                 }
                 
@@ -536,7 +1068,7 @@ final class EntityKeyboardTopPanelComponent: Component {
                             return
                         }
                         strongSelf.draggingStoppedTimer = nil
-                        strongSelf.isDragging = false
+                        strongSelf.isDraggingOrReordering = false
                         guard let environment = strongSelf.environment else {
                             return
                         }
@@ -548,8 +1080,8 @@ final class EntityKeyboardTopPanelComponent: Component {
                 self.draggingStoppedTimer?.invalidate()
                 self.draggingStoppedTimer = nil
             
-                if !self.isDragging {
-                    self.isDragging = true
+                if !self.isDraggingOrReordering {
+                    self.isDraggingOrReordering = true
                     
                     guard let environment = self.environment else {
                         return
@@ -559,8 +1091,91 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
         }
         
+        private func beginReordering(itemView: ComponentHostView<EntityKeyboardTopPanelItemEnvironment>) {
+            if let currentReorderingItemView = self.currentReorderingItemView {
+                if let componentView = currentReorderingItemView.componentView {
+                    currentReorderingItemView.addSubview(componentView)
+                }
+                self.currentReorderingItemView = nil
+                self.currentReorderingItemId = nil
+            }
+            
+            guard let id = self.itemViews.first(where: { $0.value === itemView })?.key else {
+                return
+            }
+            
+            self.currentReorderingItemId = id
+            self.currentReorderingItemView = itemView
+            
+            let reorderingItemContainerView: UIView
+            if let current = self.currentReorderingItemContainerView {
+                reorderingItemContainerView = current
+            } else {
+                reorderingItemContainerView = UIView()
+                self.addSubview(reorderingItemContainerView)
+                self.currentReorderingItemContainerView = reorderingItemContainerView
+            }
+            
+            reorderingItemContainerView.alpha = 0.5
+            reorderingItemContainerView.layer.animateAlpha(from: 1.0, to: 0.5, duration: 0.2)
+            
+            reorderingItemContainerView.frame = itemView.convert(itemView.bounds, to: self)
+            self.initialReorderingItemFrame = reorderingItemContainerView.frame
+            if let componentView = itemView.componentView {
+                reorderingItemContainerView.addSubview(componentView)
+            }
+        }
+        
+        private func endReordering() {
+            if let currentReorderingItemView = self.currentReorderingItemView {
+                self.currentReorderingItemView = nil
+                
+                if let componentView = currentReorderingItemView.componentView {
+                    let localFrame = componentView.convert(componentView.bounds, to: self.scrollView)
+                    currentReorderingItemView.superview?.bringSubviewToFront(currentReorderingItemView)
+                    currentReorderingItemView.addSubview(componentView)
+                    
+                    let deltaPosition = CGPoint(x: localFrame.minX - currentReorderingItemView.frame.minX, y: localFrame.minY - currentReorderingItemView.frame.minY)
+                    currentReorderingItemView.layer.animatePosition(from: deltaPosition, to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                }
+            }
+            
+            if let reorderingItemContainerView = self.currentReorderingItemContainerView {
+                self.currentReorderingItemContainerView = nil
+                reorderingItemContainerView.removeFromSuperview()
+            }
+            
+            self.currentReorderingItemId = nil
+            self.temporaryReorderingOrderIndex = nil
+            
+            self.component?.reorderItems(self.items)
+            //self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+        }
+        
+        private func updateReordering(offset: CGFloat) {
+            guard let itemLayout = self.itemLayout, let currentReorderingItemId = self.currentReorderingItemId, let reorderingItemContainerView = self.currentReorderingItemContainerView, let initialReorderingItemFrame = self.initialReorderingItemFrame else {
+                return
+            }
+            reorderingItemContainerView.frame = initialReorderingItemFrame.offsetBy(dx: offset, dy: 0.0)
+            
+            for i in 0 ..< self.items.count {
+                if !self.items[i].isReorderable {
+                    continue
+                }
+                let containerFrame = itemLayout.containerFrame(at: i)
+                if containerFrame.intersects(reorderingItemContainerView.frame) {
+                    let temporaryReorderingOrderIndex: (id: AnyHashable, index: Int) = (currentReorderingItemId, i)
+                    if self.temporaryReorderingOrderIndex?.id != temporaryReorderingOrderIndex.id || self.temporaryReorderingOrderIndex?.index != temporaryReorderingOrderIndex.index {
+                        self.temporaryReorderingOrderIndex = temporaryReorderingOrderIndex
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                    }
+                    break
+                }
+            }
+        }
+        
         private func updateVisibleItems(attemptSynchronousLoads: Bool, transition: Transition) {
-            guard let component = self.component, let itemLayout = self.itemLayout else {
+            guard let itemLayout = self.itemLayout else {
                 return
             }
             
@@ -569,9 +1184,9 @@ final class EntityKeyboardTopPanelComponent: Component {
             
             var validIds = Set<AnyHashable>()
             let visibleItemRange = itemLayout.visibleItemRange(for: visibleBounds)
-            if !component.items.isEmpty && visibleItemRange.maxIndex >= visibleItemRange.minIndex {
+            if !self.items.isEmpty && visibleItemRange.maxIndex >= visibleItemRange.minIndex {
                 for index in visibleItemRange.minIndex ... visibleItemRange.maxIndex {
-                    let item = component.items[index]
+                    let item = self.items[index]
                     validIds.insert(item.id)
                     
                     var itemTransition = transition
@@ -590,7 +1205,7 @@ final class EntityKeyboardTopPanelComponent: Component {
                         transition: itemTransition,
                         component: item.content,
                         environment: {
-                            EntityKeyboardTopPanelItemEnvironment(isExpanded: itemLayout.isExpanded)
+                            EntityKeyboardTopPanelItemEnvironment(isExpanded: itemLayout.isExpanded, isHighlighted: self.activeContentItemId == item.id)
                         },
                         containerSize: itemOuterFrame.size
                     )
@@ -618,6 +1233,7 @@ final class EntityKeyboardTopPanelComponent: Component {
                 self.highlightedIconBackgroundView.backgroundColor = component.theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor
             }
             self.component = component
+            self.state = state
             
             if let defaultActiveItemId = component.defaultActiveItemId {
                 self.activeContentItemId = defaultActiveItemId
@@ -630,11 +1246,49 @@ final class EntityKeyboardTopPanelComponent: Component {
             let wasExpanded = self.isExpanded
             self.isExpanded = isExpanded
             
+            if !isExpanded {
+                if self.isDragging {
+                    self.isDragging = false
+                }
+                if self.isReordering {
+                    self.isReordering = false
+                }
+                if self.isDraggingOrReordering {
+                    self.isDraggingOrReordering = false
+                }
+                if let draggingStoppedTimer = self.draggingStoppedTimer {
+                    self.draggingStoppedTimer = nil
+                    draggingStoppedTimer.invalidate()
+                }
+            }
+            
             let intrinsicHeight: CGFloat = availableSize.height
             let height = intrinsicHeight
             
+            var items = component.items
+            if let (id, index) = self.temporaryReorderingOrderIndex {
+                for i in 0 ..< items.count {
+                    if items[i].id == id {
+                        let item = items.remove(at: i)
+                        items.insert(item, at: min(index, items.count))
+                        break
+                    }
+                }
+            }
+            self.items = items
+            
+            if self.activeContentItemId == nil {
+                self.activeContentItemId = items.first?.id
+            }
+            
             let previousItemLayout = self.itemLayout
-            let itemLayout = ItemLayout(itemCount: component.items.count, isExpanded: isExpanded, height: availableSize.height)
+            let itemLayout = ItemLayout(isExpanded: isExpanded, height: availableSize.height, items: self.items.map { item -> ItemLayout.ItemDescription in
+                let isStatic = item.id == AnyHashable("static")
+                return ItemLayout.ItemDescription(
+                    isStatic: isStatic,
+                    isStaticExpanded: isStatic && self.activeContentItemId == item.id
+                )
+            })
             self.itemLayout = itemLayout
             
             self.ignoreScrolling = true
@@ -660,7 +1314,7 @@ final class EntityKeyboardTopPanelComponent: Component {
                     let baseFrame = CGRect(origin: CGPoint(x: updatedItemFrame.minX, y: previousItemFrame.minY), size: previousItemFrame.size)
                     for index in updatedVisibleRange.minIndex ..< updatedVisibleRange.maxIndex {
                         let indexDifference = index - previousVisibleRange.minIndex
-                        if let itemView = self.itemViews[component.items[index].id] {
+                        if let itemView = self.itemViews[self.items[index].id] {
                             let itemContainerOriginX = baseFrame.minX + CGFloat(indexDifference) * (previousItemLayout.itemSize.width + previousItemLayout.itemSpacing)
                             let itemContainerFrame = CGRect(origin: CGPoint(x: itemContainerOriginX, y: baseFrame.minY), size: baseFrame.size)
                             let itemOuterFrame = previousItemLayout.contentFrame(containerFrame: itemContainerFrame)
@@ -685,11 +1339,23 @@ final class EntityKeyboardTopPanelComponent: Component {
             self.updateVisibleItems(attemptSynchronousLoads: !(self.scrollView.isDragging || self.scrollView.isDecelerating), transition: transition)
             
             if let activeContentItemId = self.activeContentItemId {
-                if let index = component.items.firstIndex(where: { $0.id == activeContentItemId }) {
+                if let index = self.items.firstIndex(where: { $0.id == activeContentItemId }) {
                     let itemFrame = itemLayout.containerFrame(at: index)
-                    transition.setPosition(view: self.highlightedIconBackgroundView, position: CGPoint(x: itemFrame.midX, y: itemFrame.midY))
-                    transition.setBounds(view: self.highlightedIconBackgroundView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                    
+                    var highlightTransition = transition
+                    if self.highlightedIconBackgroundView.isHidden {
+                        self.highlightedIconBackgroundView.isHidden = false
+                        highlightTransition = .immediate
+                    }
+                    
+                    highlightTransition.setCornerRadius(layer: self.highlightedIconBackgroundView.layer, cornerRadius: activeContentItemId.base is String ? min(itemFrame.width / 2.0, itemFrame.height / 2.0) : 10.0)
+                    highlightTransition.setPosition(view: self.highlightedIconBackgroundView, position: CGPoint(x: itemFrame.midX, y: itemFrame.midY))
+                    highlightTransition.setBounds(view: self.highlightedIconBackgroundView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                } else {
+                    self.highlightedIconBackgroundView.isHidden = true
                 }
+            } else {
+                self.highlightedIconBackgroundView.isHidden = true
             }
             transition.setAlpha(view: self.highlightedIconBackgroundView, alpha: isExpanded ? 0.0 : 1.0)
             
@@ -732,17 +1398,28 @@ final class EntityKeyboardTopPanelComponent: Component {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
-            
+            if self.activeContentItemId == itemId {
+                return
+            }
             self.activeContentItemId = itemId
+            
+            let _ = component
+            let _ = itemLayout
+            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
 
-            var found = false
-            for i in 0 ..< component.items.count {
-                if component.items[i].id == itemId {
+            /*var found = false
+            for i in 0 ..< self.items.count {
+                if self.items[i].id == itemId {
                     found = true
                     self.highlightedIconBackgroundView.isHidden = false
                     let itemFrame = itemLayout.containerFrame(at: i)
-                    transition.setPosition(view: self.highlightedIconBackgroundView, position: CGPoint(x: itemFrame.midX, y: itemFrame.midY))
-                    transition.setBounds(view: self.highlightedIconBackgroundView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                    
+                    var highlightTransition = transition
+                    if highlightTransition.animation.isImmediate {
+                        highlightTransition = highlightTransition.withAnimation(.curve(duration: 0.3, curve: .spring))
+                    }
+                    highlightTransition.setPosition(view: self.highlightedIconBackgroundView, position: CGPoint(x: itemFrame.midX, y: itemFrame.midY))
+                    highlightTransition.setBounds(view: self.highlightedIconBackgroundView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                     
                     self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: -6.0, dy: 0.0), animated: true)
                     
@@ -751,7 +1428,7 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
             if !found {
                 self.highlightedIconBackgroundView.isHidden = true
-            }
+            }*/
         }
     }
     

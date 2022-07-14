@@ -7,8 +7,13 @@ import Display
 
 public final class LottieAnimationComponent: Component {
     public struct AnimationItem: Equatable {
+        public enum StillPosition {
+            case begin
+            case end
+        }
+        
         public enum Mode: Equatable {
-            case still
+            case still(position: StillPosition)
             case animating(loop: Bool)
             case animateTransitionFromPrevious
         }
@@ -153,7 +158,11 @@ public final class LottieAnimationComponent: Component {
                         view.backgroundColor = .clear
                         view.isOpaque = false
                         
-                        //view.logHierarchyKeypaths()
+                        if let value = component.animation.colors["__allcolors__"] {
+                            for keypath in view.allKeypaths(predicate: { $0.keys.last == "Color" }) {
+                                view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: keypath))
+                            }
+                        }
                         
                         for (key, value) in component.animation.colors {
                             view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
@@ -188,6 +197,14 @@ public final class LottieAnimationComponent: Component {
                             }
                         }
                     } else {
+                        if case let .still(position) = component.animation.mode {
+                            switch position {
+                            case .begin:
+                                animationView.currentFrame = 0.0
+                            case .end:
+                                animationView.currentFrame = animationView.animation?.endFrame ?? 0.0
+                            }
+                        }
                         if animationView.isAnimationPlaying {
                             animationView.stop()
                         }

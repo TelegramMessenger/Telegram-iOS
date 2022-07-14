@@ -363,7 +363,7 @@ public func deleteAccountOptionsController(context: AccountContext, navigationCo
                 }))
             })
         ])
-        alertController.dismissed = {
+        alertController.dismissed = { _ in
             addAppLogEvent(postbox: context.account.postbox, type: "deactivate.options_support_cancel")
         }
         presentControllerImpl?(alertController, nil)

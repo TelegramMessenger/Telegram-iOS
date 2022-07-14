@@ -620,6 +620,8 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                     let text: String
                     if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                         text = self.presentationData.strings.StickerPack_RemoveStickerCount(info.count)
+                    } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                        text = self.presentationData.strings.StickerPack_RemoveEmojiCount(info.count)
                     } else {
                         text = self.presentationData.strings.StickerPack_RemoveMaskCount(info.count)
                     }
@@ -628,6 +630,8 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                     let text: String
                     if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                         text = self.presentationData.strings.StickerPack_AddStickerCount(info.count)
+                    } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                        text = self.presentationData.strings.StickerPack_AddEmojiCount(info.count)
                     } else {
                         text = self.presentationData.strings.StickerPack_AddMaskCount(info.count)
                     }

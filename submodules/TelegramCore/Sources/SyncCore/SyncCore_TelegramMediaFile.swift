@@ -605,6 +605,40 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return false
     }
     
+    public var isCustomEmoji: Bool {
+        var hasSticker = false
+        for attribute in self.attributes {
+            if case .CustomEmoji = attribute {
+                hasSticker = true
+                break
+            }
+        }
+        return hasSticker
+    }
+    
+    public var isPremiumEmoji: Bool {
+        for attribute in self.attributes {
+            if case let .CustomEmoji(isPremium, _, _) = attribute {
+                return isPremium
+            }
+        }
+        return false
+    }
+    
+    public var isVideoEmoji: Bool {
+        if self.mimeType == "video/webm" {
+            var hasSticker = false
+            for attribute in self.attributes {
+                if case .CustomEmoji = attribute {
+                    hasSticker = true
+                    break
+                }
+            }
+            return hasSticker
+        }
+        return false
+    }
+    
     public var hasLinkedStickers: Bool {
         for attribute in self.attributes {
             if case .HasLinkedStickers = attribute {

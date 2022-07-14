@@ -468,6 +468,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
             let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: message, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
                 completionHandler()
             })])
+            alertController.dismissed = { byOutsideTap in
+                if byOutsideTap {
+                    completionHandler()
+                }
+            }
             self.controller?.present(alertController, in: .window(.root))
         }
 
@@ -477,6 +482,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
                 completionHandler(true)
             })])
+            alertController.dismissed = { byOutsideTap in
+                if byOutsideTap {
+                    completionHandler(false)
+                }
+            }
             self.controller?.present(alertController, in: .window(.root))
         }
 
@@ -488,6 +498,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     completionHandler(nil)
                 }
             })
+            promptController.dismissed = { byOutsideTap in
+                if byOutsideTap {
+                    completionHandler(nil)
+                }
+            }
             self.controller?.present(promptController, in: .window(.root))
         }
                 
@@ -772,8 +787,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             actionLayout = .vertical
                         }
                         let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: title, text: message, actions: alertButtons, actionLayout: actionLayout)
-                        alertController.dismissed = {
-                            self.sendAlertButtonEvent(id: nil)
+                        alertController.dismissed = { byOutsideTap in
+                            if byOutsideTap {
+                                self.sendAlertButtonEvent(id: nil)
+                            }
                         }
                         self.controller?.present(alertController, in: .window(.root))
                     }

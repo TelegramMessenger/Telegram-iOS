@@ -67,8 +67,6 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
         
         private var visibilityFraction: CGFloat = 1.0
         
-        private var hasExpandedPanels: Bool = false
-        
         override init(frame: CGRect) {
             super.init(frame: frame)
             
@@ -83,6 +81,8 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
         func update(component: EntityKeyboardTopContainerPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             let intrinsicHeight: CGFloat = 41.0
             let height = intrinsicHeight
+            
+            let isExpanded = availableSize.height > 41.0
             
             let panelEnvironment = environment[PagerComponentPanelEnvironment.self].value
             
@@ -131,6 +131,10 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                             panelView = PanelView()
                             self.panelViews[panel.id] = panelView
                             self.addSubview(panelView.view)
+                        }
+                        
+                        if !isExpanded {
+                            panelView.isExpanded = false
                         }
                         
                         let panelId = panel.id
@@ -198,6 +202,9 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             guard let panelView = self.panelViews[id] else {
                 return
             }
+            if panelView.isExpanded == isExpanded {
+                return
+            }
             panelView.isExpanded = isExpanded
             
             var hasExpanded = false
@@ -207,12 +214,8 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                     break
                 }
             }
-            
-            if self.hasExpandedPanels != hasExpanded {
-                self.hasExpandedPanels = hasExpanded
-                
-                self.panelEnvironment?.isExpandedUpdated(self.hasExpandedPanels, transition)
-            }
+
+            self.panelEnvironment?.isExpandedUpdated(hasExpanded, transition)
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

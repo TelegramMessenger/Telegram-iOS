@@ -796,6 +796,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             guard let product = self.products?.first(where: { $0.id == self.selectedProductId }) else {
                 return
             }
+            let (currency, amount) = product.priceCurrencyAndAmount
             
             let duration: Int32
             switch product.id {
@@ -814,81 +815,92 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             self.inProgress = true
             self.updateInProgress(true)
             self.updated(transition: .immediate)
-
-            self.paymentDisposable.set((inAppPurchaseManager.buyProduct(product, targetPeerId: self.peerId)
-            |> deliverOnMainQueue).start(next: { [weak self] status in
-                if let strongSelf = self, case .purchased = status {
-                    strongSelf.activationDisposable.set((strongSelf.context.account.postbox.peerView(id: strongSelf.context.account.peerId)
-                    |> castError(AssignAppStoreTransactionError.self)
-                    |> take(until: { view in
-                        if let peer = view.peers[view.peerId], peer.isPremium {
-                            return SignalTakeAction(passthrough: false, complete: true)
-                        } else {
-                            return SignalTakeAction(passthrough: false, complete: false)
-                        }
-                    })
-                    |> mapToSignal { _ -> Signal<Never, AssignAppStoreTransactionError> in
-                        return .never()
-                    }
-                    |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.timeout))
-                    |> deliverOnMainQueue).start(error: { [weak self] _ in
-                        if let strongSelf = self {
-                            strongSelf.inProgress = false
-                            strongSelf.updateInProgress(false)
-                            
-                            strongSelf.updated(transition: .immediate)
-                            
-                            addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
-                            
-                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                            let errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                            let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                            strongSelf.present(alertController)
-                        }
-                    }, completed: { [weak self] in
-                        if let strongSelf = self {
-                            Queue.mainQueue().after(2.0) {
-                                let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
+            
+            let _ = (self.context.engine.payments.canPurchasePremium(purpose: .gift(peerId: self.peerId, currency: currency, amount: amount))
+            |> deliverOnMainQueue).start(next: { [weak self] available in
+                if let strongSelf = self {
+                    if available {
+                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(product, targetPeerId: strongSelf.peerId)
+                        |> deliverOnMainQueue).start(next: { [weak self] status in
+                            if let strongSelf = self, case .purchased = status {
+                                strongSelf.activationDisposable.set((strongSelf.context.account.postbox.peerView(id: strongSelf.context.account.peerId)
+                                |> castError(AssignAppStoreTransactionError.self)
+                                |> take(until: { view in
+                                    if let peer = view.peers[view.peerId], peer.isPremium {
+                                        return SignalTakeAction(passthrough: false, complete: true)
+                                    } else {
+                                        return SignalTakeAction(passthrough: false, complete: false)
+                                    }
+                                })
+                                |> mapToSignal { _ -> Signal<Never, AssignAppStoreTransactionError> in
+                                    return .never()
+                                }
+                                |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.timeout))
+                                |> deliverOnMainQueue).start(error: { [weak self] _ in
+                                    if let strongSelf = self {
+                                        strongSelf.inProgress = false
+                                        strongSelf.updateInProgress(false)
+                                        
+                                        strongSelf.updated(transition: .immediate)
+                                        
+                                        addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
+                                        
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        let errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                        let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                                        strongSelf.present(alertController)
+                                    }
+                                }, completed: { [weak self] in
+                                    if let strongSelf = self {
+                                        Queue.mainQueue().after(2.0) {
+                                            let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
+                                            strongSelf.inProgress = false
+                                            strongSelf.updateInProgress(false)
+                                            
+                                            strongSelf.updated(transition: .easeInOut(duration: 0.25))
+                                            strongSelf.completion(duration)
+                                        }
+                                    }
+                                }))
+                            }
+                        }, error: { [weak self] error in
+                            if let strongSelf = self {
                                 strongSelf.inProgress = false
                                 strongSelf.updateInProgress(false)
-                                
-                                strongSelf.updated(transition: .easeInOut(duration: 0.25))
-                                strongSelf.completion(duration)
-                            }
-                        }
-                    }))
-                }
-            }, error: { [weak self] error in
-                if let strongSelf = self {
-                    strongSelf.inProgress = false
-                    strongSelf.updateInProgress(false)
-                    strongSelf.updated(transition: .immediate)
+                                strongSelf.updated(transition: .immediate)
 
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    var errorText: String?
-                    switch error {
-                        case .generic:
-                            errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                        case .network:
-                            errorText = presentationData.strings.Premium_Purchase_ErrorNetwork
-                        case .notAllowed:
-                            errorText = presentationData.strings.Premium_Purchase_ErrorNotAllowed
-                        case .cantMakePayments:
-                            errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
-                        case .assignFailed:
-                            errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                        case .cancelled:
-                            break
-                    }
-                    
-                    if let errorText = errorText {
-                        addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
-                        
-                        let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                        strongSelf.present(alertController)
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                var errorText: String?
+                                switch error {
+                                    case .generic:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                    case .network:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorNetwork
+                                    case .notAllowed:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorNotAllowed
+                                    case .cantMakePayments:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
+                                    case .assignFailed:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                    case .cancelled:
+                                        break
+                                }
+                                
+                                if let errorText = errorText {
+                                    addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
+                                    
+                                    let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                                    strongSelf.present(alertController)
+                                }
+                            }
+                        }))
+                    } else {
+                        strongSelf.inProgress = false
+                        strongSelf.updateInProgress(false)
+                        strongSelf.updated(transition: .immediate)
                     }
                 }
-            }))
+            })
         }
         
         func updateIsFocused(_ isFocused: Bool) {

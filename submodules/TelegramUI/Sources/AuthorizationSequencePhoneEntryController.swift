@@ -129,7 +129,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                         strongSelf.controllerNode.activateInput()
                     }
                 }
-                controller.dismissed = {
+                controller.dismissed = { 
                     self?.controllerNode.activateInput()
                 }
                 strongSelf.push(controller)
