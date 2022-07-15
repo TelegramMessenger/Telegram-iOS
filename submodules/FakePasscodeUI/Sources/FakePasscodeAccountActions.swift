@@ -83,8 +83,8 @@ private struct FakePasscodeAccountActionsData: Equatable {
 private func fakePasscodeAccountActionsControllerEntries(presentationData: PresentationData, settings: FakePasscodeAccountActionsSettings) -> [FakePasscodeAccountActionsEntry] {
     var entries: [FakePasscodeAccountActionsEntry] = []
 
-    let sessionsCount = "\(settings.sessionsToHide.count)"
-    let label = settings.sessionsToHideMode == .selected ? sessionsCount
+    let sessionsCount = "\(settings.sessionsToHide.sessions.count)"
+    let label = settings.sessionsToHide.mode == .selected ? sessionsCount
         : presentationData.strings.FakePasscodes_AccountActions_AllExceptCount(sessionsCount).string
 
     entries.append(.sessionsToHide(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, label))
@@ -111,8 +111,10 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
             return settings.withUpdatedLogOut(enabled)
         }
     }, sessionsToHide: {
-        pushControllerImpl?(hiddenSessionsController(context: context, uuid: uuid, account: account, updated: { settings in
-            accountActionsDataPromise.set(.single(FakePasscodeAccountActionsData(settings: settings)))
+        pushControllerImpl?(hiddenSessionsController(context: context, uuid: uuid, account: account, updated: { sessionsToHide in
+            updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
+                settings.withUpdatedSessionsToHide(sessionsToHide)
+            }
         }))
     })
 

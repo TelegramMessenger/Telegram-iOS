@@ -133,10 +133,10 @@ public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably
         var sessionFilter: ((RecentAccountSession) -> Bool) = { _ in true }
         if unlockedWithFakePasscode() {
             let settings = getAccountActions(account: account)
-            if settings.sessionsToHideMode == .selected {
-                sessionFilter = { !settings.sessionsToHide.contains($0.hash) }
+            if settings.sessionsToHide.mode == .selected {
+                sessionFilter = { !settings.sessionsToHide.sessions.contains($0.hash) }
             } else {
-                sessionFilter = { settings.sessionsToHide.contains($0.hash) }
+                sessionFilter = { settings.sessionsToHide.sessions.contains($0.hash) }
             }
         }
         return sessionFilter

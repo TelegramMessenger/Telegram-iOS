@@ -335,7 +335,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
         case let .currentSessionHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .currentSession(_, _, dateTimeFormat, session):
-            return ItemListRecentSessionItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, session: session, enabled: true, editable: true, editing: false, revealed: false, sectionId: self.section, setSessionIdWithRevealedOptions: { _, _ in
+            return ItemListRecentSessionItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, session: session, enabled: true, editable: false, editing: false, revealed: false, sectionId: self.section, setSessionIdWithRevealedOptions: { _, _ in
             }, removeSession: { _ in
             }, action: {
                 arguments.openSession(session)
@@ -813,7 +813,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     }
     |> distinctUntilChanged
 
-    let sharedDataPromise = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings]) |> take(1)
+    let sharedDataPromise = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
     
     let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, webSessionsContext.state, enableQRLogin, sharedDataPromise)
     |> deliverOnMainQueue

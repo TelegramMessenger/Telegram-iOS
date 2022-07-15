@@ -12,12 +12,12 @@ import AccountContext
 import FakePasscode
 
 private final class SessionsControllerArguments {
-    let changeSelectionMode: (SessionSelectionMode) -> Void
+    let changeSelectionMode: () -> Void
     let checkSession: (Bool, RecentAccountSession) -> Void
     let clearSessions: () -> Void
     let checkAllSessions: () -> Void
 
-    init(changeSelectionMode: @escaping (SessionSelectionMode) -> Void, checkSession: @escaping (Bool, RecentAccountSession) -> Void, clearSessions: @escaping () -> Void, checkAllSessions: @escaping () -> Void) {
+    init(changeSelectionMode: @escaping () -> Void, checkSession: @escaping (Bool, RecentAccountSession) -> Void, clearSessions: @escaping () -> Void, checkAllSessions: @escaping () -> Void) {
         self.changeSelectionMode = changeSelectionMode
         self.checkSession = checkSession
         self.clearSessions = clearSessions
@@ -106,7 +106,7 @@ private enum HideSessionsEntry: ItemListNodeEntry {
         case let .selectionMode(title, mode):
             let label = mode == .selected ? presentationData.strings.AccountActions_SessionsToHide_Selected : presentationData.strings.AccountActions_SessionsToHide_ExceptSelected
             return ItemListDisclosureItem(presentationData: presentationData, title: title, label: label, sectionId: self.section, style: .blocks, action: {
-                arguments.changeSelectionMode(mode)
+                arguments.changeSelectionMode()
             })
         case let .activeSessionHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text.uppercased(), sectionId: self.section)
@@ -119,22 +119,26 @@ private enum HideSessionsEntry: ItemListNodeEntry {
 }
 
 private struct SessionsToHideData: Equatable {
-    let settings: FakePasscodeAccountActionsSettings
+    let settings: FakePasscodeSessionsToHideSettings
 
-    func withUpdatedSettings(_ settings: FakePasscodeAccountActionsSettings) -> SessionsToHideData {
-        return SessionsToHideData(settings: settings)
+    func withUpdatedSessions(_ sessions: [Int64]) -> SessionsToHideData {
+        return SessionsToHideData(settings: settings.withUpdatedSessions(sessions))
+    }
+
+    func withUpdatedMode(_ mode: SessionSelectionMode) -> SessionsToHideData {
+        return SessionsToHideData(settings: settings.withUpdatedMode(mode))
     }
 }
 
 private func hiddenSessionsControllerEntries(presentationData: PresentationData, data: SessionsToHideData, sessionsState: ActiveSessionsContextState) -> [HideSessionsEntry] {
     var entries: [HideSessionsEntry] = []
 
-    entries.append(.selectionMode(presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, data.settings.sessionsToHideMode))
+    entries.append(.selectionMode(presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, data.settings.mode))
 
     if !sessionsState.sessions.isEmpty {
         entries.append(.activeSessionHeader(presentationData.strings.AccountActions_SessionsToHide_ActiveSessions))
         for (index, session) in sessionsState.sessions.enumerated() {
-            entries.append(.activeSession(index, presentationData.strings, presentationData.dateTimeFormat, session, data.settings.sessionsToHide.contains(where: { $0 == session.hash })))
+            entries.append(.activeSession(index, presentationData.strings, presentationData.dateTimeFormat, session, data.settings.sessions.contains(where: { $0 == session.hash })))
 
         }
     }
@@ -142,10 +146,7 @@ private func hiddenSessionsControllerEntries(presentationData: PresentationData,
     return entries
 }
 
-private final class SessionsControllerImpl: ItemListController {
-}
-
-func hiddenSessionsController(context: AccountContext, uuid: UUID, account: FakePasscodeActionsAccount, updated: @escaping ((FakePasscodeAccountActionsSettings) -> Void)) -> ViewController {
+func hiddenSessionsController(context: AccountContext, uuid: UUID, account: FakePasscodeActionsAccount, updated: @escaping ((FakePasscodeSessionsToHideSettings) -> Void)) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let activeSessionsContext = context.engine.privacy.activeSessions()
 
@@ -153,10 +154,10 @@ func hiddenSessionsController(context: AccountContext, uuid: UUID, account: Fake
     
     var presentControllerImpl: ((ViewController) -> Void)?
 
-    let sesionsToHideDataPromise = Promise<SessionsToHideData>()
-    sesionsToHideDataPromise.set(context.sharedContext.accountManager.transaction { transaction -> SessionsToHideData in
+    let dataPromise = Promise<SessionsToHideData>()
+    dataPromise.set(context.sharedContext.accountManager.transaction { transaction -> SessionsToHideData in
         let settings = FakePasscodeSettingsHolder(transaction).getAccountActions(uuid, account)
-        return SessionsToHideData(settings: settings)
+        return SessionsToHideData(settings: settings.sessionsToHide)
     })
 
     let didAppearValue = ValuePromise<Bool>(false)
@@ -181,31 +182,35 @@ func hiddenSessionsController(context: AccountContext, uuid: UUID, account: Fake
         presentControllerImpl?(actionSheet)
     }
 
-    let arguments = SessionsControllerArguments(changeSelectionMode: { mode in
+    let arguments = SessionsControllerArguments(changeSelectionMode: {
         let actionSheet = ActionSheetController(presentationData: presentationData)
 
         actionSheet.setItemGroups([
             ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: presentationData.strings.AccountActions_SessionsToHide_Selected, color: .accent, action: { [weak actionSheet] in
-                    updateAccountActionSettings(context: context, uuid: uuid, sesionsToHideDataPromise, updated: updated) { accountSettings in
-                        accountSettings.withUpdatedSessionsToHideMode(.selected)
-                    }
+                    let _ = (dataPromise.get() |> take(1)).start(next: { [weak dataPromise] data in
+                        let updatedData = data.withUpdatedMode(.selected)
+                        dataPromise?.set(.single(updatedData))
+                        updated(updatedData.settings)
+                    })
                     actionSheet?.dismissAnimated()
                 })
             ]),
             ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: presentationData.strings.AccountActions_SessionsToHide_ExceptSelected, color: .accent, action: { [weak actionSheet] in
-                    updateAccountActionSettings(context: context, uuid: uuid, sesionsToHideDataPromise, updated: updated) { accountSettings in
-                        accountSettings.withUpdatedSessionsToHideMode(.excluded)
-                    }
+                    let _ = (dataPromise.get() |> take(1)).start(next: { [weak dataPromise] data in
+                        let updatedData = data.withUpdatedMode(.excluded)
+                        dataPromise?.set(.single(updatedData))
+                        updated(updatedData.settings)
+                    })
                     actionSheet?.dismissAnimated()
                 })
             ])
         ])
         presentControllerImpl?(actionSheet)
     }, checkSession: { checked, session in
-        updateAccountActionSettings(context: context, uuid: uuid, sesionsToHideDataPromise, updated: updated) { accountSettings in
-            var sessions = accountSettings.sessionsToHide
+        let _ = (dataPromise.get() |> take(1)).start(next: { [weak dataPromise] data in
+            var sessions = data.settings.sessions
             if checked {
                 sessions.append(session.hash)
             } else {
@@ -215,41 +220,38 @@ func hiddenSessionsController(context: AccountContext, uuid: UUID, account: Fake
                     assertionFailure("Session with id \(session.hash) not found")
                 }
             }
-            return accountSettings.withUpdatedSessionsToHide(sessions)
-        }
+            let updatedData = data.withUpdatedSessions(sessions)
+            dataPromise?.set(.single(updatedData))
+            updated(updatedData.settings)
+        })
     }, clearSessions: {
         confirmChange {
-            updateAccountActionSettings(context: context, uuid: uuid, sesionsToHideDataPromise, updated: updated) { accountSettings in
-                accountSettings.withUpdatedSessionsToHide([])
-            }
+            let _ = (dataPromise.get() |> take(1)).start(next: { [weak dataPromise] data in
+                let updatedData = data.withUpdatedSessions([])
+                dataPromise?.set(.single(updatedData))
+                updated(updatedData.settings)
+            })
         }
     }, checkAllSessions: {
         let _ = activeSessionsContext.state
-        // |> take(1)
         |> deliverOnMainQueue
         |> map { activeSessionsContext in
             let allSessions = activeSessionsContext.sessions.map { s in s.hash }
-            updateAccountActionSettings(context: context, uuid: uuid, sesionsToHideDataPromise, updated: updated) { accountSettings in
-                accountSettings.withUpdatedSessionsToHide(allSessions)
-            }
+            let _ = (dataPromise.get() |> take(1)).start(next: { [weak dataPromise] data in
+                let updatedData = data.withUpdatedSessions(allSessions)
+                dataPromise?.set(.single(updatedData))
+                updated(updatedData.settings)
+            })
         }
-
-//        let disposable = activeSessionsContext.state.start(next: { activeSessionsContext in
-//
-//        }) { error in
-//            // FIXME
-//        } completed: {
-//            // FIXME
-//        }
     })
 
-    let signal = combineLatest(context.sharedContext.presentationData, activeSessionsContext.state, sesionsToHideDataPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, activeSessionsContext.state, dataPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, sessionsState, sesionsToHideData -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, sessionsState, data -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         let emptyStateItem: ItemListControllerEmptyStateItem? = nil
 
-        let hiddenSessions = sesionsToHideData.settings.sessionsToHide
+        let hiddenSessions = data.settings.sessions
 
         if hiddenSessions.isEmpty {
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.AccountActions_SessionsToHide_CheckAll), style: .regular, enabled: true, action: {
@@ -262,7 +264,7 @@ func hiddenSessionsController(context: AccountContext, uuid: UUID, account: Fake
         }
 
         let title: ItemListControllerTitle = .text(presentationData.strings.AuthSessions_LoggedIn)
-        let entries = hiddenSessionsControllerEntries(presentationData: presentationData, data: sesionsToHideData, sessionsState: sessionsState)
+        let entries = hiddenSessionsControllerEntries(presentationData: presentationData, data: data, sessionsState: sessionsState)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, emptyStateItem: emptyStateItem)
@@ -272,7 +274,9 @@ func hiddenSessionsController(context: AccountContext, uuid: UUID, account: Fake
         actionsDisposable.dispose()
     }
 
-    let controller = SessionsControllerImpl(context: context, state: signal)
+    let controller = ItemListControllerReactiveToPasscodeSwitch(context: context, state: signal, onPasscodeSwitch: { controller in
+        controller.dismiss(animated: false)
+    })
     controller.didAppear = { _ in
         didAppearValue.set(true)
     }
@@ -284,16 +288,4 @@ func hiddenSessionsController(context: AccountContext, uuid: UUID, account: Fake
     }
 
     return controller
-}
-
-private func updateAccountActionSettings(context: AccountContext, uuid: UUID, _ dataPromise: Promise<SessionsToHideData>, updated: @escaping (FakePasscodeAccountActionsSettings) -> Void, _ f: @escaping (FakePasscodeAccountActionsSettings) -> FakePasscodeAccountActionsSettings) {
-    let _ = (dataPromise.get() |> take(1)).start(next: { [weak dataPromise] data in
-        let updatedSettings = f(data.settings)
-        dataPromise?.set(.single(data.withUpdatedSettings(updatedSettings)))
-        updated(updatedSettings)
-
-        let _ = updateFakePasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, { holder in
-            return holder.withUpdatedSettingsItem(holder.settings.first(where: { $0.uuid == uuid })!.withUpdatedAccountActionItem(updatedSettings))
-        }).start()
-    })
 }
