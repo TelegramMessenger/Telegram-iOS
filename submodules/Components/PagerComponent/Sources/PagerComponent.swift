@@ -543,7 +543,11 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             case .hide:
                 effectiveTopPanelHeight = 0.0
             case .show, .hideOnScroll:
-                effectiveTopPanelHeight = topPanelHeight
+                if component.externalTopPanelContainer != nil {
+                    effectiveTopPanelHeight = topPanelHeight
+                } else {
+                    effectiveTopPanelHeight = 0.0
+                }
             }
             
             if let contentBackground = component.contentBackground {

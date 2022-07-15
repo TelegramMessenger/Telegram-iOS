@@ -458,6 +458,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
+    private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
+    
     private let containerNode: ASDisplayNode
     private let backgroundNode: NavigationBackgroundNode
     private let scrollNode: ASScrollNode
@@ -496,9 +498,11 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     
     var mainButtonPressed: () -> Void = { }
     
-    init(context: AccountContext, chatLocation: ChatLocation, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?) {
+    init(context: AccountContext, chatLocation: ChatLocation, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        
+        self.makeEntityInputView = makeEntityInputView
                 
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: chatLocation, subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
         
@@ -895,7 +899,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 if let strongSelf = self {
                     strongSelf.present(c)
                 }
-            })
+            }, makeEntityInputView: self.makeEntityInputView)
             textInputPanelNode.interfaceInteraction = self.interfaceInteraction
             textInputPanelNode.sendMessage = { [weak self] mode in
                 if let strongSelf = self {

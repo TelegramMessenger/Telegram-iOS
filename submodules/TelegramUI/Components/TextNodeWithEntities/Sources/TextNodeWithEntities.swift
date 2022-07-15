@@ -118,7 +118,7 @@ public final class TextNodeWithEntities {
                         if let font = string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont {
                             string.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: value, file: value.file, fontSize: font.pointSize), range: range)
                             
-                            let itemSize = font.pointSize * 24.0 / 17.0 / CGFloat(range.length)
+                            let itemSize = font.pointSize * 24.0 / 17.0 / CGFloat(min(2, range.length))
                             
                             let runDelegateData = RunDelegateData(
                                 ascent: font.ascender,

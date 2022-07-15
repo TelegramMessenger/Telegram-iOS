@@ -85,7 +85,7 @@ public final class EntityKeyboardComponent: Component {
     public let hideInputUpdated: (Bool, Bool, Transition) -> Void
     public let switchToTextInput: () -> Void
     public let switchToGifSubject: (GifPagerContentComponent.Subject) -> Void
-    public let makeSearchContainerNode: (EntitySearchContentType) -> EntitySearchContainerNode
+    public let makeSearchContainerNode: (EntitySearchContentType) -> EntitySearchContainerNode?
     public let deviceMetrics: DeviceMetrics
     public let hiddenInputHeight: CGFloat
     public let isExpanded: Bool
@@ -103,7 +103,7 @@ public final class EntityKeyboardComponent: Component {
         hideInputUpdated: @escaping (Bool, Bool, Transition) -> Void,
         switchToTextInput: @escaping () -> Void,
         switchToGifSubject: @escaping (GifPagerContentComponent.Subject) -> Void,
-        makeSearchContainerNode: @escaping (EntitySearchContentType) -> EntitySearchContainerNode,
+        makeSearchContainerNode: @escaping (EntitySearchContentType) -> EntitySearchContainerNode?,
         deviceMetrics: DeviceMetrics,
         hiddenInputHeight: CGFloat,
         isExpanded: Bool
@@ -486,7 +486,8 @@ public final class EntityKeyboardComponent: Component {
                     )),
                     topPanel: AnyComponent(EntityKeyboardTopContainerPanelComponent(
                         theme: component.theme,
-                        overflowHeight: component.hiddenInputHeight
+                        overflowHeight: component.hiddenInputHeight,
+                        displayBackground: component.externalTopPanelContainer == nil
                     )),
                     externalTopPanelContainer: component.externalTopPanelContainer,
                     bottomPanel: AnyComponent(EntityKeyboardBottomPanelComponent(

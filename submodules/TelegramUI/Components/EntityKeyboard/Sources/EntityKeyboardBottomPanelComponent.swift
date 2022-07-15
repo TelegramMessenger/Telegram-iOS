@@ -278,59 +278,64 @@ final class EntityKeyboardBottomPanelComponent: Component {
             
             let navigateToContentId = panelEnvironment.navigateToContentId
             
-            for icon in panelEnvironment.contentIcons {
-                validIconIds.append(icon.id)
-                
-                var iconTransition = transition
-                let iconView: ComponentHostView<Empty>
-                if let current = self.iconViews[icon.id] {
-                    iconView = current
-                } else {
-                    iconTransition = .immediate
-                    iconView = ComponentHostView<Empty>()
-                    self.iconViews[icon.id] = iconView
-                    self.addSubview(iconView)
+            if panelEnvironment.contentIcons.count > 1 {
+                for icon in panelEnvironment.contentIcons {
+                    validIconIds.append(icon.id)
+                    
+                    var iconTransition = transition
+                    let iconView: ComponentHostView<Empty>
+                    if let current = self.iconViews[icon.id] {
+                        iconView = current
+                    } else {
+                        iconTransition = .immediate
+                        iconView = ComponentHostView<Empty>()
+                        self.iconViews[icon.id] = iconView
+                        self.addSubview(iconView)
+                    }
+                    
+                    let iconSize = iconView.update(
+                        transition: iconTransition,
+                        component: AnyComponent(BottomPanelIconComponent(
+                            content: icon.component,
+                            action: {
+                                navigateToContentId(icon.id)
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 32.0, height: 32.0)
+                    )
+                    
+                    iconInfos[icon.id] = (size: iconSize, transition: iconTransition)
+                    
+                    if !iconTotalSize.width.isZero {
+                        iconTotalSize.width += iconSpacing
+                    }
+                    iconTotalSize.width += iconSize.width
+                    iconTotalSize.height = max(iconTotalSize.height, iconSize.height)
                 }
-                
-                let iconSize = iconView.update(
-                    transition: iconTransition,
-                    component: AnyComponent(BottomPanelIconComponent(
-                        content: icon.component,
-                        action: {
-                            navigateToContentId(icon.id)
-                        }
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: 32.0, height: 32.0)
-                )
-                
-                iconInfos[icon.id] = (size: iconSize, transition: iconTransition)
-                
-                if !iconTotalSize.width.isZero {
-                    iconTotalSize.width += iconSpacing
-                }
-                iconTotalSize.width += iconSize.width
-                iconTotalSize.height = max(iconTotalSize.height, iconSize.height)
             }
             
             var nextIconOrigin = CGPoint(x: floor((availableSize.width - iconTotalSize.width) / 2.0), y: floor((intrinsicHeight - iconTotalSize.height) / 2.0))
             if component.bottomInset > 0.0 {
                 nextIconOrigin.y += 2.0
             }
-            for icon in panelEnvironment.contentIcons {
-                guard let iconInfo = iconInfos[icon.id], let iconView = self.iconViews[icon.id] else {
-                    continue
+            
+            if panelEnvironment.contentIcons.count > 1 {
+                for icon in panelEnvironment.contentIcons {
+                    guard let iconInfo = iconInfos[icon.id], let iconView = self.iconViews[icon.id] else {
+                        continue
+                    }
+                    
+                    let iconFrame = CGRect(origin: nextIconOrigin, size: iconInfo.size)
+                    iconInfo.transition.setFrame(view: iconView, frame: iconFrame, completion: nil)
+                    
+                    if let activeContentId = activeContentId, activeContentId == icon.id {
+                        self.highlightedIconBackgroundView.isHidden = false
+                        transition.setFrame(view: self.highlightedIconBackgroundView, frame: iconFrame)
+                    }
+                    
+                    nextIconOrigin.x += iconInfo.size.width + iconSpacing
                 }
-                
-                let iconFrame = CGRect(origin: nextIconOrigin, size: iconInfo.size)
-                iconInfo.transition.setFrame(view: iconView, frame: iconFrame, completion: nil)
-                
-                if let activeContentId = activeContentId, activeContentId == icon.id {
-                    self.highlightedIconBackgroundView.isHidden = false
-                    transition.setFrame(view: self.highlightedIconBackgroundView, frame: iconFrame)
-                }
-                
-                nextIconOrigin.x += iconInfo.size.width + iconSpacing
             }
                                     
             if activeContentId == nil {
