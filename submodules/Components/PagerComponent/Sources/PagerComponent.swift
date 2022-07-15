@@ -381,9 +381,10 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     if component.contents.contains(where: { $0.id == defaultId }) {
                         centralId = defaultId
                     }
-                } else {
-                    centralId = component.contents.first?.id
                 }
+                if centralId == nil {
+                   centralId = component.contents.first?.id
+               }
             }
             
             if self.centralId != centralId {

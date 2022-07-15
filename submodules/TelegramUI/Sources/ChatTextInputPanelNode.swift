@@ -619,10 +619,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.menuButton.cornerRadius = 16.0
         self.menuButton.accessibilityLabel = presentationInterfaceState.strings.Conversation_InputMenu
         self.menuButtonBackgroundNode = ASDisplayNode()
+        self.menuButtonBackgroundNode.isUserInteractionEnabled = false
         self.menuButtonClippingNode = ASDisplayNode()
         self.menuButtonClippingNode.clipsToBounds = true
+        self.menuButtonClippingNode.isUserInteractionEnabled = false
         
         self.menuButtonIconNode = MenuIconNode()
+        self.menuButtonIconNode.isUserInteractionEnabled = false
         self.menuButtonIconNode.customColor = presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor
         self.menuButtonTextNode = ImmediateTextNode()
         
@@ -1782,6 +1785,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         transition.updateAlpha(node: self.textInputContainer, alpha: audioRecordingItemsAlpha)
         
         if let textInputNode = self.textInputNode {
+            textInputNode.textContainerInset = textInputViewRealInsets
             let textFieldFrame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - textInputViewInternalInsets.bottom))
             let shouldUpdateLayout = textFieldFrame.size != textInputNode.frame.size
             transition.updateFrame(node: textInputNode, frame: textFieldFrame)
@@ -2069,7 +2073,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         let endIndex = currentIndex
                         addSpoiler(startIndex: currentStartIndex, endIndex: endIndex)
                     }
-                } else if let value = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
+                }
+                
+                if let value = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
                     if let start = textInputNode.textView.position(from: beginning, offset: range.location), let end = textInputNode.textView.position(from: start, offset: range.length), let textRange = textInputNode.textView.textRange(from: start, to: end) {
                         let textRects = textInputNode.textView.selectionRects(for: textRange)
                         for textRect in textRects {

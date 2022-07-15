@@ -100,7 +100,6 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                         subgroupId: nil
                     ),
                     context: component.context,
-                    groupId: "topPanel",
                     attemptSynchronousLoad: false,
                     file: component.file,
                     staticEmoji: nil,
@@ -110,18 +109,18 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                     blurredBadgeColor: .clear,
                     displayPremiumBadgeIfAvailable: false,
                     pointSize: CGSize(width: 44.0, height: 44.0),
-                    onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder in
+                    onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.updateDisplayPlaceholder(displayPlaceholder: displayPlaceholder)
+                        strongSelf.updateDisplayPlaceholder(displayPlaceholder: displayPlaceholder, duration: duration)
                     }
                 )
                 self.itemLayer = itemLayer
                 self.layer.addSublayer(itemLayer)
                 
                 if itemLayer.displayPlaceholder {
-                    self.updateDisplayPlaceholder(displayPlaceholder: true)
+                    self.updateDisplayPlaceholder(displayPlaceholder: true, duration: 0.0)
                 }
             }
             
@@ -170,7 +169,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
             return availableSize
         }
         
-        private func updateDisplayPlaceholder(displayPlaceholder: Bool) {
+        private func updateDisplayPlaceholder(displayPlaceholder: Bool, duration: Double) {
             if displayPlaceholder {
                 if self.placeholderView == nil, let component = self.component {
                     let placeholderView = EmojiPagerContentComponent.View.ItemPlaceholderView(
@@ -188,7 +187,15 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
             } else {
                 if let placeholderView = self.placeholderView {
                     self.placeholderView = nil
-                    placeholderView.removeFromSuperview()
+                    
+                    if duration > 0.0 {
+                        placeholderView.alpha = 0.0
+                        placeholderView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { [weak placeholderView] _ in
+                            placeholderView?.removeFromSuperview()
+                        })
+                    } else {
+                        placeholderView.removeFromSuperview()
+                    }
                 }
             }
         }

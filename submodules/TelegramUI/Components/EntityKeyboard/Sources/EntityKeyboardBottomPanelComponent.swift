@@ -313,7 +313,10 @@ final class EntityKeyboardBottomPanelComponent: Component {
                 iconTotalSize.height = max(iconTotalSize.height, iconSize.height)
             }
             
-            var nextIconOrigin = CGPoint(x: floor((availableSize.width - iconTotalSize.width) / 2.0), y: floor((intrinsicHeight - iconTotalSize.height) / 2.0) + 2.0)
+            var nextIconOrigin = CGPoint(x: floor((availableSize.width - iconTotalSize.width) / 2.0), y: floor((intrinsicHeight - iconTotalSize.height) / 2.0))
+            if component.bottomInset > 0.0 {
+                nextIconOrigin.y += 2.0
+            }
             for icon in panelEnvironment.contentIcons {
                 guard let iconInfo = iconInfos[icon.id], let iconView = self.iconViews[icon.id] else {
                     continue

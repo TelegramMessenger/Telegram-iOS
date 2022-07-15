@@ -238,16 +238,6 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             },
             chatPeerId: chatPeerId
         )
-        let gifInputInteraction = GifPagerContentComponent.InputInteraction(
-            performItemAction: { [weak controllerInteraction] item, view, rect in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                let _ = controllerInteraction.sendGif(.savedGif(media: item.file), view, rect, false, false)
-            },
-            openGifContextMenu: { _, _, _, _, _ in
-            }
-        )
         
         let animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
             return TempBox.shared.tempFile(fileName: "file").path
@@ -560,22 +550,28 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             return animatedEmojiStickers
         }
         
-        // We are intentionally not subscribing to the recent gif updates here
-        let gifItems: Signal<GifPagerContentComponent, NoError> = context.engine.data.get(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
-        |> map { savedGifs -> GifPagerContentComponent in
-            var items: [GifPagerContentComponent.Item] = []
-            for gifItem in savedGifs {
-                items.append(GifPagerContentComponent.Item(
-                    file: gifItem.contents.get(RecentMediaItem.self)!.media
-                ))
+        let gifInputInteraction = GifPagerContentComponent.InputInteraction(
+            performItemAction: { [weak controllerInteraction] item, view, rect in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                let _ = controllerInteraction.sendGif(.savedGif(media: item.file), view, rect, false, false)
+            },
+            openGifContextMenu: { _, _, _, _, _ in
+            },
+            loadMore: { _ in
             }
-            return GifPagerContentComponent(
-                context: context,
-                inputInteraction: gifInputInteraction,
-                subject: .recent,
-                items: items
-            )
-        }
+        )
+        
+        // We are going to subscribe to the actual data when the view is loaded
+        let gifItems: Signal<GifPagerContentComponent, NoError> = .single(GifPagerContentComponent(
+            context: context,
+            inputInteraction: gifInputInteraction,
+            subject: .recent,
+            items: [],
+            isLoading: false,
+            loadMoreToken: nil
+        ))
         
         return combineLatest(queue: .mainQueue(),
             emojiItems,
@@ -625,10 +621,195 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private var gifMode: GifPagerContentComponent.Subject = .recent {
         didSet {
-            self.gifModeSubject.set(self.gifMode)
+            if self.gifMode != oldValue {
+                self.reloadGifContext()
+            }
         }
     }
-    private let gifModeSubject: ValuePromise<GifPagerContentComponent.Subject>
+    
+    private final class GifContext {
+        private var componentValue: GifPagerContentComponent? {
+            didSet {
+                if let componentValue = self.componentValue {
+                    self.componentResult.set(.single(componentValue))
+                }
+            }
+        }
+        private let componentPromise = Promise<GifPagerContentComponent>()
+        
+        private let componentResult = Promise<GifPagerContentComponent>()
+        var component: Signal<GifPagerContentComponent, NoError> {
+            return self.componentResult.get()
+        }
+        private var componentDisposable: Disposable?
+        
+        private let context: AccountContext
+        private let subject: GifPagerContentComponent.Subject
+        private let gifInputInteraction: GifPagerContentComponent.InputInteraction
+        
+        private var loadingMoreToken: String?
+        
+        init(context: AccountContext, subject: GifPagerContentComponent.Subject, gifInputInteraction: GifPagerContentComponent.InputInteraction, trendingGifs: Signal<ChatMediaInputGifPaneTrendingState?, NoError>) {
+            self.context = context
+            self.subject = subject
+            self.gifInputInteraction = gifInputInteraction
+            
+            let gifItems: Signal<GifPagerContentComponent, NoError>
+            switch subject {
+            case .recent:
+                gifItems = context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
+                |> map { savedGifs -> GifPagerContentComponent in
+                    var items: [GifPagerContentComponent.Item] = []
+                    for gifItem in savedGifs {
+                        items.append(GifPagerContentComponent.Item(
+                            file: gifItem.contents.get(RecentMediaItem.self)!.media
+                        ))
+                    }
+                    return GifPagerContentComponent(
+                        context: context,
+                        inputInteraction: gifInputInteraction,
+                        subject: subject,
+                        items: items,
+                        isLoading: false,
+                        loadMoreToken: nil
+                    )
+                }
+            case .trending:
+                gifItems = trendingGifs
+                |> map { trendingGifs -> GifPagerContentComponent in
+                    var items: [GifPagerContentComponent.Item] = []
+                    
+                    var isLoading = false
+                    if let trendingGifs = trendingGifs {
+                        for file in trendingGifs.files {
+                            items.append(GifPagerContentComponent.Item(
+                                file: file.file.media
+                            ))
+                        }
+                    } else {
+                        isLoading = true
+                    }
+                    
+                    return GifPagerContentComponent(
+                        context: context,
+                        inputInteraction: gifInputInteraction,
+                        subject: subject,
+                        items: items,
+                        isLoading: isLoading,
+                        loadMoreToken: nil
+                    )
+                }
+            case let .emojiSearch(query):
+                gifItems = paneGifSearchForQuery(context: context, query: query, offset: nil, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil)
+                |> map { result -> GifPagerContentComponent in
+                    var items: [GifPagerContentComponent.Item] = []
+                    
+                    var loadMoreToken: String?
+                    var isLoading = false
+                    if let result = result {
+                        for file in result.files {
+                            items.append(GifPagerContentComponent.Item(
+                                file: file.file.media
+                            ))
+                        }
+                        loadMoreToken = result.nextOffset
+                    } else {
+                        isLoading = true
+                    }
+                    
+                    return GifPagerContentComponent(
+                        context: context,
+                        inputInteraction: gifInputInteraction,
+                        subject: subject,
+                        items: items,
+                        isLoading: isLoading,
+                        loadMoreToken: loadMoreToken
+                    )
+                }
+            }
+            
+            self.componentPromise.set(gifItems)
+            self.componentDisposable = (self.componentPromise.get()
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.componentValue = result
+            })
+        }
+        
+        deinit {
+            self.componentDisposable?.dispose()
+        }
+        
+        func loadMore(token: String) {
+            if self.loadingMoreToken == token {
+                return
+            }
+            self.loadingMoreToken = token
+            
+            guard let componentValue = self.componentValue else {
+                return
+            }
+            
+            let context = self.context
+            let subject = self.subject
+            let gifInputInteraction = self.gifInputInteraction
+            
+            switch self.subject {
+            case let .emojiSearch(query):
+                let gifItems: Signal<GifPagerContentComponent, NoError>
+                gifItems = paneGifSearchForQuery(context: context, query: query, offset: token, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil)
+                |> map { result -> GifPagerContentComponent in
+                    var items: [GifPagerContentComponent.Item] = []
+                    var existingIds = Set<MediaId>()
+                    for item in componentValue.items {
+                        items.append(item)
+                        existingIds.insert(item.file.fileId)
+                    }
+                    
+                    var loadMoreToken: String?
+                    var isLoading = false
+                    if let result = result {
+                        for file in result.files {
+                            if existingIds.contains(file.file.media.fileId) {
+                                continue
+                            }
+                            existingIds.insert(file.file.media.fileId)
+                            items.append(GifPagerContentComponent.Item(file: file.file.media))
+                        }
+                        if !result.isComplete {
+                            loadMoreToken = result.nextOffset
+                        }
+                    } else {
+                        isLoading = true
+                    }
+                    
+                    return GifPagerContentComponent(
+                        context: context,
+                        inputInteraction: gifInputInteraction,
+                        subject: subject,
+                        items: items,
+                        isLoading: isLoading,
+                        loadMoreToken: loadMoreToken
+                    )
+                }
+                
+                self.componentPromise.set(gifItems)
+            default:
+                break
+            }
+        }
+    }
+    private var gifContext: GifContext? {
+        didSet {
+            if let gifContext = self.gifContext {
+                self.gifComponent.set(gifContext.component)
+            }
+        }
+    }
+    private let gifComponent = Promise<GifPagerContentComponent>()
+    private var gifInputInteraction: GifPagerContentComponent.InputInteraction?
     
     init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction) {
         self.context = context
@@ -639,9 +820,10 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         self.entityKeyboardView = ComponentHostView<Empty>()
         
-        self.gifModeSubject = ValuePromise<GifPagerContentComponent.Subject>(self.gifMode, ignoreRepeated: true)
-        
         super.init()
+        
+        self.topBackgroundExtension = 41.0
+        self.followsDefaultHeight = true
         
         self.view.addSubview(self.entityKeyboardView)
         
@@ -649,7 +831,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         self.inputDataDisposable = (combineLatest(queue: .mainQueue(),
             updatedInputData,
-            self.updatedGifs()
+            self.gifComponent.get()
         )
         |> deliverOnMainQueue).start(next: { [weak self] inputData, gifs in
             guard let strongSelf = self else {
@@ -685,6 +867,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             }
         )
         
+        self.trendingGifsPromise.set(.single(nil))
         self.trendingGifsPromise.set(paneGifSearchForQuery(context: context, query: "", offset: nil, incompleteResults: true, delayRequest: false, updateActivity: nil)
         |> map { items -> ChatMediaInputGifPaneTrendingState? in
             if let items = items {
@@ -693,14 +876,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 return nil
             }
         })
-    }
-    
-    deinit {
-        self.inputDataDisposable?.dispose()
-    }
-    
-    private func updatedGifs() -> Signal<GifPagerContentComponent, NoError> {
-        let gifInputInteraction = GifPagerContentComponent.InputInteraction(
+        
+        self.gifInputInteraction = GifPagerContentComponent.InputInteraction(
             performItemAction: { [weak controllerInteraction] item, view, rect in
                 guard let controllerInteraction = controllerInteraction else {
                     return
@@ -712,83 +889,26 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     return
                 }
                 strongSelf.openGifContextMenu(file: file, sourceView: sourceView, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
+            },
+            loadMore: { [weak self] token in
+                guard let strongSelf = self, let gifContext = strongSelf.gifContext else {
+                    return
+                }
+                gifContext.loadMore(token: token)
             }
         )
         
-        let context = self.context
-        let trendingGifs = self.trendingGifsPromise.get()
-        let updatedGifs = self.gifModeSubject.get()
-        |> mapToSignal { subject -> Signal<GifPagerContentComponent, NoError> in
-            switch subject {
-            case .recent:
-                let gifItems: Signal<GifPagerContentComponent, NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
-                |> map { savedGifs -> GifPagerContentComponent in
-                    var items: [GifPagerContentComponent.Item] = []
-                    for gifItem in savedGifs {
-                        items.append(GifPagerContentComponent.Item(
-                            file: gifItem.contents.get(RecentMediaItem.self)!.media
-                        ))
-                    }
-                    return GifPagerContentComponent(
-                        context: context,
-                        inputInteraction: gifInputInteraction,
-                        subject: subject,
-                        items: items
-                    )
-                }
-                return gifItems
-            case .trending:
-                return trendingGifs
-                |> map { trendingGifs -> GifPagerContentComponent in
-                    var items: [GifPagerContentComponent.Item] = []
-                    
-                    if let trendingGifs = trendingGifs {
-                        for file in trendingGifs.files {
-                            items.append(GifPagerContentComponent.Item(
-                                file: file.file.media
-                            ))
-                        }
-                    }
-                    
-                    return GifPagerContentComponent(
-                        context: context,
-                        inputInteraction: gifInputInteraction,
-                        subject: subject,
-                        items: items
-                    )
-                }
-            case let .emojiSearch(query):
-                return paneGifSearchForQuery(context: context, query: query, offset: nil, incompleteResults: true, staleCachedResults: true, delayRequest: false, updateActivity: nil)
-                |> map { result -> GifPagerContentComponent in
-                    var items: [GifPagerContentComponent.Item] = []
-                    
-                    /*let canLoadMore: Bool
-                    if let result = result {
-                        canLoadMore = !result.isComplete
-                    } else {
-                        canLoadMore = true
-                    }*/
-                    
-                    if let result = result {
-                        for file in result.files {
-                            items.append(GifPagerContentComponent.Item(
-                                file: file.file.media
-                            ))
-                        }
-                    }
-                    
-                    return GifPagerContentComponent(
-                        context: context,
-                        inputInteraction: gifInputInteraction,
-                        subject: subject,
-                        items: items
-                    )
-                }
-            }
+        self.reloadGifContext()
+    }
+    
+    deinit {
+        self.inputDataDisposable?.dispose()
+    }
+    
+    private func reloadGifContext() {
+        if let gifInputInteraction = self.gifInputInteraction {
+            self.gifContext = GifContext(context: self.context, subject: self.gifMode, gifInputInteraction: gifInputInteraction, trendingGifs: self.trendingGifsPromise.get())
         }
-        
-        return .single(self.currentInputData.gifs)
-        |> then(updatedGifs)
     }
     
     func markInputCollapsed() {
@@ -808,7 +928,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         let wasMarkedInputCollapsed = self.isMarkInputCollapsed
         self.isMarkInputCollapsed = false
         
-        let expandedHeight = standardInputHeight + self.expansionFraction * (maximumHeight - standardInputHeight)
+        let expandedHeight = standardInputHeight
         
         var hiddenInputHeight: CGFloat = 0.0
         if self.hideInput && !self.adjustLayoutForHiddenInput {
@@ -822,8 +942,27 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         var mappedTransition = Transition(transition)
         
-        if wasMarkedInputCollapsed {
+        if wasMarkedInputCollapsed || !isExpanded {
             mappedTransition = mappedTransition.withUserData(EntityKeyboardComponent.MarkInputCollapsed())
+        }
+        
+        var stickerContent: EmojiPagerContentComponent? = self.currentInputData.stickers
+        var gifContent: GifPagerContentComponent? = self.currentInputData.gifs
+        
+        var stickersEnabled = true
+        if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel {
+            if peer.hasBannedPermission(.banSendStickers) != nil {
+                stickersEnabled = false
+            }
+        } else if let peer = interfaceState.renderedPeer?.peer as? TelegramGroup {
+            if peer.hasBannedPermission(.banSendStickers) {
+                stickersEnabled = false
+            }
+        }
+        
+        if !stickersEnabled || interfaceState.interfaceState.editMessage != nil {
+            stickerContent = nil
+            gifContent = nil
         }
         
         let entityKeyboardSize = self.entityKeyboardView.update(
@@ -832,8 +971,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 theme: interfaceState.theme,
                 bottomInset: bottomInset,
                 emojiContent: self.currentInputData.emoji,
-                stickerContent: self.currentInputData.stickers,
-                gifContent: self.currentInputData.gifs,
+                stickerContent: stickerContent,
+                gifContent: gifContent,
                 availableGifSearchEmojies: self.currentInputData.availableGifSearchEmojies,
                 defaultToEmojiTab: self.defaultToEmojiTab,
                 externalTopPanelContainer: self.externalTopPanelContainerImpl,
@@ -868,7 +1007,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.gifModeSubject.set(subject)
+                    strongSelf.gifMode = subject
                 },
                 makeSearchContainerNode: { content in
                     let mappedMode: ChatMediaInputSearchMode

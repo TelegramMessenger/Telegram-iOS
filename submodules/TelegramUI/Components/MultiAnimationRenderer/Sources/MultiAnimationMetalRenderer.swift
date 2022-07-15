@@ -297,11 +297,11 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         
         var targets: [TargetReference] = []
         var slotIndex: Int
-        private let preferredBytesPerRow: Int
+        private let preferredRowAlignment: Int
         
-        init(slotIndex: Int, preferredBytesPerRow: Int, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable, stateUpdated: @escaping () -> Void) {
+        init(slotIndex: Int, preferredRowAlignment: Int, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable, stateUpdated: @escaping () -> Void) {
             self.slotIndex = slotIndex
-            self.preferredBytesPerRow = preferredBytesPerRow
+            self.preferredRowAlignment = preferredRowAlignment
             self.cache = cache
             self.stateUpdated = stateUpdated
             
@@ -375,10 +375,10 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 let readyTextureU = texturePoolHalfPlane.take()
                 let readyTextureV = texturePoolHalfPlane.take()
                 let readyTextureA = texturePoolFullPlane.take()
-                let preferredBytesPerRow = self.preferredBytesPerRow
+                let preferredRowAlignment = self.preferredRowAlignment
                 
                 return LoadFrameTask(task: { [weak self] in
-                    let frame = item.getFrame(at: timestamp, requestedFormat: .yuva(bytesPerRow: preferredBytesPerRow))
+                    let frame = item.getFrame(at: timestamp, requestedFormat: .yuva(rowAlignment: preferredRowAlignment))
                     
                     let textureY = readyTextureY ?? TextureStoragePool.takeNew(device: device, parameters: fullParameters, pool: texturePoolFullPlane)
                     let textureU = readyTextureU ?? TextureStoragePool.takeNew(device: device, parameters: halfParameters, pool: texturePoolHalfPlane)
@@ -419,7 +419,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         private let texturePoolFullPlane: TextureStoragePool
         private let texturePoolHalfPlane: TextureStoragePool
         
-        private let preferredBytesPerRow: Int
+        private let preferredRowAlignment: Int
         
         private let slotCount: Int
         private let slotsX: Int
@@ -468,7 +468,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             self.texturePoolFullPlane = TextureStoragePool(width: Int(self.cellSize.width), height: Int(self.cellSize.height), format: .r)
             self.texturePoolHalfPlane = TextureStoragePool(width: Int(self.cellSize.width) / 2, height: Int(self.cellSize.height) / 2, format: .r)
             
-            self.preferredBytesPerRow = alignUp(size: Int(self.cellSize.width), align: TextureStorage.Content.rowAlignment(device: self.metalDevice, format: .r))
+            self.preferredRowAlignment = TextureStorage.Content.rowAlignment(device: self.metalDevice, format: .r)
             
             super.init()
             
@@ -508,7 +508,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 for i in 0 ..< self.slotCount {
                     if self.slotToItemId[i] == nil {
                         self.slotToItemId[i] = itemId
-                        self.itemContexts[itemId] = ItemContext(slotIndex: i, preferredBytesPerRow: self.preferredBytesPerRow, cache: cache, itemId: itemId, size: size, fetch: fetch, stateUpdated: { [weak self] in
+                        self.itemContexts[itemId] = ItemContext(slotIndex: i, preferredRowAlignment: self.preferredRowAlignment, cache: cache, itemId: itemId, size: size, fetch: fetch, stateUpdated: { [weak self] in
                             guard let strongSelf = self else {
                                 return
                             }
@@ -778,7 +778,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         self.isPlaying = isPlaying
     }
     
-    public func add(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable {
+    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable {
         assert(Thread.isMainThread)
         
         let alignedSize = CGSize(width: CGFloat(alignUp(size: Int(size.width), align: 16)), height: CGFloat(alignUp(size: Int(size.height), align: 16)))
@@ -805,11 +805,11 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         }
     }
     
-    public func loadFirstFrameSynchronously(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize) -> Bool {
+    public func loadFirstFrameSynchronously(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize) -> Bool {
         return false
     }
     
-    public func loadFirstFrame(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable {
+    public func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable {
         completion(false)
         
         return EmptyDisposable

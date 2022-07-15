@@ -108,6 +108,33 @@ private func textInputBackgroundImage(backgroundColor: UIColor?, inputBackground
     }
 }
 
+private final class EntityInputView: UIInputView, UIInputViewAudioFeedback {
+    override var inputViewStyle: UIInputView.Style {
+        get {
+            return .default
+        }
+    }
+    override var allowsSelfSizing: Bool {
+        get {
+            return true
+        }
+        set {
+        }
+    }
+    
+    override var intrinsicContentSize: CGSize {
+        CGSize(width: UIView.noIntrinsicMetric, height: 300)
+    }
+    
+    override func sizeToFit() {
+        print("sizeToFit")
+    }
+    
+    override func sizeThatFits(_ size: CGSize) -> CGSize {
+        return CGSize(width: size.width, height: 100.0)
+    }
+}
+
 private class CaptionEditableTextNode: EditableTextNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let previousAlpha = self.alpha
@@ -437,6 +464,11 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         textInputNode.view.addGestureRecognizer(recognizer)
         
         textInputNode.textView.accessibilityHint = self.textPlaceholderNode.attributedText?.string
+        
+        /*let entityInputView = EntityInputView()
+        entityInputView.frame = CGRect(origin: CGPoint(), size: CGSize(width: 100.0, height: 100.0))
+        entityInputView.backgroundColor = .blue
+        textInputNode.textView.inputView = entityInputView*/
     }
     
     private func textFieldMaxHeight(_ maxHeight: CGFloat, metrics: LayoutMetrics) -> CGFloat {

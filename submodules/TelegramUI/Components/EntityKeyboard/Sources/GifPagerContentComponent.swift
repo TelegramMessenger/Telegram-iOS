@@ -19,10 +19,11 @@ import SoftwareVideo
 import AVFoundation
 import PhotoResources
 import ContextUI
+import ShimmerEffect
 
 private class GifVideoLayer: AVSampleBufferDisplayLayer {
     private let context: AccountContext
-    private let file: TelegramMediaFile
+    private let file: TelegramMediaFile?
     
     private var frameManager: SoftwareVideoLayerFrameManager?
     
@@ -56,7 +57,7 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
         }
     }
     
-    init(context: AccountContext, file: TelegramMediaFile, synchronousLoad: Bool) {
+    init(context: AccountContext, file: TelegramMediaFile?, synchronousLoad: Bool) {
         self.context = context
         self.file = file
         
@@ -64,29 +65,31 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
         
         self.videoGravity = .resizeAspectFill
         
-        if let dimensions = file.dimensions {
-            self.thumbnailDisposable = (mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .savedGif(media: self.file), synchronousLoad: synchronousLoad, nilForEmptyResult: true)
-            |> deliverOnMainQueue).start(next: { [weak self] transform in
-                guard let strongSelf = self else {
-                    return
-                }
-                let boundingSize = CGSize(width: 93.0, height: 93.0)
-                let imageSize = dimensions.cgSize.aspectFilled(boundingSize)
-                
-                if let image = transform(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .fill(.clear)))?.generateImage() {
-                    Queue.mainQueue().async {
-                        if let strongSelf = self {
-                            strongSelf.contents = image.cgImage
-                            strongSelf.setupVideo()
-                            strongSelf.started?()
-                        }
+        if let file = self.file {
+            if let dimensions = file.dimensions {
+                self.thumbnailDisposable = (mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .savedGif(media: file), synchronousLoad: synchronousLoad, nilForEmptyResult: true)
+                |> deliverOnMainQueue).start(next: { [weak self] transform in
+                    guard let strongSelf = self else {
+                        return
                     }
-                } else {
-                    strongSelf.setupVideo()
-                }
-            })
-        } else {
-            self.setupVideo()
+                    let boundingSize = CGSize(width: 93.0, height: 93.0)
+                    let imageSize = dimensions.cgSize.aspectFilled(boundingSize)
+                    
+                    if let image = transform(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .fill(.clear)))?.generateImage() {
+                        Queue.mainQueue().async {
+                            if let strongSelf = self {
+                                strongSelf.contents = image.cgImage
+                                strongSelf.setupVideo()
+                                strongSelf.started?()
+                            }
+                        }
+                    } else {
+                        strongSelf.setupVideo()
+                    }
+                })
+            } else {
+                self.setupVideo()
+            }
         }
     }
     
@@ -103,7 +106,10 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
     }
     
     private func setupVideo() {
-        let frameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: .savedGif(media: self.file), layerHolder: nil, layer: self)
+        guard let file = self.file else {
+            return
+        }
+        let frameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: .savedGif(media: file), layerHolder: nil, layer: self)
         self.frameManager = frameManager
         frameManager.started = { [weak self] in
             guard let strongSelf = self else {
@@ -127,13 +133,16 @@ public final class GifPagerContentComponent: Component {
     public final class InputInteraction {
         public let performItemAction: (Item, UIView, CGRect) -> Void
         public let openGifContextMenu: (TelegramMediaFile, UIView, CGRect, ContextGesture, Bool) -> Void
+        public let loadMore: (String) -> Void
         
         public init(
             performItemAction: @escaping (Item, UIView, CGRect) -> Void,
-            openGifContextMenu: @escaping (TelegramMediaFile, UIView, CGRect, ContextGesture, Bool) -> Void
+            openGifContextMenu: @escaping (TelegramMediaFile, UIView, CGRect, ContextGesture, Bool) -> Void,
+            loadMore: @escaping (String) -> Void
         ) {
             self.performItemAction = performItemAction
             self.openGifContextMenu = openGifContextMenu
+            self.loadMore = loadMore
         }
     }
     
@@ -160,17 +169,23 @@ public final class GifPagerContentComponent: Component {
     public let inputInteraction: InputInteraction
     public let subject: Subject
     public let items: [Item]
+    public let isLoading: Bool
+    public let loadMoreToken: String?
     
     public init(
         context: AccountContext,
         inputInteraction: InputInteraction,
         subject: Subject,
-        items: [Item]
+        items: [Item],
+        isLoading: Bool,
+        loadMoreToken: String?
     ) {
         self.context = context
         self.inputInteraction = inputInteraction
         self.subject = subject
         self.items = items
+        self.isLoading = isLoading
+        self.loadMoreToken = loadMoreToken
     }
     
     public static func ==(lhs: GifPagerContentComponent, rhs: GifPagerContentComponent) -> Bool {
@@ -184,6 +199,12 @@ public final class GifPagerContentComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.isLoading != rhs.isLoading {
+            return false
+        }
+        if lhs.loadMoreToken != rhs.loadMoreToken {
             return false
         }
         
@@ -256,7 +277,7 @@ public final class GifPagerContentComponent: Component {
                 let maxVisibleRow = Int(ceil((offsetRect.maxY - self.verticalSpacing) / (self.itemSize + self.verticalSpacing)))
                 
                 let minVisibleIndex = minVisibleRow * self.itemsPerRow
-                let maxVisibleIndex = min(self.itemCount - 1, (maxVisibleRow + 1) * self.itemsPerRow - 1)
+                let maxVisibleIndex = (maxVisibleRow + 1) * self.itemsPerRow - 1
                 
                 if maxVisibleIndex >= minVisibleIndex {
                     return minVisibleIndex ..< (maxVisibleIndex + 1)
@@ -266,11 +287,14 @@ public final class GifPagerContentComponent: Component {
             }
         }
         
+        fileprivate enum ItemKey: Hashable {
+            case media(MediaId)
+            case placeholder(Int)
+        }
+        
         fileprivate final class ItemLayer: GifVideoLayer {
-            let item: Item
+            let item: Item?
             
-            private let file: TelegramMediaFile
-            private let placeholderColor: UIColor
             private var disposable: Disposable?
             private var fetchDisposable: Disposable?
             
@@ -282,60 +306,32 @@ public final class GifPagerContentComponent: Component {
                     }
                 }
             }
-            private var displayPlaceholder: Bool = false
+            private(set) var displayPlaceholder: Bool = false {
+                didSet {
+                    if self.displayPlaceholder != oldValue {
+                        self.onUpdateDisplayPlaceholder(self.displayPlaceholder)
+                    }
+                }
+            }
+            let onUpdateDisplayPlaceholder: (Bool) -> Void
             
             init(
-                item: Item,
+                item: Item?,
                 context: AccountContext,
                 groupId: String,
                 attemptSynchronousLoad: Bool,
-                file: TelegramMediaFile,
-                placeholderColor: UIColor
+                onUpdateDisplayPlaceholder: @escaping (Bool) -> Void
             ) {
                 self.item = item
-                self.file = file
-                self.placeholderColor = placeholderColor
+                self.onUpdateDisplayPlaceholder = onUpdateDisplayPlaceholder
                 
-                super.init(context: context, file: file, synchronousLoad: attemptSynchronousLoad)
+                super.init(context: context, file: item?.file, synchronousLoad: attemptSynchronousLoad)
                 
                 self.updateDisplayPlaceholder(displayPlaceholder: true)
                 
                 self.started = { [weak self] in
                     self?.updateDisplayPlaceholder(displayPlaceholder: false)
                 }
-                
-                /*if attemptSynchronousLoad {
-                    if !renderer.loadFirstFrameSynchronously(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize) {
-                        self.displayPlaceholder = true
-                        
-                        if let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: self.size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor) {
-                            self.contents = image.cgImage
-                        }
-                    }
-                }
-                
-                self.disposable = renderer.add(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: { size, writer in
-                    let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
-                    
-                    let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
-                        guard let result = result else {
-                            return
-                        }
-                                
-                        guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
-                            writer.finish()
-                            return
-                        }
-                        cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
-                    })
-                    
-                    let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
-                    
-                    return ActionDisposable {
-                        dataDisposable.dispose()
-                        fetchDisposable.dispose()
-                    }
-                })*/
             }
             
             required init?(coder: NSCoder) {
@@ -364,17 +360,36 @@ public final class GifPagerContentComponent: Component {
             }
             
             func updateDisplayPlaceholder(displayPlaceholder: Bool) {
-                if self.displayPlaceholder == displayPlaceholder {
-                    return
-                }
-                
                 self.displayPlaceholder = displayPlaceholder
+            }
+        }
+        
+        final class ItemPlaceholderView: UIView {
+            private let shimmerView: PortalSourceView?
+            private var placeholderView: PortalView?
+            
+            init(shimmerView: PortalSourceView?) {
+                self.shimmerView = shimmerView
+                self.placeholderView = PortalView()
                 
-                if displayPlaceholder {
-                    let placeholderColor = self.placeholderColor
-                    self.backgroundColor = placeholderColor.cgColor
-                } else {
-                    self.backgroundColor = nil
+                super.init(frame: CGRect())
+                
+                self.clipsToBounds = true
+                
+                if let placeholderView = self.placeholderView, let shimmerView = self.shimmerView {
+                    placeholderView.view.clipsToBounds = true
+                    self.addSubview(placeholderView.view)
+                    shimmerView.addPortal(view: placeholderView)
+                }
+            }
+            
+            required init?(coder: NSCoder) {
+                fatalError("init(coder:) has not been implemented")
+            }
+            
+            func update(size: CGSize) {
+                if let placeholderView = self.placeholderView {
+                    placeholderView.view.frame = CGRect(origin: CGPoint(), size: size)
                 }
             }
         }
@@ -382,9 +397,13 @@ public final class GifPagerContentComponent: Component {
         private final class ContentScrollView: UIScrollView, PagerExpandableScrollView {
         }
         
+        private let shimmerHostView: PortalSourceView
+        private let standaloneShimmerEffect: StandaloneShimmerEffect
+        
         private let scrollView: ContentScrollView
         
-        private var visibleItemLayers: [MediaId: ItemLayer] = [:]
+        private var visibleItemPlaceholderViews: [ItemKey: ItemPlaceholderView] = [:]
+        private var visibleItemLayers: [ItemKey: ItemLayer] = [:]
         private var ignoreScrolling: Bool = false
         
         private var component: GifPagerContentComponent?
@@ -392,10 +411,18 @@ public final class GifPagerContentComponent: Component {
         private var theme: PresentationTheme?
         private var itemLayout: ItemLayout?
         
+        private var currentLoadMoreToken: String?
+        
         override init(frame: CGRect) {
+            self.shimmerHostView = PortalSourceView()
+            self.standaloneShimmerEffect = StandaloneShimmerEffect()
+            
             self.scrollView = ContentScrollView()
             
             super.init(frame: frame)
+            
+            self.shimmerHostView.alpha = 0.0
+            self.addSubview(self.shimmerHostView)
             
             self.scrollView.delaysContentTouches = false
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
@@ -450,7 +477,7 @@ public final class GifPagerContentComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                if let component = self.component, let item = self.item(atPoint: recognizer.location(in: self)), let itemView = self.visibleItemLayers[item.file.fileId] {
+                if let component = self.component, let item = self.item(atPoint: recognizer.location(in: self)), let itemView = self.visibleItemLayers[.media(item.file.fileId)] {
                     component.inputInteraction.performItemAction(item, self, self.scrollView.convert(itemView.frame, to: self))
                 }
             }
@@ -473,7 +500,11 @@ public final class GifPagerContentComponent: Component {
             
             for (_, itemLayer) in self.visibleItemLayers {
                 if itemLayer.frame.contains(localPoint) {
-                    return (itemLayer.item, itemLayer)
+                    if let item = itemLayer.item {
+                        return (item, itemLayer)
+                    } else {
+                        return nil
+                    }
                 }
             }
             
@@ -497,6 +528,13 @@ public final class GifPagerContentComponent: Component {
             self.updateVisibleItems(attemptSynchronousLoads: false)
             
             self.updateScrollingOffset(transition: .immediate)
+            
+            if scrollView.contentOffset.y >= scrollView.contentSize.height - scrollView.bounds.height - 100.0 {
+                if let component = self.component, let loadMoreToken = component.loadMoreToken, self.currentLoadMoreToken != loadMoreToken {
+                    self.currentLoadMoreToken = loadMoreToken
+                    component.inputInteraction.loadMore(loadMoreToken)
+                }
+            }
         }
         
         public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
@@ -564,44 +602,104 @@ public final class GifPagerContentComponent: Component {
         }
         
         private func updateVisibleItems(attemptSynchronousLoads: Bool) {
-            guard let component = self.component, let theme = self.theme, let itemLayout = self.itemLayout else {
+            guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
             
-            var validIds = Set<MediaId>()
+            var validIds = Set<ItemKey>()
             
             if let itemRange = itemLayout.visibleItems(for: self.scrollView.bounds) {
                 for index in itemRange.lowerBound ..< itemRange.upperBound {
-                    let item = component.items[index]
-                    let itemId = item.file.fileId
+                    var item: Item?
+                    let itemId: ItemKey
+                    if index < component.items.count {
+                        item = component.items[index]
+                        itemId = .media(component.items[index].file.fileId)
+                    } else if component.isLoading || component.loadMoreToken != nil {
+                        itemId = .placeholder(index)
+                    } else {
+                        continue
+                    }
+                        
                     validIds.insert(itemId)
+                    
+                    let itemFrame = itemLayout.frame(at: index)
+                    
+                    let itemTransition: Transition = .immediate
+                    var updateItemLayerPlaceholder = false
                     
                     let itemLayer: ItemLayer
                     if let current = self.visibleItemLayers[itemId] {
                         itemLayer = current
                     } else {
+                        updateItemLayerPlaceholder = true
+                        
                         itemLayer = ItemLayer(
                             item: item,
                             context: component.context,
                             groupId: "savedGif",
                             attemptSynchronousLoad: attemptSynchronousLoads,
-                            file: item.file,
-                            placeholderColor: theme.chat.inputMediaPanel.stickersBackgroundColor
+                            onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                if displayPlaceholder {
+                                    if let itemLayer = strongSelf.visibleItemLayers[itemId] {
+                                        let placeholderView: ItemPlaceholderView
+                                        if let current = strongSelf.visibleItemPlaceholderViews[itemId] {
+                                            placeholderView = current
+                                        } else {
+                                            placeholderView = ItemPlaceholderView(shimmerView: strongSelf.shimmerHostView)
+                                            strongSelf.visibleItemPlaceholderViews[itemId] = placeholderView
+                                            strongSelf.scrollView.insertSubview(placeholderView, at: 0)
+                                        }
+                                        placeholderView.frame = itemLayer.frame
+                                        placeholderView.update(size: placeholderView.bounds.size)
+                                        
+                                        strongSelf.updateShimmerIfNeeded()
+                                    }
+                                } else {
+                                    if let placeholderView = strongSelf.visibleItemPlaceholderViews[itemId] {
+                                        strongSelf.visibleItemPlaceholderViews.removeValue(forKey: itemId)
+                                        placeholderView.removeFromSuperview()
+                                        
+                                        strongSelf.updateShimmerIfNeeded()
+                                    }
+                                }
+                            }
                         )
                         self.scrollView.layer.addSublayer(itemLayer)
                         self.visibleItemLayers[itemId] = itemLayer
                     }
                     
-                    itemLayer.frame = itemLayout.frame(at: index)
+                    let itemPosition = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
+                    let itemBounds = CGRect(origin: CGPoint(), size: itemFrame.size)
+                    
+                    itemTransition.setFrame(layer: itemLayer, frame: itemFrame)
                     itemLayer.isVisibleForAnimations = true
+                    
+                    if let placeholderView = self.visibleItemPlaceholderViews[itemId] {
+                        if placeholderView.layer.position != itemPosition || placeholderView.layer.bounds != itemBounds {
+                            itemTransition.setFrame(view: placeholderView, frame: itemFrame)
+                            placeholderView.update(size: itemFrame.size)
+                        }
+                    } else if updateItemLayerPlaceholder {
+                        if itemLayer.displayPlaceholder {
+                            itemLayer.onUpdateDisplayPlaceholder(true)
+                        }
+                    }
                 }
             }
 
-            var removedIds: [MediaId] = []
+            var removedIds: [ItemKey] = []
             for (id, itemLayer) in self.visibleItemLayers {
                 if !validIds.contains(id) {
                     removedIds.append(id)
                     itemLayer.removeFromSuperlayer()
+                    
+                    if let view = self.visibleItemPlaceholderViews.removeValue(forKey: id) {
+                        view.removeFromSuperview()
+                    }
                 }
             }
             for id in removedIds {
@@ -609,12 +707,34 @@ public final class GifPagerContentComponent: Component {
             }
         }
         
+        private func updateShimmerIfNeeded() {
+            if self.visibleItemPlaceholderViews.isEmpty {
+                self.standaloneShimmerEffect.layer = nil
+            } else {
+                self.standaloneShimmerEffect.layer = self.shimmerHostView.layer
+            }
+        }
+        
         func update(component: GifPagerContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            var contentReset = false
+            if let previousComponent = self.component, previousComponent.subject != component.subject {
+                contentReset = true
+                self.currentLoadMoreToken = nil
+            }
+            
+            let keyboardChildEnvironment = environment[EntityKeyboardChildEnvironment.self].value
+            
             self.component = component
-            self.theme = environment[EntityKeyboardChildEnvironment.self].value.theme
+            self.theme = keyboardChildEnvironment.theme
             
             let pagerEnvironment = environment[PagerComponentChildEnvironment.self].value
             self.pagerEnvironment = pagerEnvironment
+            
+            transition.setFrame(view: self.shimmerHostView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            
+            let shimmerBackgroundColor = keyboardChildEnvironment.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08)
+            let shimmerForegroundColor = keyboardChildEnvironment.theme.list.itemBlocksBackgroundColor.withMultipliedAlpha(0.15)
+            self.standaloneShimmerEffect.update(background: shimmerBackgroundColor, foreground: shimmerForegroundColor)
             
             let itemLayout = ItemLayout(
                 width: availableSize.width,
@@ -631,6 +751,11 @@ public final class GifPagerContentComponent: Component {
             if self.scrollView.scrollIndicatorInsets != pagerEnvironment.containerInsets {
                 self.scrollView.scrollIndicatorInsets = pagerEnvironment.containerInsets
             }
+            
+            if contentReset {
+                self.scrollView.setContentOffset(CGPoint(), animated: false)
+            }
+            
             self.previousScrollingOffset = self.scrollView.contentOffset.y
             self.ignoreScrolling = false
             

@@ -197,24 +197,23 @@ open class TabBarControllerImpl: ViewController, TabBarController {
                     return
                 }
                 
-                if strongSelf.selectedIndex == index {
-                    let timestamp = CACurrentMediaTime()
-                    if strongSelf.debugTapCounter.0 < timestamp - 0.4 {
-                        strongSelf.debugTapCounter.0 = timestamp
-                        strongSelf.debugTapCounter.1 = 0
-                    }
-                        
-                    if strongSelf.debugTapCounter.0 >= timestamp - 0.4 {
-                        strongSelf.debugTapCounter.0 = timestamp
-                        strongSelf.debugTapCounter.1 += 1
-                    }
-                    
-                    if strongSelf.debugTapCounter.1 >= 10 {
-                        strongSelf.debugTapCounter.1 = 0
-                        
-                        strongSelf.controllers[index].tabBarItemDebugTapAction?()
-                    }
+                let timestamp = CACurrentMediaTime()
+                if strongSelf.debugTapCounter.0 < timestamp - 0.4 {
+                    strongSelf.debugTapCounter.0 = timestamp
+                    strongSelf.debugTapCounter.1 = 0
                 }
+                    
+                if strongSelf.debugTapCounter.0 >= timestamp - 0.4 {
+                    strongSelf.debugTapCounter.0 = timestamp
+                    strongSelf.debugTapCounter.1 += 1
+                }
+                
+                if strongSelf.debugTapCounter.1 >= 10 {
+                    strongSelf.debugTapCounter.1 = 0
+                    
+                    strongSelf.controllers[index].tabBarItemDebugTapAction?()
+                }
+                
                 if let validLayout = strongSelf.validLayout {
                     var updatedLayout = validLayout
                     

@@ -39,6 +39,18 @@ private final class InlineStickerItem: Hashable {
     }
 }
 
+private final class RunDelegateData {
+    let ascent: CGFloat
+    let descent: CGFloat
+    let width: CGFloat
+    
+    init(ascent: CGFloat, descent: CGFloat, width: CGFloat) {
+        self.ascent = ascent
+        self.descent = descent
+        self.width = width
+    }
+}
+
 public final class TextNodeWithEntities {
     public final class Arguments {
         public let context: AccountContext
@@ -105,6 +117,35 @@ public final class TextNodeWithEntities {
                     if let value = value as? ChatTextInputTextCustomEmojiAttribute {
                         if let font = string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont {
                             string.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: value, file: value.file, fontSize: font.pointSize), range: range)
+                            
+                            let itemSize = font.pointSize * 24.0 / 17.0 / CGFloat(range.length)
+                            
+                            let runDelegateData = RunDelegateData(
+                                ascent: font.ascender,
+                                descent: font.descender,
+                                width: itemSize
+                            )
+                            var callbacks = CTRunDelegateCallbacks(
+                                version: kCTRunDelegateVersion1,
+                                dealloc: { dataRef in
+                                    Unmanaged<RunDelegateData>.fromOpaque(dataRef).release()
+                                },
+                                getAscent: { dataRef in
+                                    let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                                    return data.takeUnretainedValue().ascent
+                                },
+                                getDescent: { dataRef in
+                                    let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                                    return data.takeUnretainedValue().descent
+                                },
+                                getWidth: { dataRef in
+                                    let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                                    return data.takeUnretainedValue().width
+                                }
+                            )
+                            if let runDelegate = CTRunDelegateCreate(&callbacks, Unmanaged.passRetained(runDelegateData).toOpaque()) {
+                                string.addAttribute(NSAttributedString.Key(kCTRunDelegateAttributeName as String), value: runDelegate, range: range)
+                            }
                         }
                     }
                 })
@@ -168,7 +209,7 @@ public final class TextNodeWithEntities {
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: attemptSynchronousLoad, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
+                        itemLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: attemptSynchronousLoad, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         
@@ -331,7 +372,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: false, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
+                        itemLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: false, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.layer.addSublayer(itemLayer)
                         

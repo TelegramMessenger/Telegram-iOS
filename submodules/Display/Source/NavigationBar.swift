@@ -335,6 +335,7 @@ open class BlurredBackgroundView: UIView {
                 if let sublayer = effectView.layer.sublayers?[0], let filters = sublayer.filters {
                     sublayer.backgroundColor = nil
                     sublayer.isOpaque = false
+                    //sublayer.setValue(true as NSNumber, forKey: "allowsInPlaceFiltering")
                     let allowedKeys: [String] = [
                         "colorSaturate",
                         "gaussianBlur"
