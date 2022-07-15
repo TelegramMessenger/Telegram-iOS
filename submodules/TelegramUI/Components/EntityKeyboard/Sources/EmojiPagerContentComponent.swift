@@ -350,7 +350,7 @@ public final class EmojiPagerContentComponent: Component {
             var premiumButtonInset: CGFloat
             var premiumButtonHeight: CGFloat
             
-            init(width: CGFloat, containerInsets: UIEdgeInsets, itemGroups: [ItemGroupDescription], itemLayoutType: ItemLayoutType, expandedPremiumGroups: Set<AnyHashable>) {
+            init(width: CGFloat, containerInsets: UIEdgeInsets, itemGroups: [ItemGroupDescription], itemLayoutType: ItemLayoutType) {
                 self.width = width
                 self.containerInsets = containerInsets
                 
@@ -392,7 +392,7 @@ public final class EmojiPagerContentComponent: Component {
                     
                     let numRowsInGroup = (itemGroup.itemCount + (self.itemsPerRow - 1)) / self.itemsPerRow
                     var groupContentSize = CGSize(width: width, height: itemTopOffset + CGFloat(numRowsInGroup) * self.visibleItemSize + CGFloat(max(0, numRowsInGroup - 1)) * self.verticalSpacing)
-                    if itemGroup.isPremium && expandedPremiumGroups.contains(itemGroup.groupId) {
+                    if itemGroup.isPremium {
                         groupContentSize.height += self.premiumButtonInset + self.premiumButtonHeight
                     }
                     self.itemGroupLayouts.append(ItemGroupLayout(
@@ -765,7 +765,6 @@ public final class EmojiPagerContentComponent: Component {
         private var visibleGroupHeaders: [AnyHashable: GroupHeaderLayer] = [:]
         private var visibleGroupBorders: [AnyHashable: GroupBorderLayer] = [:]
         private var visibleGroupPremiumButtons: [AnyHashable: ComponentView<Empty>] = [:]
-        private var expandedPremiumGroups: Set<AnyHashable> = Set()
         private var ignoreScrolling: Bool = false
         private var keepTopPanelVisibleUntilScrollingInput: Bool = false
         
@@ -1034,7 +1033,8 @@ public final class EmojiPagerContentComponent: Component {
                 let locationInScrollView = recognizer.location(in: self.scrollView)
                 outer: for (id, groupHeader) in self.visibleGroupHeaders {
                     if groupHeader.frame.insetBy(dx: -10.0, dy: -6.0).contains(locationInScrollView) {
-                        for group in component.itemGroups {
+                        let _ = id
+                        /*for group in component.itemGroups {
                             if group.groupId == id {
                                 if group.isPremium && !self.expandedPremiumGroups.contains(id) {
                                     if self.expandedPremiumGroups.contains(id) {
@@ -1059,7 +1059,7 @@ public final class EmojiPagerContentComponent: Component {
                                     break outer
                                 }
                             }
-                        }
+                        }*/
                     }
                 }
                 
@@ -1288,7 +1288,7 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     groupBorderTransition.setFrame(layer: groupBorderLayer, frame: groupBorderFrame)
                     
-                    if self.expandedPremiumGroups.contains(itemGroup.groupId) {
+                    if itemGroup.isPremium {
                         validGroupPremiumButtonIds.insert(itemGroup.groupId)
                         
                         let groupPremiumButton: ComponentView<Empty>
@@ -1562,7 +1562,7 @@ public final class EmojiPagerContentComponent: Component {
             
             var itemTransition = transition
             
-            let itemLayout = ItemLayout(width: availableSize.width, containerInsets: UIEdgeInsets(top: pagerEnvironment.containerInsets.top + 9.0, left: pagerEnvironment.containerInsets.left + 12.0, bottom: 9.0 + pagerEnvironment.containerInsets.bottom, right: pagerEnvironment.containerInsets.right + 12.0), itemGroups: itemGroups, itemLayoutType: component.itemLayoutType, expandedPremiumGroups: expandedPremiumGroups)
+            let itemLayout = ItemLayout(width: availableSize.width, containerInsets: UIEdgeInsets(top: pagerEnvironment.containerInsets.top + 9.0, left: pagerEnvironment.containerInsets.left + 12.0, bottom: 9.0 + pagerEnvironment.containerInsets.bottom, right: pagerEnvironment.containerInsets.right + 12.0), itemGroups: itemGroups, itemLayoutType: component.itemLayoutType)
             if let previousItemLayout = self.itemLayout {
                 if previousItemLayout.width != itemLayout.width {
                     itemTransition = .immediate

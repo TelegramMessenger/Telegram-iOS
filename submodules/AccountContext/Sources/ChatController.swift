@@ -469,7 +469,7 @@ public enum ChatPresentationInputQueryResult: Equatable {
     case hashtags([String])
     case mentions([EnginePeer])
     case commands([PeerCommand])
-    case emojis([(String, String)], NSRange)
+    case emojis([(String, TelegramMediaFile?, String)], NSRange)
     case contextRequestResult(EnginePeer?, ChatContextResultCollection?)
     
     public static func ==(lhs: ChatPresentationInputQueryResult, rhs: ChatPresentationInputQueryResult) -> Bool {
@@ -513,7 +513,13 @@ public enum ChatPresentationInputQueryResult: Equatable {
                     return false
                 }
                 for i in 0 ..< lhsValue.count {
-                    if lhsValue[i] != rhsValue[i] {
+                    if lhsValue[i].0 != rhsValue[i].0 {
+                        return false
+                    }
+                    if lhsValue[i].1?.fileId != rhsValue[i].1?.fileId {
+                        return false
+                    }
+                    if lhsValue[i].2 != rhsValue[i].2 {
                         return false
                     }
                 }

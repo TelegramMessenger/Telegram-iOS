@@ -412,7 +412,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 return UIView()
             }
             
-            return EmojiTextAttachmentView(context: context, emoji: emoji, file: emoji.file, cache: strongSelf.animationCache, renderer: strongSelf.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12))
+            return EmojiTextAttachmentView(context: context, emoji: emoji, file: emoji.file, cache: strongSelf.animationCache, renderer: strongSelf.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12), pointSize: CGSize(width: 24.0, height: 24.0))
         }
         
         self.updateSendButtonEnabled(isCaption || isAttachment, animated: false)
