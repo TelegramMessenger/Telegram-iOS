@@ -1106,11 +1106,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> then(
                                 context.engine.stickers.resolveInlineStickers(fileIds: emojiFileIds)
                                 |> mapToSignal { files -> Signal<ContextController.Items, NoError> in
-                                    var packReferences = Set<StickerPackReference>()
+                                    var packReferences: [StickerPackReference] = []
+                                    var existingIds = Set<Int64>()
                                     for (_, file) in files {
                                         loop: for attribute in file.attributes {
                                             if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
-                                                packReferences.insert(packReference)
+                                                if case let .id(id, _) = packReference, !existingIds.contains(id) {
+                                                    packReferences.append(packReference)
+                                                    existingIds.insert(id)
+                                                }
                                                 break loop
                                             }
                                         }

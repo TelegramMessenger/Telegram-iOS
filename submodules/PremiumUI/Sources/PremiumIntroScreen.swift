@@ -255,11 +255,11 @@ private struct PremiumIntroConfiguration {
             .noAds,
             .uniqueReactions,
             .premiumStickers,
+            .animatedEmoji,
             .advancedChatManagement,
             .profileBadge,
             .animatedUserpics,
-            .appIcons,
-            .animatedEmoji
+            .appIcons
         ])
     }
     
@@ -287,9 +287,6 @@ private struct PremiumIntroConfiguration {
             }
             if perks.count < 4 {
                 perks = PremiumIntroConfiguration.defaultValue.perks
-            }
-            if !perks.contains(.appIcons) {
-                perks.append(.appIcons)
             }
             return PremiumIntroConfiguration(perks: perks)
         } else {
