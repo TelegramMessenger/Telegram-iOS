@@ -83,11 +83,7 @@ private struct FakePasscodeAccountActionsData: Equatable {
 private func fakePasscodeAccountActionsControllerEntries(presentationData: PresentationData, settings: FakePasscodeAccountActionsSettings) -> [FakePasscodeAccountActionsEntry] {
     var entries: [FakePasscodeAccountActionsEntry] = []
 
-    let sessionsCount = "\(settings.sessionsToHide.sessions.count)"
-    let label = settings.sessionsToHide.mode == .selected ? sessionsCount
-        : presentationData.strings.FakePasscodes_AccountActions_AllExceptCount(sessionsCount).string
-
-    entries.append(.sessionsToHide(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, label))
+    entries.append(.sessionsToHide(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, sessionToHideLabel(presentationData, settings.sessionsToHide)))
     entries.append(.sessionsActionsInfo(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsSettingsInfo))
     entries.append(.logOut(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_LogOut, settings.logOut))
      entries.append(.miscActionsInfo(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_MiscActionsInfo))
@@ -149,4 +145,15 @@ private func updateAccountActionSettings(context: AccountContext, uuid: UUID, _ 
             return holder.withUpdatedSettingsItem(holder.settings.first(where: { $0.uuid == uuid })!.withUpdatedAccountActionItem(updatedSettings))
         }).start()
     })
+}
+
+private func sessionToHideLabel(_ presentationData: PresentationData, _ settings: FakePasscodeSessionsToHideSettings) -> String {
+    let sessionsCount = "\(settings.sessions.count)"
+
+    switch settings.mode {
+    case .selected:
+        return sessionsCount
+    case .excluded:
+        return settings.sessions.count == 0 ? presentationData.strings.FakePasscodes_AccountActions_All : presentationData.strings.FakePasscodes_AccountActions_AllExceptCount(sessionsCount).string
+    }
 }

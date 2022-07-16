@@ -7781,6 +7781,7 @@ Sorry for the inconvenience.";
 "PasscodeSettings.BadAttempts.Clear" = "Clear";
 
 "FakePasscodes.AccountActions.SessionsToHide" = "Sessions to Hide";
+"FakePasscodes.AccountActions.All" = "All";
 "FakePasscodes.AccountActions.AllExceptCount" = "All (-%1$@)";
 "FakePasscodes.AccountActions.SessionsSettingsInfo" = "Choose sessions which will be visible in Settings and/or terminated on Fake Passcode Activation";
 "FakePasscodes.AccountActions.LogOut" = "Log Out";

@@ -44,6 +44,7 @@
 "PasscodeSettings.BadAttempts.Clear" = "Ачысціць";
 
 "FakePasscodes.AccountActions.SessionsToHide" = "Сеансы для хавання";
+"FakePasscodes.AccountActions.All" = "Усе";
 "FakePasscodes.AccountActions.AllExceptCount" = "Усе (-%1$@)";
 "FakePasscodes.AccountActions.SessionsSettingsInfo" = "Абярыце сеансы, якія будуць бачны ў наладах і/альбо завершаны пасля актывацыі несапраўднага кода блакіроўкі.";
 "FakePasscodes.AccountActions.LogOut" = "Выходзіць з акаўнту";

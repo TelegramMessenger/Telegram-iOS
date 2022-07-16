@@ -70,14 +70,14 @@ public struct FakePasscodeSessionsToHideSettings: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        self.mode = try container.decode(SessionSelectionMode.self, forKey: "m")
+        self.mode = SessionSelectionMode(rawValue: try container.decode(Int32.self, forKey: "m")) ?? .selected
         self.sessions = try container.decode([Int64].self, forKey: "s")
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
+        try container.encode(self.mode.rawValue, forKey: "m")
         try container.encode(self.sessions, forKey: "s")
-        try container.encode(self.mode, forKey: "m")
     }
 
     public func withUpdatedSessions(_ sessions: [Int64]) -> FakePasscodeSessionsToHideSettings {
@@ -89,31 +89,7 @@ public struct FakePasscodeSessionsToHideSettings: Codable, Equatable {
     }
 }
 
-public enum SessionSelectionMode: Codable, Equatable {
+public enum SessionSelectionMode: Int32, Codable {
     case selected
     case excluded
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: StringCodingKey.self)
-
-        switch (try? container.decode(Int32.self, forKey: "t")) ?? 0 {
-        case 0:
-            self = .selected
-        case 1:
-            self = .excluded
-        default:
-            assertionFailure()
-            self = .selected
-        }
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: StringCodingKey.self)
-        switch self {
-        case .selected:
-            try container.encode(0 as Int32, forKey: "t")
-        case .excluded:
-            try container.encode(1 as Int32, forKey: "t")
-        }
-    }
 }
