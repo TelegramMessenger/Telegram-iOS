@@ -349,6 +349,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let textNode: TextNodeWithEntities
     private var textSelectionNode: TextSelectionNode?
     private let iconNode: ASImageNode
+    private let placeholderNode: ASDisplayNode
     
     private let text: String
     private var arguments: TextNodeWithEntities.Arguments?
@@ -408,6 +409,11 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.image = generateTintedImage(image: icon, color: presentationData.theme.contextMenu.primaryColor)
         
+        self.placeholderNode = ASDisplayNode()
+        self.placeholderNode.clipsToBounds = true
+        self.placeholderNode.cornerRadius = 4.0
+        self.placeholderNode.isUserInteractionEnabled = false
+        
         super.init()
         
         self.clipsToBounds = true
@@ -424,6 +430,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         self.addSubnode(self.highlightBackgroundNode)
         self.addSubnode(self.textNode.textNode)
         self.addSubnode(self.iconNode)
+        self.addSubnode(self.placeholderNode)
         
         self.textSelectionNode.flatMap(self.addSubnode)
         
@@ -445,6 +452,16 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         }
         
         self.buttonNode.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
+        
+        let shimmeringForegroundColor: UIColor
+        if presentationData.theme.overallDarkAppearance {
+            let backgroundColor = presentationData.theme.contextMenu.backgroundColor.blitOver(presentationData.theme.list.plainBackgroundColor, alpha: 1.0)
+            shimmeringForegroundColor = presentationData.theme.contextMenu.primaryColor.blitOver(backgroundColor, alpha: 0.1)
+        } else {
+            shimmeringForegroundColor = presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.07)
+        }
+        
+        self.placeholderNode.backgroundColor = shimmeringForegroundColor
         
         self.isUserInteractionEnabled = isUserInteractionEnabled
     }
@@ -511,14 +528,37 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             shimmeringForegroundColor = presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.07)
         }
         
+        let textRightInset: CGFloat
+        if let _ = self.iconNode.image {
+            textRightInset = iconSize.width - 8.0
+        } else {
+            textRightInset = 0.0
+        }
+        
         let makeTextLayout = TextNodeWithEntities.asyncLayout(self.textNode)
-        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, minimumNumberOfLines: 0, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - horizontalInset * 2.0 - iconSize.width - 8.0, height: .greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets(), lineColor: nil, textShadowColor: nil, textStroke: nil))
+        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, minimumNumberOfLines: 0, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - horizontalInset * 2.0 - textRightInset, height: .greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets(), lineColor: nil, textShadowColor: nil, textStroke: nil))
         let _ = textApply(self.arguments?.withUpdatedPlaceholderColor(shimmeringForegroundColor))
         
         let textFrame = CGRect(origin: CGPoint(x: horizontalInset, y: verticalInset), size: textLayout.size)
         transition.updateFrame(node: self.textNode.textNode, frame: textFrame)
+        if textFrame.size.height.isZero {
+            self.textNode.textNode.alpha = 0.0
+        } else if self.textNode.textNode.alpha.isZero {
+            self.textNode.textNode.alpha = 1.0
+            self.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.placeholderNode.layer.animateAlpha(from: self.placeholderNode.alpha, to: 1.0, duration: 0.2)
+        }
         
-        let size = CGSize(width: width, height: textLayout.size.height + verticalInset * 2.0)
+        var contentHeight = textLayout.size.height
+        if contentHeight.isZero {
+            contentHeight = 32.0
+        }
+        
+        let size = CGSize(width: width, height: contentHeight + verticalInset * 2.0)
+        
+        let lineHeight: CGFloat = 8.0
+        transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: horizontalInset, y: floorToScreenPixels((size.height - lineHeight) / 2.0)), size: CGSize(width: width - horizontalInset * 2.0, height: lineHeight)))
+        transition.updateAlpha(node: self.placeholderNode, alpha: textFrame.height.isZero ? 1.0 : 0.0)
         
         let iconFrame = CGRect(origin: CGPoint(x: size.width - standardIconWidth - iconSideInset + floor((standardIconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
