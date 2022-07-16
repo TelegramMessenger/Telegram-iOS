@@ -1100,6 +1100,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         if !emojiFileIds.isEmpty {
                             tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
+                            actions.tip = tip
                             disableTransitionAnimations = true
                             
                             actionsSignal = .single(actions)

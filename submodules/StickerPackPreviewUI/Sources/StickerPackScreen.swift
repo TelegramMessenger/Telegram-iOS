@@ -1009,7 +1009,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 let layout = ItemLayout(width: fillingWidth, itemsCount: stickerPack.1.count, hasTitle: true)
                 packsHeight += layout.height
             }
-            contentHeight = packsHeight
+            contentHeight = packsHeight + 8.0
         } else if let (info, items, _) = self.currentStickerPack {
             if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
                 let layout = ItemLayout(width: fillingWidth, itemsCount: items.count, hasTitle: false)
