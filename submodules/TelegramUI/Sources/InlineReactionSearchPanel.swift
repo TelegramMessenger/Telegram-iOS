@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import StickerPackPreviewUI
+import StickerPeekUI
 import ContextUI
 import ChatPresentationInterfaceState
 import PremiumUI

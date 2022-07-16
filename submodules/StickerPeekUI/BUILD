@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "StickerPackPreviewUI",
-    module_name = "StickerPackPreviewUI",
+    name = "StickerPeekUI",
+    module_name = "StickerPeekUI",
     srcs = glob([
 		"Sources/**/*.swift",
     ]),
@@ -18,27 +18,17 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/ShareController:ShareController",
         "//submodules/StickerResources:StickerResources",
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TextFormat:TextFormat",
-        "//submodules/MergeLists:MergeLists",
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
-        "//submodules/ArchivedStickerPacksNotice:ArchivedStickerPacksNotice",
         "//submodules/ShimmerEffect:ShimmerEffect",
-        "//submodules/UndoUI:UndoUI",
         "//submodules/ContextUI:ContextUI",
-        "//submodules/MoreButtonNode:MoreButtonNode",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/PremiumUI:PremiumUI",
-        "//submodules/OverlayStatusController:OverlayStatusController",
-        "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",
-        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
-        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
-        "//submodules/StickerPeekUI:StickerPeekUI",
     ],
     visibility = [
         "//visibility:public",

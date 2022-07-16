@@ -14,6 +14,8 @@ import TelegramNotices
 import LocalAuth
 import AppBundle
 import PasswordSetupUI
+import UndoUI
+import PremiumUI
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account
@@ -130,11 +132,11 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return 8
             case .voiceCallPrivacy:
                 return 9
-            case .forwardPrivacy:
-                return 10
-            case .groupPrivacy:
-                return 11
             case .voiceMessagePrivacy:
+                return 10
+            case .forwardPrivacy:
+                return 11
+            case .groupPrivacy:
                 return 12
             case .selectivePrivacyInfo:
                 return 13
@@ -447,18 +449,18 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
         entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.presence)))
         entries.append(.profilePhotoPrivacy(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.profilePhoto)))
         entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceCalls)))
+        entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceMessages)))
         entries.append(.forwardPrivacy(presentationData.theme, presentationData.strings.Privacy_Forwards, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.forwards)))
         entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.groupInvitations)))
-        entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceMessages)))
         
         entries.append(.selectivePrivacyInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_GroupsAndChannelsHelp))
     } else {
         entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, presentationData.strings.Channel_NotificationLoading))
         entries.append(.profilePhotoPrivacy(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto, presentationData.strings.Channel_NotificationLoading))
         entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, presentationData.strings.Channel_NotificationLoading))
+        entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, presentationData.strings.Channel_NotificationLoading))
         entries.append(.forwardPrivacy(presentationData.theme, presentationData.strings.Privacy_Forwards, presentationData.strings.Channel_NotificationLoading))
         entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, presentationData.strings.Channel_NotificationLoading))
-        entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, presentationData.strings.Channel_NotificationLoading))
         entries.append(.selectivePrivacyInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_GroupsAndChannelsHelp))
     }
     
@@ -738,26 +740,43 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             }
         }))
     }, openVoiceMessagePrivacy: {
-        let signal = privacySettingsPromise.get()
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let signal = combineLatest(
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+            privacySettingsPromise.get()
+        )
         |> take(1)
         |> deliverOnMainQueue
-        currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
-            if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .voiceMessages, current: info.voiceMessages, updated: { updated, _, _ in
-                    if let currentInfoDisposable = currentInfoDisposable {
-                        let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
-                            |> filter { $0 != nil }
-                            |> take(1)
-                            |> deliverOnMainQueue
-                            |> mapToSignal { value -> Signal<Void, NoError> in
-                                if let value = value {
-                                    privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: updated, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: value.accountRemovalTimeout)))
-                                }
-                                return .complete()
+        currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] peer, info in
+            let isPremium = peer?.isPremium ?? false
+            
+            if isPremium {
+                if let info = info {
+                    pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .voiceMessages, current: info.voiceMessages, updated: { updated, _, _ in
+                        if let currentInfoDisposable = currentInfoDisposable {
+                            let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
+                                |> filter { $0 != nil }
+                                |> take(1)
+                                |> deliverOnMainQueue
+                                |> mapToSignal { value -> Signal<Void, NoError> in
+                                    if let value = value {
+                                        privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: updated, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: value.accountRemovalTimeout)))
+                                    }
+                                    return .complete()
+                            }
+                            currentInfoDisposable.set(applySetting.start())
                         }
-                        currentInfoDisposable.set(applySetting.start())
+                    }), true)
+                }
+            } else {
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Privacy_VoiceMessages_Tooltip), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                    if action == .info {
+                        let controller = PremiumIntroScreen(context: context, source: .settings)
+                        pushControllerImpl?(controller, true)
+                        return true
                     }
-                }), true)
+                    return false
+                }))
             }
         }))
     }, openPasscode: {
@@ -953,7 +972,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: true)
     }
     presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        controller?.present(c, in: .window(.root), with: nil)
     }
     getNavigationControllerImpl = {  [weak controller] in
         return (controller?.navigationController as? NavigationController)

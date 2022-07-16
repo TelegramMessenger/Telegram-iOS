@@ -2667,7 +2667,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             let baseNavigationController = strongSelf.baseNavigationController()
             baseNavigationController?.view.endEditing(true)
-            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil, actionPerformed: { info, items, action in
+            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: Array(packs.prefix(1)), sendSticker: nil, actionPerformed: { info, items, action in
                 let animateInAsReplacement = false
                 switch action {
                 case .add:

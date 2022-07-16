@@ -36,7 +36,7 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/ContextUI:ContextUI",
         "//submodules/PremiumUI:PremiumUI",
-        "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
+        "//submodules/StickerPeekUI:StickerPeekUI",
         "//submodules/UndoUI:UndoUI",
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
         "//submodules/Components/SolidRoundedButtonComponent:SolidRoundedButtonComponent",

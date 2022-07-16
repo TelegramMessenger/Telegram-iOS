@@ -181,11 +181,18 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                    return ("URL", contents)
+                }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = Double(max(5, min(8, text.count / 14)))
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
             case let .actionSucceeded(title, text, cancel):
                 self.avatarNode = nil
                 self.iconNode = nil

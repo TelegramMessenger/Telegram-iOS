@@ -20,6 +20,7 @@ import UrlHandling
 import MoreButtonNode
 import BotPaymentsUI
 import PromptUI
+import PhoneNumberFormat
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -798,6 +799,40 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if let json = json, let needConfirmation = json["need_confirmation"] as? Bool {
                         self.needDismissConfirmation = needConfirmation
                     }
+                case "web_app_request_phone":
+                    let _ = (self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
+                    |> deliverOnMainQueue).start(next: { [weak self] accountPeer in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        guard let user = accountPeer as? TelegramUser, let phoneNumber = user.phone else {
+                            return
+                        }
+                        
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        var items: [ActionSheetItem] = []
+                        items.append(ActionSheetTextItem(title: strongSelf.presentationData.strings.WebApp_ShareMyPhoneNumberConfirmation(formatPhoneNumber(phoneNumber), strongSelf.controller?.botName ?? "").string, parseMarkdown: true))
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.WebApp_ShareMyPhoneNumber, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            strongSelf.sendPhoneRequestedEvent(phone: phoneNumber)
+                        }))
+                        
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                strongSelf.sendPhoneRequestedEvent(phone: nil)
+                            })
+                        ])])
+                        strongSelf.controller?.present(actionSheet, in: .window(.root))
+                    })
                 default:
                     break
             }
@@ -918,6 +953,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 paramsString = "{button_id: \"\(id)\"}"
             }
             self.webView?.sendEvent(name: "popup_closed", data: paramsString)
+        }
+        
+        fileprivate func sendPhoneRequestedEvent(phone: String?) {
+            var paramsString: String?
+            if let phone = phone {
+                paramsString = "{phone_number: \"\(phone)\"}"
+            }
+            self.webView?.sendEvent(name: "phone_requested", data: paramsString)
         }
     }
     

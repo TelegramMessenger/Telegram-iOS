@@ -240,7 +240,7 @@ enum PremiumPerk: CaseIterable {
             case .appIcons:
                 return "Premium/Perk/AppIcon"
             case .animatedEmoji:
-                return "Premium/Perk/AppIcon"
+                return "Premium/Perk/Emoji"
         }
     }
 }

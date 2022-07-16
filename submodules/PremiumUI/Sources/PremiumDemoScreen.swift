@@ -905,7 +905,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoFile: configuration.videos["profile_badge"],
+                                    videoFile: configuration.videos["animated_emoji"],
                                     decoration: .emoji
                                 )),
                                 title: strings.Premium_AnimatedEmoji,

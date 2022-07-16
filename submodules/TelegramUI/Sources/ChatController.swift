@@ -78,6 +78,8 @@ import ChatTextLinkEditUI
 import WebUI
 import PremiumUI
 import ImageTransparency
+import StickerPackPreviewUI
+import TextNodeWithEntities
 
 #if DEBUG
 import os.signpost
@@ -955,6 +957,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if strongSelf.presentationInterfaceState.interfaceState.selectionState != nil {
                 return
             }
+            let presentationData = strongSelf.presentationData
             
             strongSelf.dismissAllTooltips()
             
@@ -1003,7 +1006,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
 
                     var tip: ContextController.Tip?
-
+                    
                     if tip == nil {
                         var isAction = false
                         for media in message.media {
@@ -1036,7 +1039,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     actions.context = strongSelf.context
-                                 
+                                         
                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                     
                     if canAddMessageReactions(message: topMessage), let availableReactions = availableReactions, let allowedReactions = allowedReactions {
@@ -1084,7 +1087,84 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                     
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message, selectAll: selectAll)), items: .single(actions), recognizer: recognizer, gesture: gesture)
+                    let presentationContext = strongSelf.controllerInteraction?.presentationContext
+                    
+                    var disableTransitionAnimations = false
+                    var actionsSignal: Signal<ContextController.Items, NoError> = .single(actions)
+                    if actions.tip == nil, let entitiesAttribute = message.textEntitiesAttribute {
+                        var emojiFileIds: [Int64] = []
+                        for entity in entitiesAttribute.entities {
+                            if case let .CustomEmoji(_, fileId) = entity.type {
+                                emojiFileIds.append(fileId)
+                            }
+                        }
+                        if !emojiFileIds.isEmpty {
+                            tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
+                            disableTransitionAnimations = true
+                            
+                            actionsSignal = .single(actions)
+                            |> then(
+                                context.engine.stickers.resolveInlineStickers(fileIds: emojiFileIds)
+                                |> mapToSignal { files -> Signal<ContextController.Items, NoError> in
+                                    var packReferences = Set<StickerPackReference>()
+                                    for (_, file) in files {
+                                        loop: for attribute in file.attributes {
+                                            if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                                                packReferences.insert(packReference)
+                                                break loop
+                                            }
+                                        }
+                                    }
+                                    
+                                    let action = {
+                                        guard let packReference = packReferences.first, let strongSelf = self else {
+                                            return
+                                        }
+                                        let controller = StickerPackScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(packReferences), parentNavigationController: strongSelf.effectiveNavigationController)
+                                        strongSelf.present(controller, in: .window(.root))
+                                    }
+                                    
+                                    if packReferences.count > 1 {
+                                        actions.tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_EmojiSet(Int32(packReferences.count)), arguments: nil, file: nil, action: action)
+                                        return .single(actions)
+                                    } else if let reference = packReferences.first {
+                                        return context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
+                                        |> filter { result in
+                                            if case .result = result {
+                                                return true
+                                            } else {
+                                                return false
+                                            }
+                                        }
+                                        |> mapToSignal { result in
+                                            if case let .result(info, items, _) = result, let presentationContext = presentationContext {
+                                                actions.tip = .animatedEmoji(
+                                                    text: presentationData.strings.ChatContextMenu_EmojiSetSingle(info.title).string,
+                                                    arguments: TextNodeWithEntities.Arguments(
+                                                        context: context,
+                                                        cache: presentationContext.animationCache,
+                                                        renderer: presentationContext.animationRenderer,
+                                                        placeholderColor: .clear,
+                                                        attemptSynchronous: true
+                                                    ),
+                                                    file: items.first?.file,
+                                                    action: action)
+                                                return .single(actions)
+                                            } else {
+                                                return .complete()
+                                            }
+                                        }
+                                    } else {
+                                        actions.tip = nil
+                                        return .single(actions)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    
+                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message, selectAll: selectAll)), items: actionsSignal, recognizer: recognizer, gesture: gesture)
+                    controller.immediateItemsTransitionAnimation = disableTransitionAnimations
                     controller.getOverlayViews = { [weak self] in
                         guard let strongSelf = self else {
                             return []
@@ -7298,16 +7378,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.chatDisplayNode.dismissInput()
                 
-                let context = strongSelf.context
-                var replaceImpl: ((ViewController) -> Void)?
-                let controller = PremiumDemoScreen(context: context, subject: .voiceToText, action: {
-                    let controller = PremiumIntroScreen(context: context, source: .settings)
-                    replaceImpl?(controller)
-                })
-                replaceImpl = { [weak controller] c in
-                    controller?.replace(with: c)
-                }
-                strongSelf.push(controller)
+                strongSelf.interfaceInteraction?.displayRestrictedInfo(.premiumVoiceMessages, .tooltip)
                 return
             }
             
@@ -7393,7 +7464,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             switch subject {
                 case .stickers:
                     subjectFlags = .banSendStickers
-                case .mediaRecording:
+                case .mediaRecording, .premiumVoiceMessages:
                     subjectFlags = .banSendMedia
             }
                         
@@ -7429,6 +7500,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else {
                             banDescription = strongSelf.presentationInterfaceState.strings.Conversation_DefaultRestrictedMedia
                         }
+                    case .premiumVoiceMessages:
+                        banDescription = ""
                 }
                 if strongSelf.recordingModeFeedback == nil {
                     strongSelf.recordingModeFeedback = HapticFeedback()
@@ -7448,7 +7521,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 rectValue.origin.y = actionRect.minY
                                 rect = rectValue
                             }
-                        case .mediaRecording:
+                        case .mediaRecording, .premiumVoiceMessages:
                             rect = strongSelf.chatDisplayNode.frameForInputActionButton()
                         }
                         
@@ -7476,7 +7549,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            if case .mediaRecording = subject, strongSelf.presentationInterfaceState.hasActiveGroupCall {
+            if case .premiumVoiceMessages = subject {
+                let rect = strongSelf.chatDisplayNode.frameForInputActionButton()
+                if let rect = rect {
+                    strongSelf.mediaRestrictedTooltipController?.dismiss()
+                    let text: String
+                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer.flatMap({ EnginePeer($0) }) {
+                        text = strongSelf.presentationInterfaceState.strings.Conversation_VoiceMessagesRestricted(peer.compactDisplayTitle).string
+                    } else {
+                        text = ""
+                    }
+                    let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
+                    strongSelf.mediaRestrictedTooltipController = tooltipController
+                    strongSelf.mediaRestrictedTooltipControllerMode = false
+                    tooltipController.dismissed = { [weak tooltipController] _ in
+                        if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRestrictedTooltipController === tooltipController {
+                            strongSelf.mediaRestrictedTooltipController = nil
+                        }
+                    }
+                    strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                        if let strongSelf = self {
+                            return (strongSelf.chatDisplayNode, rect)
+                        }
+                        return nil
+                    }))
+                }
+            } else if case .mediaRecording = subject, strongSelf.presentationInterfaceState.hasActiveGroupCall {
                 let rect = strongSelf.chatDisplayNode.frameForInputActionButton()
                 if let rect = rect {
                     strongSelf.mediaRestrictedTooltipController?.dismiss()

@@ -20,6 +20,7 @@ public enum ItemListDisclosureLabelStyle {
     case text
     case detailText
     case coloredText(UIColor)
+//    case textWithIcon(UIColor)
     case multilineDetailText
     case badge(UIColor)
     case color(UIColor)

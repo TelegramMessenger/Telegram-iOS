@@ -46,6 +46,7 @@ public enum ChatPanelSearchNavigationAction {
 public enum ChatPanelRestrictionInfoSubject {
     case mediaRecording
     case stickers
+    case premiumVoiceMessages
 }
 
 public enum ChatPanelRestrictionInfoDisplayType {

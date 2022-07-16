@@ -11,6 +11,7 @@ import TelegramNotices
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
+import StickerPeekUI
 import PeerInfoUI
 import SettingsUI
 import ContextUI

@@ -26,6 +26,7 @@ import AppLock
 import WallpaperBackgroundNode
 import InAppPurchaseManager
 import PremiumUI
+import StickerPackPreviewUI
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1501,6 +1502,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 mappedSource = .profile(peerId)
         }
         return PremiumIntroScreen(context: context, source: mappedSource)
+    }
+    
+    public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {
+        return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     }
 }
 

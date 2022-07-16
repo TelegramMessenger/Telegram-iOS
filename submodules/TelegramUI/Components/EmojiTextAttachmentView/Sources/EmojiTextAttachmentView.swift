@@ -71,12 +71,12 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         if let file = file {
             self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
         } else {
-            self.infoDisposable = (context.engine.stickers.resolveInlineSticker(fileId: emoji.fileId)
-            |> deliverOnMainQueue).start(next: { [weak self] file in
+            self.infoDisposable = (context.engine.stickers.resolveInlineStickers(fileIds: [emoji.fileId])
+            |> deliverOnMainQueue).start(next: { [weak self] files in
                 guard let strongSelf = self else {
                     return
                 }
-                if let file = file {
+                if let file = files[emoji.fileId] {
                     strongSelf.updateFile(file: file, attemptSynchronousLoad: false)
                 }
             })

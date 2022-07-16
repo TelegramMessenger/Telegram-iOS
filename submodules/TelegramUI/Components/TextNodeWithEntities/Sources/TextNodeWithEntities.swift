@@ -60,6 +60,16 @@ public final class TextNodeWithEntities {
             self.placeholderColor = placeholderColor
             self.attemptSynchronous = attemptSynchronous
         }
+        
+        public func withUpdatedPlaceholderColor(_ color: UIColor) -> Arguments {
+            return Arguments(
+                context: self.context,
+                cache: self.cache,
+                renderer: self.renderer,
+                placeholderColor: self.placeholderColor,
+                attemptSynchronous: self.attemptSynchronous
+            )
+        }
     }
     
     public let textNode: TextNode

@@ -7844,6 +7844,12 @@ Sorry for the inconvenience.";
 "StickerPack.RemoveEmojiCount_1" = "Remove 1 Emoji";
 "StickerPack.RemoveEmojiCount_any" = "Remove %@ Emoji";
 
+"StickerPack.AddEmojiPacksCount_1" = "Add 1 Emoji Pack";
+"StickerPack.AddEmojiPacksCount_any" = "Add %@ Emoji Packs";
+
+"StickerPack.RemoveEmojiPacksCount_1" = "Remove 1 Emoji Packs";
+"StickerPack.RemoveEmojiPacksCount_any" = "Remove %@ Emoji Packs";
+
 "Gallery.AirPlay" = "AirPlay";
 "Gallery.AirPlayPlaceholder" = "This video is playing on the TV using AirPlay";
 
@@ -7851,6 +7857,8 @@ Sorry for the inconvenience.";
 "WebApp.CloseAnyway" = "Close Anyway";
 
 "Privacy.VoiceMessages" = "Voice Messages";
+
+"Privacy.VoiceMessages.Tooltip" = "Only subscribers of [Telegram Premium]() can restrict receiving voice messages.";
 
 "Privacy.VoiceMessages.WhoCanSend" = "WHO CAN SEND ME VOICE MESSAGES";
 "Privacy.VoiceMessages.CustomHelp" = "You can restrict who can send you voice messages with granular precision.";
@@ -7861,6 +7869,22 @@ Sorry for the inconvenience.";
 "Premium.AnimatedEmoji" = "Animated Emoji";
 "Premium.AnimatedEmojiInfo" = "Include animated emoji from different emoji sets in any message you send.";
 
-"ChatContextMenu.EmojiSetSingle" = "This message contains %@ emoji.";
-"ChatContextMenu.EmojiSet_1" = "This message contains emoji from %@ pack.";
-"ChatContextMenu.EmojiSet_many" = "This message contains emoji from %@ packs.";
+"ChatContextMenu.EmojiSetSingle" = "This message contains\n#[%@]() emoji.";
+"ChatContextMenu.EmojiSet_1" = "This message contains emoji from [%@ pack]().";
+"ChatContextMenu.EmojiSet_any" = "This message contains emoji from [%@ packs]().";
+
+"EmojiPack.Title" = "Emoji";
+"EmojiPack.Emoji_1" = "%@ emoji";
+"EmojiPack.Emoji_any" = "%@ emoji";
+"EmojiPack.Add" = "Add";
+"EmojiPack.Added" = "Added";
+
+"EmojiPackActionInfo.AddedTitle" = "Emoji Added";
+"EmojiPackActionInfo.AddedText" = "%@ has been added to your emoji.";
+"EmojiPackActionInfo.RemovedTitle" = "Emoji Removed";
+"EmojiPackActionInfo.RemovedText" = "%@ is no longer in your emoji.";
+
+"WebApp.ShareMyPhoneNumber" = "Share My Phone Number";
+"WebApp.ShareMyPhoneNumberConfirmation" = "Are you sure you want to share your phone number **%1$@** with **%2$@**?";
+
+"Conversation.VoiceMessagesRestricted" = "%@ doesn't accept voice and video messages";
