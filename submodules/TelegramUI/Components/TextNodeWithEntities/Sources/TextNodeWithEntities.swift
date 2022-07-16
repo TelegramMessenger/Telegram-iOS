@@ -112,13 +112,19 @@ public final class TextNodeWithEntities {
             if let sourceString = arguments.attributedString {
                 let string = NSMutableAttributedString(attributedString: sourceString)
                 
-                let fullRange = NSRange(location: 0, length: string.length)
-                string.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: fullRange, options: [], using: { value, range, _ in
-                    if let value = value as? ChatTextInputTextCustomEmojiAttribute {
-                        if let font = string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont {
-                            string.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: value, file: value.file, fontSize: font.pointSize), range: range)
+                var fullRange = NSRange(location: 0, length: string.length)
+                while true {
+                    var found = false
+                    string.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: fullRange, options: [], using: { value, range, stop in
+                        if let value = value as? ChatTextInputTextCustomEmojiAttribute, let font = string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont {
+                            let updatedSubstring = NSMutableAttributedString(string: ".")
                             
-                            let itemSize = font.pointSize * 24.0 / 17.0 / CGFloat(min(2, range.length))
+                            let replacementRange = NSRange(location: 0, length: updatedSubstring.length)
+                            updatedSubstring.addAttributes(string.attributes(at: range.location, effectiveRange: nil), range: replacementRange)
+                            updatedSubstring.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: value, file: value.file, fontSize: font.pointSize), range: replacementRange)
+                            updatedSubstring.addAttribute(originalTextAttributeKey, value: string.attributedSubstring(from: range).string, range: replacementRange)
+                            
+                            let itemSize = font.pointSize * 24.0 / 17.0
                             
                             let runDelegateData = RunDelegateData(
                                 ascent: font.ascender,
@@ -126,7 +132,7 @@ public final class TextNodeWithEntities {
                                 width: itemSize
                             )
                             var callbacks = CTRunDelegateCallbacks(
-                                version: kCTRunDelegateVersion1,
+                                version: kCTRunDelegateCurrentVersion,
                                 dealloc: { dataRef in
                                     Unmanaged<RunDelegateData>.fromOpaque(dataRef).release()
                                 },
@@ -143,12 +149,23 @@ public final class TextNodeWithEntities {
                                     return data.takeUnretainedValue().width
                                 }
                             )
+                            
                             if let runDelegate = CTRunDelegateCreate(&callbacks, Unmanaged.passRetained(runDelegateData).toOpaque()) {
-                                string.addAttribute(NSAttributedString.Key(kCTRunDelegateAttributeName as String), value: runDelegate, range: range)
+                                updatedSubstring.addAttribute(NSAttributedString.Key(kCTRunDelegateAttributeName as String), value: runDelegate, range: replacementRange)
                             }
+                            
+                            string.replaceCharacters(in: range, with: updatedSubstring)
+                            let updatedRange = NSRange(location: range.location, length: updatedSubstring.length)
+                            
+                            found = true
+                            stop.pointee = ObjCBool(true)
+                            fullRange = NSRange(location: updatedRange.upperBound, length: fullRange.upperBound - range.upperBound)
                         }
+                    })
+                    if !found {
+                        break
                     }
-                })
+                }
                 
                 updatedString = string
             }

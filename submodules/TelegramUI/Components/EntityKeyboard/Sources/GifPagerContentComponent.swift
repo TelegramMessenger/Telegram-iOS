@@ -306,31 +306,28 @@ public final class GifPagerContentComponent: Component {
                     }
                 }
             }
-            private(set) var displayPlaceholder: Bool = false {
-                didSet {
-                    if self.displayPlaceholder != oldValue {
-                        self.onUpdateDisplayPlaceholder(self.displayPlaceholder)
-                    }
-                }
-            }
-            let onUpdateDisplayPlaceholder: (Bool) -> Void
+            private(set) var displayPlaceholder: Bool = false
+            let onUpdateDisplayPlaceholder: (Bool, Double) -> Void
             
             init(
                 item: Item?,
                 context: AccountContext,
                 groupId: String,
                 attemptSynchronousLoad: Bool,
-                onUpdateDisplayPlaceholder: @escaping (Bool) -> Void
+                onUpdateDisplayPlaceholder: @escaping (Bool, Double) -> Void
             ) {
                 self.item = item
                 self.onUpdateDisplayPlaceholder = onUpdateDisplayPlaceholder
                 
                 super.init(context: context, file: item?.file, synchronousLoad: attemptSynchronousLoad)
                 
-                self.updateDisplayPlaceholder(displayPlaceholder: true)
+                if item == nil {
+                    self.updateDisplayPlaceholder(displayPlaceholder: true, duration: 0.0)
+                }
                 
                 self.started = { [weak self] in
-                    self?.updateDisplayPlaceholder(displayPlaceholder: false)
+                    let _ = self
+                    //self?.updateDisplayPlaceholder(displayPlaceholder: false, duration: 0.2)
                 }
             }
             
@@ -359,8 +356,12 @@ public final class GifPagerContentComponent: Component {
                 self.shouldBeAnimating = shouldBePlaying
             }
             
-            func updateDisplayPlaceholder(displayPlaceholder: Bool) {
+            func updateDisplayPlaceholder(displayPlaceholder: Bool, duration: Double) {
+                if self.displayPlaceholder == displayPlaceholder {
+                    return
+                }
                 self.displayPlaceholder = displayPlaceholder
+                self.onUpdateDisplayPlaceholder(displayPlaceholder, duration)
             }
         }
         
@@ -402,6 +403,7 @@ public final class GifPagerContentComponent: Component {
         
         private let scrollView: ContentScrollView
         
+        private let placeholdersContainerView: UIView
         private var visibleItemPlaceholderViews: [ItemKey: ItemPlaceholderView] = [:]
         private var visibleItemLayers: [ItemKey: ItemLayer] = [:]
         private var ignoreScrolling: Bool = false
@@ -416,6 +418,8 @@ public final class GifPagerContentComponent: Component {
         override init(frame: CGRect) {
             self.shimmerHostView = PortalSourceView()
             self.standaloneShimmerEffect = StandaloneShimmerEffect()
+            
+            self.placeholdersContainerView = UIView()
             
             self.scrollView = ContentScrollView()
             
@@ -435,6 +439,8 @@ public final class GifPagerContentComponent: Component {
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
+            
+            self.scrollView.addSubview(self.placeholdersContainerView)
             
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
             
@@ -620,6 +626,12 @@ public final class GifPagerContentComponent: Component {
                     } else {
                         continue
                     }
+                    
+                    if !component.isLoading {
+                        if let placeholderView = self.visibleItemPlaceholderViews.removeValue(forKey: .placeholder(index)) {
+                            self.visibleItemPlaceholderViews[itemId] = placeholderView
+                        }
+                    }
                         
                     validIds.insert(itemId)
                     
@@ -639,7 +651,7 @@ public final class GifPagerContentComponent: Component {
                             context: component.context,
                             groupId: "savedGif",
                             attemptSynchronousLoad: attemptSynchronousLoads,
-                            onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder in
+                            onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -651,7 +663,7 @@ public final class GifPagerContentComponent: Component {
                                         } else {
                                             placeholderView = ItemPlaceholderView(shimmerView: strongSelf.shimmerHostView)
                                             strongSelf.visibleItemPlaceholderViews[itemId] = placeholderView
-                                            strongSelf.scrollView.insertSubview(placeholderView, at: 0)
+                                            strongSelf.placeholdersContainerView.addSubview(placeholderView)
                                         }
                                         placeholderView.frame = itemLayer.frame
                                         placeholderView.update(size: placeholderView.bounds.size)
@@ -661,9 +673,20 @@ public final class GifPagerContentComponent: Component {
                                 } else {
                                     if let placeholderView = strongSelf.visibleItemPlaceholderViews[itemId] {
                                         strongSelf.visibleItemPlaceholderViews.removeValue(forKey: itemId)
-                                        placeholderView.removeFromSuperview()
-                                        
-                                        strongSelf.updateShimmerIfNeeded()
+                                        if duration > 0.0 {
+                                            if let itemLayer = strongSelf.visibleItemLayers[itemId] {
+                                                itemLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+                                            }
+                                            
+                                            placeholderView.alpha = 0.0
+                                            placeholderView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { [weak self, weak placeholderView] _ in
+                                                placeholderView?.removeFromSuperview()
+                                                self?.updateShimmerIfNeeded()
+                                            })
+                                        } else {
+                                            placeholderView.removeFromSuperview()
+                                            strongSelf.updateShimmerIfNeeded()
+                                        }
                                     }
                                 }
                             }
@@ -683,9 +706,13 @@ public final class GifPagerContentComponent: Component {
                             itemTransition.setFrame(view: placeholderView, frame: itemFrame)
                             placeholderView.update(size: itemFrame.size)
                         }
-                    } else if updateItemLayerPlaceholder {
+                    }
+                    
+                    if updateItemLayerPlaceholder {
                         if itemLayer.displayPlaceholder {
-                            itemLayer.onUpdateDisplayPlaceholder(true)
+                            itemLayer.onUpdateDisplayPlaceholder(true, 0.0)
+                        } else {
+                            itemLayer.onUpdateDisplayPlaceholder(false, 0.2)
                         }
                     }
                 }
@@ -708,7 +735,7 @@ public final class GifPagerContentComponent: Component {
         }
         
         private func updateShimmerIfNeeded() {
-            if self.visibleItemPlaceholderViews.isEmpty {
+            if self.placeholdersContainerView.subviews.isEmpty {
                 self.standaloneShimmerEffect.layer = nil
             } else {
                 self.standaloneShimmerEffect.layer = self.shimmerHostView.layer

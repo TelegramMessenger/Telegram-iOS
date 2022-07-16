@@ -23,6 +23,8 @@ public struct ChatTextInputAttributes {
     public static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.textUrl, ChatTextInputAttributes.spoiler, ChatTextInputAttributes.customEmoji]
 }
 
+public let originalTextAttributeKey = NSAttributedString.Key(rawValue: "Attribute__OriginalText")
+
 public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedString {
     let sourceString = NSMutableAttributedString(attributedString: text)
     while true {
@@ -205,7 +207,8 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject {
     
     override public func isEqual(_ object: Any?) -> Bool {
         if let other = object as? ChatTextInputTextCustomEmojiAttribute {
-            return self.stickerPack == other.stickerPack && self.fileId == other.fileId && self.file?.fileId == other.file?.fileId
+            return self === other
+            //return self.stickerPack == other.stickerPack && self.fileId == other.fileId && self.file?.fileId == other.file?.fileId
         } else {
             return false
         }
