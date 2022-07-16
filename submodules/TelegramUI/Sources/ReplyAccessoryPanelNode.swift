@@ -70,6 +70,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.textNode.maximumNumberOfLines = 1
         self.textNode.displaysAsynchronously = false
         self.textNode.insets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
+        self.textNode.visibility = true
         
         if let animationCache = animationCache, let animationRenderer = animationRenderer {
             self.textNode.arguments = TextNodeWithEntities.Arguments(

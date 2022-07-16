@@ -253,7 +253,6 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 itemLayer = EmojiPagerContentComponent.View.ItemLayer(
                     item: EmojiPagerContentComponent.Item(file: item.file, staticEmoji: nil, subgroupId: nil),
                     context: context,
-                    groupId: "pack-\(Int(nativeItemSize))",
                     attemptSynchronousLoad: attemptSynchronousLoads,
                     file: item.file,
                     staticEmoji: nil,
@@ -263,7 +262,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                     blurredBadgeColor: theme.chat.inputPanel.panelBackgroundColor.withMultipliedAlpha(0.5),
                     displayPremiumBadgeIfAvailable: false,
                     pointSize: itemNativeFitSize,
-                    onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder in
+                    onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, _ in
                         guard let strongSelf = self else {
                             return
                         }
@@ -320,7 +319,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 }
             } else if updateItemLayerPlaceholder {
                 if itemLayer.displayPlaceholder {
-                    itemLayer.onUpdateDisplayPlaceholder(true)
+                    itemLayer.onUpdateDisplayPlaceholder(true, 0.0)
                 }
             }
             

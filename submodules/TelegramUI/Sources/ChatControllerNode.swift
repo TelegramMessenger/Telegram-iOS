@@ -540,13 +540,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.addSubnode(self.inputPanelContainerNode)
+        self.addSubnode(self.inputContextPanelContainer)
         
         self.inputPanelContainerNode.addSubnode(self.inputPanelClippingNode)
         self.inputPanelClippingNode.addSubnode(self.inputPanelBackgroundNode)
         self.inputPanelClippingNode.addSubnode(self.inputPanelBackgroundSeparatorNode)
         self.inputPanelBackgroundNode.addSubnode(self.inputPanelBottomBackgroundSeparatorNode)
-
-        self.contentContainerNode.addSubnode(self.inputContextPanelContainer)
 
         self.addSubnode(self.messageTransitionNode)
         self.contentContainerNode.addSubnode(self.navigateButtons)
@@ -1031,7 +1030,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         var insets: UIEdgeInsets
         var inputPanelBottomInsetTerm: CGFloat = 0.0
-        if inputNodeForState != nil {
+        if let inputNodeForState = inputNodeForState {
+            if !self.inputPanelContainerNode.stableIsExpanded && inputNodeForState.adjustLayoutForHiddenInput {
+                inputNodeForState.hideInput = false
+                inputNodeForState.adjustLayoutForHiddenInput = false
+            }
+            
             insets = layout.insets(options: [])
             inputPanelBottomInsetTerm = max(insets.bottom, layout.standardInputHeight)
         } else {
@@ -1191,9 +1195,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 inputNode.hideInputUpdated = { [weak self] transition in
                     self?.updateInputPanelBackgroundExpansion(transition: transition)
                 }
-                inputNode.expansionFractionUpdated = { [weak self] transition in
-                    self?.updateInputPanelBackgroundExpansion(transition: transition)
-                }
                 
                 dismissedInputNode = self.inputNode
                 if let inputNode = self.inputNode {
@@ -1236,7 +1237,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             inputNodeHeightAndOverflow = (
                 boundedHeight,
-                max(0.0, inputHeight - boundedHeight)
+                inputNode.followsDefaultHeight ? max(0.0, inputHeight - boundedHeight) : 0.0
             )
         } else if let inputNode = self.inputNode {
             dismissedInputNode = inputNode
@@ -1330,7 +1331,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
         var immediatelyLayoutInputContextPanelAndAnimateAppearance = false
-        if let inputContextPanelNode = inputContextPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.inputContextPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction) {
+        if let inputContextPanelNode = inputContextPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.inputContextPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, chatPresentationContext: self.controllerInteraction.presentationContext) {
             if inputContextPanelNode !== self.inputContextPanelNode {
                 dismissedInputContextPanelNode = self.inputContextPanelNode
                 self.inputContextPanelNode = inputContextPanelNode
@@ -1344,7 +1345,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         var immediatelyLayoutOverlayContextPanelAndAnimateAppearance = false
-        if let overlayContextPanelNode = chatOverlayContextPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.overlayContextPanelNode, interfaceInteraction: self.interfaceInteraction) {
+        if let overlayContextPanelNode = chatOverlayContextPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.overlayContextPanelNode, interfaceInteraction: self.interfaceInteraction, chatPresentationContext: self.controllerInteraction.presentationContext) {
             if overlayContextPanelNode !== self.overlayContextPanelNode {
                 dismissedOverlayContextPanelNode = self.overlayContextPanelNode
                 self.overlayContextPanelNode = overlayContextPanelNode
@@ -2058,7 +2059,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
             
-            let updatedInputFocus = self.chatPresentationInterfaceStateRequiresInputFocus(self.chatPresentationInterfaceState) != self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState)
+            var updatedInputFocus = self.chatPresentationInterfaceStateRequiresInputFocus(self.chatPresentationInterfaceState) != self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState)
+            if self.chatPresentationInterfaceStateInputView(self.chatPresentationInterfaceState) !== self.chatPresentationInterfaceStateInputView(chatPresentationInterfaceState) {
+                updatedInputFocus = true
+            }
             
             let updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
             self.chatPresentationInterfaceState = chatPresentationInterfaceState
@@ -2171,18 +2175,22 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.navigationBar?.setContentNode(nil, animated: transitionIsAnimated)
             }
             
+            var waitForKeyboardLayout = false
             if let textView = self.textInputPanelNode?.textInputNode?.textView {
                 let updatedInputView = self.chatPresentationInterfaceStateInputView(chatPresentationInterfaceState)
                 if textView.inputView !== updatedInputView {
                     textView.inputView = updatedInputView
                     if textView.isFirstResponder {
+                        if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState) {
+                            waitForKeyboardLayout = true
+                        }
                         textView.reloadInputViews()
                     }
                 }
             }
             
             if updatedInputFocus {
-                if !self.ignoreUpdateHeight {
+                if !self.ignoreUpdateHeight && !waitForKeyboardLayout {
                     self.scheduleLayoutTransitionRequest(layoutTransition)
                 }
                 

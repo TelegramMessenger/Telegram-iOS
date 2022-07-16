@@ -126,11 +126,11 @@ public final class TelegramRootController: NavigationController {
         }
         
         let accountSettingsController = PeerInfoScreenImpl(context: self.context, updatedPresentationData: nil, peerId: self.context.account.peerId, avatarInitiallyExpanded: false, isOpenedFromChat: false, nearbyPeerDistance: nil, callMessages: [], isSettings: true)
-        accountSettingsController.tabBarItemDebugTapAction = { [weak self, weak accountSettingsController] in
-            guard let strongSelf = self, let accountSettingsController = accountSettingsController else {
+        accountSettingsController.tabBarItemDebugTapAction = { [weak self] in
+            guard let strongSelf = self else {
                 return
             }
-            accountSettingsController.push(debugController(sharedContext: strongSelf.context.sharedContext, context: strongSelf.context))
+            strongSelf.pushViewController(debugController(sharedContext: strongSelf.context.sharedContext, context: strongSelf.context))
         }
         controllers.append(accountSettingsController)
         

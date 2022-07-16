@@ -493,7 +493,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
     
     private var choosingStickerDisposable: Disposable?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, peerId: PeerId?) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, peerId: PeerId?, chatPresentationContext: ChatPresentationContext) {
         self.containerNode = ASDisplayNode()
         
         self.backgroundNode = ASDisplayNode()
@@ -536,7 +536,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         self.stickersNode = InlineReactionSearchStickersNode(context: context, theme: theme, strings: strings, peerId: peerId)
         
-        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize, chatPresentationContext: chatPresentationContext)
         
         self.placement = .overPanels
         self.isOpaque = false

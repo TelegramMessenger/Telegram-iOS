@@ -23,6 +23,8 @@ public struct ChatTextInputAttributes {
     public static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.textUrl, ChatTextInputAttributes.spoiler, ChatTextInputAttributes.customEmoji]
 }
 
+public let originalTextAttributeKey = NSAttributedString.Key(rawValue: "Attribute__OriginalText")
+
 public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedString {
     let sourceString = NSMutableAttributedString(attributedString: text)
     while true {
@@ -139,35 +141,6 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
         }
     })
     
-    /*if #available(iOS 15, *), let emojiViewProvider = emojiViewProvider {
-        let _ = CustomTextAttachmentViewProvider.ensureRegistered
-        
-        var nextIndex: [String: Int] = [:]
-        
-        result.string.enumerateSubstrings(in: result.string.startIndex ..< result.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
-            if let substring = substring {
-                let emoji = substring.basicEmoji.0
-                
-                if !emoji.isEmpty && emoji.isSingleEmoji && availableEmojis.contains(emoji) {
-                    let index: Int
-                    if let value = nextIndex[emoji] {
-                        index = value
-                    } else {
-                        index = 0
-                    }
-                    nextIndex[emoji] = index + 1
-                    
-                    let attachment = EmojiTextAttachment(index: index, emoji: emoji, viewProvider: emojiViewProvider)
-                    attachment.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 16.0))
-                    
-                    result.replaceCharacters(in: NSRange(substringRange, in: result.string), with: NSAttributedString(attachment: attachment))
-                    
-                    stop = true
-                }
-            }
-        }
-    }*/
-    
     return result
 }
 
@@ -234,7 +207,8 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject {
     
     override public func isEqual(_ object: Any?) -> Bool {
         if let other = object as? ChatTextInputTextCustomEmojiAttribute {
-            return self.stickerPack == other.stickerPack && self.fileId == other.fileId && self.file?.fileId == other.file?.fileId
+            return self === other
+            //return self.stickerPack == other.stickerPack && self.fileId == other.fileId && self.file?.fileId == other.file?.fileId
         } else {
             return false
         }
@@ -562,15 +536,6 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
                     }
                 } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
                     textNode.textView.textStorage.addAttribute(key, value: value, range: range)
-                    if let emojiViewProvider = emojiViewProvider {
-                        let _ = emojiViewProvider
-                        /*let emojiText = attributedText.attributedSubstring(from: range)
-                        let attachment = EmojiTextAttachment(index: emojiIndex, text: emojiText.string, emoji: value, viewProvider: emojiViewProvider)
-                        emojiIndex += 1
-                        attachment.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 16.0))
-                        
-                        replaceRanges.append((range, attachment))*/
-                    }
                 }
             }
                 
@@ -601,52 +566,6 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
         for (range, attachment) in replaceRanges.sorted(by: { $0.0.location > $1.0.location }) {
             textNode.textView.textStorage.replaceCharacters(in: range, with: NSAttributedString(attachment: attachment))
         }
-    }
-    
-    if #available(iOS 15, *), let _ = emojiViewProvider {
-        let _ = CustomTextAttachmentViewProvider.ensureRegistered
-        
-        /*var nextIndex: [String: Int] = [:]
-        
-        var count = 0
-        
-        let fullRange = NSRange(textNode.textView.textStorage.string.startIndex ..< textNode.textView.textStorage.string.endIndex, in: textNode.textView.textStorage.string)
-        textNode.textView.textStorage.enumerateAttribute(NSAttributedString.Key.attachment, in: fullRange, options: [], using: { value, _, _ in
-            if let _ = value as? EmojiTextAttachment {
-                count += 1
-            }
-        })
-        
-        while count < 400 {
-            var found = false
-            textNode.textView.textStorage.string.enumerateSubstrings(in: textNode.textView.textStorage.string.startIndex ..< textNode.textView.textStorage.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
-                if let substring = substring {
-                    let emoji = substring.basicEmoji.0
-                    
-                    if !emoji.isEmpty && emoji.isSingleEmoji && availableEmojis.contains(emoji) {
-                        let index: Int
-                        if let value = nextIndex[emoji] {
-                            index = value
-                        } else {
-                            index = 0
-                        }
-                        nextIndex[emoji] = index + 1
-                        
-                        let attachment = EmojiTextAttachment(index: index, emoji: emoji, viewProvider: emojiViewProvider)
-                        attachment.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 16.0))
-                        
-                        textNode.textView.textStorage.replaceCharacters(in: NSRange(substringRange, in: textNode.textView.textStorage.string), with: NSAttributedString(attachment: attachment))
-                        
-                        count += 1
-                        found = true
-                        stop = true
-                    }
-                }
-            }
-            if !found {
-                break
-            }
-        }*/
     }
 }
 

@@ -49,7 +49,7 @@ private final class CachedChatMessageText {
 
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNodeWithEntities
-    private var spoilerTextNode: TextNode?
+    private var spoilerTextNode: TextNodeWithEntities?
     private var dustNode: InvisibleInkDustNode?
     
     private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
@@ -67,11 +67,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 switch self.visibility {
                 case .none:
                     self.textNode.visibilityRect = nil
+                    self.spoilerTextNode?.visibilityRect = nil
                 case let .visible(_, subRect):
                     var subRect = subRect
                     subRect.origin.x = 0.0
                     subRect.size.width = 10000.0
                     self.textNode.visibilityRect = subRect
+                    self.spoilerTextNode?.visibilityRect = subRect
                 }
             }
         }
@@ -120,7 +122,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let textLayout = TextNodeWithEntities.asyncLayout(self.textNode)
-        let spoilerTextLayout = TextNode.asyncLayout(self.spoilerTextNode)
+        let spoilerTextLayout = TextNodeWithEntities.asyncLayout(self.spoilerTextNode)
         let statusLayout = self.statusNode.asyncLayout()
         
         let currentCachedChatMessageText = self.cachedChatMessageText
@@ -339,9 +341,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
                 
-                let spoilerTextLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+                let spoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
                 if !textLayout.spoilers.isEmpty {
-                    spoilerTextLayoutAndApply = spoilerTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor, displaySpoilers: true))
+                    spoilerTextLayoutAndApply = spoilerTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
                 } else {
                     spoilerTextLayoutAndApply = nil
                 }
@@ -440,38 +442,50 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             animation.animator.updateFrame(layer: strongSelf.textNode.textNode.layer, frame: textFrame, completion: nil)
                             
                             if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
-                                let spoilerTextNode = spoilerTextApply()
+                                let spoilerTextNode = spoilerTextApply(TextNodeWithEntities.Arguments(context: item.context, cache: item.controllerInteraction.presentationContext.animationCache, renderer: item.controllerInteraction.presentationContext.animationRenderer, placeholderColor: messageTheme.mediaPlaceholderColor, attemptSynchronous: synchronousLoads))
                                 if strongSelf.spoilerTextNode == nil {
-                                    spoilerTextNode.alpha = 0.0
-                                    spoilerTextNode.isUserInteractionEnabled = false
-                                    spoilerTextNode.contentMode = .topLeft
-                                    spoilerTextNode.contentsScale = UIScreenScale
-                                    spoilerTextNode.displaysAsynchronously = false
-                                    strongSelf.insertSubnode(spoilerTextNode, aboveSubnode: strongSelf.textAccessibilityOverlayNode)
+                                    spoilerTextNode.textNode.alpha = 0.0
+                                    spoilerTextNode.textNode.isUserInteractionEnabled = false
+                                    spoilerTextNode.textNode.contentMode = .topLeft
+                                    spoilerTextNode.textNode.contentsScale = UIScreenScale
+                                    spoilerTextNode.textNode.displaysAsynchronously = false
+                                    strongSelf.insertSubnode(spoilerTextNode.textNode, aboveSubnode: strongSelf.textAccessibilityOverlayNode)
                                     
                                     strongSelf.spoilerTextNode = spoilerTextNode
                                 }
                                 
-                                strongSelf.spoilerTextNode?.frame = textFrame
+                                strongSelf.spoilerTextNode?.textNode.frame = textFrame
                                 
                                 let dustNode: InvisibleInkDustNode
                                 if let current = strongSelf.dustNode {
                                     dustNode = current
                                 } else {
-                                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode)
+                                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode)
                                     strongSelf.dustNode = dustNode
-                                    strongSelf.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
+                                    strongSelf.insertSubnode(dustNode, aboveSubnode: spoilerTextNode.textNode)
                                 }
                                 dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
                                 dustNode.update(size: dustNode.frame.size, color: messageTheme.secondaryTextColor, textColor: messageTheme.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                             } else if let spoilerTextNode = strongSelf.spoilerTextNode {
                                 strongSelf.spoilerTextNode = nil
-                                spoilerTextNode.removeFromSupernode()
+                                spoilerTextNode.textNode.removeFromSupernode()
                                 
                                 if let dustNode = strongSelf.dustNode {
                                     strongSelf.dustNode = nil
                                     dustNode.removeFromSupernode()
                                 }
+                            }
+                            
+                            switch strongSelf.visibility {
+                            case .none:
+                                strongSelf.textNode.visibilityRect = nil
+                                strongSelf.spoilerTextNode?.visibilityRect = nil
+                            case let .visible(_, subRect):
+                                var subRect = subRect
+                                subRect.origin.x = 0.0
+                                subRect.size.width = 10000.0
+                                strongSelf.textNode.visibilityRect = subRect
+                                strongSelf.spoilerTextNode?.visibilityRect = subRect
                             }
                             
                             if let textSelectionNode = strongSelf.textSelectionNode {

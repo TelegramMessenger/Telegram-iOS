@@ -118,7 +118,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     
     private var stickerPreviewController: StickerPreviewController?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext) {
         self.strings = strings
         
         self.backgroundNode = ASImageNode()
@@ -145,7 +145,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         
         self.stickersInteraction = HorizontalStickersChatContextPanelInteraction()
         
-        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize, chatPresentationContext: chatPresentationContext)
         
         self.placement = .overTextInput
         self.isOpaque = false

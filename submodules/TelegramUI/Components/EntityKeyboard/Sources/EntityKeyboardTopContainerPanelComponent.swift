@@ -32,13 +32,16 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
     
     let theme: PresentationTheme
     let overflowHeight: CGFloat
+    let displayBackground: Bool
     
     init(
         theme: PresentationTheme,
-        overflowHeight: CGFloat
+        overflowHeight: CGFloat,
+        displayBackground: Bool
     ) {
         self.theme = theme
         self.overflowHeight = overflowHeight
+        self.displayBackground = displayBackground
     }
     
     static func ==(lhs: EntityKeyboardTopContainerPanelComponent, rhs: EntityKeyboardTopContainerPanelComponent) -> Bool {
@@ -46,6 +49,9 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             return false
         }
         if lhs.overflowHeight != rhs.overflowHeight {
+            return false
+        }
+        if lhs.displayBackground != rhs.displayBackground {
             return false
         }
         
@@ -59,6 +65,9 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
     }
     
     final class View: UIView {
+        private var backgroundView: BlurredBackgroundView?
+        private var backgroundSeparatorView: UIView?
+        
         private var panelViews: [AnyHashable: PanelView] = [:]
         
         private var component: EntityKeyboardTopContainerPanelComponent?
@@ -181,6 +190,40 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                     return
                 }
                 strongSelf.updateVisibilityFraction(value: fraction, transition: transition)
+            }
+            
+            if component.displayBackground {
+                let backgroundView: BlurredBackgroundView
+                if let current = self.backgroundView {
+                    backgroundView = current
+                } else {
+                    backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
+                    self.insertSubview(backgroundView, at: 0)
+                }
+                
+                let backgroundSeparatorView: UIView
+                if let current = self.backgroundSeparatorView {
+                    backgroundSeparatorView = current
+                } else {
+                    backgroundSeparatorView = UIView()
+                    self.insertSubview(backgroundSeparatorView, aboveSubview: backgroundView)
+                }
+                
+                backgroundView.updateColor(color: component.theme.chat.inputPanel.panelBackgroundColor.withMultipliedAlpha(1.0), transition: .immediate)
+                backgroundView.update(size: CGSize(width: availableSize.width, height: height), transition: transition.containedViewLayoutTransition)
+                transition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height)))
+                
+                backgroundSeparatorView.backgroundColor = component.theme.chat.inputPanel.panelSeparatorColor
+                transition.setFrame(view: backgroundSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: height), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
+            } else {
+                if let backgroundView = self.backgroundView {
+                    self.backgroundView = nil
+                    backgroundView.removeFromSuperview()
+                }
+                if let backgroundSeparatorView = self.backgroundSeparatorView {
+                    self.backgroundSeparatorView = nil
+                    backgroundSeparatorView.removeFromSuperview()
+                }
             }
             
             return CGSize(width: availableSize.width, height: height)

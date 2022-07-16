@@ -656,6 +656,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         var textFrame = self.textFieldFrame
         textFrame.origin = CGPoint(x: 13.0, y: 6.0 - UIScreenPixel)
         textFrame.size.height = self.textInputNode.textView.contentSize.height
+        textFrame.size.width -= self.textInputNode.textContainerInset.right
         
         if self.textInputNode.isRTL {
             textFrame.origin.x -= messageOriginDelta

@@ -272,15 +272,8 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         case .inputButtons:
             return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .none, .text:
-            if let editMessage = chatPresentationInterfaceState.interfaceState.editMessage {
-                let isTextEmpty = editMessage.inputState.inputText.length == 0
-                
-                let stickersAreEmoji = !isTextEmpty
-                
-                var stickersEnabled = true
-                stickersEnabled = true
-                
-                accessoryItems.append(.stickers(isEnabled: stickersEnabled, isEmoji: stickersAreEmoji))
+            if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
+                accessoryItems.append(.stickers(isEnabled: true, isEmoji: true))
                 
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             } else {
@@ -330,7 +323,11 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         accessoryItems.append(.commands)
                     }
                     
-                    accessoryItems.append(.stickers(isEnabled: stickersEnabled, isEmoji: stickersAreEmoji))
+                    if stickersEnabled {
+                        accessoryItems.append(.stickers(isEnabled: true, isEmoji: stickersAreEmoji))
+                    } else {
+                        accessoryItems.append(.stickers(isEnabled: true, isEmoji: true))
+                    }
                     
                     if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
                         accessoryItems.append(.inputButtons)

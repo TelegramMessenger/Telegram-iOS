@@ -97,3 +97,19 @@ void combineYUVAPlanesIntoARBB(uint8_t *argb, uint8_t const *inY, uint8_t const 
     
     error = vImageOverwriteChannels_ARGB8888(&srcA, &destArgb, &destArgb, 1 << 0, kvImageDoNotTile);
 }
+
+void scaleImagePlane(uint8_t *outPlane, int outWidth, int outHeight, int outBytesPerRow, uint8_t const *inPlane, int inWidth, int inHeight, int inBytesPerRow) {
+    vImage_Buffer src;
+    src.data = (void *)inPlane;
+    src.width = inWidth;
+    src.height = inHeight;
+    src.rowBytes = inBytesPerRow;
+    
+    vImage_Buffer dst;
+    dst.data = (void *)outPlane;
+    dst.width = outWidth;
+    dst.height = outHeight;
+    dst.rowBytes = outBytesPerRow;
+    
+    vImageScale_Planar8(&src, &dst, nil, kvImageDoNotTile);
+}

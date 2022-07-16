@@ -62,37 +62,84 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
     }
     
     private final class TextureStoragePool {
-        let width: Int
-        let height: Int
+        struct Parameters {
+            let width: Int
+            let height: Int
+            let format: TextureStorage.Content.Format
+        }
         
+        let parameters: Parameters
         private var items: [TextureStorage.Content] = []
+        private var cleanupTimer: Foundation.Timer?
+        private var lastTakeTimestamp: Double = 0.0
         
-        init(width: Int, height: Int) {
-            self.width = width
-            self.height = height
+        init(width: Int, height: Int, format: TextureStorage.Content.Format) {
+            self.parameters = Parameters(width: width, height: height, format: format)
+            
+            let cleanupTimer = Foundation.Timer(timeInterval: 2.0, repeats: true, block: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.collect()
+            })
+            self.cleanupTimer = cleanupTimer
+            RunLoop.main.add(cleanupTimer, forMode: .common)
+        }
+        
+        deinit {
+            self.cleanupTimer?.invalidate()
+        }
+        
+        private func collect() {
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            if timestamp - self.lastTakeTimestamp < 1.0 {
+                return
+            }
+            if self.items.count > 32 {
+                autoreleasepool {
+                    var remainingItems: [Unmanaged<TextureStorage.Content>] = []
+                    while self.items.count > 32 {
+                        let item = self.items.removeLast()
+                        remainingItems.append(Unmanaged.passRetained(item))
+                    }
+                    DispatchQueue.global().async {
+                        autoreleasepool {
+                            for item in remainingItems {
+                                item.release()
+                            }
+                        }
+                    }
+                }
+            }
         }
         
         func recycle(content: TextureStorage.Content) {
-            if self.items.count < 4 {
-                self.items.append(content)
-            } else {
-                print("Warning: over-recycling texture storage")
-            }
+            self.items.append(content)
         }
         
-        func take(device: MTLDevice) -> TextureStorage.Content? {
+        func take() -> TextureStorage? {
             if self.items.isEmpty {
-                guard let content = TextureStorage.Content(device: device, width: self.width, height: self.height) else {
-                    return nil
-                }
-                return content
+                self.lastTakeTimestamp = CFAbsoluteTimeGetCurrent()
+                return nil
             }
-            return self.items.removeLast()
+            return TextureStorage(pool: self, content: self.items.removeLast())
+        }
+        
+        static func takeNew(device: MTLDevice, parameters: Parameters, pool: TextureStoragePool) -> TextureStorage? {
+            guard let content = TextureStorage.Content(device: device, width: parameters.width, height: parameters.height, format: parameters.format) else {
+                return nil
+            }
+            return TextureStorage(pool: pool, content: content)
         }
     }
     
     private final class TextureStorage {
         final class Content {
+            enum Format {
+                case bgra
+                case r
+            }
+            
             let buffer: MTLBuffer?
             
             let width: Int
@@ -100,9 +147,29 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             let bytesPerRow: Int
             let texture: MTLTexture
             
-            init?(device: MTLDevice, width: Int, height: Int) {
-                let bytesPerPixel = 4
-                let pixelRowAlignment = device.minimumLinearTextureAlignment(for: .bgra8Unorm)
+            static func rowAlignment(device: MTLDevice, format: Format) -> Int {
+                let pixelFormat: MTLPixelFormat
+                switch format {
+                case .bgra:
+                    pixelFormat = .bgra8Unorm
+                case .r:
+                    pixelFormat = .r8Unorm
+                }
+                return device.minimumLinearTextureAlignment(for: pixelFormat)
+            }
+            
+            init?(device: MTLDevice, width: Int, height: Int, format: Format) {
+                let bytesPerPixel: Int
+                let pixelFormat: MTLPixelFormat
+                switch format {
+                case .bgra:
+                    bytesPerPixel = 4
+                    pixelFormat = .bgra8Unorm
+                case .r:
+                    bytesPerPixel = 1
+                    pixelFormat = .r8Unorm
+                }
+                let pixelRowAlignment = Content.rowAlignment(device: device, format: format)
                 let bytesPerRow = alignUp(size: width * bytesPerPixel, align: pixelRowAlignment)
                 
                 self.width = width
@@ -112,10 +179,10 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 #if targetEnvironment(simulator)
                 let textureDescriptor = MTLTextureDescriptor()
                 textureDescriptor.textureType = .type2D
-                textureDescriptor.pixelFormat = .bgra8Unorm
+                textureDescriptor.pixelFormat = pixelFormat
                 textureDescriptor.width = width
                 textureDescriptor.height = height
-                textureDescriptor.usage = [.renderTarget]
+                textureDescriptor.usage = [.shaderRead]
                 textureDescriptor.storageMode = .shared
                 
                 guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
@@ -130,10 +197,10 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 
                 let textureDescriptor = MTLTextureDescriptor()
                 textureDescriptor.textureType = .type2D
-                textureDescriptor.pixelFormat = .bgra8Unorm
+                textureDescriptor.pixelFormat = pixelFormat
                 textureDescriptor.width = width
                 textureDescriptor.height = height
-                textureDescriptor.usage = [.renderTarget]
+                textureDescriptor.usage = [.shaderRead]
                 textureDescriptor.storageMode = buffer.storageMode
                 
                 guard let texture = buffer.makeTexture(descriptor: textureDescriptor, offset: 0, bytesPerRow: bytesPerRow) else {
@@ -144,7 +211,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 self.texture = texture
             }
             
-            func replace(rgbaData: Data, range: Range<Int>, width: Int, height: Int, bytesPerRow: Int) {
+            func replace(rgbaData: Data, width: Int, height: Int, bytesPerRow: Int) {
                 if width != self.width || height != self.height {
                     assert(false, "Image size does not match")
                     return
@@ -152,12 +219,14 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 let region = MTLRegion(origin: MTLOrigin(x: 0, y: 0, z: 0), size: MTLSize(width: width, height: height, depth: 1))
                 
                 if let buffer = self.buffer, self.bytesPerRow == bytesPerRow {
+                    assert(bytesPerRow * height <= rgbaData.count)
+                    
                     rgbaData.withUnsafeBytes { bytes in
-                        let _ = memcpy(buffer.contents(), bytes.baseAddress!.advanced(by: range.lowerBound), bytesPerRow * height)
+                        let _ = memcpy(buffer.contents(), bytes.baseAddress!, bytesPerRow * height)
                     }
                 } else {
                     rgbaData.withUnsafeBytes { bytes in
-                        self.texture.replace(region: region, mipmapLevel: 0, withBytes: bytes.baseAddress!.advanced(by: range.lowerBound), bytesPerRow: bytesPerRow)
+                        self.texture.replace(region: region, mipmapLevel: 0, withBytes: bytes.baseAddress!, bytesPerRow: bytesPerRow)
                     }
                 }
             }
@@ -177,67 +246,30 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 self.pool?.recycle(content: self.content)
             }
         }
-        
-        /*func createCGImage() -> CGImage? {
-            if self.isInvalidated {
-                return nil
-            }
-            self.isInvalidated = true
-            
-            #if targetEnvironment(simulator)
-            guard let data = NSMutableData(capacity: self.content.bytesPerRow * self.content.height) else {
-                return nil
-            }
-            data.length = self.content.bytesPerRow * self.content.height
-            self.content.texture.getBytes(data.mutableBytes, bytesPerRow: self.content.bytesPerRow, bytesPerImage: self.content.bytesPerRow * self.content.height, from: MTLRegion(origin: MTLOrigin(), size: MTLSize(width: self.content.width, height: self.content.height, depth: 1)), mipmapLevel: 0, slice: 0)
-            
-            guard let dataProvider = CGDataProvider(data: data as CFData) else {
-                return nil
-            }
-            #else
-            let content = self.content
-            let pool = self.pool
-            guard let dataProvider = CGDataProvider(data: Data(bytesNoCopy: self.content.buffer.contents(), count: self.content.buffer.length, deallocator: .custom { [weak pool] _, _ in
-                guard let pool = pool else {
-                    return
-                }
-                pool.recycle(content: content)
-            }) as CFData) else {
-                return nil
-            }
-            #endif
-
-            guard let image = CGImage(
-                width: Int(self.content.width),
-                height: Int(self.content.height),
-                bitsPerComponent: 8,
-                bitsPerPixel: 8 * 4,
-                bytesPerRow: self.content.bytesPerRow,
-                space: DeviceGraphicsContextSettings.shared.colorSpace,
-                bitmapInfo: DeviceGraphicsContextSettings.shared.transparentBitmapInfo,
-                provider: dataProvider,
-                decode: nil,
-                shouldInterpolate: true,
-                intent: .defaultIntent
-            ) else {
-                return nil
-            }
-            
-            return image
-        }*/
     }
     
     private final class Frame {
         let timestamp: Double
-        let texture: TextureStorage.Content
+        let textureY: TextureStorage
+        let textureU: TextureStorage
+        let textureV: TextureStorage
+        let textureA: TextureStorage
         
-        init(device: MTLDevice, texture: TextureStorage.Content, data: AnimationCacheItemFrame, timestamp: Double) {
+        init?(device: MTLDevice, textureY: TextureStorage, textureU: TextureStorage, textureV: TextureStorage, textureA: TextureStorage, data: AnimationCacheItemFrame, timestamp: Double) {
             self.timestamp = timestamp
-            self.texture = texture
+            self.textureY = textureY
+            self.textureU = textureU
+            self.textureV = textureV
+            self.textureA = textureA
             
             switch data.format {
-            case let .rgba(width, height, bytesPerRow):
-                texture.replace(rgbaData: data.data, range: data.range, width: width, height: height, bytesPerRow: bytesPerRow)
+            case .rgba:
+                return nil
+            case let .yuva(y, u, v, a):
+                self.textureY.content.replace(rgbaData: y.data, width: y.width, height: y.height, bytesPerRow: y.bytesPerRow)
+                self.textureU.content.replace(rgbaData: u.data, width: u.width, height: u.height, bytesPerRow: u.bytesPerRow)
+                self.textureV.content.replace(rgbaData: v.data, width: v.width, height: v.height, bytesPerRow: v.bytesPerRow)
+                self.textureA.content.replace(rgbaData: a.data, width: a.width, height: a.height, bytesPerRow: a.bytesPerRow)
             }
         }
     }
@@ -265,9 +297,11 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         
         var targets: [TargetReference] = []
         var slotIndex: Int
+        private let preferredRowAlignment: Int
         
-        init(slotIndex: Int, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable, stateUpdated: @escaping () -> Void) {
+        init(slotIndex: Int, preferredRowAlignment: Int, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable, stateUpdated: @escaping () -> Void) {
             self.slotIndex = slotIndex
+            self.preferredRowAlignment = preferredRowAlignment
             self.cache = cache
             self.stateUpdated = stateUpdated
             
@@ -316,11 +350,11 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             self.isPlaying = isPlaying
         }
         
-        func animationTick(device: MTLDevice, texturePool: TextureStoragePool, advanceTimestamp: Double) -> LoadFrameTask? {
-            return self.update(device: device, texturePool: texturePool, advanceTimestamp: advanceTimestamp)
+        func animationTick(device: MTLDevice, texturePoolFullPlane: TextureStoragePool, texturePoolHalfPlane: TextureStoragePool, advanceTimestamp: Double) -> LoadFrameTask? {
+            return self.update(device: device, texturePoolFullPlane: texturePoolFullPlane, texturePoolHalfPlane: texturePoolHalfPlane, advanceTimestamp: advanceTimestamp)
         }
         
-        private func update(device: MTLDevice, texturePool: TextureStoragePool, advanceTimestamp: Double?) -> LoadFrameTask? {
+        private func update(device: MTLDevice, texturePoolFullPlane: TextureStoragePool, texturePoolHalfPlane: TextureStoragePool, advanceTimestamp: Double?) -> LoadFrameTask? {
             guard let item = self.item else {
                 return nil
             }
@@ -334,18 +368,31 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             } else if !self.isLoadingFrame {
                 self.isLoadingFrame = true
                 
+                let fullParameters = texturePoolFullPlane.parameters
+                let halfParameters = texturePoolHalfPlane.parameters
+                
+                let readyTextureY = texturePoolFullPlane.take()
+                let readyTextureU = texturePoolHalfPlane.take()
+                let readyTextureV = texturePoolHalfPlane.take()
+                let readyTextureA = texturePoolFullPlane.take()
+                let preferredRowAlignment = self.preferredRowAlignment
+                
                 return LoadFrameTask(task: { [weak self] in
-                    let frame = item.getFrame(at: timestamp)
+                    let frame = item.getFrame(at: timestamp, requestedFormat: .yuva(rowAlignment: preferredRowAlignment))
+                    
+                    let textureY = readyTextureY ?? TextureStoragePool.takeNew(device: device, parameters: fullParameters, pool: texturePoolFullPlane)
+                    let textureU = readyTextureU ?? TextureStoragePool.takeNew(device: device, parameters: halfParameters, pool: texturePoolHalfPlane)
+                    let textureV = readyTextureV ?? TextureStoragePool.takeNew(device: device, parameters: halfParameters, pool: texturePoolHalfPlane)
+                    let textureA = readyTextureA ?? TextureStoragePool.takeNew(device: device, parameters: fullParameters, pool: texturePoolFullPlane)
+                    
+                    var currentFrame: Frame?
+                    if let frame = frame, let textureY = textureY, let textureU = textureU, let textureV = textureV, let textureA = textureA {
+                        currentFrame = Frame(device: device, textureY: textureY, textureU: textureU, textureV: textureV, textureA: textureA, data: frame, timestamp: timestamp)
+                    }
                     
                     return {
                         guard let strongSelf = self else {
                             return
-                        }
-                        
-                        var currentFrame: Frame?
-                        let texture = texturePool.take(device: device)
-                        if let frame = frame, let texture = texture {
-                            currentFrame = Frame(device: device, texture: texture, data: frame, timestamp: timestamp)
                         }
                         
                         strongSelf.isLoadingFrame = false
@@ -369,7 +416,10 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         private let commandQueue: MTLCommandQueue
         private let renderPipelineState: MTLRenderPipelineState
         
-        private let texturePool: TextureStoragePool
+        private let texturePoolFullPlane: TextureStoragePool
+        private let texturePoolHalfPlane: TextureStoragePool
+        
+        private let preferredRowAlignment: Int
         
         private let slotCount: Int
         private let slotsX: Int
@@ -389,8 +439,10 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             self.cellSize = cellSize
             self.stateUpdated = stateUpdated
             
-            self.slotsX = 16
-            self.slotsY = 16
+            let resolutionX = max(1, (1024 / Int(cellSize.width))) * Int(cellSize.width)
+            let resolutionY = max(1, (1024 / Int(cellSize.height))) * Int(cellSize.height)
+            self.slotsX = resolutionX / Int(cellSize.width)
+            self.slotsY = resolutionY / Int(cellSize.height)
             let drawableSize = CGSize(width: cellSize.width * CGFloat(self.slotsX), height: cellSize.height * CGFloat(self.slotsY))
             
             self.slotCount = (Int(drawableSize.width) / Int(cellSize.width)) * (Int(drawableSize.height) / Int(cellSize.height))
@@ -413,7 +465,10 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             
             self.renderPipelineState = makePipelineState(device: self.metalDevice, library: defaultLibrary, vertexProgram: "multiAnimationVertex", fragmentProgram: "multiAnimationFragment")!
             
-            self.texturePool = TextureStoragePool(width: Int(self.cellSize.width), height: Int(self.cellSize.height))
+            self.texturePoolFullPlane = TextureStoragePool(width: Int(self.cellSize.width), height: Int(self.cellSize.height), format: .r)
+            self.texturePoolHalfPlane = TextureStoragePool(width: Int(self.cellSize.width) / 2, height: Int(self.cellSize.height) / 2, format: .r)
+            
+            self.preferredRowAlignment = TextureStorage.Content.rowAlignment(device: self.metalDevice, format: .r)
             
             super.init()
             
@@ -427,6 +482,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             self.pixelFormat = .bgra8Unorm
             self.framebufferOnly = true
             self.allowsNextDrawableTimeout = true
+            self.isOpaque = false
         }
         
         override public init(layer: Any) {
@@ -452,7 +508,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 for i in 0 ..< self.slotCount {
                     if self.slotToItemId[i] == nil {
                         self.slotToItemId[i] = itemId
-                        self.itemContexts[itemId] = ItemContext(slotIndex: i, cache: cache, itemId: itemId, size: size, fetch: fetch, stateUpdated: { [weak self] in
+                        self.itemContexts[itemId] = ItemContext(slotIndex: i, preferredRowAlignment: self.preferredRowAlignment, cache: cache, itemId: itemId, size: size, fetch: fetch, stateUpdated: { [weak self] in
                             guard let strongSelf = self else {
                                 return
                             }
@@ -465,6 +521,23 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             
             if let itemContext = self.itemContexts[itemId] {
                 itemContext.targets.append(TargetReference(target))
+                
+                let deinitIndex = target.deinitCallbacks.add { [weak self, weak itemContext] in
+                    Queue.mainQueue().async {
+                        guard let strongSelf = self, let currentItemContext = strongSelf.itemContexts[itemId], currentItemContext === itemContext else {
+                            return
+                        }
+                        strongSelf.removeTargetFromItemContext(itemId: itemId, itemContext: currentItemContext, targetId: targetId)
+                    }
+                }
+                
+                let updateStateIndex = target.updateStateCallbacks.add { [weak itemContext] in
+                    guard let itemContext = itemContext else {
+                        return
+                    }
+                    itemContext.updateIsPlaying()
+                }
+                
                 target.contents = self.contents
                 
                 let slotX = itemContext.slotIndex % self.slotsX
@@ -476,26 +549,37 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 
                 self.isPlaying = true
                 
-                return ActionDisposable { [weak self, weak itemContext] in
+                return ActionDisposable { [weak self, weak target, weak itemContext] in
                     Queue.mainQueue().async {
                         guard let strongSelf = self, let currentItemContext = strongSelf.itemContexts[itemId], currentItemContext === itemContext else {
                             return
                         }
-                        if let index = currentItemContext.targets.firstIndex(where: { $0.id == targetId }) {
-                            currentItemContext.targets.remove(at: index)
-                            if currentItemContext.targets.isEmpty {
-                                strongSelf.slotToItemId[currentItemContext.slotIndex] = nil
-                                strongSelf.itemContexts.removeValue(forKey: itemId)
-                                
-                                if strongSelf.itemContexts.isEmpty {
-                                    strongSelf.isPlaying = false
-                                }
-                            }
+                        
+                        if let target = target {
+                            target.deinitCallbacks.remove(deinitIndex)
+                            target.updateStateCallbacks.remove(updateStateIndex)
                         }
+                        
+                        strongSelf.removeTargetFromItemContext(itemId: itemId, itemContext: currentItemContext, targetId: targetId)
                     }
                 }
             } else {
                 return nil
+            }
+        }
+        
+        private func removeTargetFromItemContext(itemId: String, itemContext: ItemContext, targetId: Int64) {
+            if let index = itemContext.targets.firstIndex(where: { $0.id == targetId }) {
+                itemContext.targets.remove(at: index)
+                
+                if itemContext.targets.isEmpty {
+                    self.slotToItemId[itemContext.slotIndex] = nil
+                    self.itemContexts.removeValue(forKey: itemId)
+                    
+                    if self.itemContexts.isEmpty {
+                        self.isPlaying = false
+                    }
+                }
             }
         }
         
@@ -515,7 +599,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             var tasks: [LoadFrameTask] = []
             for (_, itemContext) in self.itemContexts {
                 if itemContext.isPlaying {
-                    if let task = itemContext.animationTick(device: self.metalDevice, texturePool: self.texturePool, advanceTimestamp: advanceTimestamp) {
+                    if let task = itemContext.animationTick(device: self.metalDevice, texturePoolFullPlane: self.texturePoolFullPlane, texturePoolHalfPlane: self.texturePoolHalfPlane, advanceTimestamp: advanceTimestamp) {
                         tasks.append(task)
                     }
                 }
@@ -525,10 +609,15 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         }
         
         func redraw() {
-            guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
+            guard let drawable = self.nextDrawable() else {
                 return
             }
-            guard let drawable = self.nextDrawable() else {
+            
+            let commandQueue = self.commandQueue
+            let renderPipelineState = self.renderPipelineState
+            let cellSize = self.cellSize
+            
+            guard let commandBuffer = commandQueue.makeCommandBuffer() else {
                 return
             }
             
@@ -551,7 +640,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 return
             }
             
-            var usedTextures: [MultiAnimationMetalRendererImpl.TextureStorage.Content] = []
+            var usedTextures: [Unmanaged<MultiAnimationMetalRendererImpl.TextureStorage>] = []
             
             var vertices: [Float] = [
                 -1.0, -1.0, 0.0, 0.0,
@@ -560,12 +649,12 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 1.0, 1.0, 1.0, 1.0
             ]
             
-            renderEncoder.setRenderPipelineState(self.renderPipelineState)
+            renderEncoder.setRenderPipelineState(renderPipelineState)
             
             var resolution = simd_uint2(UInt32(drawable.texture.width), UInt32(drawable.texture.height))
             renderEncoder.setVertexBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 1)
             
-            var slotSize = simd_uint2(UInt32(self.cellSize.width), UInt32(self.cellSize.height))
+            var slotSize = simd_uint2(UInt32(cellSize.width), UInt32(cellSize.height))
             renderEncoder.setVertexBytes(&slotSize, length: MemoryLayout<simd_uint2>.size * 2, index: 2)
             
             for (_, itemContext) in self.itemContexts {
@@ -580,25 +669,31 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 
                 let contentsRect = CGRect(origin: CGPoint(x: (CGFloat(slotX) * self.cellSize.width) / totalX, y: (CGFloat(slotY) * self.cellSize.height) / totalY), size: CGSize(width: self.cellSize.width / totalX, height: self.cellSize.height / totalY))
                 
-                vertices[4 * 0 + 0] = Float(contentsRect.minX).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
-                vertices[4 * 0 + 1] = Float(contentsRect.minY).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
-                
-                vertices[4 * 1 + 0] = Float(contentsRect.maxX).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
-                vertices[4 * 1 + 1] = Float(contentsRect.minY).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
-                
                 vertices[4 * 2 + 0] = Float(contentsRect.minX).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
-                vertices[4 * 2 + 1] = Float(contentsRect.maxY).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
+                vertices[4 * 2 + 1] = Float(contentsRect.minY).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
                 
                 vertices[4 * 3 + 0] = Float(contentsRect.maxX).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
-                vertices[4 * 3 + 1] = Float(contentsRect.maxY).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
+                vertices[4 * 3 + 1] = Float(contentsRect.minY).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
+                
+                vertices[4 * 0 + 0] = Float(contentsRect.minX).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
+                vertices[4 * 0 + 1] = Float(contentsRect.maxY).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
+                
+                vertices[4 * 1 + 0] = Float(contentsRect.maxX).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
+                vertices[4 * 1 + 1] = Float(contentsRect.maxY).remap(fromLow: 0.0, fromHigh: 1.0, toLow: -1.0, toHigh: 1.0)
                 
                 renderEncoder.setVertexBytes(&vertices, length: 4 * vertices.count, index: 0)
                 
                 var slotPosition = simd_uint2(UInt32(itemContext.slotIndex % self.slotsX), UInt32(itemContext.slotIndex % self.slotsY))
                 renderEncoder.setVertexBytes(&slotPosition, length: MemoryLayout<simd_uint2>.size * 2, index: 3)
                 
-                usedTextures.append(frame.texture)
-                renderEncoder.setFragmentTexture(frame.texture.texture, index: 0)
+                usedTextures.append(Unmanaged.passRetained(frame.textureY))
+                usedTextures.append(Unmanaged.passRetained(frame.textureU))
+                usedTextures.append(Unmanaged.passRetained(frame.textureV))
+                usedTextures.append(Unmanaged.passRetained(frame.textureA))
+                renderEncoder.setFragmentTexture(frame.textureY.content.texture, index: 0)
+                renderEncoder.setFragmentTexture(frame.textureU.content.texture, index: 1)
+                renderEncoder.setFragmentTexture(frame.textureV.content.texture, index: 2)
+                renderEncoder.setFragmentTexture(frame.textureA.content.texture, index: 3)
 
                 renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: 1)
             }
@@ -623,7 +718,8 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 }
                 commandBuffer.addCompletedHandler { _ in
                     DispatchQueue.main.async {
-                        for _ in usedTextures {
+                        for texture in usedTextures {
+                            texture.release()
                         }
                     }
                 }
@@ -682,7 +778,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         self.isPlaying = isPlaying
     }
     
-    public func add(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable {
+    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable {
         assert(Thread.isMainThread)
         
         let alignedSize = CGSize(width: CGFloat(alignUp(size: Int(size.width), align: 16)), height: CGFloat(alignUp(size: Int(size.height), align: 16)))
@@ -709,11 +805,11 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         }
     }
     
-    public func loadFirstFrameSynchronously(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize) -> Bool {
+    public func loadFirstFrameSynchronously(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize) -> Bool {
         return false
     }
     
-    public func loadFirstFrame(groupId: String, target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable {
+    public func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable {
         completion(false)
         
         return EmptyDisposable
@@ -751,13 +847,13 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                         for completion in completions {
                             completion()
                         }
-                    }
-                }
-                
-                if let strongSelf = self {
-                    for index in surfaceLayersWithTasks {
-                        if let surfaceLayer = strongSelf.surfaceLayers[index] {
-                            surfaceLayer.redraw()
+                        
+                        if let strongSelf = self {
+                            for index in surfaceLayersWithTasks {
+                                if let surfaceLayer = strongSelf.surfaceLayers[index] {
+                                    surfaceLayer.redraw()
+                                }
+                            }
                         }
                     }
                 }

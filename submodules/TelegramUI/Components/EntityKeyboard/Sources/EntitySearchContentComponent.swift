@@ -51,11 +51,11 @@ final class EntitySearchContentEnvironment: Equatable {
 final class EntitySearchContentComponent: Component {
     typealias EnvironmentType = EntitySearchContentEnvironment
     
-    let makeContainerNode: () -> EntitySearchContainerNode
+    let makeContainerNode: () -> EntitySearchContainerNode?
     let dismissSearch: () -> Void
     
     init(
-        makeContainerNode: @escaping () -> EntitySearchContainerNode,
+        makeContainerNode: @escaping () -> EntitySearchContainerNode?,
         dismissSearch: @escaping () -> Void
     ) {
         self.makeContainerNode = makeContainerNode
@@ -78,30 +78,34 @@ final class EntitySearchContentComponent: Component {
         }
         
         func update(component: EntitySearchContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-            let containerNode: EntitySearchContainerNode
+            let containerNode: EntitySearchContainerNode?
             if let current = self.containerNode {
                 containerNode = current
             } else {
                 containerNode = component.makeContainerNode()
-                self.containerNode = containerNode
-                self.addSubnode(containerNode)
+                if let containerNode = containerNode {
+                    self.containerNode = containerNode
+                    self.addSubnode(containerNode)
+                }
             }
             
+            if let containerNode = containerNode {
+            
             let environmentValue = environment[EntitySearchContentEnvironment.self].value
-            
-            transition.setFrame(view: containerNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-            containerNode.updateLayout(
-                size: availableSize,
-                leftInset: 0.0,
-                rightInset: 0.0,
-                bottomInset: 0.0,
-                inputHeight: 0.0,
-                deviceMetrics: environmentValue.deviceMetrics,
-                transition: transition.containedViewLayoutTransition
-            )
-            
-            containerNode.onCancel = {
-                component.dismissSearch()
+                transition.setFrame(view: containerNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
+                containerNode.updateLayout(
+                    size: availableSize,
+                    leftInset: 0.0,
+                    rightInset: 0.0,
+                    bottomInset: 0.0,
+                    inputHeight: 0.0,
+                    deviceMetrics: environmentValue.deviceMetrics,
+                    transition: transition.containedViewLayoutTransition
+                )
+                
+                containerNode.onCancel = {
+                    component.dismissSearch()
+                }
             }
             
             return availableSize
