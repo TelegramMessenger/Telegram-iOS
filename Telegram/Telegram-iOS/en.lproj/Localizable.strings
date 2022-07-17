@@ -7794,5 +7794,16 @@ Sorry for the inconvenience.";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeInfo" = "If the \"Hide\" option is selected, the dialogs (chats, channels) will not be deleted. They will be hidden from the dialog list. Their notifications will also be hidden. After logging in with the original passcode, the dialog will appear in the list. It is safer to use delete.";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanion" = "Delete from Companion";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanionInfo" = "Delete dialogs from the companion. This option only applies to dialogs with users.";
+"FakePasscodes.AccountActions.SessionsToHide" = "Sessions to Hide";
+"FakePasscodes.AccountActions.All" = "All";
+"FakePasscodes.AccountActions.AllExceptCount" = "All (-%1$@)";
+"FakePasscodes.AccountActions.SessionsSettingsInfo" = "Choose sessions which will be visible in Settings and/or terminated on Fake Passcode Activation";
 "FakePasscodes.AccountActions.LogOut" = "Log Out";
 "FakePasscodes.AccountActions.MiscActionsInfo" = "When a fake passcode is entered, selected actions are performed.";
+
+"AccountActions.SessionsToHide.Clear" = "Clear";
+"AccountActions.SessionsToHide.Selected" = "Selected";
+"AccountActions.SessionsToHide.CheckAll" = "Check all";
+"AccountActions.SessionsToHide.ExceptSelected" = "Except selected";
+"AccountActions.SessionsToHide.ActiveSessions" = "Active sessions";
+"AccountActions.SessionsToHide.CleanConfirmation" = "Are your sure?";

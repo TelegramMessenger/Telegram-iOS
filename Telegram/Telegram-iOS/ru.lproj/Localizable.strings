@@ -57,5 +57,17 @@
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeInfo" = "Если была выбрана опция \"Скрыть\", диалоги (чаты, каналы) не будут удалены. Они будут скрыты из списка диалогов. Их уведомления также будут скрыты. После входа с оригинальным код-паролем диалоги (чаты, каналы) появятся в списке. Более безопасно использовать удаление.";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanion" = "Удалить у собеседника";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanionInfo" = "Удалить диалоги у собеседников. Эта опция применяется только для диалогов с пользователями.";
+"FakePasscodes.AccountActions.SessionsToHide" = "Сеансы для скрытия";
+"FakePasscodes.AccountActions.All" = "Все";
+"FakePasscodes.AccountActions.AllExceptCount" = "Все (-%1$@)";
+"FakePasscodes.AccountActions.SessionsSettingsInfo" = "Выберите сеансы, которые будут видны в настройках и/или завершены после активации ложного код-пароля.";
 "FakePasscodes.AccountActions.LogOut" = "Выходить из аккаунта";
 "FakePasscodes.AccountActions.MiscActionsInfo" = "При вводе ложного код-пароля выполняются выбранные действия.";
+
+"AccountActions.SessionsToHide.Clear" = "Очистить";
+"AccountActions.SessionsToHide.CheckAll" = "Выбрать все";
+"AccountActions.SessionsToHide.Selected" = "Выбранные";
+"AccountActions.SessionsToHide.ExceptSelected" = "Кроме выбранных";
+"AccountActions.SessionsToHide.ActiveSessions" = "Активные сессии";
+"AccountActions.SessionsToHide.CleanConfirmation" = "Вы уверены?";
+

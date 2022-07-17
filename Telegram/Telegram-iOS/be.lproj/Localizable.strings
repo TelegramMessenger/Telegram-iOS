@@ -57,5 +57,16 @@
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeInfo" = "Калі была абраная опцыя \"Схаваць\", дыялогі (чаты, каналы) не будуць выдаленыя. Яны будуць схаваныя са спісу дыялогаў. Іх апавяшчэнні таксама будуць схаваныя. Пасля ўваходу з арыгінальным код-паролем дыялогі (чаты, каналы) з'явяцца ў спісе. Больш бяспечна выкарыстоўваць выдаленне.";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanion" = "Выдаліць у суразмоўцы";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanionInfo" = "Выдаліць дыялогі ў суразмоўцаў. Гэтая опцыя прымяняецца толькі для дыялогаў з карыстальнікамі.";
+"FakePasscodes.AccountActions.SessionsToHide" = "Сеансы для хавання";
+"FakePasscodes.AccountActions.All" = "Усе";
+"FakePasscodes.AccountActions.AllExceptCount" = "Усе (-%1$@)";
+"FakePasscodes.AccountActions.SessionsSettingsInfo" = "Абярыце сеансы, якія будуць бачны ў наладах і/альбо завершаны пасля актывацыі несапраўднага кода блакіроўкі.";
 "FakePasscodes.AccountActions.LogOut" = "Выходзіць з акаўнту";
 "FakePasscodes.AccountActions.MiscActionsInfo" = "Пры ўводзе несапраўднага кода блакіроўкі выконваюцца выбраныя дзеянні.";
+
+"AccountActions.SessionsToHide.Clear" = "Clear";
+"AccountActions.SessionsToHide.CheckAll" = "Выбраць усе";
+"AccountActions.SessionsToHide.Selected" = "Абраныя";
+"AccountActions.SessionsToHide.ExceptSelected" = "Акрамя абраных";
+"AccountActions.SessionsToHide.ActiveSessions" = "Актыўныя сеансы";
+"AccountActions.SessionsToHide.CleanConfirmation" = "Вы ўпэўнены?";

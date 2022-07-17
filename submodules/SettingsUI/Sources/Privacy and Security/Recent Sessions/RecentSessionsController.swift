@@ -13,6 +13,7 @@ import AuthTransferUI
 import ItemListPeerActionItem
 import DeviceAccess
 import QrCodeUI
+import FakePasscode
 
 private final class RecentSessionsControllerArguments {
     let context: AccountContext
@@ -463,11 +464,12 @@ private struct RecentSessionsControllerState: Equatable {
     }
 }
 
-private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessionsState: ActiveSessionsContextState, enableQRLogin: Bool) -> [RecentSessionsEntry] {
+private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessionsState: ActiveSessionsContextState, enableQRLogin: Bool, sessionFilter: ((RecentAccountSession) -> Bool)) -> [RecentSessionsEntry] {
     var entries: [RecentSessionsEntry] = []
-    
+
     entries.append(.header(SortIndex(section: 0, item: 0), presentationData.strings.AuthSessions_HeaderInfo))
-    
+
+
     if !sessionsState.sessions.isEmpty {
         var existingSessionIds = Set<Int64>()
         entries.append(.currentSessionHeader(SortIndex(section: 1, item: 0), presentationData.strings.AuthSessions_CurrentSession))
@@ -507,9 +509,11 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
 //                entries.append(.addDevice(SortIndex(section: 4, item: 1), presentationData.strings.AuthSessions_AddDevice))
 //            }
             
-            let filteredSessions: [RecentAccountSession] = sessionsState.sessions.sorted(by: { lhs, rhs in
+            let sortedSessions: [RecentAccountSession] = sessionsState.sessions.sorted(by: { lhs, rhs in
                 return lhs.activityDate > rhs.activityDate
             })
+
+            let filteredSessions = sortedSessions.filter(sessionFilter)
             
             for i in 0 ..< filteredSessions.count {
                 if !existingSessionIds.contains(filteredSessions[i].hash) {
@@ -808,10 +812,12 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         return true
     }
     |> distinctUntilChanged
+
+    let sharedDataPromise = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
     
-    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, webSessionsContext.state, enableQRLogin)
+    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, webSessionsContext.state, enableQRLogin, sharedDataPromise)
     |> deliverOnMainQueue
-    |> map { presentationData, mode, state, sessionsState, websitesAndPeers, enableQRLogin -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, mode, state, sessionsState, websitesAndPeers, enableQRLogin, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         let websites = websitesAndPeers.sessions
         let peers = websitesAndPeers.peers
@@ -848,13 +854,15 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         } else {
             title = .text(presentationData.strings.AuthSessions_DevicesTitle)
         }
-        
+
+        let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+
         var animateChanges = true
         switch (mode, websites, peers) {
             case (.websites, let websites, let peers):
                 entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, websites: websites, peers: peers)
             default:
-                entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessionsState: sessionsState, enableQRLogin: enableQRLogin)
+                entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessionsState: sessionsState, enableQRLogin: enableQRLogin, sessionFilter: fakePasscodeHolder.sessionFilter(account: context.account))
         }
         
         let previousMode = previousMode.swap(mode)

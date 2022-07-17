@@ -259,6 +259,30 @@ public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably
         }
         return nil
     }
+
+    public func sessionFilter(account: Account) -> ((RecentAccountSession) -> Bool) {
+        var sessionFilter: ((RecentAccountSession) -> Bool) = { _ in true }
+        if unlockedWithFakePasscode() {
+            let settings = getAccountActions(account: account)
+            if settings.sessionsToHide.mode == .selected {
+                sessionFilter = { !settings.sessionsToHide.sessions.contains($0.hash) }
+            } else {
+                sessionFilter = { settings.sessionsToHide.sessions.contains($0.hash) }
+            }
+        }
+        return sessionFilter
+    }
+
+    public func getAccountActions(account: Account) -> FakePasscodeAccountActionsSettings {
+        guard let settings = activeFakePasscodeSettings() else { return .defaultSettings(peerId: account.peerId, recordId: account.id) }
+        return settings.accountActions.first(where: { $0.peerId == account.peerId && $0.recordId == account.id }) ?? .defaultSettings(peerId: account.peerId, recordId: account.id)
+    }
+
+    public func getAccountActions(_ uuid: UUID, _ account: FakePasscodeActionsAccount) -> FakePasscodeAccountActionsSettings {
+        let fakePasscodeSettings = self.settings.first(where: { $0.uuid == uuid })!
+        let settings = fakePasscodeSettings.accountActions.first(where: { $0.peerId == account.peerId && $0.recordId == account.recordId }) ?? .defaultSettings(peerId: account.peerId, recordId: account.recordId)
+        return settings;
+    }
 }
 
 public struct FakePasscodeSettings: Codable, Equatable {
