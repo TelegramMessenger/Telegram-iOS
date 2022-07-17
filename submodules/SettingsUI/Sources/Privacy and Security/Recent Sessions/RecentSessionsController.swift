@@ -477,10 +477,12 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             existingSessionIds.insert(sessionsState.sessions[index].hash)
             entries.append(.currentSession(SortIndex(section: 1, item: 1), presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
         }
-        
+
+        let filteredSessions = sessionsState.sessions.filter(sessionFilter).filter({ $0.hash != 0 })
+
         var hasAddDevice = false
-        if sessionsState.sessions.count > 1 || enableQRLogin {
-            if sessionsState.sessions.count > 1 {
+        if filteredSessions.count > 0 || enableQRLogin {
+            if filteredSessions.count > 0 {
                 entries.append(.terminateOtherSessions(SortIndex(section: 1, item: 2), presentationData.strings.AuthSessions_TerminateOtherSessions))
                 entries.append(.currentSessionInfo(SortIndex(section: 1, item: 3), presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
             } else if enableQRLogin {
@@ -489,7 +491,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
                 entries.append(.currentSessionInfo(SortIndex(section: 1, item: 5), presentationData.strings.AuthSessions_OtherDevices))
             }
             
-            let filteredPendingSessions: [RecentAccountSession] = sessionsState.sessions.filter({ $0.flags.contains(.passwordPending) })
+            let filteredPendingSessions: [RecentAccountSession] = filteredSessions.filter({ $0.flags.contains(.passwordPending) })
             if !filteredPendingSessions.isEmpty {
                 entries.append(.pendingSessionsHeader(SortIndex(section: 1, item: 6), presentationData.strings.AuthSessions_IncompleteAttempts))
                 for i in 0 ..< filteredPendingSessions.count {
@@ -500,25 +502,23 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
                 }
                 entries.append(.pendingSessionsInfo(SortIndex(section: 3, item: 0), presentationData.strings.AuthSessions_IncompleteAttemptsInfo))
             }
-            
-            if sessionsState.sessions.count > 1 {
+
+            if filteredSessions.count > 0 {
                 entries.append(.otherSessionsHeader(SortIndex(section: 4, item: 0), presentationData.strings.AuthSessions_OtherSessions))
             }
-            
+
 //            if enableQRLogin && !hasAddDevice {
 //                entries.append(.addDevice(SortIndex(section: 4, item: 1), presentationData.strings.AuthSessions_AddDevice))
 //            }
             
-            let sortedSessions: [RecentAccountSession] = sessionsState.sessions.sorted(by: { lhs, rhs in
+            let sortedSessions: [RecentAccountSession] = filteredSessions.sorted(by: { lhs, rhs in
                 return lhs.activityDate > rhs.activityDate
             })
 
-            let filteredSessions = sortedSessions.filter(sessionFilter)
-            
-            for i in 0 ..< filteredSessions.count {
-                if !existingSessionIds.contains(filteredSessions[i].hash) {
-                    existingSessionIds.insert(filteredSessions[i].hash)
-                    entries.append(.session(index: Int32(i), sortIndex: SortIndex(section: 5, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredSessions[i], enabled: state.removingSessionId != filteredSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredSessions[i].hash))
+            for i in 0 ..< sortedSessions.count {
+                if !existingSessionIds.contains(sortedSessions[i].hash) {
+                    existingSessionIds.insert(sortedSessions[i].hash)
+                    entries.append(.session(index: Int32(i), sortIndex: SortIndex(section: 5, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: sortedSessions[i], enabled: state.removingSessionId != sortedSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == sortedSessions[i].hash))
                 }
             }
             
