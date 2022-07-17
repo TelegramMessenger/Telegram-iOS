@@ -203,7 +203,7 @@ func hiddenSessionsController(context: AccountContext, uuid: UUID, account: Fake
         actionSheet.setItemGroups(itemsGroups)
         presentControllerImpl?(actionSheet)
     }, checkSession: { checked, session in
-        let _ = (dataPromise.get() |> take(1)).start(next: { data in
+        let _ = (dataPromise.get() |> take(1)).start(next: { [weak dataPromise] data in
             var sessions = data.settings.sessions
             if checked {
                 sessions.append(session.hash)
@@ -215,7 +215,7 @@ func hiddenSessionsController(context: AccountContext, uuid: UUID, account: Fake
                 }
             }
             let updatedData = data.withUpdatedSessions(sessions)
-            dataPromise.set(.single(updatedData))
+            dataPromise?.set(.single(updatedData))
             updated(updatedData.settings)
         })
     }, clearSessions: {
@@ -226,10 +226,10 @@ func hiddenSessionsController(context: AccountContext, uuid: UUID, account: Fake
         }
     }, checkAllSessions: {
         confirmChange { data in
-            let _ = (activeSessionsContext.state |> take(1)).start(next: { activeSessionsContext in
+            let _ = (activeSessionsContext.state |> take(1)).start(next: { [weak dataPromise] activeSessionsContext in
                 let allSessions = activeSessionsContext.sessions.map { s in s.hash }
                 let updatedData = data.withUpdatedSessions(allSessions)
-                dataPromise.set(.single(updatedData))
+                dataPromise?.set(.single(updatedData))
                 updated(updatedData.settings)
             })
         }
