@@ -230,19 +230,21 @@ public func chatsToRemovePeerSettingsController(context: AccountContext, peers: 
         let _ = (controller.ready.get()
         |> filter { $0 }
         |> take(1)
-        |> deliverOnMainQueue).start(next: { _ in
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            if let image = PresentationResourcesChat.chatTitleLockIcon(presentationData.theme) {
-                let titleLeftIconNode = ASImageNode()
-                titleLeftIconNode.isLayerBacked = true
-                titleLeftIconNode.displayWithoutProcessing = true
-                titleLeftIconNode.displaysAsynchronously = false
-                
-                titleLeftIconNode.image = image
-                titleLeftIconNode.frame = CGRect(origin: CGPoint(x: -image.size.width - 3.0 - UIScreenPixel, y: 4.0), size: image.size)
-                
-                assert(controller.navigationItem.titleView != nil)
-                controller.navigationItem.titleView?.subviews.first?.addSubnode(titleLeftIconNode)
+        |> deliverOnMainQueue).start(next: { [weak controller] _ in
+            if let controller = controller {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                if let image = PresentationResourcesChat.chatTitleLockIcon(presentationData.theme) {
+                    let titleLeftIconNode = ASImageNode()
+                    titleLeftIconNode.isLayerBacked = true
+                    titleLeftIconNode.displayWithoutProcessing = true
+                    titleLeftIconNode.displaysAsynchronously = false
+                    
+                    titleLeftIconNode.image = image
+                    titleLeftIconNode.frame = CGRect(origin: CGPoint(x: -image.size.width - 3.0 - UIScreenPixel, y: 4.0), size: image.size)
+                    
+                    assert(controller.navigationItem.titleView != nil)
+                    controller.navigationItem.titleView?.subviews.first?.addSubnode(titleLeftIconNode)
+                }
             }
         })
     }
