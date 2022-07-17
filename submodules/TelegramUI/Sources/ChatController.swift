@@ -7374,19 +7374,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.interfaceInteraction?.updateShowWebView { _ in
                 return false
             }
-            
-            if !strongSelf.presentationInterfaceState.voiceMessagesAvailable {
-                if strongSelf.recordingModeFeedback == nil {
-                    strongSelf.recordingModeFeedback = HapticFeedback()
-                    strongSelf.recordingModeFeedback?.prepareError()
-                }
-                
-                strongSelf.chatDisplayNode.dismissInput()
-                
-                strongSelf.interfaceInteraction?.displayRestrictedInfo(.premiumVoiceMessages, .tooltip)
-                return
-            }
-            
+                        
             let requestId = strongSelf.beginMediaRecordingRequestId
             let begin: () -> Void = {
                 guard let strongSelf = self, strongSelf.beginMediaRecordingRequestId == requestId else {
@@ -7555,29 +7543,34 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if case .premiumVoiceMessages = subject {
-                let rect = strongSelf.chatDisplayNode.frameForInputActionButton()
-                if let rect = rect {
-                    strongSelf.mediaRestrictedTooltipController?.dismiss()
-                    let text: String
-                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer.flatMap({ EnginePeer($0) }) {
-                        text = strongSelf.presentationInterfaceState.strings.Conversation_VoiceMessagesRestricted(peer.compactDisplayTitle).string
-                    } else {
-                        text = ""
-                    }
-                    let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
-                    strongSelf.mediaRestrictedTooltipController = tooltipController
-                    strongSelf.mediaRestrictedTooltipControllerMode = false
-                    tooltipController.dismissed = { [weak tooltipController] _ in
-                        if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRestrictedTooltipController === tooltipController {
-                            strongSelf.mediaRestrictedTooltipController = nil
+                let text: String
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer.flatMap({ EnginePeer($0) }) {
+                    text = strongSelf.presentationInterfaceState.strings.Conversation_VoiceMessagesRestricted(peer.compactDisplayTitle).string
+                } else {
+                    text = ""
+                }
+                switch displayType {
+                    case .tooltip:
+                        let rect = strongSelf.chatDisplayNode.frameForInputActionButton()
+                        if let rect = rect {
+                            strongSelf.mediaRestrictedTooltipController?.dismiss()
+                            let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
+                            strongSelf.mediaRestrictedTooltipController = tooltipController
+                            strongSelf.mediaRestrictedTooltipControllerMode = false
+                            tooltipController.dismissed = { [weak tooltipController] _ in
+                                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRestrictedTooltipController === tooltipController {
+                                    strongSelf.mediaRestrictedTooltipController = nil
+                                }
+                            }
+                            strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                                if let strongSelf = self {
+                                    return (strongSelf.chatDisplayNode, rect)
+                                }
+                                return nil
+                            }))
                         }
-                    }
-                    strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
-                        if let strongSelf = self {
-                            return (strongSelf.chatDisplayNode, rect)
-                        }
-                        return nil
-                    }))
+                    case .alert:
+                        strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
             } else if case .mediaRecording = subject, strongSelf.presentationInterfaceState.hasActiveGroupCall {
                 let rect = strongSelf.chatDisplayNode.frameForInputActionButton()
@@ -8934,6 +8927,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .tooMuchScheduled:
                             text = strongSelf.presentationData.strings.Conversation_SendMessageErrorTooMuchScheduled
                             moreInfo = false
+                        case .voiceMessagesForbidden:
+                            strongSelf.interfaceInteraction?.displayRestrictedInfo(.premiumVoiceMessages, .alert)
+                            return
                         }
                         let actions: [TextAlertAction]
                         if moreInfo {
