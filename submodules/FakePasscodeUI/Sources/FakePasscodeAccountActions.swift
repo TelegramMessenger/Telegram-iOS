@@ -7,6 +7,14 @@ import AccountContext
 import FakePasscode
 
 private final class FakePasscodeAccountActionsControllerArguments {
+    let openChatsToRemove: ([PeerWithRemoveOptions]) -> Void
+    let switchLogOut: (Bool) -> Void
+    
+    init(openChatsToRemove: @escaping ([PeerWithRemoveOptions]) -> Void, switchLogOut: @escaping (Bool) -> Void) {
+        self.openChatsToRemove = openChatsToRemove
+        self.switchLogOut = switchLogOut
+    }    
+    
     let logOut: (Bool) -> Void
     let sessionsToHide: () -> Void
     
@@ -24,6 +32,7 @@ private enum FakePasscodeAccountActionsSection: Int32 {
 }
 
 private enum FakePasscodeAccountActionsEntry: ItemListNodeEntry {
+    case chatsToRemove(PresentationTheme, String, [PeerWithRemoveOptions])
     case logOut(PresentationTheme, String, Bool)
     case sessionsToHide(PresentationTheme, String, String)
     case sessionsActionsInfo(PresentationTheme, String)
@@ -33,21 +42,23 @@ private enum FakePasscodeAccountActionsEntry: ItemListNodeEntry {
         switch self {
             case .sessionsToHide, .sessionsActionsInfo:
                 return FakePasscodeAccountActionsSection.sessionActions.rawValue
-            case .logOut, .miscActionsInfo:
+            case .chatsToRemove, .logOut, .miscActionsInfo:
                 return FakePasscodeAccountActionsSection.miscActions.rawValue
         }
     }
     
     var stableId: Int32 {
         switch self {
-            case .sessionsToHide:
+            case .chatsToRemove:
                 return 0
-            case .sessionsActionsInfo:
-                return 1
             case .logOut:
-                return 2
+                return 1
             case .miscActionsInfo:
+                return 2
+            case .sessionsToHide:
                 return 3
+            case .sessionsActionsInfo:
+                return 4
         }
     }
 
@@ -58,13 +69,16 @@ private enum FakePasscodeAccountActionsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! FakePasscodeAccountActionsControllerArguments
         switch self {
+            case let .chatsToRemove(_, title, chatsToRemove):
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: "\(chatsToRemove.count)", sectionId: self.section, style: .blocks, action: {
+                    arguments.openChatsToRemove(chatsToRemove)
             case let .sessionsToHide(_, title, label):
                 return ItemListDisclosureItem(presentationData: presentationData, title: title, label: label, sectionId: self.section, style: .blocks, action: {
                     arguments.sessionsToHide()
                 })
             case let .logOut(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.logOut(value)
+                    arguments.switchLogOut(value)
                 })
             case let .miscActionsInfo(_, text), let .sessionsActionsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -81,17 +95,18 @@ private struct FakePasscodeAccountActionsData: Equatable {
 }
 
 private func fakePasscodeAccountActionsControllerEntries(presentationData: PresentationData, settings: FakePasscodeAccountActionsSettings) -> [FakePasscodeAccountActionsEntry] {
-    var entries: [FakePasscodeAccountActionsEntry] = []
-
+    var entries: [FakePasscodeAccountActionsEntry] = []    
+    entries.append(.chatsToRemove(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_ChatsToRemove, settings.chatsToRemove))
+    entries.append(.logOut(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_LogOut, settings.logOut))
+    entries.append(.miscActionsInfo(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_MiscActionsInfo))
     entries.append(.sessionsToHide(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, sessionToHideLabel(presentationData, settings.sessionsToHide)))
     entries.append(.sessionsActionsInfo(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsSettingsInfo))
-    entries.append(.logOut(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_LogOut, settings.logOut))
-     entries.append(.miscActionsInfo(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_MiscActionsInfo))
-    
     return entries
 }
 
-func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, account: FakePasscodeActionsAccount) -> ViewController {
+func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, accountDisplayName: String) -> ViewController {
+    var pushControllerImpl: ((ViewController) -> Void)?
+
     let actionsDisposable = DisposableSet()
 
     var pushControllerImpl: ((ViewController) -> Void)?
@@ -102,7 +117,13 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
         return FakePasscodeAccountActionsData(settings: settings)
     })
 
-    let arguments = FakePasscodeAccountActionsControllerArguments(logOut: { enabled in
+    let arguments = FakePasscodeAccountActionsControllerArguments(openChatsToRemove: { chatsToRemove in
+        pushControllerImpl?(chatsToRemoveController(context: context, chatsToRemove: chatsToRemove, updatedSettings: { chatsToRemove in
+            updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
+                return settings.withUpdatedChatsToRemove(chatsToRemove)
+            }
+        }))
+    }, switchLogOut: { enabled in
         updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
             return settings.withUpdatedLogOut(enabled)
         }
@@ -116,7 +137,7 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
 
     let signal = combineLatest(context.sharedContext.presentationData, accountActionsDataPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, accountActionsData -> (ItemListControllerState, (ItemListNodeState, Any)) in
-            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(account.displayName), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(accountDisplayName), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             
             let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: fakePasscodeAccountActionsControllerEntries(presentationData: presentationData, settings: accountActionsData.settings), style: .blocks, emptyStateItem: nil, animateChanges: false)
 

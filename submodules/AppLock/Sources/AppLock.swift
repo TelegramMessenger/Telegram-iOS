@@ -92,6 +92,8 @@ public final class AppLockContextImpl: AppLockContext {
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
+    public weak var sharedAccountContext: SharedAccountContext?
+    
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         
@@ -203,7 +205,7 @@ public final class AppLockContextImpl: AppLockContext {
                             } else {
                                 return CGRect()
                             }
-                        }))
+                        }), sharedAccountContext: strongSelf.sharedAccountContext)
                         if becameActiveRecently, appInForeground {
                             passcodeController.presentationCompleted = { [weak passcodeController] in
                                 if case .enabled = biometrics {

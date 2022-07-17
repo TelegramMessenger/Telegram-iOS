@@ -63,7 +63,9 @@ public final class PasscodeEntryController: ViewController {
     private var statusBarHost: StatusBarHost?
     private var previousStatusBarStyle: UIStatusBarStyle?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
+    private let sharedAccountContext: SharedAccountContext?
+    
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments, sharedAccountContext: SharedAccountContext?) {
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.appLockContext = appLockContext
@@ -72,6 +74,7 @@ public final class PasscodeEntryController: ViewController {
         self.challengeData = challengeData
         self.biometrics = biometrics
         self.arguments = arguments
+        self.sharedAccountContext = sharedAccountContext
         
         self.statusBarHost = statusBarHost
         self.previousStatusBarStyle = statusBarHost?.statusBarStyle
@@ -219,8 +222,8 @@ public final class PasscodeEntryController: ViewController {
                         }
                     }
                     
-                    if let fakePasscodeToActivate = fakePasscodeToActivate {
-                        fakePasscodeToActivate.activate(accountManager: strongSelf.accountManager, applicationBindings: strongSelf.applicationBindings)
+                    if let fakePasscodeToActivate = fakePasscodeToActivate, let sharedAccountContext = strongSelf.sharedAccountContext {
+                        fakePasscodeToActivate.activate(sharedAccountContext: sharedAccountContext)
                     }
                 } else {
                     strongSelf.appLockContext.failedUnlockAttempt()

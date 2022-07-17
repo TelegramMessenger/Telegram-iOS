@@ -15,6 +15,7 @@ import PersistentStringHash
 import CallKit
 import AppLockState
 import NotificationsPresentationData
+import FakePasscode
 
 private let queue = Queue()
 
@@ -691,7 +692,7 @@ private final class NotificationServiceHandler {
 
         let _ = (combineLatest(queue: self.queue,
             self.accountManager.accountRecords(),
-            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings])
+            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
         )
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
@@ -917,7 +918,17 @@ private final class NotificationServiceHandler {
                             break
                         }
                     } else {
-                        if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
+                        var hideNotification = false
+                        if let peerId = peerId {
+                            let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+                            if let activeFakePasscodeSettings = fakePasscodeHolder.activeFakePasscodeSettings() {
+                                if let accountActions = activeFakePasscodeSettings.accountActions.first(where: { $0.peerId == stateManager.accountPeerId && $0.recordId == recordId }) {
+                                    hideNotification = accountActions.chatsToRemove.contains(where: { $0.removalType == .hide && $0.peerId == peerId })
+                                }
+                            }
+                        }
+                        
+                        if !hideNotification, let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
                             var content: NotificationContent = NotificationContent(isLockedMessage: isLockedMessage)
                             if let alert = aps["alert"] as? [String: Any] {
                                 content.title = alert["title"] as? String

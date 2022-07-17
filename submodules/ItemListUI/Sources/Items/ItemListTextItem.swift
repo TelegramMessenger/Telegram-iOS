@@ -11,6 +11,7 @@ public enum ItemListTextItemText {
     case plain(String)
     case large(String)
     case markdown(String)
+    case attributedString(NSAttributedString)
 }
 
 public enum ItemListTextItemLinkAction {
@@ -131,6 +132,8 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                 attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: item.presentationData.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)
                 }))
+            case let .attributedString(text):
+                attributedText = text
             }
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0 - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
