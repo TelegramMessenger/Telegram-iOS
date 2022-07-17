@@ -8,18 +8,12 @@ import FakePasscode
 
 private final class FakePasscodeAccountActionsControllerArguments {
     let openChatsToRemove: ([PeerWithRemoveOptions]) -> Void
+    let sessionsToHide: () -> Void
     let switchLogOut: (Bool) -> Void
     
-    init(openChatsToRemove: @escaping ([PeerWithRemoveOptions]) -> Void, switchLogOut: @escaping (Bool) -> Void) {
+    init(openChatsToRemove: @escaping ([PeerWithRemoveOptions]) -> Void, sessionsToHide: @escaping () -> Void, switchLogOut: @escaping (Bool) -> Void) {
         self.openChatsToRemove = openChatsToRemove
         self.switchLogOut = switchLogOut
-    }    
-    
-    let logOut: (Bool) -> Void
-    let sessionsToHide: () -> Void
-    
-    init(logOut: @escaping (Bool) -> Void, sessionsToHide: @escaping () -> Void) {
-        self.logOut = logOut
         self.sessionsToHide = sessionsToHide
     }
 }
@@ -72,6 +66,7 @@ private enum FakePasscodeAccountActionsEntry: ItemListNodeEntry {
             case let .chatsToRemove(_, title, chatsToRemove):
                 return ItemListDisclosureItem(presentationData: presentationData, title: title, label: "\(chatsToRemove.count)", sectionId: self.section, style: .blocks, action: {
                     arguments.openChatsToRemove(chatsToRemove)
+                })
             case let .sessionsToHide(_, title, label):
                 return ItemListDisclosureItem(presentationData: presentationData, title: title, label: label, sectionId: self.section, style: .blocks, action: {
                     arguments.sessionsToHide()
@@ -109,11 +104,9 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
 
     let actionsDisposable = DisposableSet()
 
-    var pushControllerImpl: ((ViewController) -> Void)?
-
     let accountActionsDataPromise = Promise<FakePasscodeAccountActionsData>()
     accountActionsDataPromise.set(context.sharedContext.accountManager.transaction { transaction -> FakePasscodeAccountActionsData in
-        let settings = FakePasscodeSettingsHolder(transaction).getAccountActions(uuid, account)
+        let settings = FakePasscodeSettingsHolder(transaction).getAccountActions(uuid, context.account)
         return FakePasscodeAccountActionsData(settings: settings)
     })
 
@@ -123,16 +116,16 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
                 return settings.withUpdatedChatsToRemove(chatsToRemove)
             }
         }))
-    }, switchLogOut: { enabled in
-        updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
-            return settings.withUpdatedLogOut(enabled)
-        }
     }, sessionsToHide: {
-        pushControllerImpl?(hiddenSessionsController(context: context, uuid: uuid, account: account, updated: { sessionsToHide in
+        pushControllerImpl?(hiddenSessionsController(context: context, uuid: uuid, updated: { sessionsToHide in
             updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
                 settings.withUpdatedSessionsToHide(sessionsToHide)
             }
         }))
+    }, switchLogOut: { enabled in
+        updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
+            return settings.withUpdatedLogOut(enabled)
+        }
     })
 
     let signal = combineLatest(context.sharedContext.presentationData, accountActionsDataPromise.get()) |> deliverOnMainQueue
