@@ -509,7 +509,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         
         let iconSize = self.iconNode.image?.size ?? CGSize(width: 16.0, height: 16.0)
                 
-        let text = self.text.replacingOccurrences(of: "#", with: "#  ")
+        let text = self.text.replacingOccurrences(of: "#", with: "# ")
         let attributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: boldTextFont, textColor: accentColor), linkAttribute: { _ in
             return nil
         })))

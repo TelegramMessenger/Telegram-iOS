@@ -324,7 +324,7 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         let loadedStickerPacks = combineLatest(stickerPacks.map {
-            context.engine.stickers.loadedStickerPack(reference: $0, forceActualized: false)
+            context.engine.stickers.loadedStickerPack(reference: $0, forceActualized: true)
         })
         
         self.itemsDisposable = combineLatest(queue: Queue.mainQueue(), loadedStickerPacks, context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))).start(next: { [weak self] contents, peer in
