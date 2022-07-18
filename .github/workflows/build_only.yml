@@ -2,6 +2,11 @@ name: Build only
 
 on:
   workflow_dispatch:
+  pull_request:
+     branches: [ master ]
+
+env:
+  BAZEL_USER_ROOT: "/private/var/tmp/_bazel_telegram" # use canonical bazel root
 
 jobs:
   build:
@@ -24,6 +29,11 @@ jobs:
           sudo chown -R $(whoami) /Users/telegram
           cp -R $GITHUB_WORKSPACE /Users/telegram/
           mv /Users/telegram/$(basename $GITHUB_WORKSPACE) /Users/telegram/telegram-ios
+      - name: Bazel cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.BAZEL_USER_ROOT }}
+          key: ${{ runner.os }}-bazel-cache
       - name: Build the App
         env:
           SIGNING_CERTIFICATE_P12_DATA: ${{ secrets.SIGNING_CERTIFICATE_P12_DATA }}
@@ -41,8 +51,6 @@ jobs:
           set -x
           # source code paths are included in the final binary, so we need to make them stable across builds
           SOURCE_DIR=/Users/telegram/telegram-ios
-          # use canonical bazel root
-          BAZEL_USER_ROOT="/private/var/tmp/_bazel_telegram"
           cd $SOURCE_DIR
           BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
           export APP_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["app"]);')
@@ -87,16 +95,3 @@ jobs:
             --configurationPath="$HOME/telegram-configuration" \
             --buildNumber=$BUILD_NUMBER \
             --configuration=release_universal
-          # collect ipa
-          OUTPUT_PATH="build/artifacts"
-          rm -rf "$OUTPUT_PATH"
-          mkdir -p "$OUTPUT_PATH"
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa; do
-            cp "$f" $OUTPUT_PATH/
-          done
-          # collect dsym
-          mkdir -p build/DSYMs
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/*.dSYM; do
-            cp -R "$f" build/DSYMs/
-          done
-          zip -r "./$OUTPUT_PATH/Telegram.DSYMs.zip" build/DSYMs 1>/dev/null
