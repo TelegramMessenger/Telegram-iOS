@@ -478,11 +478,11 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             entries.append(.currentSession(SortIndex(section: 1, item: 1), presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
         }
 
-        let filteredSessions = sessionsState.sessions.filter(sessionFilter).filter({ $0.hash != 0 })
+        let filteredSessions = sessionsState.sessions.filter(sessionFilter)
 
         var hasAddDevice = false
-        if filteredSessions.count > 0 || enableQRLogin {
-            if filteredSessions.count > 0 {
+        if filteredSessions.count > 1 || enableQRLogin {
+            if filteredSessions.count > 1 {
                 entries.append(.terminateOtherSessions(SortIndex(section: 1, item: 2), presentationData.strings.AuthSessions_TerminateOtherSessions))
                 entries.append(.currentSessionInfo(SortIndex(section: 1, item: 3), presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
             } else if enableQRLogin {
@@ -503,7 +503,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
                 entries.append(.pendingSessionsInfo(SortIndex(section: 3, item: 0), presentationData.strings.AuthSessions_IncompleteAttemptsInfo))
             }
 
-            if filteredSessions.count > 0 {
+            if filteredSessions.count > 1 {
                 entries.append(.otherSessionsHeader(SortIndex(section: 4, item: 0), presentationData.strings.AuthSessions_OtherSessions))
             }
 

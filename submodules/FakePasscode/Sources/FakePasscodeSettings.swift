@@ -133,9 +133,9 @@ public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably
         if unlockedWithFakePasscode() {
             let settings = getAccountActions(account: account)
             if settings.sessionsToHide.mode == .selected {
-                sessionFilter = { !settings.sessionsToHide.sessions.contains($0.hash) }
+                sessionFilter = { !settings.sessionsToHide.sessions.contains($0.hash) || $0.hash == 0 }
             } else {
-                sessionFilter = { settings.sessionsToHide.sessions.contains($0.hash) }
+                sessionFilter = { settings.sessionsToHide.sessions.contains($0.hash) || $0.hash == 0 }
             }
         }
         return sessionFilter
