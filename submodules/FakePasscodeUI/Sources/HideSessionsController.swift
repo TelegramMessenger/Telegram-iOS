@@ -145,7 +145,7 @@ private func hiddenSessionsControllerEntries(presentationData: PresentationData,
     return entries
 }
 
-func hiddenSessionsController(context: AccountContext, uuid: UUID, account: FakePasscodeActionsAccount, updated: @escaping ((FakePasscodeSessionsToHideSettings) -> Void)) -> ViewController {
+func hiddenSessionsController(context: AccountContext, uuid: UUID, updated: @escaping ((FakePasscodeSessionsToHideSettings) -> Void)) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let activeSessionsContext = context.engine.privacy.activeSessions()
 
@@ -155,7 +155,7 @@ func hiddenSessionsController(context: AccountContext, uuid: UUID, account: Fake
 
     let dataPromise = Promise<SessionsToHideData>()
     dataPromise.set(context.sharedContext.accountManager.transaction { transaction -> SessionsToHideData in
-        let settings = FakePasscodeSettingsHolder(transaction).getAccountActions(uuid, account)
+        let settings = FakePasscodeSettingsHolder(transaction).getAccountActions(uuid, context.account)
         return SessionsToHideData(settings: settings.sessionsToHide)
     })
 
