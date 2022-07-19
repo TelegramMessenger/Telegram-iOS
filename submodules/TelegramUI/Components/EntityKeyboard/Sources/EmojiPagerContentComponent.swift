@@ -20,7 +20,7 @@ import StickerResources
 import AppBundle
 import ContextUI
 import PremiumUI
-import StickerPackPreviewUI
+import StickerPeekUI
 import UndoUI
 import AudioToolbox
 import SolidRoundedButtonComponent
@@ -558,12 +558,12 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
-        final class ItemPlaceholderView: UIView {
+        public final class ItemPlaceholderView: UIView {
             private let shimmerView: PortalSourceView?
             private var placeholderView: PortalView?
             private let placeholderMaskLayer: SimpleLayer
             
-            init(
+            public init(
                 context: AccountContext,
                 file: TelegramMediaFile,
                 shimmerView: PortalSourceView?,
@@ -604,7 +604,7 @@ public final class EmojiPagerContentComponent: Component {
                 fatalError("init(coder:) has not been implemented")
             }
             
-            func update(size: CGSize) {
+            public func update(size: CGSize) {
                 if let placeholderView = self.placeholderView {
                     placeholderView.view.frame = CGRect(origin: CGPoint(), size: size)
                 }
@@ -612,11 +612,21 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
-        final class ItemLayer: MultiAnimationRenderTarget {
-            struct Key: Hashable {
+        public final class ItemLayer: MultiAnimationRenderTarget {
+            public struct Key: Hashable {
                 var groupId: AnyHashable
                 var fileId: MediaId?
                 var staticEmoji: String?
+                
+                public init(
+                    groupId: AnyHashable,
+                    fileId: MediaId?,
+                    staticEmoji: String?
+                ) {
+                    self.groupId = groupId
+                    self.fileId = fileId
+                    self.staticEmoji = staticEmoji
+                }
             }
             
             enum Badge {
@@ -646,10 +656,10 @@ public final class EmojiPagerContentComponent: Component {
                     }
                 }
             }
-            private(set) var displayPlaceholder: Bool = false
-            let onUpdateDisplayPlaceholder: (Bool, Double) -> Void
-            
-            init(
+            public private(set) var displayPlaceholder: Bool = false
+            public let onUpdateDisplayPlaceholder: (Bool, Double) -> Void
+        
+            public init(
                 item: Item,
                 context: AccountContext,
                 attemptSynchronousLoad: Bool,
@@ -795,7 +805,7 @@ public final class EmojiPagerContentComponent: Component {
                 self.fetchDisposable?.dispose()
             }
             
-            override public func action(forKey event: String) -> CAAction? {
+            public override func action(forKey event: String) -> CAAction? {
                 if event == kCAOnOrderIn {
                     self.isInHierarchyValue = true
                 } else if event == kCAOnOrderOut {
@@ -847,7 +857,7 @@ public final class EmojiPagerContentComponent: Component {
                 self.shouldBeAnimating = shouldBePlaying
             }
             
-            override func updateDisplayPlaceholder(displayPlaceholder: Bool) {
+            public override func updateDisplayPlaceholder(displayPlaceholder: Bool) {
                 if self.displayPlaceholder == displayPlaceholder {
                     return
                 }
@@ -856,7 +866,7 @@ public final class EmojiPagerContentComponent: Component {
                 self.onUpdateDisplayPlaceholder(displayPlaceholder, 0.0)
             }
             
-            override func transitionToContents(_ contents: AnyObject) {
+            public override func transitionToContents(_ contents: AnyObject) {
                 self.contents = contents
                 
                 if self.displayPlaceholder {
@@ -1051,7 +1061,7 @@ public final class EmojiPagerContentComponent: Component {
                             switch attribute {
                             case let .CustomEmoji(_, _, packReference):
                                 if let packReference = packReference {
-                                    let controller = StickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: component.inputInteraction.navigationController(), sendSticker: { file, sourceView, sourceRect in
+                                    let controller = context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: component.inputInteraction.navigationController(), sendSticker: { file, sourceView, sourceRect in
                                         //return component.inputInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect, nil)
                                         return false
                                     })

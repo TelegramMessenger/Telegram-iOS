@@ -304,7 +304,7 @@ public func archivedStickerPacksNoticeController(context: AccountContext, archiv
     let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
     })
-    controller.dismissed = {
+    controller.dismissed = { _ in
         presentationDataDisposable.dispose()
         disposable.dispose()
     }

@@ -12,6 +12,7 @@ import ActivityIndicator
 import TextFormat
 import AccountContext
 import ContextUI
+import StickerPeekUI
 
 private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     let index: Int
@@ -142,7 +143,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         super.init()
         
-        self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: false)
+        self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: false, addStickerPack: { _, _ in }, removeStickerPack: { _ in })
         
         self.backgroundColor = nil
         self.isOpaque = false

@@ -10,6 +10,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
 import StickerPackPreviewUI
+import StickerPeekUI
 import OverlayStatusController
 import PresentationDataUtils
 import SearchBarNode

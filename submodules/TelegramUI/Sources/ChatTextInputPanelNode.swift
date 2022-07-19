@@ -694,7 +694,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         self.actionButtons.micButton.recordingDisabled = { [weak self] in
-            self?.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .tooltip)
+            if let strongSelf = self {
+                if strongSelf.presentationInterfaceState?.voiceMessagesAvailable == false {
+                    self?.interfaceInteraction?.displayRestrictedInfo(.premiumVoiceMessages, .tooltip)
+                } else {
+                    self?.interfaceInteraction?.displayRestrictedInfo(.mediaRecording, .tooltip)
+                }
+            }
         }
         
         self.actionButtons.micButton.beginRecording = { [weak self] in
@@ -1895,7 +1901,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         let mediaInputDisabled: Bool
-        if interfaceState.hasActiveGroupCall {
+        if !interfaceState.voiceMessagesAvailable {
+            mediaInputDisabled = true
+        } else if interfaceState.hasActiveGroupCall {
             mediaInputDisabled = true
         } else if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.hasBannedPermission(.banSendMedia) != nil {
             mediaInputDisabled = true

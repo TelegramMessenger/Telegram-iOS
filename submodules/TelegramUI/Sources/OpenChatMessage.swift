@@ -79,6 +79,8 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 return true
             case let .stickerPack(reference):
                 let controller = StickerPackScreen(context: params.context, updatedPresentationData: params.updatedPresentationData, mainStickerPack: reference, stickerPacks: [reference], parentNavigationController: params.navigationController, sendSticker: params.sendSticker, actionPerformed: { info, items, action in
+                    let isEmoji = info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
+                    
                     let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
                     var animateInAsReplacement = false
                     if let navigationController = params.navigationController {
@@ -91,11 +93,11 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                     switch action {
                     case .add:
-                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedTitle : presentationData.strings.StickerPackActionInfo_AddedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedText(info.title).string : presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
                             return true
                         }))
                     case let .remove(positionInList):
-                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                        params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string : presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
                             if case .undo = action {
                                 let _ = params.context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
                             }

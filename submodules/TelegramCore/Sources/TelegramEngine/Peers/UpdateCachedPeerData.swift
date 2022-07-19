@@ -239,11 +239,13 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         let isBlocked = (userFullFlags & (1 << 0)) != 0
                                         let voiceCallsAvailable = (userFullFlags & (1 << 4)) != 0
                                         let videoCallsAvailable = (userFullFlags & (1 << 13)) != 0
-
+                                        let voiceMessagesAvailable = (userFullFlags & (1 << 20)) == 0
+                                    
                                         let callsPrivate = (userFullFlags & (1 << 5)) != 0
                                         let canPinMessages = (userFullFlags & (1 << 7)) != 0
                                         let pinnedMessageId = userFullPinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
-                                        
+                                    
+
                                         let peerStatusSettings = PeerStatusSettings(apiSettings: userFullSettings)
                                         
                                         let hasScheduledMessages = (userFullFlags & 1 << 12) != 0
@@ -271,6 +273,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             .withUpdatedThemeEmoticon(userFullThemeEmoticon)
                                             .withUpdatedPhoto(photo)
                                             .withUpdatedPremiumGiftOptions(premiumGiftOptions)
+                                            .withUpdatedVoiceMessagesAvailable(voiceMessagesAvailable)
                                 }
                             })
                         }

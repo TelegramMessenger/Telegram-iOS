@@ -63,7 +63,7 @@ extension StickerPackReference {
             case .inputStickerSetAnimatedEmojiAnimations:
                 self = .animatedEmojiAnimations
             case .inputStickerSetPremiumGifts:
-                return nil
+                self = .premiumGifts
         }
     }
 }

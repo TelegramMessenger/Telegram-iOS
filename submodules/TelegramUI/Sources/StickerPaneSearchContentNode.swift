@@ -11,6 +11,7 @@ import LegacyComponents
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
+import StickerPeekUI
 import Emoji
 import AppBundle
 import OverlayStatusController

@@ -42,8 +42,8 @@ public extension TelegramEngine {
             return _internal_sendAppStoreReceipt(account: self.account, receipt: receipt, purpose: purpose)
         }
         
-        public func canPurchasePremium() -> Signal<Bool, NoError> {
-            return _internal_canPurchasePremium(account: self.account)
+        public func canPurchasePremium(purpose: AppStoreTransactionPurpose) -> Signal<Bool, NoError> {
+            return _internal_canPurchasePremium(account: self.account, purpose: purpose)
         }
     }
 }

@@ -1326,7 +1326,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self?.dismissAllTooltips()
                 completion()
             })])
-            controller.dismissed = { [weak self] in
+            controller.dismissed = { [weak self] _ in
                 self?.isDismissing = false
             }
             self.present(controller, in: .window(.root))

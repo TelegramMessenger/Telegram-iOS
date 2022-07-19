@@ -11,13 +11,19 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import TelegramPresentationData
 import ShimmerEffect
+import StickerPeekUI
 
 final class StickerPackPreviewInteraction {
     var previewedItem: StickerPreviewPeekItem?
     var playAnimatedStickers: Bool
     
-    init(playAnimatedStickers: Bool) {
+    let addStickerPack: (StickerPackCollectionInfo, [StickerPackItem]) -> Void
+    let removeStickerPack: (StickerPackCollectionInfo) -> Void
+    
+    init(playAnimatedStickers: Bool, addStickerPack: @escaping (StickerPackCollectionInfo, [StickerPackItem]) -> Void, removeStickerPack: @escaping (StickerPackCollectionInfo) -> Void) {
         self.playAnimatedStickers = playAnimatedStickers
+        self.addStickerPack = addStickerPack
+        self.removeStickerPack = removeStickerPack
     }
 }
 

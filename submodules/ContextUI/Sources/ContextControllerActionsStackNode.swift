@@ -807,6 +807,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     }
     
     final class ItemContainer: ASDisplayNode {
+        let getController: () -> ContextControllerProtocol?
         let requestUpdate: (ContainedViewLayoutTransition) -> Void
         let node: ContextControllerActionsStackItemNode
         let dimNode: ASDisplayNode
@@ -826,6 +827,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?,
             positionLock: CGFloat?
         ) {
+            self.getController = getController
             self.requestUpdate = requestUpdate
             self.node = item.node(
                 getController: getController,
@@ -885,7 +887,9 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 if self.tipNode == nil {
                     updatedTransition = .immediate
                     let tipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
-                    tipNode.isUserInteractionEnabled = false
+                    tipNode.requestDismiss = { [weak self] in
+                        self?.getController()?.dismiss(completion: nil)
+                    }
                     self.tipNode = tipNode
                 }
                 

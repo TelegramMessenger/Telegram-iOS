@@ -18,13 +18,19 @@ import TextFormat
 import PremiumUI
 import OverlayStatusController
 import PresentationDataUtils
+import StickerPeekUI
+import AnimationCache
+import MultiAnimationRenderer
 
 private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
     case sticker(index: Int, stableId: Int, stickerItem: StickerPackItem?, isEmpty: Bool, isPremium: Bool, isLocked: Bool)
+    case emojis(index: Int, stableId: Int, info: StickerPackCollectionInfo, items: [StickerPackItem], title: String?, isInstalled: Bool?)
     
     var stableId: Int {
         switch self {
             case let .sticker(_, stableId, _, _, _, _):
+                return stableId
+            case let .emojis(_, stableId, _, _, _, _):
                 return stableId
         }
     }
@@ -33,6 +39,8 @@ private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
         switch self {
             case let .sticker(index, _, _, _, _, _):
                 return index
+            case let .emojis(index, _, _, _, _, _):
+                return index
         }
     }
     
@@ -40,10 +48,12 @@ private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings) -> GridItem {
+    func item(context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer) -> GridItem {
         switch self {
             case let .sticker(_, _, stickerItem, isEmpty, isPremium, isLocked):
-                return StickerPackPreviewGridItem(account: account, stickerItem: stickerItem, interaction: interaction, theme: theme, isPremium: isPremium, isLocked: isLocked, isEmpty: isEmpty)
+                return StickerPackPreviewGridItem(account: context.account, stickerItem: stickerItem, interaction: interaction, theme: theme, isPremium: isPremium, isLocked: isLocked, isEmpty: isEmpty)
+            case let .emojis(_, _, info, items, title, isInstalled):
+                return StickerPackEmojisItem(context: context, animationCache: animationCache, animationRenderer: animationRenderer, interaction: interaction, info: info, items: items, theme: theme, strings: strings, title: title, isInstalled: isInstalled, isEmpty: false)
         }
     }
 }
@@ -54,12 +64,12 @@ private struct StickerPackPreviewGridTransaction {
     let updates: [GridNodeUpdateItem]
     let scrollToItem: GridNodeScrollToItem?
     
-    init(previousList: [StickerPackPreviewGridEntry], list: [StickerPackPreviewGridEntry], account: Account, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, scrollToItem: GridNodeScrollToItem?) {
+    init(previousList: [StickerPackPreviewGridEntry], list: [StickerPackPreviewGridEntry], context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, scrollToItem: GridNodeScrollToItem?) {
          let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: previousList, rightList: list)
         
         self.deletions = deleteIndices
-        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction, theme: theme, strings: strings), previousIndex: $0.2) }
-        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction, theme: theme, strings: strings)) }
+        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings, animationCache: animationCache, animationRenderer: animationRenderer), previousIndex: $0.2) }
+        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings, animationCache: animationCache, animationRenderer: animationRenderer)) }
         
         self.scrollToItem = scrollToItem
     }
@@ -81,7 +91,7 @@ private final class StickerPackContainer: ASDisplayNode {
     private let context: AccountContext
     private weak var controller: StickerPackScreenImpl?
     private var presentationData: PresentationData
-    private let stickerPack: StickerPackReference
+    private let stickerPacks: [StickerPackReference]
     private let decideNextAction: (StickerPackContainer, StickerPackAction) -> StickerPackNextAction
     private let requestDismiss: () -> Void
     private let presentInGlobalOverlay: (ViewController, Any?) -> Void
@@ -108,7 +118,9 @@ private final class StickerPackContainer: ASDisplayNode {
     private var enqueuedTransactions: [StickerPackPreviewGridTransaction] = []
     
     private var itemsDisposable: Disposable?
+    private var currentContents: [LoadedStickerPack]?
     private(set) var currentStickerPack: (StickerPackCollectionInfo, [StickerPackItem], Bool)?
+    private(set) var currentStickerPacks: [(StickerPackCollectionInfo, [StickerPackItem], Bool)] = []
     private var didReceiveStickerPackResult = false
     
     private let isReadyValue = Promise<Bool>()
@@ -129,12 +141,16 @@ private final class StickerPackContainer: ASDisplayNode {
     
     private weak var peekController: PeekController?
     
-    init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPack: StickerPackReference, decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, openMention: @escaping (String) -> Void, controller: StickerPackScreenImpl?) {
+    var onLoading: () -> Void = {}
+    var onReady: () -> Void = {}
+    var onError: () -> Void = {}
+    
+    init(index: Int, context: AccountContext, presentationData: PresentationData, stickerPacks: [StickerPackReference], decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction, requestDismiss: @escaping () -> Void, expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, openMention: @escaping (String) -> Void, controller: StickerPackScreenImpl?) {
         self.index = index
         self.context = context
         self.controller = controller
         self.presentationData = presentationData
-        self.stickerPack = stickerPack
+        self.stickerPacks = stickerPacks
         self.decideNextAction = decideNextAction
         self.requestDismiss = requestDismiss
         self.presentInGlobalOverlay = presentInGlobalOverlay
@@ -183,7 +199,13 @@ private final class StickerPackContainer: ASDisplayNode {
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
         
-        self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: true)
+        var addStickerPackImpl: ((StickerPackCollectionInfo, [StickerPackItem]) -> Void)?
+        var removeStickerPackImpl: ((StickerPackCollectionInfo) -> Void)?
+        self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: true, addStickerPack: { info, items in
+            addStickerPackImpl?(info, items)
+        }, removeStickerPack: { info in
+            removeStickerPackImpl?(info)
+        })
         
         super.init()
         
@@ -301,7 +323,11 @@ private final class StickerPackContainer: ASDisplayNode {
             return updatedOffset
         }
         
-        self.itemsDisposable = combineLatest(queue: Queue.mainQueue(), context.engine.stickers.loadedStickerPack(reference: stickerPack, forceActualized: false), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))).start(next: { [weak self] contents, peer in
+        let loadedStickerPacks = combineLatest(stickerPacks.map {
+            context.engine.stickers.loadedStickerPack(reference: $0, forceActualized: true)
+        })
+        
+        self.itemsDisposable = combineLatest(queue: Queue.mainQueue(), loadedStickerPacks, context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))).start(next: { [weak self] contents, peer in
             guard let strongSelf = self else {
                 return
             }
@@ -335,6 +361,40 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         self.titleNode.linkHighlightColor = self.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
+        
+        addStickerPackImpl = { [weak self] info, items in
+            guard let strongSelf = self else {
+                return
+            }
+            if let index = strongSelf.currentStickerPacks.firstIndex(where: { $0.0.id == info.id }) {
+                strongSelf.currentStickerPacks[index].2 = true
+                
+                var contents: [LoadedStickerPack] = []
+                for (info, items, isInstalled) in strongSelf.currentStickerPacks {
+                    contents.append(.result(info: info, items: items, installed: isInstalled))
+                }
+                strongSelf.updateStickerPackContents(contents, hasPremium: false)
+                
+                let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
+            }
+        }
+        
+        removeStickerPackImpl = { [weak self] info in
+            guard let strongSelf = self else {
+                return
+            }
+            if let index = strongSelf.currentStickerPacks.firstIndex(where: { $0.0.id == info.id }) {
+                strongSelf.currentStickerPacks[index].2 = false
+                
+                var contents: [LoadedStickerPack] = []
+                for (info, items, isInstalled) in strongSelf.currentStickerPacks {
+                    contents.append(.result(info: info, items: items, installed: isInstalled))
+                }
+                strongSelf.updateStickerPackContents(contents, hasPremium: false)
+                
+                let _ = strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete).start()
+            }
+        }
     }
     
     deinit {
@@ -442,7 +502,7 @@ private final class StickerPackContainer: ASDisplayNode {
         
         self.titleNode.linkHighlightColor = self.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
         
-        if let currentContents = self.currentContents {
+        if let currentContents = self.currentContents?.first {
             let buttonColor: UIColor
             var buttonFont: UIFont = Font.semibold(17.0)
             switch currentContents {
@@ -459,8 +519,8 @@ private final class StickerPackContainer: ASDisplayNode {
             self.buttonNode.setTitle(self.buttonNode.attributedTitle(for: .normal)?.string ?? "", with: buttonFont, with: buttonColor, for: .normal)
         }
                 
-        if !self.currentEntries.isEmpty {
-            let transaction = StickerPackPreviewGridTransaction(previousList: self.currentEntries, list: self.currentEntries, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, scrollToItem: nil)
+        if !self.currentEntries.isEmpty, let controller = self.controller {
+            let transaction = StickerPackPreviewGridTransaction(previousList: self.currentEntries, list: self.currentEntries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil)
             self.enqueueTransaction(transaction)
         }
         
@@ -476,12 +536,37 @@ private final class StickerPackContainer: ASDisplayNode {
     }
     
     @objc private func morePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
-        guard let controller = self.controller, let (info, _, _) = self.currentStickerPack else {
+        guard let controller = self.controller else {
             return
         }
         let strings = self.presentationData.strings
 
-        let link = "https://t.me/addstickers/\(info.shortName)"
+        let text: String
+        let shareSubject: ShareControllerSubject
+        if !self.currentStickerPacks.isEmpty {
+            var links: String = ""
+            for (info, _, _) in self.currentStickerPacks {
+                if !links.isEmpty {
+                    links += "\n"
+                }
+                if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                    links += "https://t.me/addemoji/\(info.shortName)"
+                } else {
+                    links += "https://t.me/addstickers/\(info.shortName)"
+                }
+            }
+            text = links
+            shareSubject = .text(text)
+        } else if let (info, _, _) = self.currentStickerPack {
+            if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                text = "https://t.me/addemoji/\(info.shortName)"
+            } else {
+                text = "https://t.me/addstickers/\(info.shortName)"
+            }
+            shareSubject = .url(text)
+        } else {
+            return
+        }
            
         var items: [ContextMenuItem] = []
         items.append(.action(ContextMenuActionItem(text: strings.StickerPack_Share, icon: { theme in
@@ -491,7 +576,7 @@ private final class StickerPackContainer: ASDisplayNode {
             
             if let strongSelf = self {
                 let parentNavigationController = strongSelf.controller?.parentNavigationController
-                let shareController = ShareController(context: strongSelf.context, subject: .url(link))
+                let shareController = ShareController(context: strongSelf.context, subject: shareSubject)
                 shareController.actionCompleted = { [weak parentNavigationController] in
                     if let parentNavigationController = parentNavigationController, let controller = parentNavigationController.topViewController as? ViewController {
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
@@ -506,7 +591,7 @@ private final class StickerPackContainer: ASDisplayNode {
         }, action: {  [weak self] _, f in
             f(.default)
             
-            UIPasteboard.general.string = link
+            UIPasteboard.general.string = text
             
             if let strongSelf = self {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
@@ -523,30 +608,50 @@ private final class StickerPackContainer: ASDisplayNode {
     }
     
     @objc func buttonPressed() {
-        guard let (info, items, installed) = self.currentStickerPack else {
-            self.requestDismiss()
-            return
-        }
-        
-        let _ = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings])
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
-            guard let strongSelf = self else {
-                return
+        if !self.currentStickerPacks.isEmpty {
+            var installedCount = 0
+            for (_, _, isInstalled) in self.currentStickerPacks {
+                if isInstalled {
+                    installedCount += 1
+                }
             }
             
+            if installedCount == self.currentStickerPacks.count {
+                for (info, _, _) in self.currentStickerPacks {
+                    let _ = (self.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
+                    |> deliverOnMainQueue).start(next: { _ in
+//                        guard let (positionInList, _) = indexAndItems else {
+//                            return
+//                        }
+//                        if dismissed {
+//                            actionPerformed?(info, items, .remove(positionInList: positionInList))
+//                        }
+                    })
+                }
+            } else {
+                for (info, items, isInstalled) in self.currentStickerPacks {
+                    if !isInstalled {
+                        let _ = self.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
+//                        if dismissed {
+//                            actionPerformed?(info, items, .add)
+//                        }
+                    }
+                }
+            }
+            self.requestDismiss()
+        } else if let (info, items, installed) = self.currentStickerPack {
             var dismissed = false
-            switch strongSelf.decideNextAction(strongSelf, installed ? .remove : .add) {
+            switch self.decideNextAction(self, installed ? .remove : .add) {
                 case .dismiss:
-                    strongSelf.requestDismiss()
+                    self.requestDismiss()
                     dismissed = true
                 case .navigatedNext, .ignored:
-                    strongSelf.updateStickerPackContents(.result(info: info, items: items, installed: !installed), hasPremium: false)
+                    self.updateStickerPackContents([.result(info: info, items: items, installed: !installed)], hasPremium: false)
             }
             
-            let actionPerformed = strongSelf.controller?.actionPerformed
+            let actionPerformed = self.controller?.actionPerformed
             if installed {
-                let _ = (strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
+                let _ = (self.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
                 |> deliverOnMainQueue).start(next: { indexAndItems in
                     guard let (positionInList, _) = indexAndItems else {
                         return
@@ -556,12 +661,14 @@ private final class StickerPackContainer: ASDisplayNode {
                     }
                 })
             } else {
-                let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
+                let _ = self.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
                 if dismissed {
                     actionPerformed?(info, items, .add)
                 }
             }
-        })
+        } else {
+            self.requestDismiss()
+        }
     }
     
     private func updateButtonBackgroundAlpha() {
@@ -579,12 +686,7 @@ private final class StickerPackContainer: ASDisplayNode {
         self.actionAreaSeparatorNode.alpha = backgroundAlpha
     }
     
-    var onLoading: () -> Void = {}
-    var onReady: () -> Void = {}
-    var onError: () -> Void = {}
-    
-    private var currentContents: LoadedStickerPack?
-    private func updateStickerPackContents(_ contents: LoadedStickerPack, hasPremium: Bool) {
+    private func updateStickerPackContents(_ contents: [LoadedStickerPack], hasPremium: Bool) {
         self.currentContents = contents
         self.didReceiveStickerPackResult = true
         
@@ -593,139 +695,208 @@ private final class StickerPackContainer: ASDisplayNode {
         var updateLayout = false
         
         var scrollToItem: GridNodeScrollToItem?
+        let titleFont = Font.semibold(17.0)
         
-        switch contents {
-        case .fetching:
+        if contents.count > 1 {
             self.onLoading()
-            entries = []
-            self.buttonNode.setTitle(self.presentationData.strings.Channel_NotificationLoading, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemDisabledTextColor, for: .normal)
-            self.buttonNode.setBackgroundImage(nil, for: [])
             
-            for _ in 0 ..< 16 {
-                var stableId: Int?
-                inner: for entry in self.currentEntries {
-                    if case let .sticker(index, currentStableId, stickerItem, _, _, _) = entry, stickerItem == nil, index == entries.count {
-                        stableId = currentStableId
-                        break inner
+            var loadedCount = 0
+            var error = false
+            for content in contents {
+                if case .result = content {
+                    loadedCount += 1
+                } else if case .none = content {
+                    error = true
+                }
+            }
+            
+            if error {
+                self.onError()
+            } else if loadedCount == contents.count {
+                self.onReady()
+                
+                if !contents.isEmpty && self.currentStickerPack == nil {
+                    if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
+                        scrollToItem = GridNodeScrollToItem(index: 0, position: .top(0.0), transition: .immediate, directionHint: .up, adjustForSection: false)
+                    }
+                }
+            
+                if self.titleNode.attributedText == nil {
+                    if let titlePlaceholderNode = self.titlePlaceholderNode {
+                        self.titlePlaceholderNode = nil
+                        titlePlaceholderNode.removeFromSupernode()
                     }
                 }
                 
-                let resolvedStableId: Int
-                if let stableId = stableId {
-                    resolvedStableId = stableId
-                } else {
-                    resolvedStableId = self.nextStableId
-                    self.nextStableId += 1
-                }
+                self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EmojiPack_Title, font: titleFont, textColor: self.presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+                updateLayout = true
                 
-                self.nextStableId += 1
-                entries.append(.sticker(index: entries.count, stableId: resolvedStableId, stickerItem: nil, isEmpty: false, isPremium: false, isLocked: false))
-            }
-            if self.titlePlaceholderNode == nil {
-                let titlePlaceholderNode = ShimmerEffectNode()
-                self.titlePlaceholderNode = titlePlaceholderNode
-                self.titleContainer.addSubnode(titlePlaceholderNode)
-            }
-        case .none:
-            self.onError()
-            self.controller?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-            self.controller?.dismiss(animated: true, completion: nil)
-        case let .result(info, items, installed):
-            self.onReady()
-            if !items.isEmpty && self.currentStickerPack == nil {
-                if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
-                    scrollToItem = GridNodeScrollToItem(index: 0, position: .top(0.0), transition: .immediate, directionHint: .up, adjustForSection: false)
-                }
-            }
-            
-            self.currentStickerPack = (info, items, installed)
-            
-            if self.titleNode.attributedText == nil {
-                if let titlePlaceholderNode = self.titlePlaceholderNode {
-                    self.titlePlaceholderNode = nil
-                    titlePlaceholderNode.removeFromSupernode()
-                }
-            }
-            
-            let titleFont = Font.semibold(17.0)
-            let entities = generateTextEntities(info.title, enabledTypes: [.mention])
-            self.titleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont, message: nil)
-            
-            updateLayout = true
-            
-            
-            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
-            
-            var generalItems: [StickerPackItem] = []
-            var premiumItems: [StickerPackItem] = []
-            
-            for item in items {
-                if item.file.isPremiumSticker {
-                    premiumItems.append(item)
-                } else {
-                    generalItems.append(item)
-                }
-            }
-            
-            let addItem: (StickerPackItem, Bool, Bool) -> Void = { item, isPremium, isLocked in
-                var stableId: Int?
-                inner: for entry in self.currentEntries {
-                    if case let .sticker(_, currentStableId, stickerItem, _, _, _) = entry, let stickerItem = stickerItem, stickerItem.file.fileId == item.file.fileId {
-                        stableId = currentStableId
-                        break inner
+                var currentStickerPacks: [(StickerPackCollectionInfo, [StickerPackItem], Bool)] = []
+                
+                var index = 0
+                var installedCount = 0
+                for content in contents {
+                    if case let .result(info, items, isInstalled) = content {
+                        entries.append(.emojis(index: index, stableId: index, info: info, items: items, title: info.title, isInstalled: isInstalled))
+                        if isInstalled {
+                            installedCount += 1
+                        }
+                        currentStickerPacks.append((info, items, isInstalled))
                     }
+                    index += 1
                 }
-                let resolvedStableId: Int
-                if let stableId = stableId {
-                    resolvedStableId = stableId
+                self.currentStickerPacks = currentStickerPacks
+                
+                if installedCount == contents.count {
+                    let text = self.presentationData.strings.StickerPack_RemoveEmojiPacksCount(Int32(contents.count))
+                    self.buttonNode.setTitle(text, with: Font.regular(17.0), with: self.presentationData.theme.list.itemDestructiveColor, for: .normal)
+                    self.buttonNode.setBackgroundImage(nil, for: [])
                 } else {
-                    resolvedStableId = self.nextStableId
-                    self.nextStableId += 1
-                }
-                entries.append(.sticker(index: entries.count, stableId: resolvedStableId, stickerItem: item, isEmpty: false, isPremium: isPremium, isLocked: isLocked))
-            }
-            
-            for item in generalItems {
-                addItem(item, false, false)
-            }
-            
-            if !premiumConfiguration.isPremiumDisabled {
-                if !premiumItems.isEmpty {
-                    for item in premiumItems {
-                        addItem(item, true, !hasPremium)
-                    }
+                    let text = self.presentationData.strings.StickerPack_AddEmojiPacksCount(Int32(contents.count - installedCount))
+                    self.buttonNode.setTitle(text, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemCheckColors.foregroundColor, for: .normal)
+                    let roundedAccentBackground = generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(self.presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+                    })?.stretchableImage(withLeftCapWidth: 11, topCapHeight: 11)
+                    self.buttonNode.setBackgroundImage(roundedAccentBackground, for: [])
                 }
             }
-            
-            if installed {
-                let text: String
-                if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-                    text = self.presentationData.strings.StickerPack_RemoveStickerCount(Int32(entries.count))
-                } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
-                    text = self.presentationData.strings.StickerPack_RemoveEmojiCount(Int32(entries.count))
-                } else {
-                    text = self.presentationData.strings.StickerPack_RemoveMaskCount(Int32(entries.count))
-                }
-                self.buttonNode.setTitle(text, with: Font.regular(17.0), with: self.presentationData.theme.list.itemDestructiveColor, for: .normal)
+        } else if let contents = contents.first {
+            switch contents {
+            case .fetching:
+                self.onLoading()
+                entries = []
+                self.buttonNode.setTitle(self.presentationData.strings.Channel_NotificationLoading, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemDisabledTextColor, for: .normal)
                 self.buttonNode.setBackgroundImage(nil, for: [])
-            } else {
-                let text: String
-                if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-                    text = self.presentationData.strings.StickerPack_AddStickerCount(Int32(entries.count))
-                } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
-                    text = self.presentationData.strings.StickerPack_AddEmojiCount(Int32(entries.count))
-                } else {
-                    text = self.presentationData.strings.StickerPack_AddMaskCount(Int32(entries.count))
+                
+                for _ in 0 ..< 16 {
+                    var stableId: Int?
+                    inner: for entry in self.currentEntries {
+                        if case let .sticker(index, currentStableId, stickerItem, _, _, _) = entry, stickerItem == nil, index == entries.count {
+                            stableId = currentStableId
+                            break inner
+                        }
+                    }
+                    
+                    let resolvedStableId: Int
+                    if let stableId = stableId {
+                        resolvedStableId = stableId
+                    } else {
+                        resolvedStableId = self.nextStableId
+                        self.nextStableId += 1
+                    }
+                    
+                    self.nextStableId += 1
+                    entries.append(.sticker(index: entries.count, stableId: resolvedStableId, stickerItem: nil, isEmpty: false, isPremium: false, isLocked: false))
                 }
-                self.buttonNode.setTitle(text, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemCheckColors.foregroundColor, for: .normal)
-                let roundedAccentBackground = generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setFillColor(self.presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-                })?.stretchableImage(withLeftCapWidth: 11, topCapHeight: 11)
-                self.buttonNode.setBackgroundImage(roundedAccentBackground, for: [])
+                if self.titlePlaceholderNode == nil {
+                    let titlePlaceholderNode = ShimmerEffectNode()
+                    self.titlePlaceholderNode = titlePlaceholderNode
+                    self.titleContainer.addSubnode(titlePlaceholderNode)
+                }
+            case .none:
+                self.onError()
+                self.controller?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                self.controller?.dismiss(animated: true, completion: nil)
+            case let .result(info, items, installed):
+                self.onReady()
+                if !items.isEmpty && self.currentStickerPack == nil {
+                    if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
+                        scrollToItem = GridNodeScrollToItem(index: 0, position: .top(0.0), transition: .immediate, directionHint: .up, adjustForSection: false)
+                    }
+                }
+                
+                self.currentStickerPack = (info, items, installed)
+                
+                if self.titleNode.attributedText == nil {
+                    if let titlePlaceholderNode = self.titlePlaceholderNode {
+                        self.titlePlaceholderNode = nil
+                        titlePlaceholderNode.removeFromSupernode()
+                    }
+                }
+                
+                let entities = generateTextEntities(info.title, enabledTypes: [.mention])
+                self.titleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont, message: nil)
+                
+                updateLayout = true
+                
+                if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                    entries.append(.emojis(index: 0, stableId: 0, info: info, items: items, title: nil, isInstalled: nil))
+                } else {
+                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+                    
+                    var generalItems: [StickerPackItem] = []
+                    var premiumItems: [StickerPackItem] = []
+                    
+                    for item in items {
+                        if item.file.isPremiumSticker {
+                            premiumItems.append(item)
+                        } else {
+                            generalItems.append(item)
+                        }
+                    }
+                    
+                    let addItem: (StickerPackItem, Bool, Bool) -> Void = { item, isPremium, isLocked in
+                        var stableId: Int?
+                        inner: for entry in self.currentEntries {
+                            if case let .sticker(_, currentStableId, stickerItem, _, _, _) = entry, let stickerItem = stickerItem, stickerItem.file.fileId == item.file.fileId {
+                                stableId = currentStableId
+                                break inner
+                            }
+                        }
+                        let resolvedStableId: Int
+                        if let stableId = stableId {
+                            resolvedStableId = stableId
+                        } else {
+                            resolvedStableId = self.nextStableId
+                            self.nextStableId += 1
+                        }
+                        entries.append(.sticker(index: entries.count, stableId: resolvedStableId, stickerItem: item, isEmpty: false, isPremium: isPremium, isLocked: isLocked))
+                    }
+                    
+                    for item in generalItems {
+                        addItem(item, false, false)
+                    }
+                    
+                    if !premiumConfiguration.isPremiumDisabled {
+                        if !premiumItems.isEmpty {
+                            for item in premiumItems {
+                                addItem(item, true, !hasPremium)
+                            }
+                        }
+                    }
+                }
+                
+                if installed {
+                    let text: String
+                    if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
+                        text = self.presentationData.strings.StickerPack_RemoveStickerCount(Int32(entries.count))
+                    } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                        text = self.presentationData.strings.StickerPack_RemoveEmojiCount(Int32(items.count))
+                    } else {
+                        text = self.presentationData.strings.StickerPack_RemoveMaskCount(Int32(entries.count))
+                    }
+                    self.buttonNode.setTitle(text, with: Font.regular(17.0), with: self.presentationData.theme.list.itemDestructiveColor, for: .normal)
+                    self.buttonNode.setBackgroundImage(nil, for: [])
+                } else {
+                    let text: String
+                    if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
+                        text = self.presentationData.strings.StickerPack_AddStickerCount(Int32(entries.count))
+                    } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                        text = self.presentationData.strings.StickerPack_AddEmojiCount(Int32(items.count))
+                    } else {
+                        text = self.presentationData.strings.StickerPack_AddMaskCount(Int32(entries.count))
+                    }
+                    self.buttonNode.setTitle(text, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemCheckColors.foregroundColor, for: .normal)
+                    let roundedAccentBackground = generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(self.presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+                    })?.stretchableImage(withLeftCapWidth: 11, topCapHeight: 11)
+                    self.buttonNode.setBackgroundImage(roundedAccentBackground, for: [])
+                }
             }
-            
         }
         let previousEntries = self.currentEntries
         self.currentEntries = entries
@@ -751,8 +922,10 @@ private final class StickerPackContainer: ASDisplayNode {
             self.updateLayout(layout: layout, transition: .immediate)
         }
         
-        let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, scrollToItem: scrollToItem)
-        self.enqueueTransaction(transaction)
+        if let controller = self.controller {
+            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: scrollToItem)
+            self.enqueueTransaction(transaction)
+        }
     }
     
     var topContentInset: CGFloat {
@@ -792,6 +965,19 @@ private final class StickerPackContainer: ASDisplayNode {
         var buttonHeight: CGFloat = 50.0
         var actionAreaTopInset: CGFloat = 8.0
         var actionAreaBottomInset: CGFloat = 16.0
+        if !self.currentStickerPacks.isEmpty {
+            var installedCount = 0
+            for (_, _, isInstalled) in self.currentStickerPacks {
+                if isInstalled {
+                    installedCount += 1
+                }
+            }
+            if installedCount == self.currentStickerPacks.count {
+                buttonHeight = 42.0
+                actionAreaTopInset = 1.0
+                actionAreaBottomInset = 2.0
+            }
+        }
         if let (_, _, isInstalled) = self.currentStickerPack, isInstalled {
             buttonHeight = 42.0
             actionAreaTopInset = 1.0
@@ -817,9 +1003,21 @@ private final class StickerPackContainer: ASDisplayNode {
         let itemWidth = floor(fillingWidth / CGFloat(itemsPerRow))
         let gridLeftInset = floor((layout.size.width - fillingWidth) / 2.0)
         let contentHeight: CGFloat
-        if let (_, items, _) = self.currentStickerPack {
-            let rowCount = items.count / itemsPerRow + ((items.count % itemsPerRow) == 0 ? 0 : 1)
-            contentHeight = itemWidth * CGFloat(rowCount)
+        if !self.currentStickerPacks.isEmpty {
+            var packsHeight = 0.0
+            for stickerPack in currentStickerPacks {
+                let layout = ItemLayout(width: fillingWidth, itemsCount: stickerPack.1.count, hasTitle: true)
+                packsHeight += layout.height
+            }
+            contentHeight = packsHeight + 8.0
+        } else if let (info, items, _) = self.currentStickerPack {
+            if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                let layout = ItemLayout(width: fillingWidth, itemsCount: items.count, hasTitle: false)
+                contentHeight = layout.height
+            } else {
+                let rowCount = items.count / itemsPerRow + ((items.count % itemsPerRow) == 0 ? 0 : 1)
+                contentHeight = itemWidth * CGFloat(rowCount)
+            }
         } else {
             contentHeight = gridFrame.size.height
         }
@@ -1036,20 +1234,21 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.containerContainingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let expandProgress: CGFloat
-        if self.stickerPacks.count == 1 {
-            expandProgress = 1.0
-        } else {
-            expandProgress = self.containers[self.selectedStickerPackIndex]?.expandProgress ?? 0.0
-        }
+        let expandProgress: CGFloat = 1.0
+//        if self.stickerPacks.count == 1 {
+//            expandProgress = 1.0
+//        } else {
+//            expandProgress = self.containers[self.selectedStickerPackIndex]?.expandProgress ?? 0.0
+//        }
         let scaledInset: CGFloat = 12.0
         let scaledDistance: CGFloat = 4.0
         let minScale = (layout.size.width - scaledInset * 2.0) / layout.size.width
         let containerScale = expandProgress * 1.0 + (1.0 - expandProgress) * minScale
         
         let containerVerticalOffset: CGFloat = (1.0 - expandProgress) * scaledInset * 2.0
-        
-        for i in 0 ..< self.stickerPacks.count {
+                
+//        for i in 0 ..< self.stickerPacks.count {
+        let i = 0
             let indexOffset = i - self.selectedStickerPackIndex
             var scaledOffset: CGFloat = 0.0
             scaledOffset = -CGFloat(indexOffset) * (1.0 - expandProgress) * (scaledInset * 2.0) + CGFloat(indexOffset) * scaledDistance
@@ -1065,7 +1264,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                     wasAdded = true
                     containerTransition = .immediate
                     let index = i
-                    container = StickerPackContainer(index: index, context: context, presentationData: self.presentationData, stickerPack: self.stickerPacks[i], decideNextAction: { [weak self] container, action in
+                    container = StickerPackContainer(index: index, context: context, presentationData: self.presentationData, stickerPacks: self.stickerPacks, decideNextAction: { [weak self] container, action in
                         guard let strongSelf = self, let layout = strongSelf.validLayout else {
                             return .dismiss
                         }
@@ -1149,7 +1348,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                     self.containers.removeValue(forKey: i)
                 }
             }
-        }
+//        }
         
         if firstTime {
             if !self.containers.isEmpty {
@@ -1323,6 +1522,10 @@ public final class StickerPackScreenImpl: ViewController {
     private let openMentionDisposable = MetaDisposable()
     
     private var alreadyDidAppear: Bool = false
+    private var animatedIn: Bool = false
+    
+    let animationCache: AnimationCache
+    let animationRenderer: MultiAnimationRenderer
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
         self.context = context
@@ -1332,6 +1535,19 @@ public final class StickerPackScreenImpl: ViewController {
         self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
         self.actionPerformed = actionPerformed
+        
+        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+            return TempBox.shared.tempFile(fileName: "file").path
+        })
+        
+        let animationRenderer: MultiAnimationRenderer
+        /*if #available(iOS 13.0, *) {
+            animationRenderer = MultiAnimationMetalRendererImpl()
+        } else {*/
+            animationRenderer = MultiAnimationRendererImpl()
+        //}
+        
+        self.animationRenderer = animationRenderer
         
         super.init(navigationBarPresentationData: nil)
         
@@ -1421,13 +1637,16 @@ public final class StickerPackScreenImpl: ViewController {
                     }
                     
                     if strongSelf.alreadyDidAppear {
-                        strongSelf.controllerNode.animateIn()
+                        
                     } else {
                         strongSelf.isReady = true
                     }
                     
-                    self?.controllerNode.isHidden = false
-                    self?.controllerNode.animateIn()
+                    strongSelf.controllerNode.isHidden = false
+                    if !strongSelf.animatedIn {
+                        strongSelf.animatedIn = true
+                        strongSelf.controllerNode.animateIn()
+                    }
                 }
             }
         }
@@ -1469,6 +1688,7 @@ public final class StickerPackScreenImpl: ViewController {
             self.alreadyDidAppear = true
             
             if self.isReady {
+                self.animatedIn = true
                 self.controllerNode.animateIn()
             }
         }
@@ -1487,7 +1707,7 @@ public enum StickerPackScreenPerformedAction {
 }
 
 public func StickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
-    let stickerPacks = [mainStickerPack]
+    //let stickerPacks = [mainStickerPack]
     let controller = StickerPackScreenImpl(context: context, stickerPacks: stickerPacks, selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0, parentNavigationController: parentNavigationController, sendSticker: sendSticker, actionPerformed: actionPerformed)
     controller.dismissed = dismissed
     return controller

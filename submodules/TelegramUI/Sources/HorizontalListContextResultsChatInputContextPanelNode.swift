@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
+import StickerPeekUI
 import ContextUI
 import ChatPresentationInterfaceState
 import UndoUI

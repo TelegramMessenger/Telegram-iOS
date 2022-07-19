@@ -8,6 +8,7 @@ import ReactionSelectionNode
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
+import TextNodeWithEntities
 
 private let animationDurationFactor: Double = 1.0
 
@@ -1355,7 +1356,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private func setItems(items: ContextController.Items, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition) {
         if let presentationNode = self.presentationNode {
-            presentationNode.replaceItems(items: items, animated: self.didCompleteAnimationIn)
+            let disableAnimations = self.getController()?.immediateItemsTransitionAnimation == true
+            presentationNode.replaceItems(items: items, animated: self.didCompleteAnimationIn && !disableAnimations)
             
             if !self.didSetItemsReady {
                 self.didSetItemsReady = true
@@ -2226,6 +2228,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         case textSelection
         case messageViewsPrivacy
         case messageCopyProtection(isChannel: Bool)
+        case animatedEmoji(text: String?, arguments: TextNodeWithEntities.Arguments?,  file: TelegramMediaFile?, action: (() -> Void)?)
     }
 
     public final class ActionsHeight {
