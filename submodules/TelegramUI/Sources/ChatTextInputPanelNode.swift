@@ -143,15 +143,15 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
     
     static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
         switch item {
-            case .keyboard, .stickers, .inputButtons, .silentPost, .commands, .scheduledMessages:
-                return (image?.size.width ?? 0.0) + CGFloat(8.0)
-            case let .messageAutoremoveTimeout(timeout):
-                var imageWidth = (image?.size.width ?? 0.0) + CGFloat(8.0)
-                if let _ = timeout, let text = text {
-                    imageWidth = ceil((text as NSString).size(withAttributes: [.font: accessoryButtonFont]).width) + 10.0
-                }
-                
-                return max(imageWidth, 24.0)
+        case .keyboard, .stickers, .inputButtons, .silentPost, .commands, .scheduledMessages:
+            return 32.0
+        case let .messageAutoremoveTimeout(timeout):
+            var imageWidth = (image?.size.width ?? 0.0) + CGFloat(8.0)
+            if let _ = timeout, let text = text {
+                imageWidth = ceil((text as NSString).size(withAttributes: [.font: accessoryButtonFont]).width) + 10.0
+            }
+            
+            return max(imageWidth, 24.0)
         }
     }
     
@@ -413,6 +413,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
     var updateHeight: (Bool) -> Void = { _ in }
     var toggleExpandMediaInput: (() -> Void)?
+    var switchToTextInputIfNeeded: (() -> Void)?
     
     var updateActivity: () -> Void = { }
     
@@ -891,7 +892,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
         recognizer.touchDown = { [weak self] in
             if let strongSelf = self {
-                strongSelf.ensureFocused()
+                strongSelf.ensureFocusedOnTap()
             }
         }
         textInputNode.view.addGestureRecognizer(recognizer)
@@ -2902,6 +2903,16 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         self.textInputNode?.becomeFirstResponder()
+    }
+    
+    func ensureFocusedOnTap() {
+        if self.textInputNode == nil {
+            self.loadTextInputNode()
+        }
+        
+        self.textInputNode?.becomeFirstResponder()
+        
+        self.switchToTextInputIfNeeded?()
     }
     
     func backwardsDeleteText() {

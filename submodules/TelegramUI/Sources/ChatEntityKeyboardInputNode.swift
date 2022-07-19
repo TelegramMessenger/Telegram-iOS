@@ -815,6 +815,15 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
+    var canSwitchToTextInputAutomatically: Bool {
+        if let pagerView = self.entityKeyboardView.componentView as? EntityKeyboardComponent.View, let centralId = pagerView.centralId {
+            if centralId == AnyHashable("emoji") {
+                return false
+            }
+        }
+        return true
+    }
+    
     private final class GifContext {
         private var componentValue: GifPagerContentComponent? {
             didSet {

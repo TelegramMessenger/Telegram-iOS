@@ -176,6 +176,14 @@ public final class EntityKeyboardComponent: Component {
         private var topPanelExtension: CGFloat?
         private var isTopPanelExpanded: Bool = false
         
+        public var centralId: AnyHashable? {
+            if let pagerView = self.pagerView.findTaggedView(tag: PagerComponentViewTag()) as? PagerComponent<EntityKeyboardChildEnvironment, EntityKeyboardTopContainerPanelEnvironment>.View {
+                return pagerView.centralId
+            } else {
+                return nil
+            }
+        }
+        
         override init(frame: CGRect) {
             self.pagerView = ComponentHostView<EntityKeyboardChildEnvironment>()
             

@@ -294,6 +294,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let loadingMessage = Promise<ChatLoadingMessageSubject?>(nil)
     private let performingInlineSearch = ValuePromise<Bool>(false, ignoreRepeated: true)
     
+    private var stateServiceTasks: [AnyHashable: Disposable] = [:]
+    
     private var preloadHistoryPeerId: PeerId?
     private let preloadHistoryPeerIdDisposable = MetaDisposable()
 
@@ -10079,6 +10081,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             completion(.immediate)
         }
         
+        let updatedServiceTasks = serviceTasksForChatPresentationIntefaceState(context: self.context, chatPresentationInterfaceState: updatedChatPresentationInterfaceState, updateState: { [weak self] f in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, f)
+            
+            //strongSelf.chatDisplayNode.updateChatPresentationInterfaceState(f(strongSelf.chatDisplayNode.chatPresentationInterfaceState), transition: transition, interactive: false, completion: { _ in })
+        })
+        for (id, begin) in updatedServiceTasks {
+            if self.stateServiceTasks[id] == nil {
+                self.stateServiceTasks[id] = begin()
+            }
+        }
+        var removedServiceTaskIds: [AnyHashable] = []
+        for (id, _) in self.stateServiceTasks {
+            if updatedServiceTasks[id] == nil {
+                removedServiceTaskIds.append(id)
+            }
+        }
+        for id in removedServiceTaskIds {
+            self.stateServiceTasks.removeValue(forKey: id)?.dispose()
+        }
+        
         if let button = leftNavigationButtonForChatInterfaceState(updatedChatPresentationInterfaceState, subject: self.subject, strings: updatedChatPresentationInterfaceState.strings, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction))  {
             if self.leftNavigationButton != button {
                 var animated = transition.isAnimated
@@ -13008,6 +13033,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, botId: results.botId, result: result, replyToMessageId: replyMessageId, hideVia: hideVia, silentPosting: silentPosting) {
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
+                    strongSelf.chatDisplayNode.collapseInput()
+                    
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                         var state = state
                         state = state.updatedInterfaceState { interfaceState in

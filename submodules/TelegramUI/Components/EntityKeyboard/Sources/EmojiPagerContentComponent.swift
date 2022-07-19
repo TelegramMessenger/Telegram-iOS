@@ -769,7 +769,7 @@ public final class EmojiPagerContentComponent: Component {
                         
                         context.scaleBy(x: 1.0 / scaleFactor, y: 1.0 / scaleFactor)
                         
-                        let string = NSAttributedString(string: staticEmoji, font: Font.regular(floor(30.0 * scaleFactor)), textColor: .black)
+                        let string = NSAttributedString(string: staticEmoji, font: Font.regular(floor(32.0 * scaleFactor)), textColor: .black)
                         let boundingRect = string.boundingRect(with: scaledSize, options: .usesLineFragmentOrigin, context: nil)
                         UIGraphicsPushContext(context)
                         string.draw(at: CGPoint(x: (scaledSize.width - boundingRect.width) / 2.0 + boundingRect.minX, y: (scaledSize.height - boundingRect.height) / 2.0 + boundingRect.minY))
@@ -969,6 +969,9 @@ public final class EmojiPagerContentComponent: Component {
                 guard let item = strongSelf.item(atPoint: point), let itemLayer = strongSelf.visibleItemLayers[item.1], let file = item.0.file else {
                     return nil
                 }
+                if itemLayer.displayPlaceholder {
+                    return nil
+                }
                 
                 let context = component.context
                 let accountPeerId = context.account.peerId
@@ -1059,11 +1062,11 @@ public final class EmojiPagerContentComponent: Component {
                             
                             loop: for attribute in file.attributes {
                             switch attribute {
-                            case let .CustomEmoji(_, _, packReference):
+                            case let .CustomEmoji(_, _, packReference), let .Sticker(_, packReference, _):
                                 if let packReference = packReference {
                                     let controller = context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: component.inputInteraction.navigationController(), sendSticker: { file, sourceView, sourceRect in
-                                        //return component.inputInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect, nil)
-                                        return false
+                                        component.inputInteraction.sendSticker?(file, false, false, nil, false, sourceView, sourceRect, nil)
+                                        return true
                                     })
                                     
                                     component.inputInteraction.navigationController()?.view.window?.endEditing(true)
@@ -1550,7 +1553,9 @@ public final class EmojiPagerContentComponent: Component {
                 }
                 
                 if let (item, itemKey) = self.item(atPoint: recognizer.location(in: self)), let itemLayer = self.visibleItemLayers[itemKey] {
-                    component.inputInteraction.performItemAction(item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer)
+                    if !itemLayer.displayPlaceholder {
+                        component.inputInteraction.performItemAction(item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer)
+                    }
                 }
             }
         }
