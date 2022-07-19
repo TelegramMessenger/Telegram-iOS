@@ -47,29 +47,21 @@ public final class AnimationCacheItemFrame {
 }
 
 public final class AnimationCacheItem {
+    public enum Advance {
+        case duration(Double)
+        case frames(Int)
+    }
+    
     public let numFrames: Int
-    private let getFrameImpl: (Int, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?
-    private let getFrameIndexImpl: (Double) -> Int
-    private let getFrameDurationImpl: (Int) -> Double?
+    private let advanceImpl: (Advance, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?
     
-    public init(numFrames: Int, getFrame: @escaping (Int, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?, getFrameIndexImpl: @escaping (Double) -> Int, getFrameDurationImpl: @escaping (Int) -> Double?) {
+    public init(numFrames: Int, advanceImpl: @escaping (Advance, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?) {
         self.numFrames = numFrames
-        self.getFrameImpl = getFrame
-        self.getFrameIndexImpl = getFrameIndexImpl
-        self.getFrameDurationImpl = getFrameDurationImpl
+        self.advanceImpl = advanceImpl
     }
     
-    public func getFrameDuration(index: Int) -> Double? {
-        return self.getFrameDurationImpl(index)
-    }
-    
-    public func getFrame(index: Int, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
-        return self.getFrameImpl(index, requestedFormat)
-    }
-    
-    public func getFrame(at duration: Double, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
-        let index = self.getFrameIndexImpl(duration)
-        return self.getFrameImpl(index, requestedFormat)
+    public func advance(advance: Advance, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
+        return self.advanceImpl(advance, requestedFormat)
     }
 }
 
@@ -99,7 +91,7 @@ public protocol AnimationCacheItemWriter: AnyObject {
     var queue: Queue { get }
     var isCancelled: Bool { get }
     
-    func add(with drawingBlock: (AnimationCacheItemDrawingSurface) -> Void, proposedWidth: Int, proposedHeight: Int, duration: Double)
+    func add(with drawingBlock: (AnimationCacheItemDrawingSurface) -> Double?, proposedWidth: Int, proposedHeight: Int)
     func finish()
 }
 
@@ -216,21 +208,23 @@ private func decompressData(data: Data, range: Range<Int>, decompressedSize: Int
 }
 
 private final class AnimationCacheItemWriterInternal {
+    enum WriteError: Error {
+        case generic
+    }
+    
     struct CompressedResult {
         var path: String
     }
     
     private struct FrameMetadata {
-        var offset: Int
-        var length: Int
         var duration: Double
     }
     
     var isCancelled: Bool = false
     
-    private let decompressedPath: String
     private let compressedPath: String
-    private var file: ManagedFile?
+    private let file: ManagedFile
+    private let compressedWriter: CompressedFileWriter
     
     private var currentYUVASurface: ImageYUVA420?
     private var currentDctData: DctData?
@@ -240,28 +234,30 @@ private final class AnimationCacheItemWriterInternal {
     private var isFinished: Bool = false
     
     private var frames: [FrameMetadata] = []
-    private var contentLength: Int = 0
     
     private let dctQuality: Int
     
     init?(allocateTempFile: @escaping () -> String) {
         self.dctQuality = 70
         
-        self.decompressedPath = allocateTempFile()
         self.compressedPath = allocateTempFile()
         
-        guard let file = ManagedFile(queue: nil, path: self.decompressedPath, mode: .readwrite) else {
+        guard let file = ManagedFile(queue: nil, path: self.compressedPath, mode: .readwrite) else {
+            return nil
+        }
+        guard let compressedWriter = CompressedFileWriter(file: file) else {
             return nil
         }
         self.file = file
+        self.compressedWriter = compressedWriter
     }
     
-    func add(with drawingBlock: (ImageYUVA420) -> Void, proposedWidth: Int, proposedHeight: Int, duration: Double) {
+    func add(with drawingBlock: (ImageYUVA420) -> Double?, proposedWidth: Int, proposedHeight: Int) throws {
         if self.isFailed || self.isFinished {
             return
         }
         
-        guard !self.isFailed, !self.isFinished, let file = self.file else {
+        guard !self.isFailed, !self.isFinished else {
             return
         }
         
@@ -305,24 +301,27 @@ private final class AnimationCacheItemWriterInternal {
             self.currentDctData = dctData
         }
         
-        drawingBlock(yuvaSurface)
+        let duration = drawingBlock(yuvaSurface)
+        
+        guard let duration = duration else {
+            return
+        }
         
         yuvaSurface.dct(dctData: dctData, target: dctCoefficients)
         
         if isFirstFrame {
-            file.write(2 as UInt32)
+            self.file.write(3 as UInt32)
             
-            file.write(UInt32(dctCoefficients.yPlane.width))
-            file.write(UInt32(dctCoefficients.yPlane.height))
-            file.write(UInt32(dctData.quality))
+            self.file.write(UInt32(dctCoefficients.yPlane.width))
+            self.file.write(UInt32(dctCoefficients.yPlane.height))
+            self.file.write(UInt32(dctData.quality))
         
-            self.contentLengthOffset = Int(file.position())
-            file.write(0 as UInt32)
+            self.contentLengthOffset = Int(self.file.position())
+            self.file.write(0 as UInt32)
         }
         
-        let framePosition = Int(file.position())
-        assert(framePosition >= 0)
-        var frameLength = 0
+        let frameLength = dctCoefficients.yPlane.data.count + dctCoefficients.uPlane.data.count + dctCoefficients.vPlane.data.count + dctCoefficients.aPlane.data.count
+        try self.compressedWriter.writeUInt32(UInt32(frameLength))
         
         for i in 0 ..< 4 {
             let dctPlane: DctCoefficientPlane
@@ -339,85 +338,63 @@ private final class AnimationCacheItemWriterInternal {
                 preconditionFailure()
             }
             
-            dctPlane.data.withUnsafeBytes { bytes in
-                let _ = file.write(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: bytes.count)
+            try self.compressedWriter.writeUInt32(UInt32(dctPlane.data.count))
+            try dctPlane.data.withUnsafeBytes { bytes in
+                try self.compressedWriter.write(bytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: bytes.count)
             }
-            frameLength += dctPlane.data.count
         }
         
-        self.frames.append(FrameMetadata(offset: framePosition, length: frameLength, duration: duration))
-        
-        self.contentLength += frameLength
+        self.frames.append(FrameMetadata(duration: duration))
     }
     
-    func finish() -> CompressedResult? {
+    func finish() throws -> CompressedResult {
         var shouldComplete = false
         
-        outer: for _ in 0 ..< 1 {
+        do {
             if !self.isFinished {
                 self.isFinished = true
                 shouldComplete = true
                 
-                guard let contentLengthOffset = self.contentLengthOffset, let file = self.file else {
+                try self.compressedWriter.flush()
+                
+                guard let contentLengthOffset = self.contentLengthOffset else {
                     self.isFailed = true
-                    break outer
+                    throw WriteError.generic
                 }
                 assert(contentLengthOffset >= 0)
                 
                 let metadataPosition = file.position()
+                let contentLength = Int(metadataPosition) - contentLengthOffset - 4
                 file.seek(position: Int64(contentLengthOffset))
-                file.write(UInt32(self.contentLength))
+                file.write(UInt32(contentLength))
                 
                 file.seek(position: metadataPosition)
                 file.write(UInt32(self.frames.count))
                 for frame in self.frames {
-                    file.write(UInt32(frame.offset))
-                    file.write(UInt32(frame.length))
                     file.write(Float32(frame.duration))
                 }
                 
                 if !self.frames.isEmpty {
                 } else {
                     self.isFailed = true
-                    break outer
+                    throw WriteError.generic
                 }
                 
-                if !self.isFailed {
-                    self.file = nil
-                    
-                    file._unsafeClose()
-                    
-                    guard let uncompressedData = try? Data(contentsOf: URL(fileURLWithPath: self.decompressedPath), options: .alwaysMapped) else {
-                        self.isFailed = true
-                        break outer
-                    }
-                    guard let compressedData = compressData(data: uncompressedData) else {
-                        self.isFailed = true
-                        break outer
-                    }
-                    guard let compressedFile = ManagedFile(queue: nil, path: self.compressedPath, mode: .readwrite) else {
-                        self.isFailed = true
-                        break outer
-                    }
-                    compressedFile.write(Int32(uncompressedData.count))
-                    let _ = compressedFile.write(compressedData)
-                    compressedFile._unsafeClose()
-                }
+                self.file._unsafeClose()
             }
+        } catch let e {
+            throw e
         }
         
         if shouldComplete {
-            let _ = try? FileManager.default.removeItem(atPath: self.decompressedPath)
-            
             if !self.isFailed {
                 return CompressedResult(path: self.compressedPath)
             } else {
                 let _ = try? FileManager.default.removeItem(atPath: self.compressedPath)
-                
-                return nil
+                throw WriteError.generic
             }
         } else {
-            return nil
+            throw WriteError.generic
         }
     }
 }
@@ -425,22 +402,18 @@ private final class AnimationCacheItemWriterInternal {
 private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
     struct CompressedResult {
         var animationPath: String
-        var firstFramePath: String
     }
     
     private struct FrameMetadata {
-        var offset: Int
-        var length: Int
         var duration: Double
     }
     
     let queue: Queue
     var isCancelled: Bool = false
     
-    private let decompressedPath: String
     private let compressedPath: String
-    private let firstFramePath: String
     private var file: ManagedFile?
+    private var compressedWriter: CompressedFileWriter?
     private let completion: (CompressedResult?) -> Void
     
     private var currentSurface: ImageARGB?
@@ -452,7 +425,6 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
     private var isFinished: Bool = false
     
     private var frames: [FrameMetadata] = []
-    private var contentLength: Int = 0
     
     private let dctQuality: Int
     
@@ -462,24 +434,23 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
         self.dctQuality = 70
         
         self.queue = queue
-        self.decompressedPath = allocateTempFile()
         self.compressedPath = allocateTempFile()
-        self.firstFramePath = allocateTempFile()
         
-        guard let file = ManagedFile(queue: nil, path: self.decompressedPath, mode: .readwrite) else {
+        guard let file = ManagedFile(queue: nil, path: self.compressedPath, mode: .readwrite) else {
             return nil
         }
         self.file = file
+        self.compressedWriter = CompressedFileWriter(file: file)
         self.completion = completion
     }
     
-    func add(with drawingBlock: (AnimationCacheItemDrawingSurface) -> Void, proposedWidth: Int, proposedHeight: Int, duration: Double) {
+    func add(with drawingBlock: (AnimationCacheItemDrawingSurface) -> Double?, proposedWidth: Int, proposedHeight: Int) {
         if self.isFailed || self.isFinished {
             return
         }
         
         self.lock.locked {
-            guard !self.isFailed, !self.isFinished, let file = self.file else {
+            guard !self.isFailed, !self.isFinished, let file = self.file, let compressedWriter = self.compressedWriter else {
                 return
             }
             
@@ -537,8 +508,8 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
                 self.currentDctData = dctData
             }
             
-            surface.argbPlane.data.withUnsafeMutableBytes { bytes -> Void in
-                drawingBlock(AnimationCacheItemDrawingSurface(
+            let duration = surface.argbPlane.data.withUnsafeMutableBytes { bytes -> Double? in
+                return drawingBlock(AnimationCacheItemDrawingSurface(
                     argb: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self),
                     width: width,
                     height: height,
@@ -547,11 +518,15 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
                 ))
             }
             
+            guard let duration = duration else {
+                return
+            }
+            
             surface.toYUVA420(target: yuvaSurface)
             yuvaSurface.dct(dctData: dctData, target: dctCoefficients)
             
             if isFirstFrame {
-                file.write(2 as UInt32)
+                file.write(3 as UInt32)
                 
                 file.write(UInt32(dctCoefficients.yPlane.width))
                 file.write(UInt32(dctCoefficients.yPlane.height))
@@ -561,34 +536,35 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
                 file.write(0 as UInt32)
             }
             
-            let framePosition = Int(file.position())
-            assert(framePosition >= 0)
-            var frameLength = 0
-            
-            for i in 0 ..< 4 {
-                let dctPlane: DctCoefficientPlane
-                switch i {
-                case 0:
-                    dctPlane = dctCoefficients.yPlane
-                case 1:
-                    dctPlane = dctCoefficients.uPlane
-                case 2:
-                    dctPlane = dctCoefficients.vPlane
-                case 3:
-                    dctPlane = dctCoefficients.aPlane
-                default:
-                    preconditionFailure()
+            do {
+                let frameLength = dctCoefficients.yPlane.data.count + dctCoefficients.uPlane.data.count + dctCoefficients.vPlane.data.count + dctCoefficients.aPlane.data.count
+                try compressedWriter.writeUInt32(UInt32(frameLength))
+                
+                for i in 0 ..< 4 {
+                    let dctPlane: DctCoefficientPlane
+                    switch i {
+                    case 0:
+                        dctPlane = dctCoefficients.yPlane
+                    case 1:
+                        dctPlane = dctCoefficients.uPlane
+                    case 2:
+                        dctPlane = dctCoefficients.vPlane
+                    case 3:
+                        dctPlane = dctCoefficients.aPlane
+                    default:
+                        preconditionFailure()
+                    }
+                    
+                    try compressedWriter.writeUInt32(UInt32(dctPlane.data.count))
+                    try dctPlane.data.withUnsafeBytes { bytes in
+                        try compressedWriter.write(bytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: bytes.count)
+                    }
                 }
                 
-                dctPlane.data.withUnsafeBytes { bytes in
-                    let _ = file.write(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: bytes.count)
-                }
-                frameLength += dctPlane.data.count
+                self.frames.append(FrameMetadata(duration: duration))
+            } catch {
+                self.isFailed = true
             }
-            
-            self.frames.append(FrameMetadata(offset: framePosition, length: frameLength, duration: duration))
-            
-            self.contentLength += frameLength
         }
     }
     
@@ -599,94 +575,43 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
                 self.isFinished = true
                 shouldComplete = true
                 
-                guard let contentLengthOffset = self.contentLengthOffset, let file = self.file else {
+                guard let contentLengthOffset = self.contentLengthOffset, let file = self.file, let compressedWriter = self.compressedWriter else {
                     self.isFailed = true
                     return
                 }
                 assert(contentLengthOffset >= 0)
                 
-                let metadataPosition = file.position()
-                file.seek(position: Int64(contentLengthOffset))
-                file.write(UInt32(self.contentLength))
+                do {
+                    try compressedWriter.flush()
                 
-                file.seek(position: metadataPosition)
-                file.write(UInt32(self.frames.count))
-                for frame in self.frames {
-                    file.write(UInt32(frame.offset))
-                    file.write(UInt32(frame.length))
-                    file.write(Float32(frame.duration))
-                }
-                
-                if !self.frames.isEmpty, let dctCoefficients = self.currentDctCoefficients, let dctData = self.currentDctData {
-                    var firstFrameData = Data(capacity: 4 * 5 + self.frames[0].length)
+                    let metadataPosition = file.position()
+                    let contentLength = Int(metadataPosition) - contentLengthOffset - 4
+                    file.seek(position: Int64(contentLengthOffset))
+                    file.write(UInt32(contentLength))
                     
-                    writeUInt32(data: &firstFrameData, value: 2 as UInt32)
-                    writeUInt32(data: &firstFrameData, value: UInt32(dctCoefficients.yPlane.width))
-                    writeUInt32(data: &firstFrameData, value: UInt32(dctCoefficients.yPlane.height))
-                    writeUInt32(data: &firstFrameData, value: UInt32(dctData.quality))
-                    
-                    writeUInt32(data: &firstFrameData, value: UInt32(self.frames[0].length))
-                    let firstFrameStart = 4 * 5
-                    
-                    file.seek(position: Int64(self.frames[0].offset))
-                    firstFrameData.count += self.frames[0].length
-                    firstFrameData.withUnsafeMutableBytes { bytes in
-                        let _ = file.read(bytes.baseAddress!.advanced(by: 4 * 5), self.frames[0].length)
+                    file.seek(position: metadataPosition)
+                    file.write(UInt32(self.frames.count))
+                    for frame in self.frames {
+                        file.write(Float32(frame.duration))
                     }
                     
-                    writeUInt32(data: &firstFrameData, value: UInt32(1))
-                    writeUInt32(data: &firstFrameData, value: UInt32(firstFrameStart))
-                    writeUInt32(data: &firstFrameData, value: UInt32(self.frames[0].length))
-                    writeFloat32(data: &firstFrameData, value: Float32(1.0))
-                    
-                    guard let compressedFirstFrameData = compressData(data: firstFrameData, addSizeHeader: true) else {
-                        self.isFailed = true
-                        return
+                    if !self.isFailed {
+                        self.compressedWriter = nil
+                        self.file = nil
+                        
+                        file._unsafeClose()
                     }
-                    guard let _ = try? compressedFirstFrameData.write(to: URL(fileURLWithPath: self.firstFramePath)) else {
-                        self.isFailed = true
-                        return
-                    }
-                } else {
+                } catch {
                     self.isFailed = true
-                    return
-                }
-                
-                if !self.isFailed {
-                    self.file = nil
-                    
-                    file._unsafeClose()
-                    
-                    guard let uncompressedData = try? Data(contentsOf: URL(fileURLWithPath: self.decompressedPath), options: .alwaysMapped) else {
-                        self.isFailed = true
-                        return
-                    }
-                    guard let compressedData = compressData(data: uncompressedData) else {
-                        self.isFailed = true
-                        return
-                    }
-                    guard let compressedFile = ManagedFile(queue: nil, path: self.compressedPath, mode: .readwrite) else {
-                        self.isFailed = true
-                        return
-                    }
-                    compressedFile.write(Int32(uncompressedData.count))
-                    let _ = compressedFile.write(compressedData)
-                    compressedFile._unsafeClose()
                 }
             }
         }
         
         if shouldComplete {
-            let _ = try? FileManager.default.removeItem(atPath: self.decompressedPath)
-            
             if !self.isFailed {
-                self.completion(CompressedResult(
-                    animationPath: self.compressedPath,
-                    firstFramePath: self.firstFramePath
-                ))
+                self.completion(CompressedResult(animationPath: self.compressedPath))
             } else {
                 let _ = try? FileManager.default.removeItem(atPath: self.compressedPath)
-                let _ = try? FileManager.default.removeItem(atPath: self.firstFramePath)
                 self.completion(nil)
             }
         }
@@ -694,73 +619,165 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
 }
 
 private final class AnimationCacheItemAccessor {
+    private enum ReadError: Error {
+        case generic
+    }
+    
+    final class CurrentFrame {
+        let index: Int
+        var remainingDuration: Double
+        let duration: Double
+        let dctCoefficients: DctCoefficientsYUVA420
+        
+        init(index: Int, duration: Double, dctCoefficients: DctCoefficientsYUVA420) {
+            self.index = index
+            self.duration = duration
+            self.remainingDuration = duration
+            self.dctCoefficients = dctCoefficients
+        }
+    }
+    
     struct FrameInfo {
-        let range: Range<Int>
         let duration: Double
     }
     
     private let data: Data
+    private var compressedDataReader: DecompressedData?
+    private let range: Range<Int>
     private let frameMapping: [Int: FrameInfo]
+    private let width: Int
+    private let height: Int
     private let durationMapping: [Double]
-    private let totalDuration: Double
+    
+    private var currentFrame: CurrentFrame?
     
     private var currentYUVASurface: ImageYUVA420?
     private var currentDctData: DctData
-    private var currentDctCoefficients: DctCoefficientsYUVA420
+    private var sharedDctCoefficients: DctCoefficientsYUVA420?
     
-    init(data: Data, frameMapping: [FrameInfo], width: Int, height: Int, dctQuality: Int) {
+    init(data: Data, range: Range<Int>, frameMapping: [FrameInfo], width: Int, height: Int, dctQuality: Int) {
         self.data = data
+        self.range = range
+        self.width = width
+        self.height = height
         
         var resultFrameMapping: [Int: FrameInfo] = [:]
         var durationMapping: [Double] = []
-        var totalDuration: Double = 0.0
         
         for i in 0 ..< frameMapping.count {
             let frame = frameMapping[i]
             resultFrameMapping[i] = frame
-            totalDuration += frame.duration
-            durationMapping.append(totalDuration)
+            durationMapping.append(frame.duration)
         }
         
         self.frameMapping = resultFrameMapping
         self.durationMapping = durationMapping
-        self.totalDuration = totalDuration
         
         self.currentDctData = DctData(quality: dctQuality)
-        self.currentDctCoefficients = DctCoefficientsYUVA420(width: width, height: height)
     }
     
-    func getFrame(index: Int, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
-        guard let frameInfo = self.frameMapping[index] else {
-            return nil
+    private func loadNextFrame() {
+        let index: Int
+        if let currentFrame = self.currentFrame {
+            if currentFrame.index + 1 >= self.durationMapping.count {
+                index = 0
+                self.compressedDataReader = nil
+            } else {
+                index = currentFrame.index + 1
+            }
+        } else {
+            index = 0
+            self.compressedDataReader = nil
         }
         
-        var frameDataOffset = 0
-        let frameLength = frameInfo.range.upperBound - frameInfo.range.lowerBound
-        for i in 0 ..< 4 {
-            let dctPlane: DctCoefficientPlane
-            switch i {
-            case 0:
-                dctPlane = self.currentDctCoefficients.yPlane
-            case 1:
-                dctPlane = self.currentDctCoefficients.uPlane
-            case 2:
-                dctPlane = self.currentDctCoefficients.vPlane
-            case 3:
-                dctPlane = self.currentDctCoefficients.aPlane
-            default:
-                preconditionFailure()
+        if self.compressedDataReader == nil {
+            self.compressedDataReader = DecompressedData(compressedData: self.data, dataRange: self.range)
+        }
+        
+        guard let compressedDataReader = self.compressedDataReader else {
+            self.currentFrame = nil
+            return
+        }
+        
+        do {
+            let frameLength = Int(try compressedDataReader.readUInt32())
+            
+            let dctCoefficients: DctCoefficientsYUVA420
+            if let sharedDctCoefficients = self.sharedDctCoefficients, sharedDctCoefficients.yPlane.width == self.width, sharedDctCoefficients.yPlane.height == self.height {
+                dctCoefficients = sharedDctCoefficients
+            } else {
+                dctCoefficients = DctCoefficientsYUVA420(width: self.width, height: self.height)
+                self.sharedDctCoefficients = dctCoefficients
             }
             
-            if frameDataOffset + dctPlane.data.count > frameLength {
-                break
+            var frameOffset = 0
+            for i in 0 ..< 4 {
+                let planeLength = Int(try compressedDataReader.readUInt32())
+                if planeLength < 0 || planeLength > 20 * 1024 * 1024 {
+                    throw ReadError.generic
+                }
+                
+                let plane: DctCoefficientPlane
+                switch i {
+                case 0:
+                    plane = dctCoefficients.yPlane
+                case 1:
+                    plane = dctCoefficients.uPlane
+                case 2:
+                    plane = dctCoefficients.vPlane
+                case 3:
+                    plane = dctCoefficients.aPlane
+                default:
+                    throw ReadError.generic
+                }
+                
+                if planeLength != plane.data.count {
+                    throw ReadError.generic
+                }
+                
+                if frameOffset + plane.data.count > frameLength {
+                    throw ReadError.generic
+                }
+                
+                try plane.data.withUnsafeMutableBytes { bytes in
+                    try compressedDataReader.read(bytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: bytes.count)
+                }
+                frameOffset += plane.data.count
             }
             
-            dctPlane.data.withUnsafeMutableBytes { targetBuffer -> Void in
-                self.data.copyBytes(to: targetBuffer.baseAddress!.assumingMemoryBound(to: UInt8.self), from: (frameInfo.range.lowerBound + frameDataOffset) ..< (frameInfo.range.lowerBound + frameDataOffset + targetBuffer.count))
+            self.currentFrame = CurrentFrame(index: index, duration: self.durationMapping[index], dctCoefficients: dctCoefficients)
+        } catch {
+            self.currentFrame = nil
+            self.compressedDataReader = nil
+        }
+    }
+    
+    func advance(advance: AnimationCacheItem.Advance, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
+        switch advance {
+        case let .frames(count):
+            for _ in 0 ..< count {
+                self.loadNextFrame()
             }
-            
-            frameDataOffset += dctPlane.data.count
+        case let .duration(duration):
+            var durationOverflow = duration
+            while true {
+                if let currentFrame = self.currentFrame {
+                    currentFrame.remainingDuration -= durationOverflow
+                    if currentFrame.remainingDuration <= 0.0 {
+                        durationOverflow = -currentFrame.remainingDuration
+                        self.loadNextFrame()
+                    } else {
+                        break
+                    }
+                } else {
+                    self.loadNextFrame()
+                    break
+                }
+            }
+        }
+        
+        guard let currentFrame = self.currentFrame else {
+            return nil
         }
         
         let yuvaSurface: ImageYUVA420
@@ -769,13 +786,13 @@ private final class AnimationCacheItemAccessor {
             if let currentYUVASurface = self.currentYUVASurface {
                 yuvaSurface = currentYUVASurface
             } else {
-                yuvaSurface = ImageYUVA420(width: self.currentDctCoefficients.yPlane.width, height: self.currentDctCoefficients.yPlane.height, rowAlignment: nil)
+                yuvaSurface = ImageYUVA420(width: currentFrame.dctCoefficients.yPlane.width, height: currentFrame.dctCoefficients.yPlane.height, rowAlignment: nil)
             }
         case let .yuva(preferredRowAlignment):
-            yuvaSurface = ImageYUVA420(width: self.currentDctCoefficients.yPlane.width, height: self.currentDctCoefficients.yPlane.height, rowAlignment: preferredRowAlignment)
+            yuvaSurface = ImageYUVA420(width: currentFrame.dctCoefficients.yPlane.width, height: currentFrame.dctCoefficients.yPlane.height, rowAlignment: preferredRowAlignment)
         }
         
-        self.currentDctCoefficients.idct(dctData: self.currentDctData, target: yuvaSurface)
+        currentFrame.dctCoefficients.idct(dctData: self.currentDctData, target: yuvaSurface)
         
         switch requestedFormat {
         case .rgba:
@@ -783,7 +800,7 @@ private final class AnimationCacheItemAccessor {
             yuvaSurface.toARGB(target: currentSurface)
             self.currentYUVASurface = yuvaSurface
             
-            return AnimationCacheItemFrame(format: .rgba(data: currentSurface.argbPlane.data, width: currentSurface.argbPlane.width, height: currentSurface.argbPlane.height, bytesPerRow: currentSurface.argbPlane.bytesPerRow), duration: frameInfo.duration)
+            return AnimationCacheItemFrame(format: .rgba(data: currentSurface.argbPlane.data, width: currentSurface.argbPlane.width, height: currentSurface.argbPlane.height, bytesPerRow: currentSurface.argbPlane.bytesPerRow), duration: currentFrame.duration)
         case .yuva:
             return AnimationCacheItemFrame(
                 format: .yuva(
@@ -812,32 +829,8 @@ private final class AnimationCacheItemAccessor {
                         bytesPerRow: yuvaSurface.aPlane.bytesPerRow
                     )
                 ),
-                duration: frameInfo.duration
+                duration: currentFrame.duration
             )
-        }
-    }
-    
-    func getFrameIndex(duration: Double) -> Int {
-        if self.totalDuration == 0.0 {
-            return 0
-        }
-        if self.durationMapping.count <= 1 {
-            return 0
-        }
-        let normalizedDuration = duration.truncatingRemainder(dividingBy: self.totalDuration)
-        for i in 1 ..< self.durationMapping.count {
-            if normalizedDuration < self.durationMapping[i] {
-                return i - 1
-            }
-        }
-        return self.durationMapping.count - 1
-    }
-    
-    func getFrameDuration(index: Int) -> Double? {
-        if index < self.durationMapping.count {
-            return self.durationMapping[index]
-        } else {
-            return nil
         }
     }
 }
@@ -884,137 +877,344 @@ private func writeFloat32(data: inout Data, value: Float32) {
     })
 }
 
-private func loadItem(path: String) -> AnimationCacheItem? {
-    guard let compressedData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .alwaysMapped) else {
-        return nil
+private final class CompressedFileWriter {
+    enum WriteError: Error {
+        case generic
     }
     
-    if compressedData.count < 4 {
-        return nil
-    }
-    let decompressedSize = readUInt32(data: compressedData, offset: 0)
+    private let file: ManagedFile
+    private let stream: UnsafeMutablePointer<compression_stream>
     
-    if decompressedSize <= 0 || decompressedSize > 40 * 1024 * 1024 {
-        return nil
-    }
-    guard let data = decompressData(data: compressedData, range: 4 ..< compressedData.count, decompressedSize: Int(decompressedSize)) else {
-        return nil
-    }
+    private let tempBufferSize: Int = 32 * 1024
+    private let tempBuffer: UnsafeMutablePointer<UInt8>
     
-    let dataLength = data.count
+    private var didFail: Bool = false
     
-    var offset = 0
-    
-    guard dataLength >= offset + 4 else {
-        return nil
-    }
-    let formatVersion = readUInt32(data: data, offset: offset)
-    offset += 4
-    if formatVersion != 2 {
-        return nil
-    }
-    
-    guard dataLength >= offset + 4 else {
-        return nil
-    }
-    let width = readUInt32(data: data, offset: offset)
-    offset += 4
-    
-    guard dataLength >= offset + 4 else {
-        return nil
-    }
-    let height = readUInt32(data: data, offset: offset)
-    offset += 4
-    
-    guard dataLength >= offset + 4 else {
-        return nil
-    }
-    let dctQuality = readUInt32(data: data, offset: offset)
-    offset += 4
-    
-    guard dataLength >= offset + 4 else {
-        return nil
-    }
-    let frameDataLength = readUInt32(data: data, offset: offset)
-    offset += 4
-    
-    offset += Int(frameDataLength)
-    
-    guard dataLength >= offset + 4 else {
-        return nil
-    }
-    let numFrames = readUInt32(data: data, offset: offset)
-    offset += 4
-    
-    var frameMapping: [AnimationCacheItemAccessor.FrameInfo] = []
-    for _ in 0 ..< Int(numFrames) {
-        guard dataLength >= offset + 4 + 4 + 4 else {
+    init?(file: ManagedFile) {
+        self.file = file
+        
+        self.stream = UnsafeMutablePointer<compression_stream>.allocate(capacity: 1)
+        guard compression_stream_init(self.stream, COMPRESSION_STREAM_ENCODE, COMPRESSION_LZFSE) != COMPRESSION_STATUS_ERROR else {
+            self.stream.deallocate()
             return nil
         }
         
-        let frameStart = readUInt32(data: data, offset: offset)
-        offset += 4
-        let frameLength = readUInt32(data: data, offset: offset)
-        offset += 4
-        let frameDuration = readFloat32(data: data, offset: offset)
-        offset += 4
-        
-        frameMapping.append(AnimationCacheItemAccessor.FrameInfo(range: Int(frameStart) ..< Int(frameStart + frameLength), duration: Double(frameDuration)))
+        self.tempBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: self.tempBufferSize)
     }
     
-    let itemAccessor = AnimationCacheItemAccessor(data: data, frameMapping: frameMapping, width: Int(width), height: Int(height), dctQuality: Int(dctQuality))
+    deinit {
+        compression_stream_destroy(self.stream)
+        self.stream.deallocate()
+        self.tempBuffer.deallocate()
+    }
     
-    return AnimationCacheItem(numFrames: Int(numFrames), getFrame: { index, requestedFormat in
-        return itemAccessor.getFrame(index: index, requestedFormat: requestedFormat)
-    }, getFrameIndexImpl: { duration in
-        return itemAccessor.getFrameIndex(duration: duration)
-    }, getFrameDurationImpl: { index in
-        return itemAccessor.getFrameDuration(index: index)
+    func write(bytes: UnsafePointer<UInt8>, count: Int) throws {
+        if self.didFail {
+            throw WriteError.generic
+        }
+        
+        self.stream.pointee.src_ptr = bytes
+        self.stream.pointee.src_size = count
+        
+        while true {
+            self.stream.pointee.dst_ptr = self.tempBuffer
+            self.stream.pointee.dst_size = self.tempBufferSize
+            
+            let status = compression_stream_process(self.stream, 0)
+            if status == COMPRESSION_STATUS_ERROR {
+                self.didFail = true
+                throw WriteError.generic
+            }
+            
+            let writtenBytes = self.tempBufferSize - self.stream.pointee.dst_size
+            if writtenBytes > 0 {
+                let _ = self.file.write(self.tempBuffer, count: writtenBytes)
+            }
+            
+            if status == COMPRESSION_STATUS_END {
+                break
+            } else {
+                if self.stream.pointee.src_size == 0 {
+                    break
+                }
+            }
+        }
+    }
+    
+    func flush() throws {
+        if self.didFail {
+            throw WriteError.generic
+        }
+        
+        while true {
+            self.stream.pointee.dst_ptr = self.tempBuffer
+            self.stream.pointee.dst_size = self.tempBufferSize
+            
+            let status = compression_stream_process(self.stream, Int32(COMPRESSION_STREAM_FINALIZE.rawValue))
+            if status == COMPRESSION_STATUS_ERROR {
+                self.didFail = true
+                throw WriteError.generic
+            }
+            
+            let writtenBytes = self.tempBufferSize - self.stream.pointee.dst_size
+            if writtenBytes > 0 {
+                let _ = self.file.write(self.tempBuffer, count: writtenBytes)
+            }
+            
+            if status == COMPRESSION_STATUS_END {
+                break
+            }
+        }
+    }
+    
+    func writeUInt32(_ value: UInt32) throws {
+        var value: UInt32 = value
+        try withUnsafeBytes(of: &value, { bytes -> Void in
+            try self.write(bytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: 4)
+        })
+    }
+    
+    func writeFloat32(_ value: Float32) throws {
+        var value: Float32 = value
+        try withUnsafeBytes(of: &value, { bytes -> Void in
+            try self.write(bytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: 4)
+        })
+    }
+}
+
+private final class DecompressedData {
+    enum ReadError: Error {
+        case didReadToEnd
+    }
+    
+    private let compressedData: Data
+    private let dataRange: Range<Int>
+    private let stream: UnsafeMutablePointer<compression_stream>
+    private var isComplete = false
+    
+    init?(compressedData: Data, dataRange: Range<Int>) {
+        self.compressedData = compressedData
+        self.dataRange = dataRange
+        
+        self.stream = UnsafeMutablePointer<compression_stream>.allocate(capacity: 1)
+        guard compression_stream_init(self.stream, COMPRESSION_STREAM_DECODE, COMPRESSION_LZFSE) != COMPRESSION_STATUS_ERROR else {
+            self.stream.deallocate()
+            return nil
+        }
+        
+        self.compressedData.withUnsafeBytes { bytes in
+            self.stream.pointee.src_ptr = bytes.baseAddress!.assumingMemoryBound(to: UInt8.self).advanced(by: dataRange.lowerBound)
+            self.stream.pointee.src_size = dataRange.upperBound - dataRange.lowerBound
+        }
+    }
+    
+    deinit {
+        compression_stream_destroy(self.stream)
+        self.stream.deallocate()
+    }
+    
+    func read(bytes: UnsafeMutablePointer<UInt8>, count: Int) throws {
+        if self.isComplete {
+            throw ReadError.didReadToEnd
+        }
+        
+        self.stream.pointee.dst_ptr = bytes
+        self.stream.pointee.dst_size = count
+        
+        let status = compression_stream_process(self.stream, 0)
+        
+        if status == COMPRESSION_STATUS_ERROR {
+            self.isComplete = true
+            throw ReadError.didReadToEnd
+        } else if status == COMPRESSION_STATUS_END {
+            if self.stream.pointee.src_size == 0 {
+                self.isComplete = true
+            }
+        }
+         
+        if self.stream.pointee.dst_size != 0 {
+            throw ReadError.didReadToEnd
+        }
+    }
+    
+    func readUInt32() throws -> UInt32 {
+        var value: UInt32 = 0
+        try withUnsafeMutableBytes(of: &value, { bytes -> Void in
+            try self.read(bytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: 4)
+        })
+        return value
+    }
+
+    func readFloat32() throws -> Float32 {
+        var value: Float32 = 0
+        try withUnsafeMutableBytes(of: &value, { bytes -> Void in
+            try self.read(bytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: 4)
+        })
+        return value
+    }
+}
+
+private enum LoadItemError: Error {
+    case dataError
+}
+
+private func loadItem(path: String) throws -> AnimationCacheItem {
+    guard let compressedData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .alwaysMapped) else {
+        throw LoadItemError.dataError
+    }
+    
+    var offset: Int = 0
+    let dataLength = compressedData.count
+    
+    if offset + 4 > dataLength {
+        throw LoadItemError.dataError
+    }
+    let formatVersion = readUInt32(data: compressedData, offset: offset)
+    offset += 4
+    if formatVersion != 3 {
+        throw LoadItemError.dataError
+    }
+    
+    if offset + 4 > dataLength {
+        throw LoadItemError.dataError
+    }
+    let width = readUInt32(data: compressedData, offset: offset)
+    offset += 4
+    
+    if offset + 4 > dataLength {
+        throw LoadItemError.dataError
+    }
+    let height = readUInt32(data: compressedData, offset: offset)
+    offset += 4
+    
+    if offset + 4 > dataLength {
+        throw LoadItemError.dataError
+    }
+    let dctQuality = readUInt32(data: compressedData, offset: offset)
+    offset += 4
+    
+    if offset + 4 > dataLength {
+        throw LoadItemError.dataError
+    }
+    let contentLength = Int(readUInt32(data: compressedData, offset: offset))
+    offset += 4
+    
+    let compressedFrameDataRange = offset ..< (offset + contentLength)
+    offset += contentLength
+    
+    if offset + 4 > dataLength {
+        throw LoadItemError.dataError
+    }
+    let frameCount = Int(readUInt32(data: compressedData, offset: offset))
+    offset += 4
+    
+    var frameMapping: [AnimationCacheItemAccessor.FrameInfo] = []
+    for _ in 0 ..< frameCount {
+        if offset + 4 > dataLength {
+            throw LoadItemError.dataError
+        }
+        let frameDuration = readFloat32(data: compressedData, offset: offset)
+        offset += 4
+        
+        frameMapping.append(AnimationCacheItemAccessor.FrameInfo(duration: Double(frameDuration)))
+    }
+    
+    let itemAccessor = AnimationCacheItemAccessor(data: compressedData, range: compressedFrameDataRange, frameMapping: frameMapping, width: Int(width), height: Int(height), dctQuality: Int(dctQuality))
+    
+    return AnimationCacheItem(numFrames: frameMapping.count, advanceImpl: { advance, requestedFormat in
+        return itemAccessor.advance(advance: advance, requestedFormat: requestedFormat)
     })
 }
 
 private func adaptItemFromHigherResolution(itemPath: String, width: Int, height: Int, itemDirectoryPath: String, higherResolutionPath: String, allocateTempFile: @escaping () -> String) -> AnimationCacheItem? {
-    guard let higherResolutionItem = loadItem(path: higherResolutionPath) else {
+    guard let higherResolutionItem = try? loadItem(path: higherResolutionPath) else {
         return nil
     }
     guard let writer = AnimationCacheItemWriterInternal(allocateTempFile: allocateTempFile) else {
         return nil
     }
     
-    for i in 0 ..< higherResolutionItem.numFrames {
-        guard let duration = higherResolutionItem.getFrameDuration(index: i) else {
-            break
+    do {
+        for _ in 0 ..< higherResolutionItem.numFrames {
+            try writer.add(with: { yuva in
+                guard let frame = higherResolutionItem.advance(advance: .frames(1), requestedFormat: .yuva(rowAlignment: yuva.yPlane.rowAlignment)) else {
+                    return nil
+                }
+                switch frame.format {
+                case .rgba:
+                    return nil
+                case let .yuva(y, u, v, a):
+                    yuva.yPlane.copyScaled(fromPlane: y)
+                    yuva.uPlane.copyScaled(fromPlane: u)
+                    yuva.vPlane.copyScaled(fromPlane: v)
+                    yuva.aPlane.copyScaled(fromPlane: a)
+                }
+                
+                return frame.duration
+            }, proposedWidth: width, proposedHeight: height)
         }
-        writer.add(with: { yuva in
-            guard let frame = higherResolutionItem.getFrame(index: i, requestedFormat: .yuva(rowAlignment: yuva.yPlane.rowAlignment)) else {
-                return
+        
+        let result = try writer.finish()
+        
+        guard let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: itemDirectoryPath), withIntermediateDirectories: true, attributes: nil) else {
+            return nil
+        }
+        let _ = try? FileManager.default.removeItem(atPath: itemPath)
+        guard let _ = try? FileManager.default.moveItem(atPath: result.path, toPath: itemPath) else {
+            return nil
+        }
+        guard let item = try? loadItem(path: itemPath) else {
+            return nil
+        }
+        return item
+    } catch {
+        return nil
+    }
+}
+
+private func generateFirstFrameFromItem(itemPath: String, animationItemPath: String, allocateTempFile: @escaping () -> String) -> Bool {
+    guard let animationItem = try? loadItem(path: animationItemPath) else {
+        return false
+    }
+    guard let writer = AnimationCacheItemWriterInternal(allocateTempFile: allocateTempFile) else {
+        return false
+    }
+    
+    do {
+        for _ in 0 ..< min(1, animationItem.numFrames) {
+            guard let frame = animationItem.advance(advance: .frames(1), requestedFormat: .yuva(rowAlignment: 1)) else {
+                return false
             }
             switch frame.format {
             case .rgba:
-                return
+                return false
             case let .yuva(y, u, v, a):
-                yuva.yPlane.copyScaled(fromPlane: y)
-                yuva.uPlane.copyScaled(fromPlane: u)
-                yuva.vPlane.copyScaled(fromPlane: v)
-                yuva.aPlane.copyScaled(fromPlane: a)
+                try writer.add(with: { yuva in
+                    assert(yuva.yPlane.bytesPerRow == y.bytesPerRow)
+                    assert(yuva.uPlane.bytesPerRow == u.bytesPerRow)
+                    assert(yuva.vPlane.bytesPerRow == v.bytesPerRow)
+                    assert(yuva.aPlane.bytesPerRow == a.bytesPerRow)
+                    
+                    yuva.yPlane.copyScaled(fromPlane: y)
+                    yuva.uPlane.copyScaled(fromPlane: u)
+                    yuva.vPlane.copyScaled(fromPlane: v)
+                    yuva.aPlane.copyScaled(fromPlane: a)
+                    
+                    return frame.duration
+                }, proposedWidth: y.width, proposedHeight: y.height)
             }
-        }, proposedWidth: width, proposedHeight: height, duration: duration)
+        }
+        
+        let result = try writer.finish()
+        
+        let _ = try? FileManager.default.removeItem(atPath: itemPath)
+        guard let _ = try? FileManager.default.moveItem(atPath: result.path, toPath: itemPath) else {
+            return false
+        }
+        return true
+    } catch {
+        return false
     }
-    
-    guard let result = writer.finish() else {
-        return nil
-    }
-    guard let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: itemDirectoryPath), withIntermediateDirectories: true, attributes: nil) else {
-        return nil
-    }
-    let _ = try? FileManager.default.removeItem(atPath: itemPath)
-    guard let _ = try? FileManager.default.moveItem(atPath: result.path, toPath: itemPath) else {
-        return nil
-    }
-    guard let item = loadItem(path: itemPath) else {
-        return nil
-    }
-    return item
 }
 
 private func findHigherResolutionFileForAdaptation(itemDirectoryPath: String, baseName: String, baseSuffix: String, width: Int, height: Int) -> String? {
@@ -1106,7 +1306,7 @@ public final class AnimationCacheImpl: AnimationCache {
             let itemPath = "\(itemDirectoryPath)/\(sourceIdPath.fileName)"
             let itemFirstFramePath = "\(itemDirectoryPath)/\(sourceIdPath.fileName)-f"
             
-            if FileManager.default.fileExists(atPath: itemPath), let item = loadItem(path: itemPath) {
+            if FileManager.default.fileExists(atPath: itemPath), let item = try? loadItem(path: itemPath) {
                 updateResult(AnimationCacheItemResult(item: item, isFinal: true))
                 
                 return EmptyDisposable
@@ -1130,6 +1330,7 @@ public final class AnimationCacheImpl: AnimationCache {
             if beginFetch {
                 let fetchQueueIndex = self.nextFetchQueueIndex
                 self.nextFetchQueueIndex += 1
+                let allocateTempFile = self.allocateTempFile
                 guard let writer = AnimationCacheItemWriterImpl(queue: self.fetchQueues[fetchQueueIndex % self.fetchQueues.count], allocateTempFile: self.allocateTempFile, completion: { [weak self, weak itemContext] result in
                     queue.async {
                         guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[sourceId] else {
@@ -1148,11 +1349,10 @@ public final class AnimationCacheImpl: AnimationCache {
                         guard let _ = try? FileManager.default.moveItem(atPath: result.animationPath, toPath: itemPath) else {
                             return
                         }
-                        let _ = try? FileManager.default.removeItem(atPath: itemFirstFramePath)
-                        guard let _ = try? FileManager.default.moveItem(atPath: result.firstFramePath, toPath: itemFirstFramePath) else {
-                            return
-                        }
-                        guard let item = loadItem(path: itemPath) else {
+                        
+                        let _ = generateFirstFrameFromItem(itemPath: itemFirstFramePath, animationItemPath: itemPath, allocateTempFile: allocateTempFile)
+                        
+                        guard let item = try? loadItem(path: itemPath) else {
                             return
                         }
                         
@@ -1197,7 +1397,7 @@ public final class AnimationCacheImpl: AnimationCache {
             let itemFirstFramePath = "\(itemDirectoryPath)/\(sourceIdPath.fileName)-f"
             
             if FileManager.default.fileExists(atPath: itemFirstFramePath) {
-                return loadItem(path: itemFirstFramePath)
+                return try? loadItem(path: itemFirstFramePath)
             }
             
             if let adaptationItemPath = findHigherResolutionFileForAdaptation(itemDirectoryPath: itemDirectoryPath, baseName: "\(hashString)_", baseSuffix: "-f", width: Int(size.width), height: Int(size.height)) {
@@ -1215,7 +1415,7 @@ public final class AnimationCacheImpl: AnimationCache {
             let itemDirectoryPath = "\(basePath)/\(sourceIdPath.directory)"
             let itemFirstFramePath = "\(itemDirectoryPath)/\(sourceIdPath.fileName)-f"
             
-            if FileManager.default.fileExists(atPath: itemFirstFramePath), let item = loadItem(path: itemFirstFramePath) {
+            if FileManager.default.fileExists(atPath: itemFirstFramePath), let item = try? loadItem(path: itemFirstFramePath) {
                 completion(item)
                 return EmptyDisposable
             }

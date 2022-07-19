@@ -351,6 +351,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
         }
         
         var addedHashtags: [String] = []
+        var emojiItems: [RecentEmojiItem] = []
         
         var localGroupingKeyBySourceKey: [Int64: Int64] = [:]
         
@@ -474,6 +475,13 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                         entityRange.length -= 1
                                         let hashtag = nsText.substring(with: entityRange)
                                         addedHashtags.append(hashtag)
+                                    }
+                                } else if case let .CustomEmoji(_, fileId) = entity.type {
+                                    let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                    if let file = inlineStickers[mediaId] as? TelegramMediaFile {
+                                        emojiItems.append(RecentEmojiItem(.file(file)))
+                                    } else if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                                        emojiItems.append(RecentEmojiItem(.file(file)))
                                     }
                                 }
                             }
@@ -786,6 +794,19 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
         }
         var messageIds: [MessageId?] = []
         if !storeMessages.isEmpty {
+            for emojiItem in emojiItems {
+                if let entry = CodableEntry(emojiItem) {
+                    let id: RecentEmojiItemId
+                    switch emojiItem.content {
+                    case let .file(file):
+                        id = RecentEmojiItemId(file.fileId)
+                    case let .text(text):
+                        id = RecentEmojiItemId(text)
+                    }
+                    transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.LocalRecentEmoji, item: OrderedItemListEntry(id: id.rawValue, contents: entry), removeTailIfCountExceeds: 20)
+                }
+            }
+            
             let globallyUniqueIdToMessageId = transaction.addMessages(storeMessages, location: .Random)
             for globallyUniqueId in globallyUniqueIds {
                 messageIds.append(globallyUniqueIdToMessageId[globallyUniqueId])

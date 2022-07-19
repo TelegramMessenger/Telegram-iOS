@@ -184,9 +184,9 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                     component: AnyComponent(LottieAnimationComponent(
                         animation: LottieAnimationComponent.AnimationItem(
                             name: !isEmoji ? "anim_stickertosmile" : "anim_smiletosticker",
-                            colors: colors,
                             mode: .animateTransitionFromPrevious
                         ),
+                        colors: colors,
                         size: animationFrame.size
                     )),
                     environment: {},

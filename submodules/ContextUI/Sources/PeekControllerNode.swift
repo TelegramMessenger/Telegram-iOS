@@ -126,6 +126,8 @@ final class PeekControllerNode: ViewControllerTracingNode {
         }
         
         self.hapticFeedback.prepareTap()
+        
+        controller.ready.set(self.contentNode.ready())
     }
     
     deinit {

@@ -8606,6 +8606,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
             }
+            
+            strongSelf.chatDisplayNode.updateTypingActivity(true)
         }, backwardsDeleteText: { [weak self] in
             guard let strongSelf = self else {
                 return

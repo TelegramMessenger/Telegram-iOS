@@ -165,6 +165,7 @@ public protocol AnimatedStickerNode: ASDisplayNode {
     var autoplay: Bool { get set }
     
     var visibility: Bool { get set }
+    var overrideVisibility: Bool { get set }
     
     var isPlayingChanged: (Bool) -> Void { get }
     
@@ -222,6 +223,7 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
     }
     
     public var autoplay = false
+    public var overrideVisibility: Bool = false
     
     public var visibility = false {
         didSet {
@@ -386,7 +388,7 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
     
     private func updateIsPlaying() {
         if !self.autoplay {
-            let isPlaying = self.visibility && self.isDisplaying
+            let isPlaying = self.visibility && (self.isDisplaying || self.overrideVisibility)
             if self.isPlaying != isPlaying {
                 self.isPlaying = isPlaying
                 if isPlaying {

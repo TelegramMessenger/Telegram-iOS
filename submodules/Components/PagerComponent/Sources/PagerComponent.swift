@@ -261,6 +261,10 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         
         private var isTopPanelExpanded: Bool = false
         
+        public var topPanelComponentView: UIView? {
+            return self.topPanelView?.componentView
+        }
+        
         override init(frame: CGRect) {
             super.init(frame: frame)
             
@@ -773,6 +777,14 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             self.isTopPanelExpanded = isExpanded
             
             self.component?.isTopPanelExpandedUpdated(self.isTopPanelExpanded, transition)
+        }
+        
+        public func collapseTopPanel() {
+            if !self.isTopPanelExpanded {
+                return
+            }
+            
+            self.isTopPanelExpandedUpdated(isExpanded: false, transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
         }
     }
     

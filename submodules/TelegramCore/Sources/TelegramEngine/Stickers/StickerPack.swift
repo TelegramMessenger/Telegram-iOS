@@ -105,7 +105,7 @@ func _internal_stickerPacksAttachedToMedia(account: Account, media: AnyMediaRefe
     |> map { result -> [StickerPackReference] in
         return result.map { pack in
             switch pack {
-            case let .stickerSetCovered(set, _), let .stickerSetMultiCovered(set, _):
+            case let .stickerSetCovered(set, _), let .stickerSetMultiCovered(set, _), let .stickerSetFullCovered(set, _, _):
                 let info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
                 return .id(id: info.id.id, accessHash: info.accessHash)
             }

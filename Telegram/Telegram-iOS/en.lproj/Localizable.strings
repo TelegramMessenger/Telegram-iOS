@@ -7849,3 +7849,5 @@ Sorry for the inconvenience.";
 
 "WebApp.CloseConfirmation" = "Changes that you made may not be saved.";
 "WebApp.CloseAnyway" = "Close Anyway";
+
+"Emoji.ClearRecent" = "Clear Recent Emoji";

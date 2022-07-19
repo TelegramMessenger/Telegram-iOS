@@ -42,12 +42,14 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
             
             if self.shouldBeAnimating {
                 self.playbackTimer?.invalidate()
+                let startTimestamp = self.playbackTimestamp + CFAbsoluteTimeGetCurrent()
                 self.playbackTimer = SwiftSignalKit.Timer(timeout: 1.0 / 30.0, repeat: true, completion: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.frameManager?.tick(timestamp: strongSelf.playbackTimestamp)
-                    strongSelf.playbackTimestamp += 1.0 / 30.0
+                    let timestamp = CFAbsoluteTimeGetCurrent() - startTimestamp
+                    strongSelf.frameManager?.tick(timestamp: timestamp)
+                    strongSelf.playbackTimestamp = timestamp
                 }, queue: .mainQueue())
                 self.playbackTimer?.start()
             } else {
@@ -560,7 +562,7 @@ public final class GifPagerContentComponent: Component {
         }
         
         private func updateScrollingOffset(transition: Transition) {
-            let isInteracting = scrollView.isDragging || scrollView.isTracking || scrollView.isDecelerating
+            let isInteracting = scrollView.isDragging || scrollView.isDecelerating
             if let previousScrollingOffsetValue = self.previousScrollingOffset {
                 let currentBounds = scrollView.bounds
                 let offsetToTopEdge = max(0.0, currentBounds.minY - 0.0)

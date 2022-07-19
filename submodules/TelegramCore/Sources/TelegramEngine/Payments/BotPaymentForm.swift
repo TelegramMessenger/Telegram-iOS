@@ -213,7 +213,7 @@ func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source
         |> mapToSignal { result -> Signal<TelegramMediaInvoice, BotPaymentFormRequestError> in
             return postbox.transaction { transaction -> TelegramMediaInvoice in
                 switch result {
-                case let .paymentForm(_, _, _, title, description, photo, invoice, _, _, _, _, _, _, _):
+                case let .paymentForm(_, _, _, title, description, photo, invoice, _, _, _, _, _, _, _, _):
                     let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                     
                     var parsedFlags = TelegramMediaInvoiceFlags()
@@ -266,10 +266,11 @@ func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, source: B
         |> mapToSignal { result -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
             return postbox.transaction { transaction -> BotPaymentForm in
                 switch result {
-                    case let .paymentForm(flags, id, botId, title, description, photo, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
+                    case let .paymentForm(flags, id, botId, title, description, photo, invoice, providerId, url, nativeProvider, nativeParams, additionalMethods, savedInfo, savedCredentials, apiUsers):
                         let _ = title
                         let _ = description
                         let _ = photo
+                        let _ = additionalMethods
                     
                         var peers: [Peer] = []
                         for user in apiUsers {

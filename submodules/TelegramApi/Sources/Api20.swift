@@ -87,6 +87,7 @@ public extension Api {
 public extension Api {
     enum StickerSetCovered: TypeConstructorDescription {
         case stickerSetCovered(set: Api.StickerSet, cover: Api.Document)
+        case stickerSetFullCovered(set: Api.StickerSet, packs: [Api.StickerPack], documents: [Api.Document])
         case stickerSetMultiCovered(set: Api.StickerSet, covers: [Api.Document])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -97,6 +98,22 @@ public extension Api {
                     }
                     set.serialize(buffer, true)
                     cover.serialize(buffer, true)
+                    break
+                case .stickerSetFullCovered(let set, let packs, let documents):
+                    if boxed {
+                        buffer.appendInt32(451763941)
+                    }
+                    set.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(packs.count))
+                    for item in packs {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(documents.count))
+                    for item in documents {
+                        item.serialize(buffer, true)
+                    }
                     break
                 case .stickerSetMultiCovered(let set, let covers):
                     if boxed {
@@ -116,6 +133,8 @@ public extension Api {
         switch self {
                 case .stickerSetCovered(let set, let cover):
                 return ("stickerSetCovered", [("set", String(describing: set)), ("cover", String(describing: cover))])
+                case .stickerSetFullCovered(let set, let packs, let documents):
+                return ("stickerSetFullCovered", [("set", String(describing: set)), ("packs", String(describing: packs)), ("documents", String(describing: documents))])
                 case .stickerSetMultiCovered(let set, let covers):
                 return ("stickerSetMultiCovered", [("set", String(describing: set)), ("covers", String(describing: covers))])
     }
@@ -134,6 +153,29 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.StickerSetCovered.stickerSetCovered(set: _1!, cover: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_stickerSetFullCovered(_ reader: BufferReader) -> StickerSetCovered? {
+            var _1: Api.StickerSet?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.StickerSet
+            }
+            var _2: [Api.StickerPack]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerPack.self)
+            }
+            var _3: [Api.Document]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.StickerSetCovered.stickerSetFullCovered(set: _1!, packs: _2!, documents: _3!)
             }
             else {
                 return nil
@@ -592,6 +634,7 @@ public extension Api {
         case updateReadChannelDiscussionOutbox(channelId: Int64, topMsgId: Int32, readMaxId: Int32)
         case updateReadChannelInbox(flags: Int32, folderId: Int32?, channelId: Int64, maxId: Int32, stillUnreadCount: Int32, pts: Int32)
         case updateReadChannelOutbox(channelId: Int64, maxId: Int32)
+        case updateReadFeaturedEmojiStickers
         case updateReadFeaturedStickers
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
         case updateReadHistoryOutbox(peer: Api.Peer, maxId: Int32, pts: Int32, ptsCount: Int32)
@@ -1333,6 +1376,12 @@ public extension Api {
                     serializeInt64(channelId, buffer: buffer, boxed: false)
                     serializeInt32(maxId, buffer: buffer, boxed: false)
                     break
+                case .updateReadFeaturedEmojiStickers:
+                    if boxed {
+                        buffer.appendInt32(-78886548)
+                    }
+                    
+                    break
                 case .updateReadFeaturedStickers:
                     if boxed {
                         buffer.appendInt32(1461528386)
@@ -1660,6 +1709,8 @@ public extension Api {
                 return ("updateReadChannelInbox", [("flags", String(describing: flags)), ("folderId", String(describing: folderId)), ("channelId", String(describing: channelId)), ("maxId", String(describing: maxId)), ("stillUnreadCount", String(describing: stillUnreadCount)), ("pts", String(describing: pts))])
                 case .updateReadChannelOutbox(let channelId, let maxId):
                 return ("updateReadChannelOutbox", [("channelId", String(describing: channelId)), ("maxId", String(describing: maxId))])
+                case .updateReadFeaturedEmojiStickers:
+                return ("updateReadFeaturedEmojiStickers", [])
                 case .updateReadFeaturedStickers:
                 return ("updateReadFeaturedStickers", [])
                 case .updateReadHistoryInbox(let flags, let folderId, let peer, let maxId, let stillUnreadCount, let pts, let ptsCount):
@@ -3195,6 +3246,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_updateReadFeaturedEmojiStickers(_ reader: BufferReader) -> Update? {
+            return Api.Update.updateReadFeaturedEmojiStickers
         }
         public static func parse_updateReadFeaturedStickers(_ reader: BufferReader) -> Update? {
             return Api.Update.updateReadFeaturedStickers

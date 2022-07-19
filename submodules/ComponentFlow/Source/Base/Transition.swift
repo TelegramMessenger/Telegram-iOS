@@ -458,6 +458,25 @@ public struct Transition {
             )
         }
     }
+    
+    public func animateSublayerScale(view: UIView, from fromValue: CGFloat, to toValue: CGFloat, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        switch self.animation {
+        case .none:
+            completion?(true)
+        case let .curve(duration, curve):
+            view.layer.animate(
+                from: fromValue as NSNumber,
+                to: toValue as NSNumber,
+                keyPath: "sublayerTransform.scale",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: additive,
+                completion: completion
+            )
+        }
+    }
 
     public func animateAlpha(view: UIView, from fromValue: CGFloat, to toValue: CGFloat, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {

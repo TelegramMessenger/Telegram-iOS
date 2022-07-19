@@ -249,14 +249,18 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
     }
     
     private final class Frame {
-        let timestamp: Double
+        let duration: Double
         let textureY: TextureStorage
         let textureU: TextureStorage
         let textureV: TextureStorage
         let textureA: TextureStorage
         
-        init?(device: MTLDevice, textureY: TextureStorage, textureU: TextureStorage, textureV: TextureStorage, textureA: TextureStorage, data: AnimationCacheItemFrame, timestamp: Double) {
-            self.timestamp = timestamp
+        var remainingDuration: Double
+        
+        init?(device: MTLDevice, textureY: TextureStorage, textureU: TextureStorage, textureV: TextureStorage, textureA: TextureStorage, data: AnimationCacheItemFrame, duration: Double) {
+            self.duration = duration
+            self.remainingDuration = duration
+            
             self.textureY = textureY
             self.textureU = textureU
             self.textureV = textureV
@@ -281,7 +285,6 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         private let stateUpdated: () -> Void
         
         private var disposable: Disposable?
-        private var timestamp: Double = 0.0
         private var item: AnimationCacheItem?
         
         private(set) var currentFrame: Frame?
@@ -354,18 +357,35 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             return self.update(device: device, texturePoolFullPlane: texturePoolFullPlane, texturePoolHalfPlane: texturePoolHalfPlane, advanceTimestamp: advanceTimestamp)
         }
         
-        private func update(device: MTLDevice, texturePoolFullPlane: TextureStoragePool, texturePoolHalfPlane: TextureStoragePool, advanceTimestamp: Double?) -> LoadFrameTask? {
+        private func update(device: MTLDevice, texturePoolFullPlane: TextureStoragePool, texturePoolHalfPlane: TextureStoragePool, advanceTimestamp: Double) -> LoadFrameTask? {
             guard let item = self.item else {
                 return nil
             }
             
-            let timestamp = self.timestamp
-            if let advanceTimestamp = advanceTimestamp {
-                self.timestamp += advanceTimestamp
+            if let currentFrame = self.currentFrame, !self.isLoadingFrame {
+                currentFrame.remainingDuration -= advanceTimestamp
             }
             
-            if let currentFrame = self.currentFrame, currentFrame.timestamp == self.timestamp {
-            } else if !self.isLoadingFrame {
+            var frameAdvance: AnimationCacheItem.Advance?
+            if !self.isLoadingFrame {
+                if let currentFrame = self.currentFrame, advanceTimestamp > 0.0 {
+                    let divisionFactor = advanceTimestamp / currentFrame.remainingDuration
+                    let wholeFactor = round(divisionFactor)
+                    if abs(wholeFactor - divisionFactor) < 0.005 {
+                        currentFrame.remainingDuration = 0.0
+                        frameAdvance = .frames(Int(wholeFactor))
+                    } else {
+                        currentFrame.remainingDuration -= advanceTimestamp
+                        if currentFrame.remainingDuration <= 0.0 {
+                            frameAdvance = .duration(currentFrame.duration + max(0.0, -currentFrame.remainingDuration))
+                        }
+                    }
+                } else if self.currentFrame == nil {
+                    frameAdvance = .frames(1)
+                }
+            }
+            
+            if let frameAdvance = frameAdvance, !self.isLoadingFrame {
                 self.isLoadingFrame = true
                 
                 let fullParameters = texturePoolFullPlane.parameters
@@ -378,7 +398,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 let preferredRowAlignment = self.preferredRowAlignment
                 
                 return LoadFrameTask(task: { [weak self] in
-                    let frame = item.getFrame(at: timestamp, requestedFormat: .yuva(rowAlignment: preferredRowAlignment))
+                    let frame = item.advance(advance: frameAdvance, requestedFormat: .yuva(rowAlignment: preferredRowAlignment))
                     
                     let textureY = readyTextureY ?? TextureStoragePool.takeNew(device: device, parameters: fullParameters, pool: texturePoolFullPlane)
                     let textureU = readyTextureU ?? TextureStoragePool.takeNew(device: device, parameters: halfParameters, pool: texturePoolHalfPlane)
@@ -387,7 +407,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                     
                     var currentFrame: Frame?
                     if let frame = frame, let textureY = textureY, let textureU = textureU, let textureV = textureV, let textureA = textureA {
-                        currentFrame = Frame(device: device, textureY: textureY, textureU: textureU, textureV: textureV, textureA: textureA, data: frame, timestamp: timestamp)
+                        currentFrame = Frame(device: device, textureY: textureY, textureU: textureU, textureV: textureV, textureA: textureA, data: frame, duration: frame.duration)
                     }
                     
                     return {

@@ -13,11 +13,11 @@ import SwiftSignalKit
 
 public final class EntityKeyboardChildEnvironment: Equatable {
     public let theme: PresentationTheme
-    public let getContentActiveItemUpdated: (AnyHashable) -> ActionSlot<(AnyHashable, Transition)>?
+    public let getContentActiveItemUpdated: (AnyHashable) -> ActionSlot<(AnyHashable, AnyHashable?, Transition)>?
     
     public init(
         theme: PresentationTheme,
-        getContentActiveItemUpdated: @escaping (AnyHashable) -> ActionSlot<(AnyHashable, Transition)>?
+        getContentActiveItemUpdated: @escaping (AnyHashable) -> ActionSlot<(AnyHashable, AnyHashable?, Transition)>?
     ) {
         self.theme = theme
         self.getContentActiveItemUpdated = getContentActiveItemUpdated
@@ -200,8 +200,8 @@ public final class EntityKeyboardComponent: Component {
             var contentAccessoryLeftButtons: [AnyComponentWithIdentity<Empty>] = []
             var contentAccessoryRightButtons: [AnyComponentWithIdentity<Empty>] = []
             
-            let gifsContentItemIdUpdated = ActionSlot<(AnyHashable, Transition)>()
-            let stickersContentItemIdUpdated = ActionSlot<(AnyHashable, Transition)>()
+            let gifsContentItemIdUpdated = ActionSlot<(AnyHashable, AnyHashable?, Transition)>()
+            let stickersContentItemIdUpdated = ActionSlot<(AnyHashable, AnyHashable?, Transition)>()
             
             if transition.userData(MarkInputCollapsed.self) != nil {
                 self.searchComponent = nil
@@ -242,6 +242,8 @@ public final class EntityKeyboardComponent: Component {
                         content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                             context: component.emojiContent.context,
                             file: emoji.file,
+                            isFeatured: false,
+                            isPremiumLocked: false,
                             animationCache: component.emojiContent.animationCache,
                             animationRenderer: component.emojiContent.animationRenderer,
                             theme: component.theme,
@@ -293,8 +295,9 @@ public final class EntityKeyboardComponent: Component {
                         let iconMapping: [String: String] = [
                             "saved": "Chat/Input/Media/SavedStickersTabIcon",
                             "recent": "Chat/Input/Media/RecentTabIcon",
-                            "premium": "Chat/Input/Media/PremiumIcon"
+                            "premium": "Peer Info/PremiumIcon"
                         ]
+                        //TODO:localize
                         let titleMapping: [String: String] = [
                             "saved": "Saved",
                             "recent": "Recent",
@@ -323,6 +326,8 @@ public final class EntityKeyboardComponent: Component {
                                     content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                                         context: stickerContent.context,
                                         file: file,
+                                        isFeatured: itemGroup.isFeatured,
+                                        isPremiumLocked: itemGroup.isPremiumLocked,
                                         animationCache: stickerContent.animationCache,
                                         animationRenderer: stickerContent.animationRenderer,
                                         theme: component.theme,
@@ -375,18 +380,42 @@ public final class EntityKeyboardComponent: Component {
                 ).minSize(CGSize(width: 38.0, height: 38.0)))))
             }
             
-            let emojiContentItemIdUpdated = ActionSlot<(AnyHashable, Transition)>()
+            let emojiContentItemIdUpdated = ActionSlot<(AnyHashable, AnyHashable?, Transition)>()
             contents.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(component.emojiContent)))
             var topEmojiItems: [EntityKeyboardTopPanelComponent.Item] = []
             for itemGroup in component.emojiContent.itemGroups {
                 if !itemGroup.items.isEmpty {
                     if let id = itemGroup.groupId.base as? String {
-                        if id == "static" {
+                        if id == "recent" {
+                            let iconMapping: [String: String] = [
+                                "recent": "Chat/Input/Media/RecentTabIcon",
+                            ]
+                            //TODO:localize
+                            let titleMapping: [String: String] = [
+                                "recent": "Recent",
+                            ]
+                            if let iconName = iconMapping[id], let title = titleMapping[id] {
+                                topEmojiItems.append(EntityKeyboardTopPanelComponent.Item(
+                                    id: itemGroup.supergroupId,
+                                    isReorderable: false,
+                                    content: AnyComponent(EntityKeyboardIconTopPanelComponent(
+                                        imageName: iconName,
+                                        theme: component.theme,
+                                        title: title,
+                                        pressed: { [weak self] in
+                                            self?.scrollToItemGroup(contentId: "emoji", groupId: itemGroup.supergroupId, subgroupId: nil)
+                                        }
+                                    ))
+                                ))
+                            }
+                        } else if id == "static" {
+                            //TODO:localize
                             topEmojiItems.append(EntityKeyboardTopPanelComponent.Item(
                                 id: itemGroup.supergroupId,
                                 isReorderable: false,
                                 content: AnyComponent(EntityKeyboardStaticStickersPanelComponent(
                                     theme: component.theme,
+                                    title: "Emoji",
                                     pressed: { [weak self] subgroupId in
                                         guard let strongSelf = self else {
                                             return
@@ -404,6 +433,8 @@ public final class EntityKeyboardComponent: Component {
                                 content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                                     context: component.emojiContent.context,
                                     file: file,
+                                    isFeatured: itemGroup.isFeatured,
+                                    isPremiumLocked: itemGroup.isPremiumLocked,
                                     animationCache: component.emojiContent.animationCache,
                                     animationRenderer: component.emojiContent.animationRenderer,
                                     theme: component.theme,
@@ -651,9 +682,17 @@ public final class EntityKeyboardComponent: Component {
         }
         
         private func scrollToItemGroup(contentId: String, groupId: AnyHashable, subgroupId: Int32?) {
-            if let pagerView = self.pagerView.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: contentId)) as? EmojiPagerContentComponent.View {
-                pagerView.scrollToItemGroup(id: groupId, subgroupId: subgroupId)
+            guard let pagerView = self.pagerView.findTaggedView(tag: PagerComponentViewTag()) as? PagerComponent<EntityKeyboardChildEnvironment, EntityKeyboardTopContainerPanelEnvironment>.View else {
+                return
             }
+            guard let pagerContentView = self.pagerView.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: contentId)) as? EmojiPagerContentComponent.View else {
+                return
+            }
+            if let topPanelView = pagerView.topPanelComponentView as? EntityKeyboardTopContainerPanelComponent.View {
+                topPanelView.internalUpdatePanelsAreCollapsed()
+            }
+            pagerContentView.scrollToItemGroup(id: groupId, subgroupId: subgroupId)
+            pagerView.collapseTopPanel()
         }
         
         private func reorderPacks(category: ReorderCategory, items: [EntityKeyboardTopPanelComponent.Item]) {

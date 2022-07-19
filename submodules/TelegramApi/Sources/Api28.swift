@@ -4216,6 +4216,21 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getFeaturedEmojiStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FeaturedStickers>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(248473398)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getFeaturedEmojiStickers", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.FeaturedStickers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.FeaturedStickers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.FeaturedStickers
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getFeaturedStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FeaturedStickers>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1685588756)
@@ -6295,11 +6310,11 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
-                static func canPurchasePremium() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func canPurchasePremium(purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1435856696)
-                    
-                    return (FunctionDescription(name: "payments.canPurchasePremium", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    buffer.appendInt32(-1614700874)
+                    purpose.serialize(buffer, true)
+                    return (FunctionDescription(name: "payments.canPurchasePremium", parameters: [("purpose", String(describing: purpose))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

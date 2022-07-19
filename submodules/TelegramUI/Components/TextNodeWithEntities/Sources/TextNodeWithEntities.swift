@@ -226,7 +226,7 @@ public final class TextNodeWithEntities {
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: attemptSynchronousLoad, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
+                        itemLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: attemptSynchronousLoad, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: floor(itemSize * 1.2), height: floor(itemSize * 1.2)))
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         

@@ -373,7 +373,7 @@ public struct PresentationResourcesChat {
     
     public static func chatInputMediaPanelGridDismissImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelGridDismissImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridDismissIcon"), color: theme.chat.inputMediaPanel.panelIconColor.withAlphaComponent(0.65))
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridDismissIcon"), color: theme.chat.inputMediaPanel.stickersSectionTextColor)
         })
     }
     

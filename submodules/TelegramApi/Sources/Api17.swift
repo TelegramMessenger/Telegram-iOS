@@ -1,4 +1,88 @@
 public extension Api {
+    enum ReactionCount: TypeConstructorDescription {
+        case reactionCount(flags: Int32, reaction: String, count: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .reactionCount(let flags, let reaction, let count):
+                    if boxed {
+                        buffer.appendInt32(1873957073)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(reaction, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .reactionCount(let flags, let reaction, let count):
+                return ("reactionCount", [("flags", String(describing: flags)), ("reaction", String(describing: reaction)), ("count", String(describing: count))])
+    }
+    }
+    
+        public static func parse_reactionCount(_ reader: BufferReader) -> ReactionCount? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ReactionCount.reactionCount(flags: _1!, reaction: _2!, count: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum ReceivedNotifyMessage: TypeConstructorDescription {
+        case receivedNotifyMessage(id: Int32, flags: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .receivedNotifyMessage(let id, let flags):
+                    if boxed {
+                        buffer.appendInt32(-1551583367)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .receivedNotifyMessage(let id, let flags):
+                return ("receivedNotifyMessage", [("id", String(describing: id)), ("flags", String(describing: flags))])
+    }
+    }
+    
+        public static func parse_receivedNotifyMessage(_ reader: BufferReader) -> ReceivedNotifyMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ReceivedNotifyMessage.receivedNotifyMessage(id: _1!, flags: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum RecentMeUrl: TypeConstructorDescription {
         case recentMeUrlChat(url: String, chatId: Int64)
         case recentMeUrlChatInvite(url: String, chatInvite: Api.ChatInvite)

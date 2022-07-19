@@ -316,6 +316,7 @@ public final class AccountViewTracker {
     
     private var channelPollingContexts: [PeerId: ChannelPollingContext] = [:]
     private var featuredStickerPacksContext: FeaturedStickerPacksContext?
+    private var featuredEmojiPacksContext: FeaturedStickerPacksContext?
     
     let chatHistoryPreloadManager: ChatHistoryPreloadManager
     
@@ -1711,7 +1712,7 @@ public final class AccountViewTracker {
                     let timestamp = CFAbsoluteTimeGetCurrent()
                     if context.timestamp == nil || abs(context.timestamp! - timestamp) > 60.0 * 60.0 {
                         context.timestamp = timestamp
-                        context.disposable.set(updatedFeaturedStickerPacks(network: account.network, postbox: account.postbox).start())
+                        context.disposable.set(updatedFeaturedStickerPacks(network: account.network, postbox: account.postbox, category: .stickerPacks).start())
                     }
                     
                     let index = context.subscribers.add(Void())
@@ -1719,6 +1720,56 @@ public final class AccountViewTracker {
                     disposable.set(ActionDisposable {
                         self.queue.async {
                             if let context = self.featuredStickerPacksContext {
+                                context.subscribers.remove(index)
+                            }
+                        }
+                    })
+                }
+                return ActionDisposable {
+                    view.dispose()
+                    disposable.dispose()
+                }
+            } else {
+                subscriber.putNext([])
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+        }
+    }
+    
+    public func featuredEmojiPacks() -> Signal<[FeaturedStickerPackItem], NoError> {
+        return Signal { subscriber in
+            if let account = self.account {
+                let view = account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)]).start(next: { next in
+                    if let view = next.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)] as? OrderedItemListView {
+                        subscriber.putNext(view.items.map { $0.contents.get(FeaturedStickerPackItem.self)! })
+                    } else {
+                        subscriber.putNext([])
+                    }
+                }, completed: {
+                    subscriber.putCompletion()
+                })
+                let disposable = MetaDisposable()
+                self.queue.async {
+                    let context: FeaturedStickerPacksContext
+                    if let current = self.featuredEmojiPacksContext {
+                        context = current
+                    } else {
+                        context = FeaturedStickerPacksContext()
+                        self.featuredEmojiPacksContext = context
+                    }
+                    
+                    let timestamp = CFAbsoluteTimeGetCurrent()
+                    if context.timestamp == nil || abs(context.timestamp! - timestamp) > 60.0 * 60.0 {
+                        context.timestamp = timestamp
+                        context.disposable.set(updatedFeaturedStickerPacks(network: account.network, postbox: account.postbox, category: .emojiPacks).start())
+                    }
+                    
+                    let index = context.subscribers.add(Void())
+                    
+                    disposable.set(ActionDisposable {
+                        self.queue.async {
+                            if let context = self.featuredEmojiPacksContext {
                                 context.subscribers.remove(index)
                             }
                         }

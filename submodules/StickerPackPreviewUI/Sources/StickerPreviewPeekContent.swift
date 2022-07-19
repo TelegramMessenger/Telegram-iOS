@@ -101,6 +101,8 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
+    private let _ready = Promise<Bool>()
+    
     init(account: Account, item: StickerPreviewPeekItem) {
         self.account = account
         self.item = item
@@ -117,6 +119,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
         
         if item.file.isAnimatedSticker || item.file.isVideoSticker {
             let animationNode = DefaultAnimatedStickerNodeImpl()
+            animationNode.overrideVisibility = true
             self.animationNode = animationNode
             
             let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -166,10 +169,30 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
         if let additionalAnimationNode = self.additionalAnimationNode {
             self.addSubnode(additionalAnimationNode)
         }
+        
+        if let animationNode = self.animationNode {
+            animationNode.started = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf._ready.set(.single(true))
+            }
+        } else {
+            self.imageNode.imageUpdated = { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf._ready.set(.single(true))
+            }
+        }
     }
     
     deinit {
         self.effectDisposable.dispose()
+    }
+    
+    public func ready() -> Signal<Bool, NoError> {
+        return self._ready.get()
     }
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {

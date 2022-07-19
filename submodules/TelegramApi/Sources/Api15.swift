@@ -327,6 +327,46 @@ public extension Api {
     }
 }
 public extension Api {
+    enum PaymentFormMethod: TypeConstructorDescription {
+        case paymentFormMethod(url: String, title: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .paymentFormMethod(let url, let title):
+                    if boxed {
+                        buffer.appendInt32(-1996951013)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .paymentFormMethod(let url, let title):
+                return ("paymentFormMethod", [("url", String(describing: url)), ("title", String(describing: title))])
+    }
+    }
+    
+        public static func parse_paymentFormMethod(_ reader: BufferReader) -> PaymentFormMethod? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PaymentFormMethod.paymentFormMethod(url: _1!, title: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum PaymentRequestedInfo: TypeConstructorDescription {
         case paymentRequestedInfo(flags: Int32, name: String?, phone: String?, email: String?, shippingAddress: Api.PostAddress?)
     
@@ -1220,102 +1260,6 @@ public extension Api {
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
                 return Api.PhoneConnection.phoneConnectionWebrtc(flags: _1!, id: _2!, ip: _3!, ipv6: _4!, port: _5!, username: _6!, password: _7!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum Photo: TypeConstructorDescription {
-        case photo(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, sizes: [Api.PhotoSize], videoSizes: [Api.VideoSize]?, dcId: Int32)
-        case photoEmpty(id: Int64)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .photo(let flags, let id, let accessHash, let fileReference, let date, let sizes, let videoSizes, let dcId):
-                    if boxed {
-                        buffer.appendInt32(-82216347)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeBytes(fileReference, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sizes.count))
-                    for item in sizes {
-                        item.serialize(buffer, true)
-                    }
-                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(videoSizes!.count))
-                    for item in videoSizes! {
-                        item.serialize(buffer, true)
-                    }}
-                    serializeInt32(dcId, buffer: buffer, boxed: false)
-                    break
-                case .photoEmpty(let id):
-                    if boxed {
-                        buffer.appendInt32(590459437)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .photo(let flags, let id, let accessHash, let fileReference, let date, let sizes, let videoSizes, let dcId):
-                return ("photo", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("fileReference", String(describing: fileReference)), ("date", String(describing: date)), ("sizes", String(describing: sizes)), ("videoSizes", String(describing: videoSizes)), ("dcId", String(describing: dcId))])
-                case .photoEmpty(let id):
-                return ("photoEmpty", [("id", String(describing: id))])
-    }
-    }
-    
-        public static func parse_photo(_ reader: BufferReader) -> Photo? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Buffer?
-            _4 = parseBytes(reader)
-            var _5: Int32?
-            _5 = reader.readInt32()
-            var _6: [Api.PhotoSize]?
-            if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhotoSize.self)
-            }
-            var _7: [Api.VideoSize]?
-            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.VideoSize.self)
-            } }
-            var _8: Int32?
-            _8 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.Photo.photo(flags: _1!, id: _2!, accessHash: _3!, fileReference: _4!, date: _5!, sizes: _6!, videoSizes: _7, dcId: _8!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_photoEmpty(_ reader: BufferReader) -> Photo? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.Photo.photoEmpty(id: _1!)
             }
             else {
                 return nil

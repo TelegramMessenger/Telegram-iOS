@@ -133,6 +133,13 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
+        public func clearRecentlyUsedEmoji() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_clearRecentlyUsedEmoji(transaction: transaction)
+            }
+            |> ignoreValues
+        }
+        
         public func reorderStickerPacks(namespace: ItemCollectionId.Namespace, itemIds: [ItemCollectionId]) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 let infos = transaction.getItemCollectionsInfos(namespace: namespace)

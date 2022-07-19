@@ -59,7 +59,7 @@ public enum RestoreAppStoreReceiptError {
 }
 
 func _internal_canPurchasePremium(account: Account) -> Signal<Bool, NoError> {
-    return account.network.request(Api.functions.payments.canPurchasePremium())
+    return account.network.request(Api.functions.payments.canPurchasePremium(purpose: .inputStorePaymentPremiumSubscription(flags: 0)))
     |> map { result -> Bool in
         switch result {
             case .boolTrue:

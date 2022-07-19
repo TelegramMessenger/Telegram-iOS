@@ -14,14 +14,27 @@ public func cacheLottieAnimation(data: Data, width: Int, height: Int, writer: An
             return
         }
         
-        let frameDuration = 1.0 / Double(animation.frameRate)
-        for i in 0 ..< animation.frameCount {
+        
+        let frameSkip: Int
+        if animation.frameRate >= 60 {
+            if ProcessInfo.processInfo.activeProcessorCount > 2 {
+                frameSkip = 1
+            } else {
+                frameSkip = 2
+            }
+        } else {
+            frameSkip = 1
+        }
+        
+        let frameDuration = Double(frameSkip) / Double(animation.frameRate)
+        for i in stride(from: 0, through: animation.frameCount - 1, by: frameSkip) {
             if writer.isCancelled {
                 break
             }
             writer.add(with: { surface in
                 animation.renderFrame(with: i, into: surface.argb, width: Int32(surface.width), height: Int32(surface.height), bytesPerRow: Int32(surface.bytesPerRow))
-            }, proposedWidth: width, proposedHeight: height, duration: frameDuration)
+                return frameDuration
+            }, proposedWidth: width, proposedHeight: height)
         }
         
         writer.finish()
@@ -39,7 +52,8 @@ public func cacheStillSticker(path: String, width: Int, height: Int, writer: Ani
                     UIGraphicsPopContext()
                 }
                 memcpy(surface.argb, context.bytes, surface.height * surface.bytesPerRow)
-            }, proposedWidth: width, proposedHeight: height, duration: 1.0)
+                return 1.0
+            }, proposedWidth: width, proposedHeight: height)
         }
         
         writer.finish()
