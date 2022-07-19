@@ -763,7 +763,7 @@ public final class EmojiPagerContentComponent: Component {
                     let image = generateImage(self.size, opaque: false, scale: min(UIScreenScale, 3.0), rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         
-                        let preScaleFactor: CGFloat = 2.0
+                        let preScaleFactor: CGFloat = 1.0
                         let scaledSize = CGSize(width: floor(size.width * preScaleFactor), height: floor(size.height * preScaleFactor))
                         let scaleFactor = scaledSize.width / size.width
                         
@@ -1911,7 +1911,7 @@ public final class EmojiPagerContentComponent: Component {
                                 renderer: component.animationRenderer,
                                 placeholderColor: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1),
                                 blurredBadgeColor: theme.chat.inputPanel.panelBackgroundColor.withMultipliedAlpha(0.5),
-                                pointSize: itemNativeFitSize,
+                                pointSize: itemVisibleFitSize,
                                 onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
                                     guard let strongSelf = self else {
                                         return

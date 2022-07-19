@@ -260,7 +260,6 @@ final class StickerPackEmojisItemNode: GridItemNode {
                     renderer: animationRenderer,
                     placeholderColor: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1),
                     blurredBadgeColor: theme.chat.inputPanel.panelBackgroundColor.withMultipliedAlpha(0.5),
-                    displayPremiumBadgeIfAvailable: false,
                     pointSize: itemNativeFitSize,
                     onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, _ in
                         guard let strongSelf = self else {
