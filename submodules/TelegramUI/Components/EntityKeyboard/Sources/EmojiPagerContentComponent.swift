@@ -1522,49 +1522,53 @@ public final class EmojiPagerContentComponent: Component {
                         if let clearIconLayer = groupHeader.clearIconLayer, clearIconLayer.frame.insetBy(dx: -4.0, dy: -4.0).contains(groupHeaderPoint) {
                             component.inputInteraction.clearGroup(id)
                         }
-                        
-                        /*for group in component.itemGroups {
-                            if group.groupId == id {
-                                if group.isPremium && !self.expandedPremiumGroups.contains(id) {
-                                    if self.expandedPremiumGroups.contains(id) {
-                                        self.expandedPremiumGroups.remove(id)
-                                    } else {
-                                        self.expandedPremiumGroups.insert(id)
-                                    }
-                                    
-                                    let previousItemLayout = self.itemLayout
-                                    
-                                    let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
-                                    self.state?.updated(transition: transition)
-                                    
-                                    if let previousItemLayout = previousItemLayout, let itemLayout = self.itemLayout {
-                                        let boundsOffset = itemLayout.contentSize.height - previousItemLayout.contentSize.height
-                                        self.scrollView.setContentOffset(CGPoint(x: 0.0, y: self.scrollView.contentOffset.y + boundsOffset), animated: false)
-                                        transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: -boundsOffset), to: CGPoint(), additive: true)
-                                    }
-                                    
-                                    return
-                                } else {
-                                    break outer
-                                }
-                            }
-                        }*/
                     }
                 }
                 
+                var foundExactItem = false
                 if let (item, itemKey) = self.item(atPoint: recognizer.location(in: self)), let itemLayer = self.visibleItemLayers[itemKey] {
+                    foundExactItem = true
                     if !itemLayer.displayPlaceholder {
                         component.inputInteraction.performItemAction(item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer)
+                    }
+                }
+                
+                if !foundExactItem {
+                    if let (item, itemKey) = self.item(atPoint: recognizer.location(in: self), extendedHitRange: true), let itemLayer = self.visibleItemLayers[itemKey] {
+                        if !itemLayer.displayPlaceholder {
+                            component.inputInteraction.performItemAction(item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer)
+                        }
                     }
                 }
             }
         }
         
-        private func item(atPoint point: CGPoint) -> (Item, ItemLayer.Key)? {
+        private func item(atPoint point: CGPoint, extendedHitRange: Bool = false) -> (Item, ItemLayer.Key)? {
             let localPoint = self.convert(point, to: self.scrollView)
             
+            var closestItem: (key: ItemLayer.Key, distance: CGFloat)?
+            
             for (key, itemLayer) in self.visibleItemLayers {
-                if itemLayer.frame.contains(localPoint) {
+                if extendedHitRange {
+                    let position = CGPoint(x: itemLayer.frame.midX, y: itemLayer.frame.midY)
+                    let distance = CGPoint(x: localPoint.x - position.x, y: localPoint.y - position.y)
+                    let distance2 = distance.x * distance.x + distance.y * distance.y
+                    if let closestItemValue = closestItem {
+                        if closestItemValue.distance > distance2 {
+                            closestItem = (key, distance2)
+                        }
+                    } else {
+                        closestItem = (key, distance2)
+                    }
+                } else {
+                    if itemLayer.frame.contains(localPoint) {
+                        return (itemLayer.item, key)
+                    }
+                }
+            }
+            
+            if let key = closestItem?.key {
+                if let itemLayer = self.visibleItemLayers[key] {
                     return (itemLayer.item, key)
                 }
             }
@@ -1724,7 +1728,7 @@ public final class EmojiPagerContentComponent: Component {
                 
                 let groupBorderRadius: CGFloat = 16.0
                 
-                if itemGroup.isPremiumLocked {
+                if itemGroup.isPremiumLocked && !itemGroup.isFeatured {
                     validGroupBorderIds.insert(itemGroup.groupId)
                     let groupBorderLayer: GroupBorderLayer
                     var groupBorderTransition = transition

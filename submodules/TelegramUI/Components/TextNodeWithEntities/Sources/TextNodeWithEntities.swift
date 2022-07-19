@@ -236,7 +236,8 @@ public final class TextNodeWithEntities {
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: attemptSynchronousLoad, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: floor(itemSize * 1.2), height: floor(itemSize * 1.2)))
+                        let pointSize = floor(itemSize * 1.3)
+                        itemLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: attemptSynchronousLoad, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: pointSize, height: pointSize))
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         
@@ -399,7 +400,8 @@ public class ImmediateTextNodeWithEntities: TextNode {
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: false, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: itemSize, height: itemSize))
+                        let pointSize = floor(itemSize * 1.3)
+                        itemLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: false, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: pointSize, height: pointSize))
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.layer.addSublayer(itemLayer)
                         

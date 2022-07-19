@@ -1063,6 +1063,10 @@ final class EntityKeyboardTopPanelComponent: Component {
         private var currentReorderingItemId: AnyHashable?
         private var currentReorderingItemContainerView: UIView?
         private var initialReorderingItemFrame: CGRect?
+        private var currentReorderingScrollDisplayLink: ConstantDisplayLinkAnimator?
+        private lazy var reorderingHapticFeedback: HapticFeedback = {
+            return HapticFeedback()
+        }()
         
         private var itemLayout: ItemLayout?
         private var items: [Item] = []
@@ -1164,7 +1168,11 @@ final class EntityKeyboardTopPanelComponent: Component {
                     guard let strongSelf = self else {
                         return
                     }
+                    let wasReordering = strongSelf.isReordering
                     strongSelf.updateIsReordering(isActive)
+                    if !isActive, wasReordering {
+                        strongSelf.endReordering()
+                    }
                 }
             )
             self.reorderGestureRecognizer = reorderGestureRecognizer
@@ -1327,6 +1335,18 @@ final class EntityKeyboardTopPanelComponent: Component {
             if let componentView = itemView.componentView {
                 reorderingItemContainerView.addSubview(componentView)
             }
+            
+            self.reorderingHapticFeedback.impact()
+            
+            if self.currentReorderingScrollDisplayLink == nil {
+                self.currentReorderingScrollDisplayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.updateReorderingAutoscroll()
+                })
+                self.currentReorderingScrollDisplayLink?.isPaused = false
+            }
         }
         
         private func endReordering() {
@@ -1348,6 +1368,11 @@ final class EntityKeyboardTopPanelComponent: Component {
                 reorderingItemContainerView.removeFromSuperview()
             }
             
+            if let currentReorderingScrollDisplayLink = self.currentReorderingScrollDisplayLink {
+                self.currentReorderingScrollDisplayLink = nil
+                currentReorderingScrollDisplayLink.invalidate()
+            }
+            
             self.currentReorderingItemId = nil
             self.temporaryReorderingOrderIndex = nil
             
@@ -1361,19 +1386,55 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
             reorderingItemContainerView.frame = initialReorderingItemFrame.offsetBy(dx: offset, dy: 0.0)
             
+            let localReorderingItemFrame = reorderingItemContainerView.convert(reorderingItemContainerView.bounds, to: self.scrollView)
+            
             for i in 0 ..< self.items.count {
                 if !self.items[i].isReorderable {
                     continue
                 }
                 let containerFrame = itemLayout.containerFrame(at: i)
-                if containerFrame.intersects(reorderingItemContainerView.frame) {
+                if containerFrame.intersects(localReorderingItemFrame) {
                     let temporaryReorderingOrderIndex: (id: AnyHashable, index: Int) = (currentReorderingItemId, i)
+                    let hadPrevous = self.temporaryReorderingOrderIndex != nil
                     if self.temporaryReorderingOrderIndex?.id != temporaryReorderingOrderIndex.id || self.temporaryReorderingOrderIndex?.index != temporaryReorderingOrderIndex.index {
                         self.temporaryReorderingOrderIndex = temporaryReorderingOrderIndex
+                        
+                        if hadPrevous {
+                            self.reorderingHapticFeedback.tap()
+                        }
+                        
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                     }
                     break
                 }
+            }
+        }
+        
+        private func updateReorderingAutoscroll() {
+            guard let reorderingItemContainerView = self.currentReorderingItemContainerView, let initialReorderingItemFrame = self.initialReorderingItemFrame else {
+                return
+            }
+            
+            var bounds = self.scrollView.bounds
+            let delta: CGFloat = 3.0
+            if reorderingItemContainerView.frame.minX < 16.0 {
+                bounds.origin.x -= delta
+            } else if reorderingItemContainerView.frame.maxX > self.scrollView.bounds.width - 16.0 {
+                bounds.origin.x += delta
+            }
+            
+            if bounds.origin.x + bounds.size.width > self.scrollView.contentSize.width {
+                bounds.origin.x = self.scrollView.contentSize.width - bounds.size.width
+            }
+            if bounds.origin.x < 0.0 {
+                bounds.origin.x = 0.0
+            }
+            
+            if self.scrollView.bounds != bounds {
+                self.scrollView.bounds = bounds
+                
+                let offset = reorderingItemContainerView.frame.minX - initialReorderingItemFrame.minX
+                self.updateReordering(offset: offset)
             }
         }
         
@@ -1707,6 +1768,16 @@ final class EntityKeyboardTopPanelComponent: Component {
             let _ = component
             let _ = itemLayout
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+            
+            if let component = self.component, let itemLayout = self.itemLayout {
+                for i in 0 ..< component.items.count {
+                    if component.items[i].id == itemId {
+                        let itemFrame = itemLayout.containerFrame(at: i)
+                        self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: -2.0, dy: 0.0), animated: true)
+                        break
+                    }
+                }
+            }
 
             /*var found = false
             for i in 0 ..< self.items.count {

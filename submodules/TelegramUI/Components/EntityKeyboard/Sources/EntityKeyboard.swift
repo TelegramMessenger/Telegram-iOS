@@ -298,6 +298,7 @@ public final class EntityKeyboardComponent: Component {
             
             if let stickerContent = component.stickerContent {
                 var topStickerItems: [EntityKeyboardTopPanelComponent.Item] = []
+                
                 for itemGroup in stickerContent.itemGroups {
                     if let id = itemGroup.supergroupId.base as? String {
                         let iconMapping: [String: String] = [

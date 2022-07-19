@@ -518,9 +518,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         } else if self.telegramFile == nil && self.telegramDice == nil {
             let (emoji, fitz) = item.message.text.basicEmoji
-            var emojiFile: TelegramMediaFile?
             
-            emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+            var emojiFile: TelegramMediaFile?
+            if let entities = item.message.textEntitiesAttribute?.entities, entities.count == 1, case let .CustomEmoji(_, fileId) = entities[0].type {
+                if let file = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                    emojiFile = file
+                }
+            }
+            
+            if emojiFile == nil {
+                emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+            }
             if emojiFile == nil {
                 emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
             }
@@ -547,10 +555,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 
                 var animationItems: [Int: StickerPackItem]?
-                if let items = item.associatedData.additionalAnimatedEmojiStickers[textEmoji] {
-                    animationItems = items
-                } else if let items = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji] {
-                    animationItems = items
+                if let emojiFile = emojiFile, emojiFile.isCustomEmoji {
+                } else {
+                    if let items = item.associatedData.additionalAnimatedEmojiStickers[textEmoji] {
+                        animationItems = items
+                    } else if let items = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji] {
+                        animationItems = items
+                    }
                 }
                 
                 if let animationItems = animationItems {
@@ -580,16 +591,18 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 playbackMode = .once
             }
         } else if let emojiFile = self.emojiFile {
-            isEmoji = true
             file = emojiFile
-            //if alreadySeen && emojiFile.resource is LocalFileReferenceMediaResource {
+            
+            if emojiFile.isCustomEmoji {
+                playbackMode = .loop
+            } else {
+                isEmoji = true
                 playbackMode = .still(.end)
-            //} else {
-            //    playbackMode = .once
-            //}
-            let (_, fitz) = item.message.text.basicEmoji
-            if let fitz = fitz {
-                fitzModifier = EmojiFitzModifier(emoji: fitz)
+                
+                let (_, fitz) = item.message.text.basicEmoji
+                if let fitz = fitz {
+                    fitzModifier = EmojiFitzModifier(emoji: fitz)
+                }
             }
         }
         
@@ -1805,7 +1818,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     return .optionalAction({
                         item.controllerInteraction.displayDiceTooltip(dice)
                     })
-                } else if let _ = self.emojiFile {
+                } else if let emojiFile = self.emojiFile, !emojiFile.isCustomEmoji {
                     if let animationNode = self.animationNode as? AnimatedStickerNode, let _ = recognizer {
                         var shouldPlay = false
                         if !animationNode.isPlaying {

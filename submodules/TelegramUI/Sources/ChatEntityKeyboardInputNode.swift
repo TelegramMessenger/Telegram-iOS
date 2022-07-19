@@ -496,9 +496,10 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         let stickerItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: stickerOrderedItemListCollectionIds, namespaces: stickerNamespaces, aroundIndex: nil, count: 10000000),
-            hasPremium
+            hasPremium,
+            context.account.viewTracker.featuredStickerPacks()
         )
-        |> map { view, hasPremium -> EmojiPagerContentComponent in
+        |> map { view, hasPremium, featuredStickerPacks -> EmojiPagerContentComponent in
             struct ItemGroup {
                 var supergroupId: AnyHashable
                 var id: AnyHashable
@@ -630,6 +631,11 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             }
             
+            var installedCollectionIds = Set<ItemCollectionId>()
+            for (id, _, _) in view.collectionInfos {
+                installedCollectionIds.insert(id)
+            }
+            
             for entry in view.entries {
                 guard let item = entry.item as? StickerPackItem else {
                     continue
@@ -653,6 +659,33 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                     }
                     itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: true, items: [resultItem]))
+                }
+            }
+            
+            for featuredStickerPack in featuredStickerPacks {
+                if installedCollectionIds.contains(featuredStickerPack.info.id) {
+                    continue
+                }
+                
+                for item in featuredStickerPack.topItems {
+                    let resultItem = EmojiPagerContentComponent.Item(
+                        file: item.file,
+                        staticEmoji: nil,
+                        subgroupId: nil
+                    )
+                    
+                    let supergroupId = featuredStickerPack.info.id
+                    let groupId: AnyHashable = supergroupId
+                    let isPremiumLocked: Bool = item.file.isPremiumSticker && !hasPremium
+                    if isPremiumLocked && isPremiumDisabled {
+                        continue
+                    }
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    } else {
+                        itemGroupIndexById[groupId] = itemGroups.count
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: featuredStickerPack.info.title, isPremiumLocked: isPremiumLocked, isFeatured: true, displayPremiumBadges: false, items: [resultItem]))
+                    }
                 }
             }
             
