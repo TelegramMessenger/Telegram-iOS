@@ -661,6 +661,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 let animation: LottieAnimationComponent.AnimationItem?
+                let colors: [String: UIColor]
                 let progressValue: Double?
                 switch state {
                 case let .downloading(progress):
@@ -668,13 +669,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     animation = LottieAnimationComponent.AnimationItem(
                         name: "anim_search_downloading",
-                        colors: [
-                            "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                        ],
                         mode: .animating(loop: true)
                     )
+                    colors = [
+                        "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                    ]
                     progressValue = progress
                     
                     strongSelf.clearUnseenDownloadsTimer?.invalidate()
@@ -684,18 +685,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     animation = LottieAnimationComponent.AnimationItem(
                         name: "anim_search_downloaded",
-                        colors: [
-                            "Fill 2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Mask1.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Mask2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Arrow3.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Fill.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.rootController.navigationSearchBar.inputFillColor.blitOver(strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, alpha: 1.0),
-                        ],
                         mode: .animating(loop: false)
                     )
+                    colors = [
+                        "Fill 2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Mask1.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Mask2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Arrow3.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Fill.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.rootController.navigationSearchBar.inputFillColor.blitOver(strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, alpha: 1.0),
+                    ]
                     progressValue = 1.0
                     
                     if strongSelf.clearUnseenDownloadsTimer == nil {
@@ -718,6 +719,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     strongSelf.hasDownloads = hasDownloadsValue
                     
                     animation = nil
+                    colors = [:]
                     progressValue = nil
                     
                     strongSelf.clearUnseenDownloadsTimer?.invalidate()
@@ -728,6 +730,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let contentComponent = AnyComponent(ZStack<Empty>([
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(LottieAnimationComponent(
                             animation: animation,
+                            colors: colors,
                             size: CGSize(width: 24.0, height: 24.0)
                         ))),
                         AnyComponentWithIdentity(id: 1, component: AnyComponent(ProgressIndicatorComponent(

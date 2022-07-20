@@ -4216,6 +4216,21 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getFeaturedEmojiStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FeaturedStickers>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(248473398)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getFeaturedEmojiStickers", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.FeaturedStickers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.FeaturedStickers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.FeaturedStickers
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getFeaturedStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FeaturedStickers>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1685588756)

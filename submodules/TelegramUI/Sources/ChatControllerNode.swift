@@ -19,6 +19,7 @@ import GridMessageSelectionNode
 import SparseItemGrid
 import ChatPresentationInterfaceState
 import ChatInputPanelContainer
+import PremiumUI
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -600,6 +601,25 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 return
             }
             strongSelf.inputPanelContainerNode.toggleIfEnabled()
+        }
+        
+        self.textInputPanelNode?.switchToTextInputIfNeeded = { [weak self] in
+            guard let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction else {
+                return
+            }
+            
+            if let inputNode = strongSelf.inputNode as? ChatEntityKeyboardInputNode, !inputNode.canSwitchToTextInputAutomatically {
+                return
+            }
+            
+            interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                switch state.inputMode {
+                case .media:
+                    return (.text, state.keyboardButtonsMessage?.id)
+                default:
+                    return (state.inputMode, state.keyboardButtonsMessage?.id)
+                }
+            })
         }
         
         self.inputMediaNodeDataDisposable = (self.inputMediaNodeDataPromise.get()
@@ -2820,6 +2840,47 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     return
                 }
                 
+                var messages: [EnqueueMessage] = []
+                
+                let effectiveInputText = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
+                
+                var inlineStickers: [MediaId: Media] = [:]
+                var firstLockedPremiumEmoji: TelegramMediaFile?
+                effectiveInputText.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: effectiveInputText.length), using: { value, _, _ in
+                    if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                        if let file = value.file {
+                            inlineStickers[file.fileId] = file
+                            if file.isPremiumEmoji && !self.chatPresentationInterfaceState.isPremium {
+                                if firstLockedPremiumEmoji == nil {
+                                    firstLockedPremiumEmoji = file
+                                }
+                            }
+                        }
+                    }
+                })
+                
+                if let firstLockedPremiumEmoji = firstLockedPremiumEmoji {
+                    //let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                    //TODO:localize
+                    self.controllerInteraction.displayUndo(.sticker(context: context, file: firstLockedPremiumEmoji, title: nil, text: "Subscribe to Telegram Premium to unlock premium emoji.", undoText: "More", customAction: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let controller = PremiumDemoScreen(context: strongSelf.context, subject: .premiumStickers, action: {
+                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                            replaceImpl?(controller)
+                        })
+                        replaceImpl = { [weak controller] c in
+                            controller?.replace(with: c)
+                        }
+                        strongSelf.controller?.present(controller, in: .window(.root), with: nil)
+                    }))
+                    
+                    return
+                }
+                
                 let timestamp = CACurrentMediaTime()
                 if self.lastSendTimestamp + 0.15 > timestamp {
                     return
@@ -2828,9 +2889,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 self.updateTypingActivity(false)
                 
-                var messages: [EnqueueMessage] = []
-                
-                let effectiveInputText = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
                 let trimmedInputText = effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines)
                 let peerId = effectivePresentationInterfaceState.chatLocation.peerId
                 if peerId?.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText) {
@@ -2841,7 +2899,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     for text in breakChatInputText(trimChatInputText(inputText)) {
                         if text.length != 0 {
                             var attributes: [MessageAttribute] = []
-                            let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text, maxAnimatedEmojisInText: 0/*Int(self.context.userLimits.maxAnimatedEmojisInText)*/))
+                            let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text, maxAnimatedEmojisInText: 0))
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
@@ -2852,17 +2910,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 webpage = self.chatPresentationInterfaceState.urlPreview?.1
                             }
 
-                            messages.append(.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
-
-                            #if DEBUG
-                            if text.string == "sleep" {
-                                messages.removeAll()
-
-                                for i in 0 ..< 5 {
-                                    messages.append(.message(text: "sleep\(i)", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
-                                }
-                            }
-                            #endif
+                            messages.append(.message(text: text.string, attributes: attributes, inlineStickers: inlineStickers, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
                         }
                     }
 

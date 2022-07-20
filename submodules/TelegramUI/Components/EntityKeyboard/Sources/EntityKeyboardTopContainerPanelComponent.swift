@@ -91,8 +91,6 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             let intrinsicHeight: CGFloat = 41.0
             let height = intrinsicHeight
             
-            let isExpanded = availableSize.height > 41.0
-            
             let panelEnvironment = environment[PagerComponentPanelEnvironment.self].value
             
             var transitionOffsetFraction: CGFloat = 0.0
@@ -140,10 +138,6 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
                             panelView = PanelView()
                             self.panelViews[panel.id] = panelView
                             self.addSubview(panelView.view)
-                        }
-                        
-                        if !isExpanded {
-                            panelView.isExpanded = false
                         }
                         
                         let panelId = panel.id
@@ -259,6 +253,12 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
             }
 
             self.panelEnvironment?.isExpandedUpdated(hasExpanded, transition)
+        }
+        
+        public func internalUpdatePanelsAreCollapsed() {
+            for (_, panelView) in self.panelViews {
+                panelView.isExpanded = false
+            }
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

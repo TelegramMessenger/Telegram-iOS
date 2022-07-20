@@ -68,6 +68,11 @@ public final class PeekController: ViewController, ContextControllerProtocol {
     
     private var animatedIn = false
     
+    private let _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    
     public init(presentationData: PresentationData, content: PeekControllerContent, sourceView: @escaping () -> (UIView, CGRect)?) {
         self.presentationData = presentationData
         self.content = content

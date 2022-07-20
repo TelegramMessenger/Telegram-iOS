@@ -79,18 +79,65 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
         let emojiItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
-            context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
-            hasPremium
+            context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.LocalRecentEmoji], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
+            hasPremium,
+            context.account.viewTracker.featuredEmojiPacks()
         )
-        |> map { view, hasPremium -> EmojiPagerContentComponent in
+        |> map { view, hasPremium, featuredEmojiPacks -> EmojiPagerContentComponent in
             struct ItemGroup {
                 var supergroupId: AnyHashable
                 var id: AnyHashable
-                var isPremium: Bool
+                var title: String
+                var isPremiumLocked: Bool
+                var isFeatured: Bool
                 var items: [EmojiPagerContentComponent.Item]
             }
             var itemGroups: [ItemGroup] = []
             var itemGroupIndexById: [AnyHashable: Int] = [:]
+            
+            var recentEmoji: OrderedItemListView?
+            for orderedView in view.orderedItemListsViews {
+                if orderedView.collectionId == Namespaces.OrderedItemList.LocalRecentEmoji {
+                    recentEmoji = orderedView
+                }
+            }
+            
+            if let recentEmoji = recentEmoji {
+                for item in recentEmoji.items {
+                    guard let item = item.contents.get(RecentEmojiItem.self) else {
+                        continue
+                    }
+                    
+                    if case let .file(file) = item.content, isPremiumDisabled, file.isPremiumEmoji {
+                        continue
+                    }
+                    
+                    let resultItem: EmojiPagerContentComponent.Item
+                    switch item.content {
+                    case let .file(file):
+                        resultItem = EmojiPagerContentComponent.Item(
+                            file: file,
+                            staticEmoji: nil,
+                            subgroupId: nil
+                        )
+                    case let .text(text):
+                        resultItem = EmojiPagerContentComponent.Item(
+                            file: nil,
+                            staticEmoji: text,
+                            subgroupId: nil
+                        )
+                    }
+                    
+                    let groupId = "recent"
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    } else {
+                        itemGroupIndexById[groupId] = itemGroups.count
+                        //TODO:localize
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Recently Used", isPremiumLocked: false, isFeatured: false, items: [resultItem]))
+                    }
+                }
+            }
             
             for (subgroupId, list) in staticEmojiMapping {
                 let groupId: AnyHashable = "static"
@@ -105,9 +152,15 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, isPremium: false, items: [resultItem]))
+                        //TODO:localize
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Emoji", isPremiumLocked: false, isFeatured: false, items: [resultItem]))
                     }
                 }
+            }
+            
+            var installedCollectionIds = Set<ItemCollectionId>()
+            for (id, _, _) in view.collectionInfos {
+                installedCollectionIds.insert(id)
             }
             
             for entry in view.entries {
@@ -122,20 +175,50 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 
                 let supergroupId = entry.index.collectionId
                 let groupId: AnyHashable = supergroupId
-                let isPremium: Bool = item.file.isPremiumEmoji && !hasPremium
-                if isPremium && isPremiumDisabled {
+                let isPremiumLocked: Bool = item.file.isPremiumEmoji && !hasPremium
+                if isPremiumLocked && isPremiumDisabled {
                     continue
                 }
-                /*if isPremium {
-                    groupId = "\(supergroupId)-p"
-                } else {
-                    groupId = supergroupId
-                }*/
                 if let groupIndex = itemGroupIndexById[groupId] {
                     itemGroups[groupIndex].items.append(resultItem)
                 } else {
                     itemGroupIndexById[groupId] = itemGroups.count
-                    itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, isPremium: isPremium, items: [resultItem]))
+                    
+                    var title = ""
+                    inner: for (id, info, _) in view.collectionInfos {
+                        if id == entry.index.collectionId, let info = info as? StickerPackCollectionInfo {
+                            title = info.title
+                            break inner
+                        }
+                    }
+                    itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: title, isPremiumLocked: isPremiumLocked, isFeatured: false, items: [resultItem]))
+                }
+            }
+            
+            for featuredEmojiPack in featuredEmojiPacks {
+                if installedCollectionIds.contains(featuredEmojiPack.info.id) {
+                    continue
+                }
+                
+                for item in featuredEmojiPack.topItems {
+                    let resultItem = EmojiPagerContentComponent.Item(
+                        file: item.file,
+                        staticEmoji: nil,
+                        subgroupId: nil
+                    )
+                    
+                    let supergroupId = featuredEmojiPack.info.id
+                    let groupId: AnyHashable = supergroupId
+                    let isPremiumLocked: Bool = item.file.isPremiumEmoji && !hasPremium
+                    if isPremiumLocked && isPremiumDisabled {
+                        continue
+                    }
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    } else {
+                        itemGroupIndexById[groupId] = itemGroups.count
+                        itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, isPremiumLocked: isPremiumLocked, isFeatured: true, items: [resultItem]))
+                    }
                 }
             }
             
@@ -146,20 +229,12 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 animationRenderer: animationRenderer,
                 inputInteraction: inputInteraction,
                 itemGroups: itemGroups.map { group -> EmojiPagerContentComponent.ItemGroup in
-                    var title: String?
+                    var hasClear = false
                     if group.id == AnyHashable("recent") {
-                        //TODO:localize
-                        title = "Recently Used"
-                    } else {
-                        for (id, info, _) in view.collectionInfos {
-                            if AnyHashable(id) == group.id, let info = info as? StickerPackCollectionInfo {
-                                title = info.title
-                                break
-                            }
-                        }
+                        hasClear = true
                     }
                     
-                    return EmojiPagerContentComponent.ItemGroup(supergroupId: group.supergroupId, groupId: group.id, title: title, isPremium: group.isPremium, displayPremiumBadges: false, items: group.items)
+                    return EmojiPagerContentComponent.ItemGroup(supergroupId: group.supergroupId, groupId: group.id, title: group.title, isFeatured: group.isFeatured, isPremiumLocked: group.isPremiumLocked, hasClear: hasClear, displayPremiumBadges: false, items: group.items)
                 },
                 itemLayoutType: .compact
             )
@@ -244,12 +319,53 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             },
             openStickerSettings: {
             },
-            openPremiumSection: { [weak controllerInteraction] in
+            addGroupAction: { [weak controllerInteraction] groupId, isPremiumLocked in
+                guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
+                    return
+                }
+                
+                if isPremiumLocked {
+                    let controller = PremiumIntroScreen(context: context, source: .stickers)
+                    controllerInteraction.navigationController()?.pushViewController(controller)
+                    
+                    return
+                }
+                
+                let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+                let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { views in
+                    guard let view = views.views[viewKey] as? OrderedItemListView else {
+                        return
+                    }
+                    for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                        if featuredEmojiPack.info.id == collectionId {
+                            let _ = context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
+                            
+                            break
+                        }
+                    }
+                })
+            },
+            clearGroup: { [weak controllerInteraction] groupId in
                 guard let controllerInteraction = controllerInteraction else {
                     return
                 }
-                let controller = PremiumIntroScreen(context: context, source: .stickers)
-                controllerInteraction.navigationController()?.pushViewController(controller)
+                if groupId == AnyHashable("recent") {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        let _ = context.engine.stickers.clearRecentlyUsedEmoji().start()
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    controllerInteraction.presentController(actionSheet, nil)
+                }
             },
             pushController: { [weak controllerInteraction] controller in
                 guard let controllerInteraction = controllerInteraction else {
@@ -311,7 +427,27 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 controller.navigationPresentation = .modal
                 controllerInteraction.navigationController()?.pushViewController(controller)
             },
-            openPremiumSection: {
+            addGroupAction: { _, _ in
+            },
+            clearGroup: { [weak controllerInteraction] groupId in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                if groupId == AnyHashable("recent") {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    controllerInteraction.presentController(actionSheet, nil)
+                }
             },
             pushController: { [weak controllerInteraction] controller in
                 guard let controllerInteraction = controllerInteraction else {
@@ -360,12 +496,16 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         let stickerItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: stickerOrderedItemListCollectionIds, namespaces: stickerNamespaces, aroundIndex: nil, count: 10000000),
-            hasPremium
+            hasPremium,
+            context.account.viewTracker.featuredStickerPacks()
         )
-        |> map { view, hasPremium -> EmojiPagerContentComponent in
+        |> map { view, hasPremium, featuredStickerPacks -> EmojiPagerContentComponent in
             struct ItemGroup {
                 var supergroupId: AnyHashable
                 var id: AnyHashable
+                var title: String
+                var isPremiumLocked: Bool
+                var isFeatured: Bool
                 var displayPremiumBadges: Bool
                 var items: [EmojiPagerContentComponent.Item]
             }
@@ -408,7 +548,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, displayPremiumBadges: false, items: [resultItem]))
+                        //TODO:localize
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Saved", isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
                     }
                 }
             }
@@ -434,7 +575,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, displayPremiumBadges: false, items: [resultItem]))
+                        //TODO:localize
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Recently Used", isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
                     }
                     
                     count += 1
@@ -483,9 +625,15 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, displayPremiumBadges: false, items: [resultItem]))
+                        //TODO:localize
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Premium", isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
                     }
                 }
+            }
+            
+            var installedCollectionIds = Set<ItemCollectionId>()
+            for (id, _, _) in view.collectionInfos {
+                installedCollectionIds.insert(id)
             }
             
             for entry in view.entries {
@@ -502,7 +650,42 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     itemGroups[groupIndex].items.append(resultItem)
                 } else {
                     itemGroupIndexById[groupId] = itemGroups.count
-                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, displayPremiumBadges: true, items: [resultItem]))
+                    
+                    var title = ""
+                    inner: for (id, info, _) in view.collectionInfos {
+                        if id == groupId, let info = info as? StickerPackCollectionInfo {
+                            title = info.title
+                            break inner
+                        }
+                    }
+                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: true, items: [resultItem]))
+                }
+            }
+            
+            for featuredStickerPack in featuredStickerPacks {
+                if installedCollectionIds.contains(featuredStickerPack.info.id) {
+                    continue
+                }
+                
+                for item in featuredStickerPack.topItems {
+                    let resultItem = EmojiPagerContentComponent.Item(
+                        file: item.file,
+                        staticEmoji: nil,
+                        subgroupId: nil
+                    )
+                    
+                    let supergroupId = featuredStickerPack.info.id
+                    let groupId: AnyHashable = supergroupId
+                    let isPremiumLocked: Bool = item.file.isPremiumSticker && !hasPremium
+                    if isPremiumLocked && isPremiumDisabled {
+                        continue
+                    }
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    } else {
+                        itemGroupIndexById[groupId] = itemGroups.count
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: featuredStickerPack.info.title, isPremiumLocked: isPremiumLocked, isFeatured: true, displayPremiumBadges: false, items: [resultItem]))
+                    }
                 }
             }
             
@@ -513,26 +696,12 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 animationRenderer: animationRenderer,
                 inputInteraction: stickerInputInteraction,
                 itemGroups: itemGroups.map { group -> EmojiPagerContentComponent.ItemGroup in
-                    var title: String?
-                    if group.id == AnyHashable("saved") {
-                        //TODO:localize
-                        title = "Saved"
-                    } else if group.id == AnyHashable("recent") {
-                        //TODO:localize
-                        title = "Recently Used"
-                    } else if group.id == AnyHashable("premium") {
-                        //TODO:localize
-                        title = "Premium"
-                    } else {
-                        for (id, info, _) in view.collectionInfos {
-                            if AnyHashable(id) == group.id, let info = info as? StickerPackCollectionInfo {
-                                title = info.title
-                                break
-                            }
-                        }
+                    var hasClear = false
+                    if group.id == AnyHashable("recent") {
+                        hasClear = true
                     }
                     
-                    return EmojiPagerContentComponent.ItemGroup(supergroupId: group.supergroupId, groupId: group.id, title: title, isPremium: false, displayPremiumBadges: group.displayPremiumBadges, items: group.items)
+                    return EmojiPagerContentComponent.ItemGroup(supergroupId: group.supergroupId, groupId: group.id, title: group.title, isFeatured: group.isFeatured, isPremiumLocked: group.isPremiumLocked, hasClear: hasClear, displayPremiumBadges: group.displayPremiumBadges, items: group.items)
                 },
                 itemLayoutType: .detailed
             )
@@ -592,6 +761,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             loadMoreToken: nil
         ))
         
+        let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         return combineLatest(queue: .mainQueue(),
             emojiItems,
             stickerItems,
@@ -603,7 +773,37 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             var availableGifSearchEmojies: [EntityKeyboardComponent.GifSearchEmoji] = []
             for reaction in reactions {
                 if let file = animatedEmojiStickers[reaction]?.first?.file {
-                    availableGifSearchEmojies.append(EntityKeyboardComponent.GifSearchEmoji(emoji: reaction, file: file, title: reaction))
+                    var title: String?
+                    switch reaction {
+                        case "😡":
+                            title = strings.Gif_Emotion_Angry
+                        case "😮":
+                            title = strings.Gif_Emotion_Surprised
+                        case "😂":
+                            title = strings.Gif_Emotion_Joy
+                        case "😘":
+                            title = strings.Gif_Emotion_Kiss
+                        case "😍":
+                            title = strings.Gif_Emotion_Hearts
+                        case "👍":
+                            title = strings.Gif_Emotion_ThumbsUp
+                        case "👎":
+                            title = strings.Gif_Emotion_ThumbsDown
+                        case "🙄":
+                            title = strings.Gif_Emotion_RollEyes
+                        case "😎":
+                            title = strings.Gif_Emotion_Cool
+                        case "🥳":
+                            title = strings.Gif_Emotion_Party
+                        default:
+                            break
+                    }
+                    
+                    guard let title = title else {
+                        continue
+                    }
+                    
+                    availableGifSearchEmojies.append(EntityKeyboardComponent.GifSearchEmoji(emoji: reaction, file: file, title: title))
                 }
             }
             
@@ -646,6 +846,15 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 self.reloadGifContext()
             }
         }
+    }
+    
+    var canSwitchToTextInputAutomatically: Bool {
+        if let pagerView = self.entityKeyboardView.componentView as? EntityKeyboardComponent.View, let centralId = pagerView.centralId {
+            if centralId == AnyHashable("emoji") {
+                return false
+            }
+        }
+        return true
     }
     
     private final class GifContext {
@@ -995,6 +1204,12 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             gifContent = nil
         }
         
+        if let gifContentValue = gifContent {
+            if gifContentValue.items.isEmpty {
+                gifContent = nil
+            }
+        }
+        
         let entityKeyboardSize = self.entityKeyboardView.update(
             transition: mappedTransition,
             component: AnyComponent(EntityKeyboardComponent(
@@ -1340,7 +1555,9 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             },
             openStickerSettings: {
             },
-            openPremiumSection: {
+            addGroupAction: { _, _ in
+            },
+            clearGroup: { _ in
             },
             pushController: { _ in
             },

@@ -20,21 +20,21 @@ public final class LottieAnimationComponent: Component {
         
         public var name: String
         public var mode: Mode
-        public var colors: [String: UIColor]
         
-        public init(name: String, colors: [String: UIColor], mode: Mode) {
+        public init(name: String, mode: Mode) {
             self.name = name
-            self.colors = colors
             self.mode = mode
         }
     }
     
     public let animation: AnimationItem
+    public let colors: [String: UIColor]
     public let tag: AnyObject?
     public let size: CGSize?
     
-    public init(animation: AnimationItem, tag: AnyObject? = nil, size: CGSize?) {
+    public init(animation: AnimationItem, colors: [String: UIColor], tag: AnyObject? = nil, size: CGSize?) {
         self.animation = animation
+        self.colors = colors
         self.tag = tag
         self.size = size
     }
@@ -42,6 +42,7 @@ public final class LottieAnimationComponent: Component {
     public func tagged(_ tag: AnyObject?) -> LottieAnimationComponent {
         return LottieAnimationComponent(
             animation: self.animation,
+            colors: self.colors,
             tag: tag,
             size: self.size
         )
@@ -49,6 +50,9 @@ public final class LottieAnimationComponent: Component {
 
     public static func ==(lhs: LottieAnimationComponent, rhs: LottieAnimationComponent) -> Bool {
         if lhs.animation != rhs.animation {
+            return false
+        }
+        if lhs.colors != rhs.colors {
             return false
         }
         if lhs.tag !== rhs.tag {
@@ -117,6 +121,11 @@ public final class LottieAnimationComponent: Component {
         
         func update(component: LottieAnimationComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             var updatePlayback = false
+            var updateColors = false
+            
+            if let currentComponent = self.component, currentComponent.colors != component.colors {
+                updateColors = true
+            }
             
             if self.component?.animation != component.animation {
                 if let animationView = self.animationView {
@@ -158,21 +167,30 @@ public final class LottieAnimationComponent: Component {
                         view.backgroundColor = .clear
                         view.isOpaque = false
                         
-                        if let value = component.animation.colors["__allcolors__"] {
-                            for keypath in view.allKeypaths(predicate: { $0.keys.last == "Color" }) {
-                                view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: keypath))
-                            }
-                        }
-                        
-                        for (key, value) in component.animation.colors {
-                            view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
-                        }
+                        updateColors = true
                         
                         self.animationView = view
                         self.addSubview(view)
                         
                         updatePlayback = true
                     }
+                }
+            }
+            
+            self.component = component
+            
+            if updateColors, let animationView = self.animationView {
+                if let value = component.colors["__allcolors__"] {
+                    for keypath in animationView.allKeypaths(predicate: { $0.keys.last == "Color" }) {
+                        animationView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: keypath))
+                    }
+                }
+                
+                for (key, value) in component.colors {
+                    if key == "__allcolors__" {
+                        continue
+                    }
+                    animationView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
                 }
             }
             
@@ -187,7 +205,36 @@ public final class LottieAnimationComponent: Component {
             let size = CGSize(width: min(animationSize.width, availableSize.width), height: min(animationSize.height, availableSize.height))
             
             if let animationView = self.animationView {
-                animationView.frame = CGRect(origin: CGPoint(x: floor((size.width - animationSize.width) / 2.0), y: floor((size.height - animationSize.height) / 2.0)), size: animationSize)
+                let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - animationSize.width) / 2.0), y: floor((size.height - animationSize.height) / 2.0)), size: animationSize)
+                
+                if animationView.frame != animationFrame {
+                    if !transition.animation.isImmediate && !animationView.frame.isEmpty && animationView.frame.size != animationFrame.size {
+                        let previouosAnimationFrame = animationView.frame
+                        
+                        if let snapshotView = animationView.snapshotView(afterScreenUpdates: false) {
+                            snapshotView.frame = previouosAnimationFrame
+                            
+                            animationView.superview?.insertSubview(snapshotView, belowSubview: animationView)
+                            
+                            transition.setPosition(view: snapshotView, position: CGPoint(x: animationFrame.midX, y: animationFrame.midY))
+                            snapshotView.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
+                            let scaleFactor = previouosAnimationFrame.width / animationFrame.width
+                            transition.animateScale(view: snapshotView, from: scaleFactor, to: 1.0)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                        }
+                        
+                        transition.setPosition(view: animationView, position: CGPoint(x: animationFrame.midX, y: animationFrame.midY))
+                        transition.setBounds(view: animationView, bounds: CGRect(origin: CGPoint(), size: animationFrame.size))
+                        transition.animateSublayerScale(view: animationView, from: previouosAnimationFrame.width / animationFrame.width, to: 1.0)
+                        animationView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+                    } else if animationView.frame.size == animationFrame.size {
+                        transition.setFrame(view: animationView, frame: animationFrame)
+                    } else {
+                        animationView.frame = animationFrame
+                    }
+                }
                 
                 if updatePlayback {
                     if case .animating = component.animation.mode {

@@ -898,9 +898,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             let animationComponent = LottieAnimationComponent(
                 animation: LottieAnimationComponent.AnimationItem(
                     name: "anim_smiletosticker",
-                    colors: colors,
                     mode: .animateTransitionFromPrevious
                 ),
+                colors: colors,
                 size: CGSize(width: 32.0, height: 32.0)
             )
             let inputNodeSize = self.inputModeView.update(

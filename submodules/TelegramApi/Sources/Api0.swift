@@ -544,6 +544,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[982592842] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow($0) }
     dict[-732254058] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoUnknown($0) }
     dict[-368917890] = { return Api.PaymentCharge.parse_paymentCharge($0) }
+    dict[-1996951013] = { return Api.PaymentFormMethod.parse_paymentFormMethod($0) }
     dict[-1868808300] = { return Api.PaymentRequestedInfo.parse_paymentRequestedInfo($0) }
     dict[-842892769] = { return Api.PaymentSavedCredentials.parse_paymentSavedCredentialsCard($0) }
     dict[-1566230754] = { return Api.Peer.parse_peerChannel($0) }
@@ -710,6 +711,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[313694676] = { return Api.StickerPack.parse_stickerPack($0) }
     dict[768691932] = { return Api.StickerSet.parse_stickerSet($0) }
     dict[1678812626] = { return Api.StickerSetCovered.parse_stickerSetCovered($0) }
+    dict[451763941] = { return Api.StickerSetCovered.parse_stickerSetFullCovered($0) }
     dict[872932635] = { return Api.StickerSetCovered.parse_stickerSetMultiCovered($0) }
     dict[-1609668650] = { return Api.Theme.parse_theme($0) }
     dict[-94849324] = { return Api.ThemeSettings.parse_themeSettings($0) }
@@ -805,6 +807,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1767677564] = { return Api.Update.parse_updateReadChannelDiscussionOutbox($0) }
     dict[-1842450928] = { return Api.Update.parse_updateReadChannelInbox($0) }
     dict[-1218471511] = { return Api.Update.parse_updateReadChannelOutbox($0) }
+    dict[-78886548] = { return Api.Update.parse_updateReadFeaturedEmojiStickers($0) }
     dict[1461528386] = { return Api.Update.parse_updateReadFeaturedStickers($0) }
     dict[-1667805217] = { return Api.Update.parse_updateReadHistoryInbox($0) }
     dict[791617983] = { return Api.Update.parse_updateReadHistoryOutbox($0) }
@@ -1003,7 +1006,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
     dict[-1362048039] = { return Api.payments.ExportedInvoice.parse_exportedInvoice($0) }
-    dict[-1340916937] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
+    dict[1288001087] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
     dict[1891958275] = { return Api.payments.PaymentReceipt.parse_paymentReceipt($0) }
     dict[1314881805] = { return Api.payments.PaymentResult.parse_paymentResult($0) }
     dict[-666824391] = { return Api.payments.PaymentResult.parse_paymentVerificationNeeded($0) }
@@ -1417,6 +1420,8 @@ public extension Api {
             case let _1 as Api.PasswordKdfAlgo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentCharge:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.PaymentFormMethod:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentRequestedInfo:
                 _1.serialize(buffer, boxed)

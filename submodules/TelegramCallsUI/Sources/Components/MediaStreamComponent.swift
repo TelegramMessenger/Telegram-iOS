@@ -800,13 +800,13 @@ public final class MediaStreamComponent: CombinedComponent {
                         AnyComponentWithIdentity(id: "a", component: AnyComponent(LottieAnimationComponent(
                             animation: LottieAnimationComponent.AnimationItem(
                                 name: "anim_profilemore",
-                                colors: [
-                                    "Point 2.Group 1.Fill 1": whiteColor,
-                                    "Point 3.Group 1.Fill 1": whiteColor,
-                                    "Point 1.Group 1.Fill 1": whiteColor
-                                ],
                                 mode: .still(position: .begin)
                             ),
+                            colors: [
+                                "Point 2.Group 1.Fill 1": whiteColor,
+                                "Point 3.Group 1.Fill 1": whiteColor,
+                                "Point 1.Group 1.Fill 1": whiteColor
+                            ],
                             size: CGSize(width: 22.0, height: 22.0)
                         ).tagged(moreAnimationTag))),
                     ])),

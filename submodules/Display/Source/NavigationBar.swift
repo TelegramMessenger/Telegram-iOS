@@ -287,7 +287,7 @@ public final class NavigationBackgroundNode: ASDisplayNode {
 }
 
 open class BlurredBackgroundView: UIView {
-    private var _color: UIColor
+    private var _color: UIColor?
 
     private var enableBlur: Bool
 
@@ -304,8 +304,8 @@ open class BlurredBackgroundView: UIView {
         }
     }
 
-    public init(color: UIColor, enableBlur: Bool = true) {
-        self._color = .clear
+    public init(color: UIColor?, enableBlur: Bool = true) {
+        self._color = nil
         self.enableBlur = enableBlur
 
         self.backgroundView = UIView()
@@ -314,7 +314,9 @@ open class BlurredBackgroundView: UIView {
 
         self.addSubview(self.backgroundView)
 
-        self.updateColor(color: color, transition: .immediate)
+        if let color = color {
+            self.updateColor(color: color, transition: .immediate)
+        }
     }
     
     required public init?(coder: NSCoder) {
@@ -322,7 +324,7 @@ open class BlurredBackgroundView: UIView {
     }
     
     private func updateBackgroundBlur(forceKeepBlur: Bool) {
-        if self.enableBlur && !sharedIsReduceTransparencyEnabled && ((self._color.alpha > .ulpOfOne && self._color.alpha < 0.95) || forceKeepBlur) {
+        if let color = self._color, self.enableBlur && !sharedIsReduceTransparencyEnabled && ((color.alpha > .ulpOfOne && color.alpha < 0.95) || forceKeepBlur) {
             if self.effectView == nil {
                 let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
 
@@ -369,16 +371,16 @@ open class BlurredBackgroundView: UIView {
     public func updateColor(color: UIColor, enableBlur: Bool? = nil, forceKeepBlur: Bool = false, transition: ContainedViewLayoutTransition) {
         let effectiveEnableBlur = enableBlur ?? self.enableBlur
 
-        if self._color.isEqual(color) && self.enableBlur == effectiveEnableBlur {
+        if self._color == color && self.enableBlur == effectiveEnableBlur {
             return
         }
         self._color = color
         self.enableBlur = effectiveEnableBlur
 
         if sharedIsReduceTransparencyEnabled {
-            transition.updateBackgroundColor(layer: self.backgroundView.layer, color: self._color.withAlphaComponent(1.0))
+            transition.updateBackgroundColor(layer: self.backgroundView.layer, color: color.withAlphaComponent(1.0))
         } else {
-            transition.updateBackgroundColor(layer: self.backgroundView.layer, color: self._color)
+            transition.updateBackgroundColor(layer: self.backgroundView.layer, color: color)
         }
 
         self.updateBackgroundBlur(forceKeepBlur: forceKeepBlur)

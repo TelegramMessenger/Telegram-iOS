@@ -633,7 +633,7 @@ public extension ContainedViewLayoutTransition {
                 }
             case let .animated(duration, curve):
                 let previousFrame: CGRect
-                if beginWithCurrentState, let presentation = view.layer.presentation() {
+                if beginWithCurrentState, (view.layer.animation(forKey: "position") != nil || view.layer.animation(forKey: "bounds") != nil), let presentation = view.layer.presentation() {
                     previousFrame = presentation.frame
                 } else {
                     previousFrame = view.frame
@@ -662,7 +662,7 @@ public extension ContainedViewLayoutTransition {
                 }
             case let .animated(duration, curve):
                 let previousFrame: CGRect
-                if beginWithCurrentState, let presentation = layer.presentation() {
+                if beginWithCurrentState, (layer.animation(forKey: "position") != nil || layer.animation(forKey: "bounds") != nil), let presentation = layer.presentation() {
                     previousFrame = presentation.frame
                 } else {
                     previousFrame = layer.frame

@@ -198,8 +198,8 @@ public struct ChatInterfaceForwardOptionsState: Codable, Equatable {
 }
 
 public struct ChatTextInputState: Codable, Equatable {
-    public let inputText: NSAttributedString
-    public let selectionRange: Range<Int>
+    public var inputText: NSAttributedString
+    public var selectionRange: Range<Int>
     
     public static func ==(lhs: ChatTextInputState, rhs: ChatTextInputState) -> Bool {
         return lhs.inputText.isEqual(to: rhs.inputText) && lhs.selectionRange == rhs.selectionRange

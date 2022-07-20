@@ -7888,3 +7888,5 @@ Sorry for the inconvenience.";
 "WebApp.ShareMyPhoneNumberConfirmation" = "Are you sure you want to share your phone number **%1$@** with **%2$@**?";
 
 "Conversation.VoiceMessagesRestricted" = "%@ doesn't accept voice and video messages";
+
+"Emoji.ClearRecent" = "Clear Recent Emoji";
