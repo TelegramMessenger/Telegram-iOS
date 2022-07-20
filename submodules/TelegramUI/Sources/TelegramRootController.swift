@@ -76,11 +76,8 @@ public final class TelegramRootController: NavigationController {
         
         self.applicationInFocusDisposable = (context.sharedContext.applicationBindings.applicationIsActive
         |> distinctUntilChanged
-        |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.setForceBadgeHidden(!value)
+        |> deliverOn(Queue.mainQueue())).start(next: { value in
+            context.sharedContext.mainWindow?.setForceBadgeHidden(!value)
         })
     }
     

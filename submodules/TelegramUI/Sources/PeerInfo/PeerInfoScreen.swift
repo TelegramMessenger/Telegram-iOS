@@ -4064,7 +4064,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
-                            self?.giftPremium()
+                            
+                            if let strongSelf = self {
+                                let controller = PremiumGiftScreen(context: strongSelf.context, peerId: strongSelf.peerId, options: cachedData.premiumGiftOptions)
+                                strongSelf.controller?.push(controller)
+                            }
                         })))
                     }
                     
@@ -6426,12 +6430,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
         }))
     }
-    
-    private func giftPremium() {
-        let controller = PremiumGiftScreen(context: self.context, peerId: self.peerId)
-        self.controller?.push(controller)
-    }
-        
+            
     fileprivate func switchToAccount(id: AccountRecordId) {
         self.accountsAndPeers.set(.never())
         self.context.sharedContext.switchToAccount(id: id, fromSettingsController: nil, withChatListController: nil)

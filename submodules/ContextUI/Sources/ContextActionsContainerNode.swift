@@ -357,7 +357,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let targetSelectionIndex: Int?
     
     private var action: (() -> Void)?
-    var requestDismiss: () -> Void = {}
+    var requestDismiss: (@escaping () -> Void) -> Void = { _ in }
     
     init(presentationData: PresentationData, tip: ContextController.Tip) {
         self.presentationData = presentationData
@@ -369,8 +369,8 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         self.buttonNode = HighlightTrackingButtonNode()
         
         self.textNode = TextNodeWithEntities()
+        self.textNode.textNode.displaysAsynchronously = false
         self.textNode.textNode.isUserInteractionEnabled = false
-        self.textNode.textNode.displaysAsynchronously = true
 
         var isUserInteractionEnabled = false
         var icon: UIImage?
@@ -467,8 +467,9 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     }
     
     @objc func pressed() {
-        self.requestDismiss()
-        self.action?()
+        self.requestDismiss({
+            self.action?()
+        })
     }
     
     func updateLayout(widthClass: ContainerViewLayoutSizeClass, width: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -652,8 +653,8 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: itemList, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
         if let tip = items.tip {
             let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
-            textSelectionTipNode.requestDismiss = {
-                getController()?.dismiss(completion: nil)
+            textSelectionTipNode.requestDismiss = { completion in
+                getController()?.dismiss(completion: completion)
             }
             self.textSelectionTipNode = textSelectionTipNode
         } else {

@@ -203,7 +203,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         
                         if file.isPremiumEmoji && !hasPremium {
                             //TODO:localize
-                            
+                                                        
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Subscribe to Telegram Premium to unlock this emoji.", undoText: "More", customAction: { [weak controllerInteraction] in
                                 guard let controllerInteraction = controllerInteraction else {
@@ -211,7 +211,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 }
                                 
                                 var replaceImpl: ((ViewController) -> Void)?
-                                let controller = PremiumDemoScreen(context: context, subject: .premiumStickers, action: {
+                                let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {
                                     let controller = PremiumIntroScreen(context: context, source: .stickers)
                                     replaceImpl?(controller)
                                 })
@@ -1310,7 +1310,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                                 }
                                 
                                 var replaceImpl: ((ViewController) -> Void)?
-                                let controller = PremiumDemoScreen(context: strongSelf.context, subject: .premiumStickers, action: {
+                                let controller = PremiumDemoScreen(context: strongSelf.context, subject: .animatedEmoji, action: {
                                     let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
                                     replaceImpl?(controller)
                                 })

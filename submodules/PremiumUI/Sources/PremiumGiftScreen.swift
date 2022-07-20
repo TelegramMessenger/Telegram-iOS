@@ -1223,7 +1223,7 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer {
     public weak var containerView: UIView?
     public var animationColor: UIColor?
     
-    public init(context: AccountContext, peerId: PeerId) {
+    public init(context: AccountContext, peerId: PeerId, options: [CachedPremiumGiftOption]) {
         self.context = context
             
         var updateInProgressImpl: ((Bool) -> Void)?
