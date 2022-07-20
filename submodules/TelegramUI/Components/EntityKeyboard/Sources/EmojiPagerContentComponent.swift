@@ -1553,6 +1553,10 @@ public final class EmojiPagerContentComponent: Component {
                     let position = CGPoint(x: itemLayer.frame.midX, y: itemLayer.frame.midY)
                     let distance = CGPoint(x: localPoint.x - position.x, y: localPoint.y - position.y)
                     let distance2 = distance.x * distance.x + distance.y * distance.y
+                    if distance2 > pow(max(itemLayer.bounds.width, itemLayer.bounds.height) / 2.0, 2.0) {
+                        continue
+                    }
+                    
                     if let closestItemValue = closestItem {
                         if closestItemValue.distance > distance2 {
                             closestItem = (key, distance2)
