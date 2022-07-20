@@ -172,13 +172,19 @@ final class StickerPackEmojisItemNode: GridItemNode {
         super.didLoad()
         
         let shimmerHostView = PortalSourceView()
+        shimmerHostView.alpha = 0.0
+        shimmerHostView.frame = CGRect(origin: CGPoint(), size: self.frame.size)
+        self.view.addSubview(shimmerHostView)
         self.shimmerHostView = shimmerHostView
         
         let standaloneShimmerEffect = StandaloneShimmerEffect()
         self.standaloneShimmerEffect = standaloneShimmerEffect
-        
-        shimmerHostView.alpha = 0.0
-        self.view.addSubview(shimmerHostView)
+        if let item = self.item {
+            let shimmerBackgroundColor = item.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08)
+            let shimmerForegroundColor = item.theme.list.itemBlocksBackgroundColor.withMultipliedAlpha(0.15)
+            standaloneShimmerEffect.update(background: shimmerBackgroundColor, foreground: shimmerForegroundColor)
+            self.updateShimmerIfNeeded()
+        }
         
         let boundsChangeTrackerLayer = SimpleLayer()
         boundsChangeTrackerLayer.opacity = 0.0
@@ -261,7 +267,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                     placeholderColor: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1),
                     blurredBadgeColor: theme.chat.inputPanel.panelBackgroundColor.withMultipliedAlpha(0.5),
                     pointSize: itemNativeFitSize,
-                    onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, _ in
+                    onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
                         guard let strongSelf = self else {
                             return
                         }
@@ -275,7 +281,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                                         context: context,
                                         file: item.file,
                                         shimmerView: strongSelf.shimmerHostView,
-                                        color: nil,
+                                        color: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08),
                                         size: itemNativeFitSize
                                     )
                                     strongSelf.visibleItemPlaceholderViews[itemId] = placeholderView
@@ -289,9 +295,20 @@ final class StickerPackEmojisItemNode: GridItemNode {
                         } else {
                             if let placeholderView = strongSelf.visibleItemPlaceholderViews[itemId] {
                                 strongSelf.visibleItemPlaceholderViews.removeValue(forKey: itemId)
-                                placeholderView.removeFromSuperview()
                                 
-                                strongSelf.updateShimmerIfNeeded()
+                                if duration > 0.0 {
+                                    placeholderView.layer.opacity = 0.0
+                                    placeholderView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { [weak self, weak placeholderView] _ in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        placeholderView?.removeFromSuperview()
+                                        strongSelf.updateShimmerIfNeeded()
+                                    })
+                                } else {
+                                    placeholderView.removeFromSuperview()
+                                    strongSelf.updateShimmerIfNeeded()
+                                }
                             }
                         }
                     }
@@ -323,6 +340,13 @@ final class StickerPackEmojisItemNode: GridItemNode {
             }
             
             itemLayer.isVisibleForAnimations = true
+        }
+        
+        for id in self.visibleItemLayers.keys {
+            if !validIds.contains(id) {
+                self.visibleItemLayers[id]?.removeFromSuperlayer()
+                self.visibleItemLayers[id] = nil
+            }
         }
     }
     

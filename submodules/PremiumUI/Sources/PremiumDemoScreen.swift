@@ -485,7 +485,7 @@ private final class DemoSheetContent: CombinedComponent {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons]
+        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons]
         self.action = action
         self.dismiss = dismiss
     }
@@ -994,6 +994,9 @@ private final class DemoSheetContent: CombinedComponent {
                                 buttonAnimationName = "premium_unlock"
                             case .noAds:
                                 buttonText = strings.Premium_NoAds_Proceed
+                            case .animatedEmoji:
+                                buttonText = strings.Premium_AnimatedEmoji_Proceed
+                                buttonAnimationName = "premium_unlock"
                             default:
                                 buttonText = strings.Common_OK
                         }

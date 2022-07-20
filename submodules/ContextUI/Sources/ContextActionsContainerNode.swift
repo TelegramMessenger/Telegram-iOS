@@ -400,7 +400,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             self.arguments = arguments
             self.file = file
             self.targetSelectionIndex = nil
-            icon = nil //UIImage(bundleImageName: "Chat/Context Menu/Arrow")
+            icon = nil
             isUserInteractionEnabled = text != nil
         }
         
