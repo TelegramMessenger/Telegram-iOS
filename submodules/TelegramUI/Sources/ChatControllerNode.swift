@@ -2873,8 +2873,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         strongSelf.dismissTextInput()
                         
                         var replaceImpl: ((ViewController) -> Void)?
-                        let controller = PremiumDemoScreen(context: strongSelf.context, subject: .premiumStickers, action: {
-                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                        let controller = PremiumDemoScreen(context: strongSelf.context, subject: .animatedEmoji, action: {
+                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .animatedEmoji)
                             replaceImpl?(controller)
                         })
                         replaceImpl = { [weak controller] c in

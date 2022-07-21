@@ -287,7 +287,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 
                                 var replaceImpl: ((ViewController) -> Void)?
                                 let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {
-                                    let controller = PremiumIntroScreen(context: context, source: .stickers)
+                                    let controller = PremiumIntroScreen(context: context, source: .animatedEmoji)
                                     replaceImpl?(controller)
                                 })
                                 replaceImpl = { [weak controller] c in
@@ -1526,7 +1526,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                                 
                                 var replaceImpl: ((ViewController) -> Void)?
                                 let controller = PremiumDemoScreen(context: strongSelf.context, subject: .animatedEmoji, action: {
-                                    let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                    let controller = PremiumIntroScreen(context: strongSelf.context, source: .animatedEmoji)
                                     replaceImpl?(controller)
                                 })
                                 replaceImpl = { [weak controller] c in
