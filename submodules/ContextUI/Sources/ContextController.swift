@@ -2396,6 +2396,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?) {
         self.items = items
         if self.isNodeLoaded {
+            self.immediateItemsTransitionAnimation = false
             self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: .scale)
         }
     }

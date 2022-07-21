@@ -7891,3 +7891,5 @@ Sorry for the inconvenience.";
 "Conversation.VoiceMessagesRestricted" = "%@ doesn't accept voice and video messages";
 
 "Emoji.ClearRecent" = "Clear Recent Emoji";
+
+"Premium.AnimatedEmoji.Proceed" = "Unlock Animated Emoji";

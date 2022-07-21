@@ -2317,6 +2317,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.view.window?.endEditing(true)
     }
     
+    func dismissTextInput() {
+        self.view.window?.endEditing(true)
+    }
+    
     func collapseInput() {
         if self.inputPanelContainerNode.expansionFraction != 0.0 {
             self.inputPanelContainerNode.collapse()
@@ -2866,10 +2870,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         guard let strongSelf = self else {
                             return
                         }
+                        strongSelf.dismissTextInput()
                         
                         var replaceImpl: ((ViewController) -> Void)?
-                        let controller = PremiumDemoScreen(context: strongSelf.context, subject: .premiumStickers, action: {
-                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                        let controller = PremiumDemoScreen(context: strongSelf.context, subject: .animatedEmoji, action: {
+                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .animatedEmoji)
                             replaceImpl?(controller)
                         })
                         replaceImpl = { [weak controller] c in

@@ -141,6 +141,7 @@ public final class ChatControllerInteraction {
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
+    let dismissTextInput: () -> Void
     
     var canPlayMedia: Bool = false
     var hiddenMedia: [MessageId: [Media]] = [:]
@@ -243,6 +244,7 @@ public final class ChatControllerInteraction {
         openWebView: @escaping (String, String, Bool, Bool) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
+        dismissTextInput: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -330,6 +332,7 @@ public final class ChatControllerInteraction {
         self.openWebView = openWebView
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
+        self.dismissTextInput = dismissTextInput
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

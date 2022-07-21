@@ -974,6 +974,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         case let .sticker(_, _, _, _, _, customAction):
             if let customAction = customAction {
                 customAction()
+            } else {
+                let _ = self.action(.undo)
             }
         default:
             let _ = self.action(.undo)

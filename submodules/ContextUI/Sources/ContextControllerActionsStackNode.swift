@@ -887,8 +887,8 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 if self.tipNode == nil {
                     updatedTransition = .immediate
                     let tipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
-                    tipNode.requestDismiss = { [weak self] in
-                        self?.getController()?.dismiss(completion: nil)
+                    tipNode.requestDismiss = { [weak self] completion in
+                        self?.getController()?.dismiss(completion: completion)
                     }
                     self.tipNode = tipNode
                 }
@@ -997,6 +997,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             if animated {
                 self.dismissingItemContainers.append((itemContainer, false))
             } else {
+                itemContainer.tipNode?.removeFromSupernode()
                 itemContainer.removeFromSupernode()
             }
         }
@@ -1198,6 +1199,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 itemContainer?.removeFromSupernode()
             })
             if let tipNode = itemContainer.tipNode {
+                transition.updateFrame(node: tipNode, frame: CGRect(origin: CGPoint(x: navigationContainerFrame.minX, y: navigationContainerFrame.maxY + tipSpacing), size: tipNode.frame.size), beginWithCurrentState: true)
                 transition.updateAlpha(node: tipNode, alpha: 0.0, completion: { [weak tipNode] _ in
                     tipNode?.removeFromSupernode()
                 })

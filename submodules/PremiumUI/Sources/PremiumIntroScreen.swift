@@ -36,6 +36,7 @@ public enum PremiumSource: Equatable {
     case accounts
     case about
     case appIcons
+    case animatedEmoji
     case deeplink(String?)
     case profile(PeerId)
     case gift(from: PeerId, to: PeerId, duration: Int32)
@@ -73,6 +74,8 @@ public enum PremiumSource: Equatable {
                 return "double_limits__accounts"
             case .about:
                 return "double_limits__about"
+            case .animatedEmoji:
+                return "animated_emoji"
             case let .profile(id):
                 return "profile__\(id.id._internalGetInt64Value())"
             case .gift, .giftTerms:

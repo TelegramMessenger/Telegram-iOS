@@ -769,6 +769,9 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                     }), true)
                 }
             } else {
+                let hapticFeedback = HapticFeedback()
+                hapticFeedback.impact()
+                
                 presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Privacy_VoiceMessages_Tooltip), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                     if action == .info {
                         let controller = PremiumIntroScreen(context: context, source: .settings)

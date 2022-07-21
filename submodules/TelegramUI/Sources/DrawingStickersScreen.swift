@@ -163,6 +163,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, openWebView: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
+        }, dismissTextInput: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: true), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         

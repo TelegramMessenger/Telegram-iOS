@@ -78,7 +78,7 @@ public final class TextNodeWithEntities {
                 context: self.context,
                 cache: self.cache,
                 renderer: self.renderer,
-                placeholderColor: self.placeholderColor,
+                placeholderColor: color,
                 attemptSynchronous: self.attemptSynchronous
             )
         }

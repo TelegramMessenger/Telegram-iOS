@@ -715,7 +715,7 @@ private final class StickerPackContainer: ASDisplayNode {
             } else if loadedCount == contents.count {
                 self.onReady()
                 
-                if !contents.isEmpty && self.currentStickerPack == nil {
+                if !contents.isEmpty && self.currentStickerPacks.isEmpty {
                     if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
                         scrollToItem = GridNodeScrollToItem(index: 0, position: .top(0.0), transition: .immediate, directionHint: .up, adjustForSection: false)
                     }
