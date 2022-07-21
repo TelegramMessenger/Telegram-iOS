@@ -1284,7 +1284,17 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             inputData.gifs = gifs
             
             var transition: Transition = .immediate
-            if strongSelf.currentInputData.emoji != inputData.emoji {
+            var useAnimation = false
+            
+            if let pagerView = strongSelf.entityKeyboardView.componentView as? EntityKeyboardComponent.View, let centralId = pagerView.centralId {
+                if centralId == AnyHashable("emoji") {
+                    useAnimation = strongSelf.currentInputData.emoji != inputData.emoji
+                } else if centralId == AnyHashable("stickers"),  strongSelf.currentInputData.stickers != nil, inputData.stickers != nil {
+                    useAnimation = strongSelf.currentInputData.stickers != inputData.stickers
+                }
+            }
+            
+            if useAnimation {
                 transition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(EmojiPagerContentComponent.ContentAnimation(type: .generic))
             }
             strongSelf.currentInputData = inputData
