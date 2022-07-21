@@ -78,6 +78,7 @@ public final class EntityKeyboardComponent: Component {
     public let emojiContent: EmojiPagerContentComponent
     public let stickerContent: EmojiPagerContentComponent?
     public let gifContent: GifPagerContentComponent?
+    public let hasRecentGifs: Bool
     public let availableGifSearchEmojies: [GifSearchEmoji]
     public let defaultToEmojiTab: Bool
     public let externalTopPanelContainer: PagerExternalTopPanelContainer?
@@ -96,6 +97,7 @@ public final class EntityKeyboardComponent: Component {
         emojiContent: EmojiPagerContentComponent,
         stickerContent: EmojiPagerContentComponent?,
         gifContent: GifPagerContentComponent?,
+        hasRecentGifs: Bool,
         availableGifSearchEmojies: [GifSearchEmoji],
         defaultToEmojiTab: Bool,
         externalTopPanelContainer: PagerExternalTopPanelContainer?,
@@ -113,6 +115,7 @@ public final class EntityKeyboardComponent: Component {
         self.emojiContent = emojiContent
         self.stickerContent = stickerContent
         self.gifContent = gifContent
+        self.hasRecentGifs = hasRecentGifs
         self.availableGifSearchEmojies = availableGifSearchEmojies
         self.defaultToEmojiTab = defaultToEmojiTab
         self.externalTopPanelContainer = externalTopPanelContainer
@@ -140,6 +143,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.gifContent != rhs.gifContent {
+            return false
+        }
+        if lhs.hasRecentGifs != rhs.hasRecentGifs {
             return false
         }
         if lhs.availableGifSearchEmojies != rhs.availableGifSearchEmojies {
@@ -219,18 +225,20 @@ public final class EntityKeyboardComponent: Component {
                 contents.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(gifContent)))
                 var topGifItems: [EntityKeyboardTopPanelComponent.Item] = []
                 //TODO:localize
-                topGifItems.append(EntityKeyboardTopPanelComponent.Item(
-                    id: "recent",
-                    isReorderable: false,
-                    content: AnyComponent(EntityKeyboardIconTopPanelComponent(
-                        imageName: "Chat/Input/Media/RecentTabIcon",
-                        theme: component.theme,
-                        title: "Recent",
-                        pressed: { [weak self] in
-                            self?.component?.switchToGifSubject(.recent)
-                        }
+                if component.hasRecentGifs {
+                    topGifItems.append(EntityKeyboardTopPanelComponent.Item(
+                        id: "recent",
+                        isReorderable: false,
+                        content: AnyComponent(EntityKeyboardIconTopPanelComponent(
+                            imageName: "Chat/Input/Media/RecentTabIcon",
+                            theme: component.theme,
+                            title: "Recent",
+                            pressed: { [weak self] in
+                                self?.component?.switchToGifSubject(.recent)
+                            }
+                        ))
                     ))
-                ))
+                }
                 topGifItems.append(EntityKeyboardTopPanelComponent.Item(
                     id: "trending",
                     isReorderable: false,

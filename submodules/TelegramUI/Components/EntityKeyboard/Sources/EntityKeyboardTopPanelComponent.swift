@@ -437,6 +437,7 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
             self.scrollView.showsVerticalScrollIndicator = false
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.alwaysBounceHorizontal = false
+            self.scrollView.scrollsToTop = false
             self.scrollView.delegate = self
             
             self.scrollViewContainer.addSubview(self.scrollView)
@@ -1114,6 +1115,7 @@ final class EntityKeyboardTopPanelComponent: Component {
             self.scrollView.showsVerticalScrollIndicator = false
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.alwaysBounceHorizontal = true
+            self.scrollView.scrollsToTop = false
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
             

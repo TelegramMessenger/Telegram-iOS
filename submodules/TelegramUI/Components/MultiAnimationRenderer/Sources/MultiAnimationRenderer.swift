@@ -107,27 +107,6 @@ private final class ItemAnimationContext {
                     
                 data.withUnsafeBytes { bytes -> Void in
                     memcpy(context.bytes, bytes.baseAddress!, height * bytesPerRow)
-                    
-                    /*var sourceBuffer = vImage_Buffer()
-                    sourceBuffer.width = UInt(width)
-                    sourceBuffer.height = UInt(height)
-                    sourceBuffer.data = UnsafeMutableRawPointer(mutating: bytes.baseAddress!.advanced(by: firstFrame.range.lowerBound))
-                    sourceBuffer.rowBytes = bytesPerRow
-                    
-                    var destinationBuffer = vImage_Buffer()
-                    destinationBuffer.width = UInt(32)
-                    destinationBuffer.height = UInt(32)
-                    destinationBuffer.data = context.bytes
-                    destinationBuffer.rowBytes = bytesPerRow
-                    
-                    vImageBoxConvolve_ARGB8888(&sourceBuffer,
-                                               &destinationBuffer,
-                                               nil,
-                                               UInt(width - 32 - 16), UInt(height - 32 - 16),
-                                               UInt32(31),
-                                               UInt32(31),
-                                               nil,
-                                               vImage_Flags(kvImageEdgeExtend))*/
                 }
                 
                 guard let image = context.generateImage() else {
@@ -183,42 +162,6 @@ private final class ItemAnimationContext {
                     destinationBuffer.height = UInt(blurredHeight)
                     destinationBuffer.data = context.bytes
                     destinationBuffer.rowBytes = context.bytesPerRow
-                    
-                    /*var sourceBuffer = vImage_Buffer()
-                    sourceBuffer.width = UInt(width)
-                    sourceBuffer.height = UInt(height)
-                    sourceBuffer.data = UnsafeMutableRawPointer(mutating: bytes.baseAddress!)
-                    sourceBuffer.rowBytes = bytesPerRow
-                    
-                    let tempBufferBytes = malloc(blurredHeight * context.bytesPerRow)
-                    defer {
-                        free(tempBufferBytes)
-                    }
-                    let temp2BufferBytes = malloc(blurredHeight * context.bytesPerRow)
-                    defer {
-                        free(temp2BufferBytes)
-                    }
-                    memset(temp2BufferBytes, Int32(bitPattern: color?.argb ?? 0xffffffff), blurredHeight * context.bytesPerRow)
-                    
-                    var tempBuffer = vImage_Buffer()
-                    tempBuffer.width = UInt(blurredWidth)
-                    tempBuffer.height = UInt(blurredHeight)
-                    tempBuffer.data = tempBufferBytes
-                    tempBuffer.rowBytes = context.bytesPerRow
-                    
-                    var temp2Buffer = vImage_Buffer()
-                    temp2Buffer.width = UInt(blurredWidth)
-                    temp2Buffer.height = UInt(blurredHeight)
-                    temp2Buffer.data = temp2BufferBytes
-                    temp2Buffer.rowBytes = context.bytesPerRow
-                    
-
-                    
-                    vImageScale_ARGB8888(&sourceBuffer, &tempBuffer, nil, vImage_Flags(kvImageDoNotTile))
-                    //vImageUnpremultiplyData_ARGB8888(&tempBuffer, &tempBuffer, vImage_Flags(kvImageDoNotTile))
-                    
-                    vImagePremultipliedAlphaBlend_ARGB8888(&tempBuffer, &temp2Buffer, &destinationBuffer, vImage_Flags(kvImageDoNotTile))
-                    //vImageCopyBuffer(&tempBuffer, &destinationBuffer, 4, vImage_Flags(kvImageDoNotTile))*/
                     
                     vImageBoxConvolve_ARGB8888(&destinationBuffer,
                                                &destinationBuffer,
@@ -302,14 +245,6 @@ private final class ItemAnimationContext {
                 }
                 strongSelf.item = result.item
                 strongSelf.updateIsPlaying()
-                
-                if result.item == nil {
-                    for target in strongSelf.targets.copyItems() {
-                        if let target = target.value {
-                            target.updateDisplayPlaceholder(displayPlaceholder: true)
-                        }
-                    }
-                }
             }
         })
     }

@@ -439,6 +439,7 @@ public final class GifPagerContentComponent: Component {
             }
             self.scrollView.showsVerticalScrollIndicator = true
             self.scrollView.showsHorizontalScrollIndicator = false
+            self.scrollView.scrollsToTop = false
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
             
