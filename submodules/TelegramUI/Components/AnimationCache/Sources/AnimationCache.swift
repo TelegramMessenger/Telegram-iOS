@@ -240,7 +240,7 @@ private final class AnimationCacheItemWriterInternal {
     
     init?(allocateTempFile: @escaping () -> String) {
         self.dctQualityLuma = 70
-        self.dctQualityChroma = 75
+        self.dctQualityChroma = 88
         
         self.compressedPath = allocateTempFile()
         
@@ -442,7 +442,7 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
     
     init?(queue: Queue, allocateTempFile: @escaping () -> String, completion: @escaping (CompressedResult?) -> Void) {
         self.dctQualityLuma = 70
-        self.dctQualityChroma = 75
+        self.dctQualityChroma = 88
         
         self.queue = queue
         self.compressedPath = allocateTempFile()
