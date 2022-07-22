@@ -24,6 +24,16 @@ private func traceScrollView(view: UIView, point: CGPoint) -> (UIScrollView?, Bo
     return (nil, true)
 }
 
+private func traceScrollViewUp(view: UIView) -> UIScrollView? {
+    if let scrollView = view as? UIScrollView {
+        return scrollView
+    } else if let superview = view.superview {
+        return traceScrollViewUp(view: superview)
+    } else {
+        return nil
+    }
+}
+
 private final class ExpansionPanRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
     enum LockDirection {
         case up
@@ -87,8 +97,8 @@ private final class ExpansionPanRecognizer: UIGestureRecognizer, UIGestureRecogn
         if let _ = hitView as? UIButton {
         } else if let hitView = hitView, hitView.asyncdisplaykit_node is ASButtonNode {
         } else {
-            if let scrollView = traceScrollView(view: view, point: point).0 {
-                if scrollView is ListViewScroller || scrollView is GridNodeScrollerView {
+            if let scrollView = traceScrollView(view: view, point: point).0 ?? hitView.flatMap(traceScrollViewUp) {
+                if scrollView is ListViewScroller || scrollView is GridNodeScrollerView || scrollView.asyncdisplaykit_node is ASScrollNode {
                     found = false
                 } else {
                     found = true

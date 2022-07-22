@@ -152,12 +152,33 @@ extension ImageYUVA420 {
 }
 
 final class DctData {
-    let quality: Int
-    let dct: ImageDCT
+    let lumaTable: ImageDCTTable
+    let lumaDct: ImageDCT
     
-    init(quality: Int) {
-        self.quality = quality
-        self.dct = ImageDCT(quality: quality)
+    let chromaTable: ImageDCTTable
+    let chromaDct: ImageDCT
+    
+    init?(lumaTable: Data, chromaTable: Data) {
+        guard let lumaTableData = ImageDCTTable(data: lumaTable) else {
+            return nil
+        }
+        guard let chromaTableData = ImageDCTTable(data: chromaTable) else {
+            return nil
+        }
+        
+        self.lumaTable = lumaTableData
+        self.lumaDct = ImageDCT(table: lumaTableData)
+        
+        self.chromaTable = chromaTableData
+        self.chromaDct = ImageDCT(table: chromaTableData)
+    }
+    
+    init(generatingTablesAtQuality quality: Int) {
+        self.lumaTable = ImageDCTTable(quality: quality, isChroma: false)
+        self.lumaDct = ImageDCT(table: self.lumaTable)
+        
+        self.chromaTable = ImageDCTTable(quality: quality, isChroma: true)
+        self.chromaDct = ImageDCT(table: self.chromaTable)
     }
 }
 
@@ -168,19 +189,24 @@ extension ImageYUVA420 {
         for i in 0 ..< 4 {
             let sourcePlane: ImagePlane
             let targetPlane: DctCoefficientPlane
+            let isChroma: Bool
             switch i {
             case 0:
                 sourcePlane = self.yPlane
                 targetPlane = target.yPlane
+                isChroma = false
             case 1:
                 sourcePlane = self.uPlane
                 targetPlane = target.uPlane
+                isChroma = true
             case 2:
                 sourcePlane = self.vPlane
                 targetPlane = target.vPlane
+                isChroma = true
             case 3:
                 sourcePlane = self.aPlane
                 targetPlane = target.aPlane
+                isChroma = false
             default:
                 preconditionFailure()
             }
@@ -191,7 +217,8 @@ extension ImageYUVA420 {
                 targetPlane.data.withUnsafeMutableBytes { bytes in
                     let coefficients = bytes.baseAddress!.assumingMemoryBound(to: Int16.self)
                     
-                    dctData.dct.forward(withPixels: sourcePixels, coefficients: coefficients, width: sourcePlane.width, height: sourcePlane.height, bytesPerRow: sourcePlane.bytesPerRow)
+                    let dct = isChroma ? dctData.chromaDct : dctData.lumaDct
+                    dct.forward(withPixels: sourcePixels, coefficients: coefficients, width: sourcePlane.width, height: sourcePlane.height, bytesPerRow: sourcePlane.bytesPerRow)
                 }
             }
         }
@@ -211,19 +238,24 @@ extension DctCoefficientsYUVA420 {
         for i in 0 ..< 4 {
             let sourcePlane: DctCoefficientPlane
             let targetPlane: ImagePlane
+            let isChroma: Bool
             switch i {
             case 0:
                 sourcePlane = self.yPlane
                 targetPlane = target.yPlane
+                isChroma = false
             case 1:
                 sourcePlane = self.uPlane
                 targetPlane = target.uPlane
+                isChroma = true
             case 2:
                 sourcePlane = self.vPlane
                 targetPlane = target.vPlane
+                isChroma = true
             case 3:
                 sourcePlane = self.aPlane
                 targetPlane = target.aPlane
+                isChroma = false
             default:
                 preconditionFailure()
             }
@@ -234,7 +266,8 @@ extension DctCoefficientsYUVA420 {
                 targetPlane.data.withUnsafeMutableBytes { bytes in
                     let pixels = bytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                     
-                    dctData.dct.inverse(withCoefficients: coefficients, pixels: pixels, width: sourcePlane.width, height: sourcePlane.height, coefficientsPerRow: targetPlane.width, bytesPerRow: targetPlane.bytesPerRow)
+                    let dct = isChroma ? dctData.chromaDct : dctData.lumaDct
+                    dct.inverse(withCoefficients: coefficients, pixels: pixels, width: sourcePlane.width, height: sourcePlane.height, coefficientsPerRow: targetPlane.width, bytesPerRow: targetPlane.bytesPerRow)
                 }
             }
         }

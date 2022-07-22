@@ -294,10 +294,10 @@ private final class AnimationCacheItemWriterInternal {
         }
         
         let dctData: DctData
-        if let current = self.currentDctData, current.quality == self.dctQuality {
+        if let current = self.currentDctData {
             dctData = current
         } else {
-            dctData = DctData(quality: self.dctQuality)
+            dctData = DctData(generatingTablesAtQuality: self.dctQuality)
             self.currentDctData = dctData
         }
         
@@ -310,11 +310,18 @@ private final class AnimationCacheItemWriterInternal {
         yuvaSurface.dct(dctData: dctData, target: dctCoefficients)
         
         if isFirstFrame {
-            self.file.write(3 as UInt32)
+            self.file.write(4 as UInt32)
             
             self.file.write(UInt32(dctCoefficients.yPlane.width))
             self.file.write(UInt32(dctCoefficients.yPlane.height))
-            self.file.write(UInt32(dctData.quality))
+            
+            let lumaDctTable = dctData.lumaTable.serializedData()
+            self.file.write(UInt32(lumaDctTable.count))
+            let _ = self.file.write(lumaDctTable)
+            
+            let chromaDctTable = dctData.chromaTable.serializedData()
+            self.file.write(UInt32(chromaDctTable.count))
+            let _ = self.file.write(chromaDctTable)
         
             self.contentLengthOffset = Int(self.file.position())
             self.file.write(0 as UInt32)
@@ -501,10 +508,10 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
             }
             
             let dctData: DctData
-            if let current = self.currentDctData, current.quality == self.dctQuality {
+            if let current = self.currentDctData {
                 dctData = current
             } else {
-                dctData = DctData(quality: self.dctQuality)
+                dctData = DctData(generatingTablesAtQuality: self.dctQuality)
                 self.currentDctData = dctData
             }
             
@@ -526,11 +533,18 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
             yuvaSurface.dct(dctData: dctData, target: dctCoefficients)
             
             if isFirstFrame {
-                file.write(3 as UInt32)
+                file.write(4 as UInt32)
                 
                 file.write(UInt32(dctCoefficients.yPlane.width))
                 file.write(UInt32(dctCoefficients.yPlane.height))
-                file.write(UInt32(dctData.quality))
+                
+                let lumaDctTable = dctData.lumaTable.serializedData()
+                file.write(UInt32(lumaDctTable.count))
+                let _ = file.write(lumaDctTable)
+                
+                let chromaDctTable = dctData.chromaTable.serializedData()
+                file.write(UInt32(chromaDctTable.count))
+                let _ = file.write(chromaDctTable)
             
                 self.contentLengthOffset = Int(file.position())
                 file.write(0 as UInt32)
@@ -652,10 +666,10 @@ private final class AnimationCacheItemAccessor {
     private var currentFrame: CurrentFrame?
     
     private var currentYUVASurface: ImageYUVA420?
-    private var currentDctData: DctData
+    private let currentDctData: DctData
     private var sharedDctCoefficients: DctCoefficientsYUVA420?
     
-    init(data: Data, range: Range<Int>, frameMapping: [FrameInfo], width: Int, height: Int, dctQuality: Int) {
+    init(data: Data, range: Range<Int>, frameMapping: [FrameInfo], width: Int, height: Int, dctData: DctData) {
         self.data = data
         self.range = range
         self.width = width
@@ -673,7 +687,7 @@ private final class AnimationCacheItemAccessor {
         self.frameMapping = resultFrameMapping
         self.durationMapping = durationMapping
         
-        self.currentDctData = DctData(quality: dctQuality)
+        self.currentDctData = dctData
     }
     
     private func loadNextFrame() {
@@ -833,6 +847,16 @@ private final class AnimationCacheItemAccessor {
             )
         }
     }
+}
+
+private func readData(data: Data, offset: Int, count: Int) -> Data {
+    var result = Data(count: count)
+    result.withUnsafeMutableBytes { bytes -> Void in
+        data.withUnsafeBytes { dataBytes -> Void in
+            memcpy(bytes.baseAddress!, dataBytes.baseAddress!.advanced(by: offset), count)
+        }
+    }
+    return result
 }
 
 private func readUInt32(data: Data, offset: Int) -> UInt32 {
@@ -1071,7 +1095,7 @@ private func loadItem(path: String) throws -> AnimationCacheItem {
     }
     let formatVersion = readUInt32(data: compressedData, offset: offset)
     offset += 4
-    if formatVersion != 3 {
+    if formatVersion != 4 {
         throw LoadItemError.dataError
     }
     
@@ -1090,8 +1114,26 @@ private func loadItem(path: String) throws -> AnimationCacheItem {
     if offset + 4 > dataLength {
         throw LoadItemError.dataError
     }
-    let dctQuality = readUInt32(data: compressedData, offset: offset)
+    let dctLumaTableLength = readUInt32(data: compressedData, offset: offset)
     offset += 4
+    
+    if offset + Int(dctLumaTableLength) > dataLength {
+        throw LoadItemError.dataError
+    }
+    let dctLumaData = readData(data: compressedData, offset: offset, count: Int(dctLumaTableLength))
+    offset += Int(dctLumaTableLength)
+    
+    if offset + 4 > dataLength {
+        throw LoadItemError.dataError
+    }
+    let dctChromaTableLength = readUInt32(data: compressedData, offset: offset)
+    offset += 4
+    
+    if offset + Int(dctChromaTableLength) > dataLength {
+        throw LoadItemError.dataError
+    }
+    let dctChromaData = readData(data: compressedData, offset: offset, count: Int(dctChromaTableLength))
+    offset += Int(dctChromaTableLength)
     
     if offset + 4 > dataLength {
         throw LoadItemError.dataError
@@ -1119,7 +1161,11 @@ private func loadItem(path: String) throws -> AnimationCacheItem {
         frameMapping.append(AnimationCacheItemAccessor.FrameInfo(duration: Double(frameDuration)))
     }
     
-    let itemAccessor = AnimationCacheItemAccessor(data: compressedData, range: compressedFrameDataRange, frameMapping: frameMapping, width: Int(width), height: Int(height), dctQuality: Int(dctQuality))
+    guard let dctData = DctData(lumaTable: dctLumaData, chromaTable: dctChromaData) else {
+        throw LoadItemError.dataError
+    }
+    
+    let itemAccessor = AnimationCacheItemAccessor(data: compressedData, range: compressedFrameDataRange, frameMapping: frameMapping, width: Int(width), height: Int(height), dctData: dctData)
     
     return AnimationCacheItem(numFrames: frameMapping.count, advanceImpl: { advance, requestedFormat in
         return itemAccessor.advance(advance: advance, requestedFormat: requestedFormat)
@@ -1397,7 +1443,9 @@ public final class AnimationCacheImpl: AnimationCache {
             let itemFirstFramePath = "\(itemDirectoryPath)/\(sourceIdPath.fileName)-f"
             
             if FileManager.default.fileExists(atPath: itemFirstFramePath) {
-                return try? loadItem(path: itemFirstFramePath)
+                if let item = try? loadItem(path: itemFirstFramePath) {
+                    return item
+                }
             }
             
             if let adaptationItemPath = findHigherResolutionFileForAdaptation(itemDirectoryPath: itemDirectoryPath, baseName: "\(hashString)_", baseSuffix: "-f", width: Int(size.width), height: Int(size.height)) {

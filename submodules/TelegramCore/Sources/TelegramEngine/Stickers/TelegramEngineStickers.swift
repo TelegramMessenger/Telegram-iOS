@@ -46,7 +46,7 @@ public extension TelegramEngine {
             return _internal_searchGifs(account: self.account, query: query, nextOffset: nextOffset)
         }
 
-        public func addStickerPackInteractively(info: StickerPackCollectionInfo, items: [ItemCollectionItem], positionInList: Int? = nil) -> Signal<Void, NoError> {
+        public func addStickerPackInteractively(info: StickerPackCollectionInfo, items: [StickerPackItem], positionInList: Int? = nil) -> Signal<Void, NoError> {
             return _internal_addStickerPackInteractively(postbox: self.account.postbox, info: info, items: items, positionInList: positionInList)
         }
 

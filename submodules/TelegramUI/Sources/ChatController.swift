@@ -1577,6 +1577,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                 if let strongSelf = self {
+                    strongSelf.chatDisplayNode.collapseInput()
+                    
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                     })
@@ -2112,6 +2114,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreview(nil) }
                         })
@@ -7343,6 +7347,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                         if let strongSelf = self {
+                            strongSelf.chatDisplayNode.collapseInput()
+                            
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                 $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreview(nil) }
                             })
@@ -11221,6 +11227,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: location), replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil)
                             strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                 if let strongSelf = self {
+                                    strongSelf.chatDisplayNode.collapseInput()
+                                    
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                     })
@@ -11283,6 +11291,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                                         strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                             if let strongSelf = self {
+                                                strongSelf.chatDisplayNode.collapseInput()
+                                                
                                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                                     $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                                 })
@@ -11342,6 +11352,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                                             strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                                 if let strongSelf = self {
+                                                    strongSelf.chatDisplayNode.collapseInput()
+                                                    
                                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                                     })
@@ -11365,6 +11377,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                                                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                                         if let strongSelf = self {
+                                                            strongSelf.chatDisplayNode.collapseInput()
+                                                            
                                                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                                                 $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                                             })
@@ -11821,6 +11835,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 } else {
                                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                         if let strongSelf = self {
+                                            strongSelf.chatDisplayNode.collapseInput()
+                                            
                                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                                 $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                             })
@@ -12136,6 +12152,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: location), replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil)
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
@@ -12183,6 +12201,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                             strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                 if let strongSelf = self {
+                                    strongSelf.chatDisplayNode.collapseInput()
+                                    
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                     })
@@ -12242,6 +12262,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                     if let strongSelf = self {
+                                        strongSelf.chatDisplayNode.collapseInput()
+                                        
                                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                         })
@@ -12260,6 +12282,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                                         strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                             if let strongSelf = self {
+                                                strongSelf.chatDisplayNode.collapseInput()
+                                                
                                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                                     $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                                 })
@@ -12582,6 +12606,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
             strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                 if let strongSelf = self {
+                    strongSelf.chatDisplayNode.collapseInput()
+                    
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                     })
@@ -12898,6 +12924,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
@@ -12969,6 +12997,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
@@ -12985,6 +13015,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
@@ -13013,6 +13045,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
@@ -13158,6 +13192,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                         strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                             if let strongSelf = self {
+                                strongSelf.chatDisplayNode.collapseInput()
+                                
                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                     $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                 })
@@ -13267,6 +13303,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                     if let strongSelf = self {
+                                        strongSelf.chatDisplayNode.collapseInput()
+                                        
                                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                                         })
@@ -13362,6 +13400,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
+                    strongSelf.chatDisplayNode.collapseInput()
+                    
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                         $0.updatedRecordedMediaPreview(nil).updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                     })

@@ -556,7 +556,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             result += item.presentationData.strings.VoiceOver_ChatList_OutgoingMessage
                         }
-                        let (_, initialHideAuthor, messageText, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
+                        let (_, initialHideAuthor, messageText, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, case .user = author {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
                         }
@@ -590,7 +590,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             result += item.presentationData.strings.VoiceOver_ChatList_OutgoingMessage
                         }
-                        let (_, initialHideAuthor, messageText, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
+                        let (_, initialHideAuthor, messageText, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, case .user = author {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
                         }
@@ -1095,7 +1095,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let leftInset: CGFloat = params.leftInset + avatarLeftInset
             
             enum ContentData {
-                case chat(itemPeer: EngineRenderedPeer, peer: EnginePeer?, hideAuthor: Bool, messageText: String, spoilers: [NSRange]?)
+                case chat(itemPeer: EngineRenderedPeer, peer: EnginePeer?, hideAuthor: Bool, messageText: String, spoilers: [NSRange]?, customEmojiRanges: [(NSRange, ChatTextInputTextCustomEmojiAttribute)]?)
                 case group(peers: [EngineChatList.GroupItem.Item])
             }
             
@@ -1104,7 +1104,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var hideAuthor = false
             switch contentPeer {
                 case let .chat(itemPeer):
-                    var (peer, initialHideAuthor, messageText, spoilers) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages, chatPeer: itemPeer, accountPeerId: item.context.account.peerId, enableMediaEmoji: !enableChatListPhotos, isPeerGroup: isPeerGroup)
+                    var (peer, initialHideAuthor, messageText, spoilers, customEmojiRanges) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages, chatPeer: itemPeer, accountPeerId: item.context.account.peerId, enableMediaEmoji: !enableChatListPhotos, isPeerGroup: isPeerGroup)
                     
                     if case let .psa(_, maybePsaText) = promoInfo, let psaText = maybePsaText {
                         initialHideAuthor = true
@@ -1125,7 +1125,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         break
                     }
                     
-                    contentData = .chat(itemPeer: itemPeer, peer: peer, hideAuthor: hideAuthor, messageText: messageText, spoilers: spoilers)
+                    contentData = .chat(itemPeer: itemPeer, peer: peer, hideAuthor: hideAuthor, messageText: messageText, spoilers: spoilers, customEmojiRanges: customEmojiRanges)
                     hideAuthor = initialHideAuthor
                 case let .group(groupPeers):
                     contentData = .group(peers: groupPeers)
@@ -1156,7 +1156,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var contentImageSpecs: [(message: EngineMessage, media: EngineMedia, size: CGSize)] = []
             
             switch contentData {
-                case let .chat(itemPeer, _, _, text, spoilers):
+                case let .chat(itemPeer, _, _, text, spoilers, customEmojiRanges):
                     var isUser = false
                     if case .user = itemPeer.chatMainPeer {
                         isUser = true
@@ -1184,6 +1184,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         chatListText = currentChatListText
                     } else {
                         if let spoilers = spoilers, !spoilers.isEmpty {
+                            messageText = text
+                        } else if let customEmojiRanges = customEmojiRanges, !customEmojiRanges.isEmpty {
                             messageText = text
                         } else {
                             messageText = foldLineBreaks(text)
@@ -1216,10 +1218,17 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let messageString: NSAttributedString
                         if !message.text.isEmpty && entities.count > 0 {
                             messageString = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: authorAttributedString == nil ? 2 : 1), entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage())
-                        } else if let spoilers = spoilers {
+                        } else if spoilers != nil || customEmojiRanges != nil {
                             let mutableString = NSMutableAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
-                            for range in spoilers {
-                                mutableString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: range)
+                            if let spoilers = spoilers {
+                                for range in spoilers {
+                                    mutableString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: range)
+                                }
+                            }
+                            if let customEmojiRanges = customEmojiRanges {
+                                for (range, attribute) in customEmojiRanges {
+                                    mutableString.addAttribute(ChatTextInputAttributes.customEmoji, value: attribute, range: range)
+                                }
                             }
                             messageString = mutableString
                         } else {
@@ -1267,8 +1276,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         
                         attributedText = composedString
-                        
-
                         
                         var displayMediaPreviews = true
                         if message._asMessage().containsSecretMedia {
@@ -1359,7 +1366,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             switch contentData {
-                case let .chat(itemPeer, _, _, _, _):
+                case let .chat(itemPeer, _, _, _, _, _):
                     if let message = messages.last, case let .user(author) = message.author, displayAsMessage {
                         titleAttributedString = NSAttributedString(string: author.id == account.peerId ? item.presentationData.strings.DialogList_You : EnginePeer.user(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder), font: titleFont, textColor: theme.titleColor)
                     } else if isPeerGroup {

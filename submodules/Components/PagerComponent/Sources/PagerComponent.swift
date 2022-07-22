@@ -12,6 +12,10 @@ public protocol PagerPanGestureRecognizer: UIGestureRecognizer {
 open class PagerExternalTopPanelContainer: SparseContainerView {
 }
 
+public protocol PagerContentViewWithBackground: UIView {
+    func pagerUpdateBackground(backgroundFrame: CGRect, transition: Transition)
+}
+
 public final class PagerComponentChildEnvironment: Equatable {
     public struct ContentScrollingUpdate {
         public var relativeOffset: CGFloat
@@ -292,8 +296,15 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             case .began:
                 self.paneTransitionGestureState = PaneTransitionGestureState()
             case .changed:
-                if var paneTransitionGestureState = self.paneTransitionGestureState, self.bounds.width > 0.0 {
-                    paneTransitionGestureState.fraction = recognizer.translation(in: self).x / self.bounds.width
+                if let centralId = self.centralId, let component = self.component, let centralIndex = component.contents.firstIndex(where: {  $0.id == centralId }), var paneTransitionGestureState = self.paneTransitionGestureState, self.bounds.width > 0.0 {
+                    var fraction = recognizer.translation(in: self).x / self.bounds.width
+                    if centralIndex <= 0 {
+                        fraction = min(0.0, fraction)
+                    }
+                    if centralIndex >= component.contents.count - 1 {
+                        fraction = max(0.0, fraction)
+                    }
+                    paneTransitionGestureState.fraction = fraction
                     
                     self.paneTransitionGestureState = paneTransitionGestureState
                     self.state?.updated(transition: .immediate)
@@ -554,6 +565,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 }
             }
             
+            let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: effectiveTopPanelHeight), size: CGSize(width: availableSize.width, height: availableSize.height - effectiveTopPanelHeight - contentInsets.bottom + bottomPanelOffset))
             if let contentBackground = component.contentBackground {
                 let contentBackgroundView: ComponentHostView<Empty>
                 var contentBackgroundTransition = panelStateTransition
@@ -565,13 +577,13 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     self.contentBackgroundView = contentBackgroundView
                     self.insertSubview(contentBackgroundView, at: 0)
                 }
-                let contentBackgroundSize = contentBackgroundView.update(
+                let _ = contentBackgroundView.update(
                     transition: contentBackgroundTransition,
                     component: contentBackground,
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: availableSize.height - effectiveTopPanelHeight - contentInsets.bottom + bottomPanelOffset)
+                    containerSize: backgroundFrame.size
                 )
-                contentBackgroundTransition.setFrame(view: contentBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveTopPanelHeight), size: contentBackgroundSize))
+                contentBackgroundTransition.setFrame(view: contentBackgroundView, frame: backgroundFrame)
             } else {
                 if let contentBackgroundView = self.contentBackgroundView {
                     self.contentBackgroundView = nil
@@ -690,6 +702,10 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                                     }
                                 }
                             })
+                        }
+                        
+                        if let contentViewWithBackground = contentView.view.componentView as? PagerContentViewWithBackground {
+                            contentViewWithBackground.pagerUpdateBackground(backgroundFrame: backgroundFrame, transition: contentTransition)
                         }
                     }
                 }

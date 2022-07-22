@@ -118,6 +118,16 @@ static DCTELEM std_luminance_quant_tbl[DCTSIZE2] = {
     49,  64,  78,  87, 103, 121, 120, 101,
     72,  92,  95,  98, 112, 100, 103,  99
 };
+static DCTELEM std_chrominance_quant_tbl[DCTSIZE2] = {
+  17,  18,  24,  47,  99,  99,  99,  99,
+  18,  21,  26,  66,  99,  99,  99,  99,
+  24,  26,  56,  99,  99,  99,  99,  99,
+  47,  66,  99,  99,  99,  99,  99,  99,
+  99,  99,  99,  99,  99,  99,  99,  99,
+  99,  99,  99,  99,  99,  99,  99,  99,
+  99,  99,  99,  99,  99,  99,  99,  99,
+  99,  99,  99,  99,  99,  99,  99,  99
+};
 
 int jpeg_quality_scaling(int quality)
 /* Convert a user-specified quality rating to a percentage scaling factor
@@ -143,7 +153,7 @@ int jpeg_quality_scaling(int quality)
     return quality;
 }
 
-void jpeg_add_quant_table(DCTELEM *qtable, DCTELEM *basicTable, int scale_factor, bool forceBaseline)
+void jpeg_add_quant_table(DCTELEM *qtable, DCTELEM const *basicTable, int scale_factor, bool forceBaseline)
 /* Define a quantization table equal to the basic_table times
  * a scale factor (given as a percentage).
  * If force_baseline is TRUE, the computed quantization table entries
@@ -164,7 +174,7 @@ void jpeg_add_quant_table(DCTELEM *qtable, DCTELEM *basicTable, int scale_factor
     }
 }
 
-void jpeg_set_quality(DCTELEM *qtable, int quality)
+void jpeg_set_quality(DCTELEM *qtable, DCTELEM const *basicTable, int quality)
 /* Set or change the 'quality' (quantization) setting, using default tables.
  * This is the standard quality-adjusting entry point for typical user
  * interfaces; only those who want detailed control over quantization tables
@@ -175,10 +185,10 @@ void jpeg_set_quality(DCTELEM *qtable, int quality)
     quality = jpeg_quality_scaling(quality);
     
     /* Set up standard quality tables */
-    jpeg_add_quant_table(qtable, std_luminance_quant_tbl, quality, false);
+    jpeg_add_quant_table(qtable, basicTable, quality, false);
 }
 
-void getDivisors(DCTELEM *dtbl, DCTELEM *qtable) {
+void getDivisors(DCTELEM *dtbl, DCTELEM const *qtable) {
 #define CONST_BITS  14
 #define RIGHT_SHIFT(x, shft)    ((x) >> (shft))
     
@@ -234,21 +244,14 @@ void quantize(JCOEFPTR coef_block, DCTELEM *divisors, DCTELEM *workspace)
     }
 }
 
-void generateForwardDctData(int quality, std::vector<uint8_t> &data) {
+void generateForwardDctData(DCTELEM const *qtable, std::vector<uint8_t> &data) {
     data.resize(DCTSIZE2 * 4 * sizeof(DCTELEM));
-    
-    DCTELEM qtable[DCTSIZE2];
-    jpeg_set_quality(qtable, quality);
-    
     getDivisors((DCTELEM *)data.data(), qtable);
 }
 
-void generateInverseDctData(int quality, std::vector<uint8_t> &data) {
+void generateInverseDctData(DCTELEM const *qtable, std::vector<uint8_t> &data) {
     data.resize(DCTSIZE2 * sizeof(IFAST_MULT_TYPE));
     IFAST_MULT_TYPE *ifmtbl = (IFAST_MULT_TYPE *)data.data();
-    
-    DCTELEM qtable[DCTSIZE2];
-    jpeg_set_quality(qtable, quality);
     
 #define CONST_BITS  14
     static const int16_t aanscales[DCTSIZE2] = {
@@ -338,13 +341,32 @@ void performInverseDct(int16_t const * coefficients, uint8_t *pixels, int width,
 
 namespace dct {
 
+DCTTable DCTTable::generate(int quality, bool isChroma) {
+    DCTTable result;
+    result.table.resize(DCTSIZE2);
+    
+    if (isChroma) {
+        jpeg_set_quality(result.table.data(), std_chrominance_quant_tbl, quality);
+    } else {
+        jpeg_set_quality(result.table.data(), std_luminance_quant_tbl, quality);
+    }
+    
+    return result;
+}
+
+DCTTable DCTTable::initializeEmpty() {
+    DCTTable result;
+    result.table.resize(DCTSIZE2);
+    return result;
+}
+
 class DCTInternal {
 public:
-    DCTInternal(int quality) {
+    DCTInternal(DCTTable const &dctTable) {
         auxiliaryData = createDctAuxiliaryData();
         
-        generateForwardDctData(quality, forwardDctData);
-        generateInverseDctData(quality, inverseDctData);
+        generateForwardDctData(dctTable.table.data(), forwardDctData);
+        generateInverseDctData(dctTable.table.data(), inverseDctData);
     }
     
     ~DCTInternal() {
@@ -357,8 +379,8 @@ public:
     std::vector<uint8_t> inverseDctData;
 };
 
-DCT::DCT(int quality) {
-    _internal = new DCTInternal(quality);
+DCT::DCT(DCTTable const &dctTable) {
+    _internal = new DCTInternal(dctTable);
 }
 
 DCT::~DCT() {

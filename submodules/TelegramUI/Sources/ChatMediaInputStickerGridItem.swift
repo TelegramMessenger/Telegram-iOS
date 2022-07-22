@@ -74,7 +74,7 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
                 self.setupNode = setupNode
             case .clear:
                 let setupNode = HighlightableButtonNode()
-                setupNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme), for: [])
+                setupNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: theme.chat.inputMediaPanel.stickersSectionTextColor), for: [])
                 self.setupNode = setupNode
         }
         

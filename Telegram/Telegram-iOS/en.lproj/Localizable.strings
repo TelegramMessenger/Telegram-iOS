@@ -107,6 +107,7 @@
 "PUSH_MESSAGE_THEME" = "%1$@|changed chat theme to %2$@";
 "PUSH_MESSAGE_NOTHEME" = "%1$@|disabled chat theme";
 "PUSH_MESSAGE_RECURRING_PAY" = "%1$@|You were charged %2$@";
+"CHAT_MESSAGE_RECURRING_PAY" = "%1$@|You were charged %2$@";
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
