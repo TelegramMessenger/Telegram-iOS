@@ -59,14 +59,16 @@ public final class SoftwareVideoSource {
     fileprivate let size: Int32
     
     private let hintVP9: Bool
+    private let unpremultiplyAlpha: Bool
     
     private var enqueuedFrames: [(MediaTrackFrame, CGFloat, CGFloat, Bool)] = []
     private var hasReadToEnd: Bool = false
     
-    public init(path: String, hintVP9: Bool) {
+    public init(path: String, hintVP9: Bool, unpremultiplyAlpha: Bool) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
         self.hintVP9 = hintVP9
+        self.unpremultiplyAlpha = unpremultiplyAlpha
         
         var s = stat()
         stat(path, &s)
@@ -228,7 +230,7 @@ public final class SoftwareVideoSource {
             if let maxPts = maxPts, CMTimeCompare(decodableFrame.pts, maxPts) < 0 {
                 ptsOffset = maxPts
             }
-            result = (videoStream.decoder.decode(frame: decodableFrame, ptsOffset: ptsOffset, forceARGB: self.hintVP9), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+            result = (videoStream.decoder.decode(frame: decodableFrame, ptsOffset: ptsOffset, forceARGB: self.hintVP9, unpremultiplyAlpha: self.unpremultiplyAlpha), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
         } else {
             result = (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
         }

@@ -1449,6 +1449,8 @@ final class EntityKeyboardTopPanelComponent: Component {
             visibleBounds.origin.x -= 200.0
             visibleBounds.size.width += 400.0
             
+            let scale = max(0.01, self.visibilityFraction)
+            
             var validIds = Set<AnyHashable>()
             let visibleItemRange = itemLayout.visibleItemRange(for: visibleBounds)
             if !self.items.isEmpty && visibleItemRange.maxIndex >= visibleItemRange.minIndex {
@@ -1477,10 +1479,10 @@ final class EntityKeyboardTopPanelComponent: Component {
                         containerSize: itemOuterFrame.size
                     )
                     let itemFrame = CGRect(origin: CGPoint(x: itemOuterFrame.minX + floor((itemOuterFrame.width - itemSize.width) / 2.0), y: itemOuterFrame.minY + floor((itemOuterFrame.height - itemSize.height) / 2.0)), size: itemSize)
-                    /*if index == visibleItemRange.minIndex, !itemTransition.animation.isImmediate {
-                        print("\(index): \(itemView.frame) -> \(itemFrame)")
-                    }*/
                     itemTransition.setFrame(view: itemView, frame: itemFrame)
+                    
+                    transition.setSublayerTransform(view: itemView, transform: CATransform3DMakeScale(scale, scale, 1.0))
+                    transition.setAlpha(view: itemView, alpha: self.visibilityFraction)
                 }
             }
             var removedIds: [AnyHashable] = []
@@ -1803,6 +1805,13 @@ final class EntityKeyboardTopPanelComponent: Component {
             if !found {
                 self.highlightedIconBackgroundView.isHidden = true
             }*/
+        }
+        
+        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if self.visibilityFraction < 0.5 {
+                return nil
+            }
+            return super.hitTest(point, with: event)
         }
     }
     

@@ -588,7 +588,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
-    init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
 
         var hasSpoilers = true
@@ -651,6 +651,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.counterTextNode.textAlignment = .center
         
         super.init()
+        
+        self.context = context
         
         self.addSubnode(self.clippingNode)
         
@@ -1109,9 +1111,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     let baseFontSize = max(minInputFontSize, interfaceState.fontSize.baseDisplaySize)
                     
                     if let textInputNode = self.textInputNode {
-                        if let text = textInputNode.attributedText?.string {
+                        if let text = textInputNode.attributedText {
                             let range = textInputNode.selectedRange
-                            textInputNode.attributedText = NSAttributedString(string: text, font: Font.regular(baseFontSize), textColor: textColor)
+                            let updatedText = NSMutableAttributedString(attributedString: text)
+                            updatedText.addAttribute(NSAttributedString.Key.foregroundColor, value: textColor, range: NSRange(location: 0, length: updatedText.length))
+                            textInputNode.attributedText = updatedText
                             textInputNode.selectedRange = range
                         }
                         textInputNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(baseFontSize), NSAttributedString.Key.foregroundColor.rawValue: textColor]

@@ -599,7 +599,8 @@ private final class GroupHeaderLayer: UIView {
             color = theme.chat.inputPanel.primaryTextColor
             needsTintText = false
         } else {
-            color = theme.chat.inputMediaPanel.stickersSectionTextColor.withMultipliedAlpha(0.1)
+            //color = theme.chat.inputMediaPanel.stickersSectionTextColor.withMultipliedAlpha(0.1)
+            color = UIColor(white: 1.0, alpha: 0.0)
             needsTintText = true
         }
         let subtitleColor = theme.chat.inputMediaPanel.stickersSectionTextColor.withMultipliedAlpha(0.1)
@@ -1520,6 +1521,7 @@ public final class EmojiPagerContentComponent: Component {
             var itemFeaturedHeaderHeight: CGFloat
             var nativeItemSize: CGFloat
             let visibleItemSize: CGFloat
+            let playbackItemSize: CGFloat
             var horizontalSpacing: CGFloat
             var verticalSpacing: CGFloat
             var verticalGroupDefaultSpacing: CGFloat
@@ -1543,6 +1545,7 @@ public final class EmojiPagerContentComponent: Component {
                 case .compact:
                     minItemsPerRow = 8
                     self.nativeItemSize = 36.0
+                    self.playbackItemSize = 48.0
                     self.verticalSpacing = 9.0
                     minSpacing = 9.0
                     self.itemDefaultHeaderHeight = 24.0
@@ -1552,6 +1555,7 @@ public final class EmojiPagerContentComponent: Component {
                 case .detailed:
                     minItemsPerRow = 5
                     self.nativeItemSize = 71.0
+                    self.playbackItemSize = 96.0
                     self.verticalSpacing = 2.0
                     minSpacing = 12.0
                     self.itemDefaultHeaderHeight = 24.0
@@ -1820,79 +1824,59 @@ public final class EmojiPagerContentComponent: Component {
                 super.init()
                 
                 if let file = file {
-                    if file.isAnimatedSticker || file.isVideoEmoji {
-                        let loadAnimation: () -> Void = { [weak self] in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: { size, writer in
-                                let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
-                                
-                                let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
-                                    guard let result = result else {
-                                        return
-                                    }
-                                    
-                                    if file.isVideoEmoji {
-                                        cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
-                                    } else if file.isAnimatedSticker {
-                                        guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
-                                            writer.finish()
-                                            return
-                                        }
-                                        cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
-                                    } else {
-                                        cacheStillSticker(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
-                                    }
-                                })
-                                
-                                let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: stickerPackFileReference(file), resource: file.resource).start()
-                                
-                                return ActionDisposable {
-                                    dataDisposable.dispose()
-                                    fetchDisposable.dispose()
-                                }
-                            })
+                    let loadAnimation: () -> Void = { [weak self] in
+                        guard let strongSelf = self else {
+                            return
                         }
                         
-                        if attemptSynchronousLoad {
-                            if !renderer.loadFirstFrameSynchronously(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize) {
-                                self.updateDisplayPlaceholder(displayPlaceholder: true)
-                            }
+                        strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: { size, writer in
+                            let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
                             
-                            loadAnimation()
-                        } else {
-                            let _ = renderer.loadFirstFrame(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, completion: { [weak self] success in
-                                loadAnimation()
+                            let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
+                                guard let result = result else {
+                                    return
+                                }
                                 
-                                if !success {
-                                    guard let strongSelf = self else {
+                                if file.isVideoEmoji {
+                                    cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
+                                } else if file.isAnimatedSticker {
+                                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
+                                        writer.finish()
                                         return
                                     }
-                                    
-                                    strongSelf.updateDisplayPlaceholder(displayPlaceholder: true)
+                                    cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
+                                } else {
+                                    cacheStillSticker(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
                                 }
                             })
-                        }
-                    } else if let _ = file.dimensions {
-                        let isSmall: Bool = false
-                        self.disposable = (chatMessageSticker(account: context.account, file: file, small: isSmall, synchronousLoad: attemptSynchronousLoad)).start(next: { [weak self] resultTransform in
-                            let boundingSize = CGSize(width: 93.0, height: 93.0)
-                            let imageSize = boundingSize//dimensions.cgSize.aspectFitted(boundingSize)
                             
-                            if let image = resultTransform(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .fill(.clear)))?.generateImage() {
-                                Queue.mainQueue().async {
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    
-                                    strongSelf.contents = image.cgImage
-                                }
+                            let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: stickerPackFileReference(file), resource: file.resource).start()
+                            
+                            return ActionDisposable {
+                                dataDisposable.dispose()
+                                fetchDisposable.dispose()
                             }
                         })
+                    }
+                    
+                    if attemptSynchronousLoad {
+                        if !renderer.loadFirstFrameSynchronously(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize) {
+                            self.updateDisplayPlaceholder(displayPlaceholder: true)
+                        }
                         
-                        self.fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: isSmall)).start()
+                        loadAnimation()
+                    } else {
+                        let _ = renderer.loadFirstFrame(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, completion: { [weak self] success in
+                            loadAnimation()
+                            
+                            if !success {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                strongSelf.updateDisplayPlaceholder(displayPlaceholder: true)
+                            }
+                        })
                     }
                 } else if let staticEmoji = staticEmoji {
                     let image = generateImage(self.size, opaque: false, scale: min(UIScreenScale, 3.0), rotatedContext: { size, context in
@@ -1907,7 +1891,7 @@ public final class EmojiPagerContentComponent: Component {
                         let string = NSAttributedString(string: staticEmoji, font: Font.regular(floor(32.0 * scaleFactor)), textColor: .black)
                         let boundingRect = string.boundingRect(with: scaledSize, options: .usesLineFragmentOrigin, context: nil)
                         UIGraphicsPushContext(context)
-                        string.draw(at: CGPoint(x: (scaledSize.width - boundingRect.width) / 2.0 + boundingRect.minX, y: (scaledSize.height - boundingRect.height) / 2.0 + boundingRect.minY))
+                        string.draw(at: CGPoint(x: floor((scaledSize.width - boundingRect.width) / 2.0 + boundingRect.minX), y: floor((scaledSize.height - boundingRect.height) / 2.0 + boundingRect.minY)))
                         UIGraphicsPopContext()
                     })
                     self.contents = image?.cgImage
@@ -2120,8 +2104,8 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
-        private let shimmerHostView: PortalSourceView
-        private let standaloneShimmerEffect: StandaloneShimmerEffect
+        private let shimmerHostView: PortalSourceView?
+        private let standaloneShimmerEffect: StandaloneShimmerEffect?
         
         private let backgroundView: BlurredBackgroundView
         private var vibrancyEffectView: UIVisualEffectView?
@@ -2155,8 +2139,13 @@ public final class EmojiPagerContentComponent: Component {
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: nil)
             
-            self.shimmerHostView = PortalSourceView()
-            self.standaloneShimmerEffect = StandaloneShimmerEffect()
+            if ProcessInfo.processInfo.activeProcessorCount > 2 {
+                self.shimmerHostView = PortalSourceView()
+                self.standaloneShimmerEffect = StandaloneShimmerEffect()
+            } else {
+                self.shimmerHostView = nil
+                self.standaloneShimmerEffect = nil
+            }
             
             self.mirrorContentScrollView = UIView()
             self.mirrorContentScrollView.layer.anchorPoint = CGPoint()
@@ -2170,13 +2159,15 @@ public final class EmojiPagerContentComponent: Component {
             
             self.addSubview(self.backgroundView)
             
-            self.shimmerHostView.alpha = 0.0
-            self.addSubview(self.shimmerHostView)
+            if let shimmerHostView = self.shimmerHostView {
+                shimmerHostView.alpha = 0.0
+                self.addSubview(shimmerHostView)
+            }
             
             self.boundsChangeTrackerLayer.opacity = 0.0
             self.layer.addSublayer(self.boundsChangeTrackerLayer)
             self.boundsChangeTrackerLayer.didEnterHierarchy = { [weak self] in
-                self?.standaloneShimmerEffect.updateLayer()
+                self?.standaloneShimmerEffect?.updateLayer()
             }
             
             self.scrollView.delaysContentTouches = false
@@ -3304,6 +3295,7 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         let itemNativeFitSize = itemDimensions.fitted(CGSize(width: itemLayout.nativeItemSize, height: itemLayout.nativeItemSize))
                         let itemVisibleFitSize = itemDimensions.fitted(CGSize(width: itemLayout.visibleItemSize, height: itemLayout.visibleItemSize))
+                        let itemPlaybackSize = itemDimensions.fitted(CGSize(width: itemLayout.playbackItemSize, height: itemLayout.playbackItemSize))
                         
                         var animateItemIn = false
                         var updateItemLayerPlaceholder = false
@@ -3326,7 +3318,7 @@ public final class EmojiPagerContentComponent: Component {
                                 renderer: component.animationRenderer,
                                 placeholderColor: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1),
                                 blurredBadgeColor: theme.chat.inputPanel.panelBackgroundColor.withMultipliedAlpha(0.5),
-                                pointSize: itemVisibleFitSize,
+                                pointSize: item.staticEmoji == nil ? itemPlaybackSize : itemVisibleFitSize,
                                 onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
                                     guard let strongSelf = self else {
                                         return
@@ -3525,10 +3517,12 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         private func updateShimmerIfNeeded() {
-            if self.placeholdersContainerView.subviews.isEmpty {
-                self.standaloneShimmerEffect.layer = nil
-            } else {
-                self.standaloneShimmerEffect.layer = self.shimmerHostView.layer
+            if let standaloneShimmerEffect = self.standaloneShimmerEffect, let shimmerHostView = self.shimmerHostView {
+                if self.placeholdersContainerView.subviews.isEmpty {
+                    standaloneShimmerEffect.layer = nil
+                } else {
+                    standaloneShimmerEffect.layer = shimmerHostView.layer
+                }
             }
         }
         
@@ -3544,11 +3538,16 @@ public final class EmojiPagerContentComponent: Component {
             }
             
             if self.vibrancyEffectView == nil {
-                let blurEffect = UIBlurEffect(style: .extraLight)
+                let style: UIBlurEffect.Style
+                style = .extraLight
+                let blurEffect = UIBlurEffect(style: style)
                 let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
                 let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
                 self.vibrancyEffectView = vibrancyEffectView
                 self.backgroundView.addSubview(vibrancyEffectView)
+                for subview in vibrancyEffectView.subviews {
+                    let _ = subview
+                }
                 vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
             }
             
@@ -3577,11 +3576,15 @@ public final class EmojiPagerContentComponent: Component {
             
             self.pagerEnvironment = pagerEnvironment
             
-            transition.setFrame(view: self.shimmerHostView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            if let shimmerHostView = self.shimmerHostView {
+                transition.setFrame(view: shimmerHostView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            }
             
-            let shimmerBackgroundColor = keyboardChildEnvironment.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08)
-            let shimmerForegroundColor = keyboardChildEnvironment.theme.list.itemBlocksBackgroundColor.withMultipliedAlpha(0.15)
-            self.standaloneShimmerEffect.update(background: shimmerBackgroundColor, foreground: shimmerForegroundColor)
+            if let standaloneShimmerEffect = self.standaloneShimmerEffect {
+                let shimmerBackgroundColor = keyboardChildEnvironment.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08)
+                let shimmerForegroundColor = keyboardChildEnvironment.theme.list.itemBlocksBackgroundColor.withMultipliedAlpha(0.15)
+                standaloneShimmerEffect.update(background: shimmerBackgroundColor, foreground: shimmerForegroundColor)
+            }
             
             var previousItemPositions: [ItemLayer.Key: CGPoint]?
             

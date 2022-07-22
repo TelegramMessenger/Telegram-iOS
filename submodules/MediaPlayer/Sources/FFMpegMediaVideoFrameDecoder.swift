@@ -125,7 +125,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         }
     }
     
-    public func decode(frame: MediaTrackDecodableFrame, ptsOffset: CMTime?, forceARGB: Bool = false) -> MediaTrackFrame? {
+    public func decode(frame: MediaTrackDecodableFrame, ptsOffset: CMTime?, forceARGB: Bool = false, unpremultiplyAlpha: Bool = true) -> MediaTrackFrame? {
         if self.isError {
             return nil
         }
@@ -145,7 +145,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
                 if let ptsOffset = ptsOffset {
                     pts = CMTimeAdd(pts, ptsOffset)
                 }
-                return convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: frame.duration, forceARGB: forceARGB)
+                return convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: frame.duration, forceARGB: forceARGB, unpremultiplyAlpha: unpremultiplyAlpha)
             }
         }
         
@@ -268,7 +268,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         return UIImage(cgImage: image, scale: 1.0, orientation: .up)
     }
     
-    private func convertVideoFrame(_ frame: FFMpegAVFrame, pts: CMTime, dts: CMTime, duration: CMTime, forceARGB: Bool = false) -> MediaTrackFrame? {
+    private func convertVideoFrame(_ frame: FFMpegAVFrame, pts: CMTime, dts: CMTime, duration: CMTime, forceARGB: Bool = false, unpremultiplyAlpha: Bool = true) -> MediaTrackFrame? {
         if frame.data[0] == nil {
             return nil
         }
@@ -335,7 +335,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         var base: UnsafeMutableRawPointer
         if pixelFormat == kCVPixelFormatType_32ARGB {
             let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-            decodeYUVAPlanesToRGBA(frame.data[0], Int32(frame.lineSize[0]), frame.data[1], Int32(frame.lineSize[1]), frame.data[2], Int32(frame.lineSize[2]), hasAlpha, frame.data[3], CVPixelBufferGetBaseAddress(pixelBuffer)?.assumingMemoryBound(to: UInt8.self), Int32(frame.width), Int32(frame.height), Int32(bytesPerRow))
+            decodeYUVAPlanesToRGBA(frame.data[0], Int32(frame.lineSize[0]), frame.data[1], Int32(frame.lineSize[1]), frame.data[2], Int32(frame.lineSize[2]), hasAlpha, frame.data[3], CVPixelBufferGetBaseAddress(pixelBuffer)?.assumingMemoryBound(to: UInt8.self), Int32(frame.width), Int32(frame.height), Int32(bytesPerRow), unpremultiplyAlpha)
         } else {
             let srcPlaneSize = Int(frame.lineSize[1]) * Int(frame.height / 2)
             let uvPlaneSize = srcPlaneSize * 2
