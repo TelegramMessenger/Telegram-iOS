@@ -675,6 +675,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             }, schedule: { [weak textInputPanelNode] in
                 textInputPanelNode?.sendMessage(.schedule)
             })
+            controller.emojiViewProvider = textInputPanelNode.emojiViewProvider
             strongSelf.presentInGlobalOverlay(controller)
         }, openScheduledMessages: {
         }, openPeersNearby: {

@@ -4,18 +4,23 @@ import SwiftSignalKit
 
 public enum ChatTextInputAccessoryItem: Equatable {
     public enum Key: Hashable {
-        case keyboard
-        case stickers
-        case inputButtons
+        case input
+        case botInput
         case commands
         case silentPost
         case messageAutoremoveTimeout
         case scheduledMessages
     }
     
-    case keyboard
-    case stickers(isEnabled: Bool, isEmoji: Bool)
-    case inputButtons
+    public enum InputMode: Hashable {
+        case keyboard
+        case stickers
+        case emoji
+        case bot
+    }
+    case input(isEnabled: Bool, inputMode: InputMode)
+    case botInput(isEnabled: Bool, inputMode: InputMode)
+        
     case commands
     case silentPost(Bool)
     case messageAutoremoveTimeout(Int32?)
@@ -23,12 +28,10 @@ public enum ChatTextInputAccessoryItem: Equatable {
     
     public var key: Key {
         switch self {
-        case .keyboard:
-            return .keyboard
-        case .stickers:
-            return .stickers
-        case .inputButtons:
-            return .inputButtons
+        case .input:
+            return .input
+        case .botInput:
+            return .botInput
         case .commands:
             return .commands
         case .silentPost:

@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import AppBundle
 import ContextUI
+import TextFormat
 
 private let leftInset: CGFloat = 16.0
 private let rightInset: CGFloat = 16.0
@@ -158,6 +159,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     private let textInputNode: EditableTextNode
     private let attachment: Bool
     private let forwardedCount: Int?
+    private let hasEntityKeyboard: Bool
     
     private let send: (() -> Void)?
     private let cancel: (() -> Void)?
@@ -183,7 +185,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private var animateInputField = false
     
-    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
+    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool, forwardedCount: Int?, hasEntityKeyboard: Bool, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
         self.context = context
         self.presentationData = presentationData
         self.sourceSendButton = sourceSendButton
@@ -191,6 +193,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.textInputNode = textInputNode
         self.attachment = attachment
         self.forwardedCount = forwardedCount
+        self.hasEntityKeyboard = hasEntityKeyboard
         
         self.send = send
         self.cancel = cancel
@@ -422,7 +425,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let fromFrame = CGRect(origin: CGPoint(), size: CGSize(width: initialWidth, height: self.textFieldFrame.height + 2.0))
         let delta = (fromFrame.height - self.messageClipNode.bounds.height) / 2.0
         
-        let inputHeight = layout.inputHeight ?? 0.0
+        var inputHeight = layout.inputHeight ?? 0.0
+        if self.hasEntityKeyboard {
+            inputHeight = layout.standardInputHeight
+        }
+        
         var clipDelta = delta
         if inputHeight.isZero || layout.isNonExclusive {
             clipDelta -= self.contentContainerNode.frame.height + 16.0
@@ -531,7 +538,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let delta = (toFrame.height - self.messageClipNode.bounds.height) / 2.0
                 
         if cancel && self.animateInputField {
-            let inputHeight = layout.inputHeight ?? 0.0
+            var inputHeight = layout.inputHeight ?? 0.0
+            if self.hasEntityKeyboard {
+                inputHeight = layout.standardInputHeight
+            }
+            
             var clipDelta = delta
             if inputHeight.isZero || layout.isNonExclusive {
                 clipDelta -= self.contentContainerNode.frame.height + 16.0
@@ -589,8 +600,12 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         let menuHeightWithInset = contentSize.height + 16.0
         
-        let insets = layout.insets(options: [.statusBar, .input])
-        let inputHeight = layout.inputHeight ?? 0.0
+        var insets = layout.insets(options: [.statusBar, .input])
+        var inputHeight = layout.inputHeight ?? 0.0
+        if self.hasEntityKeyboard {
+            insets.bottom = max(insets.bottom, layout.standardInputHeight)
+            inputHeight = layout.standardInputHeight
+        }
         
         let contentOffset = self.scrollNode.view.contentOffset.y
         

@@ -314,13 +314,13 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
     
     switch chatPresentationInterfaceState.inputMode {
         case .media:
-            accessoryItems.append(.keyboard)
+            accessoryItems.append(.input(isEnabled: true, inputMode: .keyboard))
             return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .inputButtons:
-            return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
+            return ChatTextInputPanelState(accessoryItems: [.botInput(isEnabled: true, inputMode: .keyboard)], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .none, .text:
             if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
-                accessoryItems.append(.stickers(isEnabled: true, isEmoji: true))
+                accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
                 
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             } else {
@@ -371,13 +371,13 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     }
                     
                     if stickersEnabled {
-                        accessoryItems.append(.stickers(isEnabled: true, isEmoji: stickersAreEmoji))
+                        accessoryItems.append(.input(isEnabled: true, inputMode: stickersAreEmoji ? .emoji : .stickers))
                     } else {
-                        accessoryItems.append(.stickers(isEnabled: true, isEmoji: true))
+                        accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
                     }
                     
                     if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
-                        accessoryItems.append(.inputButtons)
+                        accessoryItems.append(.botInput(isEnabled: true, inputMode: .bot))
                     }
                 }
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)

@@ -489,6 +489,9 @@ private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutP
             methods.append(.savedCredentials(savedCredentials))
         }
     }
+    if !form.additionalPaymentMethods.isEmpty {
+        methods.append(contentsOf: form.additionalPaymentMethods.map { .other($0) })
+    }
     return methods
 }
 
@@ -1415,6 +1418,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                             }
                         }
                     })
+                    return
+                case let .other(method):
+                    let _ = method
                     return
             }
         }

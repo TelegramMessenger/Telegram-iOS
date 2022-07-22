@@ -329,6 +329,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }, schedule: { [weak textInputPanelNode] in
                 textInputPanelNode?.sendMessage(.schedule)
             })
+            controller.emojiViewProvider = textInputPanelNode.emojiViewProvider
             strongSelf.presentInGlobalOverlay(controller, nil)
         }, openScheduledMessages: {
         }, openPeersNearby: {

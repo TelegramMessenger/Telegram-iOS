@@ -143,6 +143,7 @@ public final class LottieAnimationComponent: Component {
                         }
                         strongSelf.didPlayToCompletion = true
                         let _ = strongSelf.update(component: component, availableSize: availableSize, transition: transition)
+                        strongSelf.currentCompletion = nil
                     }
                     animationView.loopMode = .playOnce
                 } else {
@@ -175,9 +176,9 @@ public final class LottieAnimationComponent: Component {
                         updatePlayback = true
                     }
                 }
+            } else {
+                self.component = component
             }
-            
-            self.component = component
             
             if updateColors, let animationView = self.animationView {
                 if let value = component.colors["__allcolors__"] {

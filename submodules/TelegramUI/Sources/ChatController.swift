@@ -1127,6 +1127,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         guard let packReference = packReferences.first, let strongSelf = self else {
                                             return
                                         }
+                                        strongSelf.chatDisplayNode.dismissTextInput()
                                         let controller = StickerPackScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(packReferences), parentNavigationController: strongSelf.effectiveNavigationController)
                                         strongSelf.present(controller, in: .window(.root))
                                     }
@@ -8446,6 +8447,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.controllerInteraction?.scheduleCurrentMessage()
                     }
                 })
+                controller.emojiViewProvider = strongSelf.chatDisplayNode.textInputPanelNode?.emojiViewProvider
                 strongSelf.sendMessageActionsController = controller
                 if layout.isNonExclusive {
                     strongSelf.present(controller, in: .window(.root))
@@ -15526,7 +15528,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if let tooltipController = self.mediaRecordingModeTooltipController {
             tooltipController.updateContent(.text(text), animated: true, extendTimer: true)
         } else if let rect = rect {
-            let tooltipController = TooltipController(content: .text(text), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize)
+            let tooltipController = TooltipController(content: .text(text), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, padding: 2.0)
             self.mediaRecordingModeTooltipController = tooltipController
             tooltipController.dismissed = { [weak self, weak tooltipController] _ in
                 if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRecordingModeTooltipController === tooltipController {
@@ -15547,7 +15549,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         self.sendingOptionsTooltipController?.dismiss()
-        let tooltipController = TooltipController(content: .text(self.presentationData.strings.Conversation_SendingOptionsTooltip), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 3.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+        let tooltipController = TooltipController(content: .text(self.presentationData.strings.Conversation_SendingOptionsTooltip), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 3.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: 2.0)
         self.sendingOptionsTooltipController = tooltipController
         tooltipController.dismissed = { [weak self, weak tooltipController] _ in
             if let strongSelf = self, let tooltipController = tooltipController, strongSelf.sendingOptionsTooltipController === tooltipController {

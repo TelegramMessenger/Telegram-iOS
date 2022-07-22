@@ -373,8 +373,17 @@ private final class GiftComponent: CombinedComponent {
             )
             
             let size = CGSize(width: context.availableSize.width, height: insets.top + title.size.height + spacing + subtitle.size.height + insets.bottom)
+            let distance = context.availableSize.width - insets.left - insets.right - label.size.width - subtitle.size.width - discountSize.width - 7.0
+            
+            let labelOriginY: CGFloat
+            if distance > 8.0 {
+                labelOriginY = size.height / 2.0
+            } else {
+                labelOriginY = insets.top + title.size.height / 2.0
+            }
+            
             context.add(label
-                .position(CGPoint(x: context.availableSize.width - insets.right - label.size.width / 2.0, y: size.height / 2.0))
+                .position(CGPoint(x: context.availableSize.width - insets.right - label.size.width / 2.0, y: labelOriginY))
             )
             
             context.add(check

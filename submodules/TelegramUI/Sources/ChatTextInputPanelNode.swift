@@ -59,9 +59,12 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         self.iconImageNode.isUserInteractionEnabled = false
         self.addSubnode(self.iconImageNode)
         
-        if case .stickers = item {
-            self.iconImageNode.isHidden = true
-            self.animationView = ComponentView<Empty>()
+        switch item {
+            case .input, .botInput:
+                self.iconImageNode.isHidden = true
+                self.animationView = ComponentView<Empty>()
+            default:
+                break
         }
         
         if let text = text {
@@ -116,12 +119,15 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
     
     static func imageAndInsets(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) -> (UIImage?, String?, String, CGFloat, UIEdgeInsets) {
         switch item {
-            case .keyboard:
-                return (PresentationResourcesChat.chatInputTextFieldKeyboardImage(theme), nil, strings.VoiceOver_Keyboard, 1.0, UIEdgeInsets())
-            case let .stickers(enabled, _):
-                return (PresentationResourcesChat.chatInputTextFieldStickersImage(theme), nil, strings.VoiceOver_Stickers, enabled ? 1.0 : 0.4, UIEdgeInsets())
-            case .inputButtons:
-                return (PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), nil, strings.VoiceOver_BotKeyboard, 1.0, UIEdgeInsets())
+            case let .input(isEnabled, inputMode), let .botInput(isEnabled, inputMode):
+                switch inputMode {
+                    case .keyboard:
+                        return (PresentationResourcesChat.chatInputTextFieldKeyboardImage(theme), nil, strings.VoiceOver_Keyboard, 1.0, UIEdgeInsets())
+                    case .stickers, .emoji:
+                        return (PresentationResourcesChat.chatInputTextFieldStickersImage(theme), nil, strings.VoiceOver_Stickers, isEnabled ? 1.0 : 0.4, UIEdgeInsets())
+                    case .bot:
+                        return (PresentationResourcesChat.chatInputTextFieldInputButtonsImage(theme), nil, strings.VoiceOver_BotKeyboard, 1.0, UIEdgeInsets())
+                }
             case .commands:
                 return (PresentationResourcesChat.chatInputTextFieldCommandsImage(theme), nil, strings.VoiceOver_BotCommands, 1.0, UIEdgeInsets())
             case let .silentPost(value):
@@ -143,7 +149,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
     
     static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
         switch item {
-        case .keyboard, .stickers, .inputButtons, .silentPost, .commands, .scheduledMessages:
+        case .input, .botInput, .silentPost, .commands, .scheduledMessages:
             return 32.0
         case let .messageAutoremoveTimeout(timeout):
             var imageWidth = (image?.size.width ?? 0.0) + CGFloat(8.0)
@@ -156,6 +162,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
     }
     
     func updateLayout(item: ChatTextInputAccessoryItem, size: CGSize) {
+        let previousItem = self.item
         self.item = item
         
         if let image = self.iconImageNode.image {
@@ -165,26 +172,112 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
             let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0) - bottomInset), size: image.size)
             self.iconImageNode.frame = imageFrame
             
-            if case let .stickers(_, isEmoji) = item, let animationView = self.animationView {
+            if let animationView = self.animationView {
                 let animationFrame = imageFrame.insetBy(dx: -4.0, dy: -4.0)
                 
-                var colors: [String: UIColor] = [:]
-                let colorKeys: [String] = [
+                var previousInputMode: ChatTextInputAccessoryItem.InputMode?
+                var inputMode: ChatTextInputAccessoryItem.InputMode?
+                
+                switch previousItem {
+                    case let .input(_, itemInputMode), let .botInput(_, itemInputMode):
+                        previousInputMode = itemInputMode
+                    default:
+                        break
+                }
+                switch item {
+                    case let .input(_, itemInputMode), let .botInput(_, itemInputMode):
+                        inputMode = itemInputMode
+                    default:
+                        break
+                }
+                
+                let emojiColorKeys = [
                     "Ellipse 33.Ellipse 33.Stroke 1",
                     "Ellipse 34.Ellipse 34.Stroke 1",
                     "Oval.Oval.Fill 1",
                     "Oval 2.Oval.Fill 1",
                     "Path 85.Path 85.Stroke 1"
                 ]
+                
+                var colorKeys: [String] = ["__allcolors__"]
+                let animationName: String
+                var animationMode: LottieAnimationComponent.AnimationItem.Mode = .still(position: .end)
+                if let inputMode = inputMode {
+                    switch inputMode {
+                        case .keyboard:
+                            if let previousInputMode = previousInputMode {
+                                if case .stickers = previousInputMode {
+                                    animationName = "anim_stickerToKey"
+                                    animationMode = .animating(loop: false)
+                                } else if case .emoji = previousInputMode {
+                                    animationName = "anim_smileToKey"
+                                    animationMode = .animating(loop: false)
+                                } else if case .bot = previousInputMode {
+                                    animationName = "anim_botToKey"
+                                    animationMode = .animating(loop: false)
+                                } else {
+                                    animationName = "anim_stickerToKey"
+                                }
+                            } else {
+                                animationName = "anim_stickerToKey"
+                            }
+                        case .stickers:
+                            if let previousInputMode = previousInputMode {
+                                if case .keyboard = previousInputMode {
+                                    animationName = "anim_keyToSticker"
+                                    animationMode = .animating(loop: false)
+                                } else if case .emoji = previousInputMode {
+                                    animationName = "anim_smileToSticker"
+                                    animationMode = .animating(loop: false)
+                                    colorKeys = emojiColorKeys
+                                } else {
+                                    animationName = "anim_keyToSticker"
+                                }
+                            } else {
+                                animationName = "anim_keyToSticker"
+                            }
+                        case .emoji:
+                            if let previousInputMode = previousInputMode {
+                                if case .keyboard = previousInputMode {
+                                    animationName = "anim_keyToSmile"
+                                    animationMode = .animating(loop: false)
+                                } else if case .stickers = previousInputMode {
+                                    animationName = "anim_stickerToSmile"
+                                    animationMode = .animating(loop: false)
+                                    colorKeys = emojiColorKeys
+                                } else {
+                                    animationName = "anim_keyToSmile"
+                                }
+                            } else {
+                                animationName = "anim_keyToSmile"
+                            }
+                        case .bot:
+                            if let previousInputMode = previousInputMode {
+                                if case .keyboard = previousInputMode {
+                                    animationName = "anim_keyToBot"
+                                    animationMode = .animating(loop: false)
+                                } else {
+                                    animationName = "anim_keyToBot"
+                                }
+                            } else {
+                                animationName = "anim_keyToBot"
+                            }
+                    }
+                } else {
+                    animationName = ""
+                }
+                 
+                var colors: [String: UIColor] = [:]
                 for colorKey in colorKeys {
                     colors[colorKey] = self.theme.chat.inputPanel.inputControlColor
                 }
+                
                 let _ = animationView.update(
                     transition: .immediate,
                     component: AnyComponent(LottieAnimationComponent(
                         animation: LottieAnimationComponent.AnimationItem(
-                            name: !isEmoji ? "anim_stickertosmile" : "anim_smiletosticker",
-                            mode: .animateTransitionFromPrevious
+                            name: animationName,
+                            mode: animationMode
                         ),
                         colors: colors,
                         size: animationFrame.size
@@ -193,6 +286,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                     containerSize: animationFrame.size
                 )
                 if let view = animationView.view {
+                    view.isUserInteractionEnabled = false
                     if view.superview == nil {
                         self.view.addSubview(view)
                     }
@@ -586,7 +680,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var touchDownGestureRecognizer: TouchDownGestureRecognizer?
     
-    private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
+    var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
     init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
@@ -2942,20 +3036,23 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         for (item, currentButton) in self.accessoryItemButtons {
             if currentButton === button {
                 switch item {
-                case let .stickers(enabled, _):
-                    if enabled {
-                        self.interfaceInteraction?.openStickers()
-                    } else {
-                        self.interfaceInteraction?.displayRestrictedInfo(.stickers, .tooltip)
+                case let .input(isEnabled, inputMode), let .botInput(isEnabled, inputMode):
+                    switch inputMode {
+                        case .keyboard:
+                            self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                                return (.text, state.keyboardButtonsMessage?.id)
+                            })
+                        case .stickers, .emoji:
+                            if isEnabled {
+                                self.interfaceInteraction?.openStickers()
+                            } else {
+                                self.interfaceInteraction?.displayRestrictedInfo(.stickers, .tooltip)
+                            }
+                        case .bot:
+                            self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                                return (.inputButtons, nil)
+                            })
                     }
-                case .keyboard:
-                    self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-                        return (.text, state.keyboardButtonsMessage?.id)
-                    })
-                case .inputButtons:
-                    self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-                        return (.inputButtons, nil)
-                    })
                 case .commands:
                     self.interfaceInteraction?.updateTextInputStateAndMode { _, inputMode in
                         return (ChatTextInputState(inputText: NSAttributedString(string: "/")), .text)
@@ -3011,7 +3108,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     func frameForStickersButton() -> CGRect? {
         for (item, button) in self.accessoryItemButtons {
-            if case .stickers = item {
+            if case let .input(_, inputMode) = item, case .stickers = inputMode {
                 return button.frame.insetBy(dx: 0.0, dy: 6.0)
             }
         }
