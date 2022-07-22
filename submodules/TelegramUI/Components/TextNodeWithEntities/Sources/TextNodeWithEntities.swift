@@ -127,14 +127,14 @@ public final class TextNodeWithEntities {
                     var found = false
                     string.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: fullRange, options: [], using: { value, range, stop in
                         if let value = value as? ChatTextInputTextCustomEmojiAttribute, let font = string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont {
-                            let updatedSubstring = NSMutableAttributedString(string: ".")
+                            let updatedSubstring = NSMutableAttributedString(string: "😀")
                             
                             let replacementRange = NSRange(location: 0, length: updatedSubstring.length)
                             updatedSubstring.addAttributes(string.attributes(at: range.location, effectiveRange: nil), range: replacementRange)
                             updatedSubstring.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: value, file: value.file, fontSize: font.pointSize), range: replacementRange)
                             updatedSubstring.addAttribute(originalTextAttributeKey, value: string.attributedSubstring(from: range).string, range: replacementRange)
                             
-                            let itemSize = font.pointSize * 24.0 / 17.0
+                            let itemSize = (font.pointSize * 24.0 / 17.0) * 0.5
                             
                             let runDelegateData = RunDelegateData(
                                 ascent: font.ascender,
@@ -230,7 +230,9 @@ public final class TextNodeWithEntities {
                     
                     let itemSize = floor(stickerItem.fontSize * 24.0 / 17.0)
                     
-                    let itemFrame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 0.0).center, size: CGSize()).insetBy(dx: -itemSize / 2.0, dy: -itemSize / 2.0)
+                    var itemFrame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 1.0).center, size: CGSize()).insetBy(dx: -itemSize / 2.0, dy: -itemSize / 2.0)
+                    itemFrame.origin.x = floorToScreenPixels(itemFrame.origin.x)
+                    itemFrame.origin.y = floorToScreenPixels(itemFrame.origin.y)
                     
                     let itemLayer: InlineStickerItemLayer
                     if let current = self.inlineStickerItemLayers[id] {

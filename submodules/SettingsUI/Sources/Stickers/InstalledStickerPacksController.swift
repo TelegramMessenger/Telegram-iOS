@@ -729,7 +729,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 
                 navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: action == .archive ? presentationData.strings.StickerPackActionInfo_ArchivedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(archivedItem.info.title).string, undo: true, info: archivedItem.info, topItem: archivedItem.topItems.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
                     if case .undo = action {
-                        let _ = context.engine.stickers.addStickerPackInteractively(info: archivedItem.info, items: items, positionInList: positionInList).start()
+                        let _ = context.engine.stickers.addStickerPackInteractively(info: archivedItem.info, items: items.compactMap({ $0 as? StickerPackItem }), positionInList: positionInList).start()
                     }
                     return true
                 }))

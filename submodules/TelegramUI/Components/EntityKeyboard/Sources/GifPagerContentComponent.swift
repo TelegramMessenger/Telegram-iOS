@@ -213,7 +213,7 @@ public final class GifPagerContentComponent: Component {
         return true
     }
     
-    public final class View: ContextControllerSourceView, UIScrollViewDelegate {
+    public final class View: ContextControllerSourceView, PagerContentViewWithBackground, UIScrollViewDelegate {
         private struct ItemGroupDescription: Equatable {
             let hasTitle: Bool
             let itemCount: Int
@@ -400,6 +400,8 @@ public final class GifPagerContentComponent: Component {
         private final class ContentScrollView: UIScrollView, PagerExpandableScrollView {
         }
         
+        private let backgroundView: BlurredBackgroundView
+        
         private let shimmerHostView: PortalSourceView
         private let standaloneShimmerEffect: StandaloneShimmerEffect
         
@@ -418,6 +420,8 @@ public final class GifPagerContentComponent: Component {
         private var currentLoadMoreToken: String?
         
         override init(frame: CGRect) {
+            self.backgroundView = BlurredBackgroundView(color: nil)
+            
             self.shimmerHostView = PortalSourceView()
             self.standaloneShimmerEffect = StandaloneShimmerEffect()
             
@@ -426,6 +430,8 @@ public final class GifPagerContentComponent: Component {
             self.scrollView = ContentScrollView()
             
             super.init(frame: frame)
+            
+            self.addSubview(self.backgroundView)
             
             self.shimmerHostView.alpha = 0.0
             self.addSubview(self.shimmerHostView)
@@ -743,6 +749,15 @@ public final class GifPagerContentComponent: Component {
             } else {
                 self.standaloneShimmerEffect.layer = self.shimmerHostView.layer
             }
+        }
+        
+        public func pagerUpdateBackground(backgroundFrame: CGRect, transition: Transition) {
+            guard let theme = self.theme else {
+                return
+            }
+            self.backgroundView.updateColor(color: theme.chat.inputMediaPanel.stickersBackgroundColor.withMultipliedAlpha(0.75), enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
+            transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
+            self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
         }
         
         func update(component: GifPagerContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {

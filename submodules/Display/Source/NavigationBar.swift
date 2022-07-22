@@ -327,6 +327,7 @@ open class BlurredBackgroundView: UIView {
         if let color = self._color, self.enableBlur && !sharedIsReduceTransparencyEnabled && ((color.alpha > .ulpOfOne && color.alpha < 0.95) || forceKeepBlur) {
             if self.effectView == nil {
                 let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+                //effectView.isHidden = true
 
                 for subview in effectView.subviews {
                     if subview.description.contains("VisualEffectSubview") {

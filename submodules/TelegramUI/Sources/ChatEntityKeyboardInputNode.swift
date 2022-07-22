@@ -86,7 +86,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
-    static func emojiInputData(context: AccountContext, inputInteraction: EmojiPagerContentComponent.InputInteraction, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError> {
+    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError> {
         let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
         |> map { peer -> Bool in
             guard case let .user(user) = peer else {
@@ -250,7 +250,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 context: context,
                 animationCache: animationCache,
                 animationRenderer: animationRenderer,
-                inputInteraction: inputInteraction,
+                inputInteractionHolder: EmojiPagerContentComponent.InputInteractionHolder(),
                 itemGroups: itemGroups.map { group -> EmojiPagerContentComponent.ItemGroup in
                     var hasClear = false
                     if group.id == AnyHashable("recent") {
@@ -291,321 +291,6 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
         |> distinctUntilChanged
         
-        let emojiInputInteraction = EmojiPagerContentComponent.InputInteraction(
-            performItemAction: { [weak interfaceInteraction, weak controllerInteraction] _, item, _, _, _ in
-                let _ = (hasPremium |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
-                    guard let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
-                        return
-                    }
-                    
-                    if let file = item.file {
-                        var text = "."
-                        var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
-                        loop: for attribute in file.attributes {
-                            switch attribute {
-                            case let .CustomEmoji(_, displayText, packReference):
-                                text = displayText
-                                emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: file.fileId.id, file: file)
-                                break loop
-                            default:
-                                break
-                            }
-                        }
-                        
-                        if file.isPremiumEmoji && !hasPremium {
-                            //TODO:localize
-                                                        
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Subscribe to Telegram Premium to unlock this emoji.", undoText: "More", customAction: { [weak controllerInteraction] in
-                                guard let controllerInteraction = controllerInteraction else {
-                                    return
-                                }
-                                
-                                var replaceImpl: ((ViewController) -> Void)?
-                                let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {
-                                    let controller = PremiumIntroScreen(context: context, source: .animatedEmoji)
-                                    replaceImpl?(controller)
-                                })
-                                replaceImpl = { [weak controller] c in
-                                    controller?.replace(with: c)
-                                }
-                                controllerInteraction.navigationController()?.pushViewController(controller)
-                                
-                                /*let controller = PremiumIntroScreen(context: context, source: .stickers)
-                                controllerInteraction.navigationController()?.pushViewController(controller)*/
-                            }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
-                            return
-                        }
-                        
-                        if let emojiAttribute = emojiAttribute {
-                            AudioServicesPlaySystemSound(0x450)
-                            interfaceInteraction.insertText(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute]))
-                        }
-                    } else if let staticEmoji = item.staticEmoji {
-                        AudioServicesPlaySystemSound(0x450)
-                        interfaceInteraction.insertText(NSAttributedString(string: staticEmoji, attributes: [:]))
-                    }
-                })
-            },
-            deleteBackwards: { [weak interfaceInteraction] in
-                guard let interfaceInteraction = interfaceInteraction else {
-                    return
-                }
-                interfaceInteraction.backwardsDeleteText()
-            },
-            openStickerSettings: {
-            },
-            addGroupAction: { [weak controllerInteraction] groupId, isPremiumLocked in
-                guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
-                    return
-                }
-                
-                if isPremiumLocked {
-                    let controller = PremiumIntroScreen(context: context, source: .stickers)
-                    controllerInteraction.navigationController()?.pushViewController(controller)
-                    
-                    return
-                }
-                
-                let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
-                let _ = (context.account.postbox.combinedView(keys: [viewKey])
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { views in
-                    guard let view = views.views[viewKey] as? OrderedItemListView else {
-                        return
-                    }
-                    for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
-                        if featuredEmojiPack.info.id == collectionId {
-                            let _ = context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
-                            
-                            break
-                        }
-                    }
-                })
-            },
-            clearGroup: { [weak controllerInteraction] groupId in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                if groupId == AnyHashable("recent") {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
-                    var items: [ActionSheetItem] = []
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        let _ = context.engine.stickers.clearRecentlyUsedEmoji().start()
-                    }))
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])])
-                    controllerInteraction.presentController(actionSheet, nil)
-                }
-            },
-            pushController: { [weak controllerInteraction] controller in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                controllerInteraction.navigationController()?.pushViewController(controller)
-            },
-            presentController: { [weak controllerInteraction] controller in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                controllerInteraction.presentController(controller, nil)
-            },
-            presentGlobalOverlayController: { [weak controllerInteraction] controller in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                controllerInteraction.presentGlobalOverlayController(controller, nil)
-            },
-            navigationController: { [weak controllerInteraction] in
-                return controllerInteraction?.navigationController()
-            },
-            sendSticker: { [weak controllerInteraction] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                let _ = controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer)
-            },
-            chatPeerId: chatPeerId
-        )
-        let stickerInputInteraction = EmojiPagerContentComponent.InputInteraction(
-            performItemAction: { [weak controllerInteraction, weak interfaceInteraction] groupId, item, view, rect, layer in
-                let _ = (hasPremium |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
-                    guard let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
-                        return
-                    }
-                    guard let file = item.file else {
-                        return
-                    }
-                    
-                    if groupId == AnyHashable("featuredTop") {
-                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
-                        let _ = (context.account.postbox.combinedView(keys: [viewKey])
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak controllerInteraction] views in
-                            guard let controllerInteraction = controllerInteraction else {
-                                return
-                            }
-                            guard let view = views.views[viewKey] as? OrderedItemListView else {
-                                return
-                            }
-                            for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
-                                if featuredStickerPack.topItems.contains(where: { $0.file.fileId == file.fileId }) {
-                                    controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
-                                        context: context,
-                                        highlightedPackId: featuredStickerPack.info.id,
-                                        sendSticker: { [weak controllerInteraction] fileReference, sourceNode, sourceRect in
-                                            guard let controllerInteraction = controllerInteraction else {
-                                                return false
-                                            }
-                                            return controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
-                                        }
-                                    ))
-                                    
-                                    break
-                                }
-                            }
-                        })
-                    } else {
-                        if file.isPremiumSticker && !hasPremium {
-                            let controller = PremiumIntroScreen(context: context, source: .stickers)
-                            controllerInteraction.navigationController()?.pushViewController(controller)
-                            
-                            return
-                        }
-                        let _ = interfaceInteraction.sendSticker(.standalone(media: file), false, view, rect, layer)
-                    }
-                })
-            },
-            deleteBackwards: { [weak interfaceInteraction] in
-                guard let interfaceInteraction = interfaceInteraction else {
-                    return
-                }
-                interfaceInteraction.backwardsDeleteText()
-            },
-            openStickerSettings: { [weak controllerInteraction] in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                let controller = installedStickerPacksController(context: context, mode: .modal)
-                controller.navigationPresentation = .modal
-                controllerInteraction.navigationController()?.pushViewController(controller)
-            },
-            addGroupAction: { groupId, isPremiumLocked in
-                guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
-                    return
-                }
-                
-                if isPremiumLocked {
-                    let controller = PremiumIntroScreen(context: context, source: .stickers)
-                    controllerInteraction.navigationController()?.pushViewController(controller)
-                    
-                    return
-                }
-                
-                let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
-                let _ = (context.account.postbox.combinedView(keys: [viewKey])
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { views in
-                    guard let view = views.views[viewKey] as? OrderedItemListView else {
-                        return
-                    }
-                    for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
-                        if featuredStickerPack.info.id == collectionId {
-                            //let _ = context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
-                            
-                            let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), forceActualized: false)
-                            |> mapToSignal { result -> Signal<Void, NoError> in
-                                switch result {
-                                case let .result(info, items, installed):
-                                    if installed {
-                                        return .complete()
-                                    } else {
-                                        return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
-                                    }
-                                case .fetching:
-                                    break
-                                case .none:
-                                    break
-                                }
-                                return .complete()
-                            }
-                            |> deliverOnMainQueue).start(completed: {
-                            })
-                            
-                            break
-                        }
-                    }
-                })
-            },
-            clearGroup: { [weak controllerInteraction] groupId in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                if groupId == AnyHashable("recent") {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
-                    var items: [ActionSheetItem] = []
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
-                    }))
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])])
-                    controllerInteraction.presentController(actionSheet, nil)
-                } else if groupId == AnyHashable("featuredTop") {
-                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
-                    let _ = (context.account.postbox.combinedView(keys: [viewKey])
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { views in
-                        guard let view = views.views[viewKey] as? OrderedItemListView else {
-                            return
-                        }
-                        var stickerPackIds: [Int64] = []
-                        for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
-                            stickerPackIds.append(featuredStickerPack.info.id.id)
-                        }
-                        let _ = ApplicationSpecificNotice.setDismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager, values: stickerPackIds).start()
-                    })
-                }
-            },
-            pushController: { [weak controllerInteraction] controller in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                controllerInteraction.navigationController()?.pushViewController(controller)
-            },
-            presentController: { [weak controllerInteraction] controller in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                controllerInteraction.presentController(controller, nil)
-            },
-            presentGlobalOverlayController: { [weak controllerInteraction] controller in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                controllerInteraction.presentGlobalOverlayController(controller, nil)
-            },
-            navigationController: { [weak controllerInteraction] in
-                return controllerInteraction?.navigationController()
-            },
-            sendSticker: { [weak controllerInteraction] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                let _ = controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer)
-            },
-            chatPeerId: chatPeerId
-        )
-        
         let animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
             return TempBox.shared.tempFile(fileName: "file").path
         })
@@ -616,7 +301,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             animationRenderer = MultiAnimationRendererImpl()
         //}
         
-        let emojiItems = emojiInputData(context: context, inputInteraction: emojiInputInteraction, animationCache: animationCache, animationRenderer: animationRenderer)
+        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.PremiumStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
@@ -863,7 +548,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 context: context,
                 animationCache: animationCache,
                 animationRenderer: animationRenderer,
-                inputInteraction: stickerInputInteraction,
+                inputInteractionHolder: EmojiPagerContentComponent.InputInteractionHolder(),
                 itemGroups: itemGroups.map { group -> EmojiPagerContentComponent.ItemGroup in
                     var hasClear = false
                     var isEmbedded = false
@@ -1028,6 +713,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     var switchToTextInput: (() -> Void)?
     
     private var currentState: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool)?
+    
+    private var scheduledContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
     private var scheduledInnerTransition: Transition?
     
     private var gifMode: GifPagerContentComponent.Subject? {
@@ -1253,7 +940,10 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     private let gifComponent = Promise<EntityKeyboardGifContent>()
     private var gifInputInteraction: GifPagerContentComponent.InputInteraction?
     
-    init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction?) {
+    fileprivate var emojiInputInteraction: EmojiPagerContentComponent.InputInteraction?
+    private var stickerInputInteraction: EmojiPagerContentComponent.InputInteraction?
+    
+    init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
         self.context = context
         self.currentInputData = currentInputData
         self.defaultToEmojiTab = defaultToEmojiTab
@@ -1271,6 +961,331 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         self.externalTopPanelContainerImpl = PagerExternalTopPanelContainer()
         
+        let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> map { peer -> Bool in
+            guard case let .user(user) = peer else {
+                return false
+            }
+            return user.isPremium
+        }
+        |> distinctUntilChanged
+        
+        self.emojiInputInteraction = EmojiPagerContentComponent.InputInteraction(
+            performItemAction: { [weak interfaceInteraction, weak controllerInteraction] _, item, _, _, _ in
+                let _ = (hasPremium |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
+                    guard let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
+                        return
+                    }
+                    
+                    if let file = item.file {
+                        var text = "."
+                        var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                        loop: for attribute in file.attributes {
+                            switch attribute {
+                            case let .CustomEmoji(_, displayText, packReference):
+                                text = displayText
+                                emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: file.fileId.id, file: file)
+                                break loop
+                            default:
+                                break
+                            }
+                        }
+                        
+                        if file.isPremiumEmoji && !hasPremium {
+                            //TODO:localize
+                                                        
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Subscribe to Telegram Premium to unlock this emoji.", undoText: "More", customAction: { [weak controllerInteraction] in
+                                guard let controllerInteraction = controllerInteraction else {
+                                    return
+                                }
+                                
+                                var replaceImpl: ((ViewController) -> Void)?
+                                let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {
+                                    let controller = PremiumIntroScreen(context: context, source: .animatedEmoji)
+                                    replaceImpl?(controller)
+                                })
+                                replaceImpl = { [weak controller] c in
+                                    controller?.replace(with: c)
+                                }
+                                controllerInteraction.navigationController()?.pushViewController(controller)
+                                
+                                /*let controller = PremiumIntroScreen(context: context, source: .stickers)
+                                controllerInteraction.navigationController()?.pushViewController(controller)*/
+                            }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                            return
+                        }
+                        
+                        if let emojiAttribute = emojiAttribute {
+                            AudioServicesPlaySystemSound(0x450)
+                            interfaceInteraction.insertText(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute]))
+                        }
+                    } else if let staticEmoji = item.staticEmoji {
+                        AudioServicesPlaySystemSound(0x450)
+                        interfaceInteraction.insertText(NSAttributedString(string: staticEmoji, attributes: [:]))
+                    }
+                })
+            },
+            deleteBackwards: { [weak interfaceInteraction] in
+                guard let interfaceInteraction = interfaceInteraction else {
+                    return
+                }
+                interfaceInteraction.backwardsDeleteText()
+            },
+            openStickerSettings: {
+            },
+            addGroupAction: { [weak self, weak controllerInteraction] groupId, isPremiumLocked in
+                guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
+                    return
+                }
+                
+                if isPremiumLocked {
+                    let controller = PremiumIntroScreen(context: context, source: .stickers)
+                    controllerInteraction.navigationController()?.pushViewController(controller)
+                    
+                    return
+                }
+                
+                let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+                let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { views in
+                    guard let view = views.views[viewKey] as? OrderedItemListView else {
+                        return
+                    }
+                    for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                        if featuredEmojiPack.info.id == collectionId {
+                            if let strongSelf = self {
+                                strongSelf.scheduledContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId))
+                            }
+                            let _ = context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
+                            
+                            break
+                        }
+                    }
+                })
+            },
+            clearGroup: { [weak controllerInteraction] groupId in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                if groupId == AnyHashable("recent") {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        let _ = context.engine.stickers.clearRecentlyUsedEmoji().start()
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    controllerInteraction.presentController(actionSheet, nil)
+                }
+            },
+            pushController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.navigationController()?.pushViewController(controller)
+            },
+            presentController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.presentController(controller, nil)
+            },
+            presentGlobalOverlayController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.presentGlobalOverlayController(controller, nil)
+            },
+            navigationController: { [weak controllerInteraction] in
+                return controllerInteraction?.navigationController()
+            },
+            sendSticker: { [weak controllerInteraction] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                let _ = controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer)
+            },
+            chatPeerId: chatPeerId
+        )
+        
+        self.stickerInputInteraction = EmojiPagerContentComponent.InputInteraction(
+            performItemAction: { [weak controllerInteraction, weak interfaceInteraction] groupId, item, view, rect, layer in
+                let _ = (hasPremium |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
+                    guard let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
+                        return
+                    }
+                    guard let file = item.file else {
+                        return
+                    }
+                    
+                    if groupId == AnyHashable("featuredTop") {
+                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                        let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak controllerInteraction] views in
+                            guard let controllerInteraction = controllerInteraction else {
+                                return
+                            }
+                            guard let view = views.views[viewKey] as? OrderedItemListView else {
+                                return
+                            }
+                            for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                                if featuredStickerPack.topItems.contains(where: { $0.file.fileId == file.fileId }) {
+                                    controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
+                                        context: context,
+                                        highlightedPackId: featuredStickerPack.info.id,
+                                        sendSticker: { [weak controllerInteraction] fileReference, sourceNode, sourceRect in
+                                            guard let controllerInteraction = controllerInteraction else {
+                                                return false
+                                            }
+                                            return controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
+                                        }
+                                    ))
+                                    
+                                    break
+                                }
+                            }
+                        })
+                    } else {
+                        if file.isPremiumSticker && !hasPremium {
+                            let controller = PremiumIntroScreen(context: context, source: .stickers)
+                            controllerInteraction.navigationController()?.pushViewController(controller)
+                            
+                            return
+                        }
+                        let _ = interfaceInteraction.sendSticker(.standalone(media: file), false, view, rect, layer)
+                    }
+                })
+            },
+            deleteBackwards: { [weak interfaceInteraction] in
+                guard let interfaceInteraction = interfaceInteraction else {
+                    return
+                }
+                interfaceInteraction.backwardsDeleteText()
+            },
+            openStickerSettings: { [weak controllerInteraction] in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                let controller = installedStickerPacksController(context: context, mode: .modal)
+                controller.navigationPresentation = .modal
+                controllerInteraction.navigationController()?.pushViewController(controller)
+            },
+            addGroupAction: { groupId, isPremiumLocked in
+                guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
+                    return
+                }
+                
+                if isPremiumLocked {
+                    let controller = PremiumIntroScreen(context: context, source: .stickers)
+                    controllerInteraction.navigationController()?.pushViewController(controller)
+                    
+                    return
+                }
+                
+                let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { views in
+                    guard let view = views.views[viewKey] as? OrderedItemListView else {
+                        return
+                    }
+                    for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                        if featuredStickerPack.info.id == collectionId {
+                            let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), forceActualized: false)
+                            |> mapToSignal { result -> Signal<Void, NoError> in
+                                switch result {
+                                case let .result(info, items, installed):
+                                    if installed {
+                                        return .complete()
+                                    } else {
+                                        return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                    }
+                                case .fetching:
+                                    break
+                                case .none:
+                                    break
+                                }
+                                return .complete()
+                            }
+                            |> deliverOnMainQueue).start(completed: {
+                            })
+                            
+                            break
+                        }
+                    }
+                })
+            },
+            clearGroup: { [weak controllerInteraction] groupId in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                if groupId == AnyHashable("recent") {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    controllerInteraction.presentController(actionSheet, nil)
+                } else if groupId == AnyHashable("featuredTop") {
+                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                    let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { views in
+                        guard let view = views.views[viewKey] as? OrderedItemListView else {
+                            return
+                        }
+                        var stickerPackIds: [Int64] = []
+                        for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                            stickerPackIds.append(featuredStickerPack.info.id.id)
+                        }
+                        let _ = ApplicationSpecificNotice.setDismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager, values: stickerPackIds).start()
+                    })
+                }
+            },
+            pushController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.navigationController()?.pushViewController(controller)
+            },
+            presentController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.presentController(controller, nil)
+            },
+            presentGlobalOverlayController: { [weak controllerInteraction] controller in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                controllerInteraction.presentGlobalOverlayController(controller, nil)
+            },
+            navigationController: { [weak controllerInteraction] in
+                return controllerInteraction?.navigationController()
+            },
+            sendSticker: { [weak controllerInteraction] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+                let _ = controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer)
+            },
+            chatPeerId: chatPeerId
+        )
         
         self.inputDataDisposable = (combineLatest(queue: .mainQueue(),
             updatedInputData,
@@ -1295,7 +1310,14 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             }
             
             if useAnimation {
-                transition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(EmojiPagerContentComponent.ContentAnimation(type: .generic))
+                let contentAnimation: EmojiPagerContentComponent.ContentAnimation
+                if let scheduledContentAnimationHint = strongSelf.scheduledContentAnimationHint {
+                    strongSelf.scheduledContentAnimationHint = nil
+                    contentAnimation = scheduledContentAnimationHint
+                } else {
+                    contentAnimation = EmojiPagerContentComponent.ContentAnimation(type: .generic)
+                }
+                transition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
             }
             strongSelf.currentInputData = inputData
             strongSelf.performLayout(transition: transition)
@@ -1458,6 +1480,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             stickerContent = nil
             gifContent = nil
         }
+        
+        stickerContent?.inputInteractionHolder.inputInteraction = self.stickerInputInteraction
+        self.currentInputData.emoji.inputInteractionHolder.inputInteraction = self.emojiInputInteraction
         
         let entityKeyboardSize = self.entityKeyboardView.update(
             transition: mappedTransition,
@@ -1824,7 +1849,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, inputInteraction: inputInteraction, animationCache: self.animationCache, animationRenderer: self.animationRenderer).start(next: { value in
+        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })
@@ -1841,9 +1866,12 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                 ),
                 updatedInputData: .never(),
                 defaultToEmojiTab: true,
-                controllerInteraction: nil
+                controllerInteraction: nil,
+                interfaceInteraction: nil,
+                chatPeerId: nil
             )
             self.inputNode = inputNode
+            inputNode.emojiInputInteraction = inputInteraction
             inputNode.externalTopPanelContainerImpl = nil
             inputNode.switchToTextInput = { [weak self] in
                 self?.switchToKeyboard?()

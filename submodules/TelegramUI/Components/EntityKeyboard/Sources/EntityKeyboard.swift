@@ -171,6 +171,8 @@ public final class EntityKeyboardComponent: Component {
     }
     
     public final class View: UIView {
+        private let tintContainerView: UIView
+        
         private let pagerView: ComponentHostView<EntityKeyboardChildEnvironment>
         
         private var component: EntityKeyboardComponent?
@@ -191,6 +193,7 @@ public final class EntityKeyboardComponent: Component {
         }
         
         override init(frame: CGRect) {
+            self.tintContainerView = UIView()
             self.pagerView = ComponentHostView<EntityKeyboardChildEnvironment>()
             
             super.init(frame: frame)
@@ -392,7 +395,7 @@ public final class EntityKeyboardComponent: Component {
                         maxSize: nil
                     )),
                     action: {
-                        stickerContent.inputInteraction.openStickerSettings()
+                        stickerContent.inputInteractionHolder.inputInteraction?.openStickerSettings()
                     }
                 ).minSize(CGSize(width: 38.0, height: 38.0)))))
             }
@@ -494,7 +497,7 @@ public final class EntityKeyboardComponent: Component {
                     component.switchToTextInput()
                 }
             ).minSize(CGSize(width: 38.0, height: 38.0)))))
-            let deleteBackwards = component.emojiContent.inputInteraction.deleteBackwards
+            let deleteBackwards = component.emojiContent.inputInteractionHolder.inputInteraction?.deleteBackwards
             contentAccessoryRightButtons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(Button(
                 content: AnyComponent(BundleIconComponent(
                     name: "Chat/Input/Media/EntityInputClearIcon",
@@ -502,11 +505,11 @@ public final class EntityKeyboardComponent: Component {
                     maxSize: nil
                 )),
                 action: {
-                    deleteBackwards()
+                    deleteBackwards?()
                     AudioServicesPlaySystemSound(1155)
                 }
             ).withHoldAction({
-                deleteBackwards()
+                deleteBackwards?()
                 AudioServicesPlaySystemSound(1155)
             }).minSize(CGSize(width: 38.0, height: 38.0)))))
             
@@ -529,9 +532,10 @@ public final class EntityKeyboardComponent: Component {
                     contentAccessoryLeftButtons: contentAccessoryLeftButtons,
                     contentAccessoryRightButtons: contentAccessoryRightButtons,
                     defaultId: component.defaultToEmojiTab ? "emoji" : "stickers",
-                    contentBackground: AnyComponent(BlurredBackgroundComponent(
-                        color: component.theme.chat.inputMediaPanel.stickersBackgroundColor.withMultipliedAlpha(0.75)
-                    )),
+                    contentBackground: nil/*AnyComponent(BlurredBackgroundComponent(
+                        color: component.theme.chat.inputMediaPanel.stickersBackgroundColor.withMultipliedAlpha(0.75),
+                        tintContainerView: self.tintContainerView
+                    ))*/,
                     topPanel: AnyComponent(EntityKeyboardTopContainerPanelComponent(
                         theme: component.theme,
                         overflowHeight: component.hiddenInputHeight,
@@ -542,7 +546,7 @@ public final class EntityKeyboardComponent: Component {
                         theme: component.theme,
                         bottomInset: component.bottomInset,
                         deleteBackwards: { [weak self] in
-                            self?.component?.emojiContent.inputInteraction.deleteBackwards()
+                            self?.component?.emojiContent.inputInteractionHolder.inputInteraction?.deleteBackwards()
                             AudioServicesPlaySystemSound(0x451)
                         }
                     )),

@@ -42,6 +42,24 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     private var cachedMaskBackgroundImage: (CGPoint, UIImage, [CGRect])?
     private var absoluteRect: (CGRect, CGSize)?
     
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            if oldValue != self.visibility {
+                switch self.visibility {
+                case .none:
+                    self.labelNode.visibilityRect = nil
+                    //self.spoilerTextNode?.visibilityRect = nil
+                case let .visible(_, subRect):
+                    var subRect = subRect
+                    subRect.origin.x = 0.0
+                    subRect.size.width = 10000.0
+                    self.labelNode.visibilityRect = subRect
+                    //self.spoilerTextNode?.visibilityRect = subRect
+                }
+            }
+        }
+    }
+    
     required init() {
         self.labelNode = TextNodeWithEntities()
         self.labelNode.textNode.isUserInteractionEnabled = false
@@ -340,6 +358,18 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.backgroundColorNode.frame = CGRect(origin: CGPoint(), size: image.size)
 
                                 strongSelf.cachedMaskBackgroundImage = (offset, image, labelRects)
+                                
+                                switch strongSelf.visibility {
+                                case .none:
+                                    strongSelf.labelNode.visibilityRect = nil
+                                    //strongSelf.spoilerTextNode?.visibilityRect = nil
+                                case let .visible(_, subRect):
+                                    var subRect = subRect
+                                    subRect.origin.x = 0.0
+                                    subRect.size.width = 10000.0
+                                    strongSelf.labelNode.visibilityRect = subRect
+                                    //strongSelf.spoilerTextNode?.visibilityRect = subRect
+                                }
                             }
                         }
                     })

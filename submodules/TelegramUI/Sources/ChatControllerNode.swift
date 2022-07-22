@@ -126,6 +126,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private(set) var accessoryPanelNode: AccessoryPanelNode?
     private var inputContextPanelNode: ChatInputContextPanelNode?
     private let inputContextPanelContainer: ChatControllerTitlePanelNodeContainer
+    private let inputContextOverTextPanelContainer: ChatControllerTitlePanelNodeContainer
     private var overlayContextPanelNode: ChatInputContextPanelNode?
     
     private var inputNode: ChatInputNode?
@@ -271,6 +272,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.titleAccessoryPanelContainer.clipsToBounds = true
         
         self.inputContextPanelContainer = ChatControllerTitlePanelNodeContainer()
+        self.inputContextOverTextPanelContainer = ChatControllerTitlePanelNodeContainer()
         
         var source: ChatHistoryListSource
         if case let .forwardedMessages(messageIds, options) = subject {
@@ -540,8 +542,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.addSubnode(self.inputPanelContainerNode)
         self.addSubnode(self.inputContextPanelContainer)
+        self.addSubnode(self.inputPanelContainerNode)
+        self.addSubnode(self.inputContextOverTextPanelContainer)
         
         self.inputPanelContainerNode.addSubnode(self.inputPanelClippingNode)
         self.inputPanelClippingNode.addSubnode(self.inputPanelBackgroundNode)
@@ -1213,7 +1216,18 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     self?.updateInputPanelBackgroundExtension(transition: transition)
                 }
                 inputNode.hideInputUpdated = { [weak self] transition in
-                    self?.updateInputPanelBackgroundExpansion(transition: transition)
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let applyAutocorrection = strongSelf.inputNode?.hideInput ?? false
+                    
+                    strongSelf.updateInputPanelBackgroundExpansion(transition: transition)
+                    
+                    if applyAutocorrection, let textInputPanelNode = strongSelf.textInputPanelNode {
+                        if let textInputNode = textInputPanelNode.textInputNode, textInputNode.isFirstResponder() {
+                            Keyboard.applyAutocorrection(textView: textInputNode.textView)
+                        }
+                    }
                 }
                 
                 dismissedInputNode = self.inputNode
@@ -1308,6 +1322,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.titleAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: 66.0)))
         
         transition.updateFrame(node: self.inputContextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
+        transition.updateFrame(node: self.inputContextOverTextPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height)))
         
         var titleAccessoryPanelFrame: CGRect?
         if let _ = self.titleAccessoryPanelNode, let panelHeight = titleAccessoryPanelHeight {
@@ -1355,8 +1370,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if inputContextPanelNode !== self.inputContextPanelNode {
                 dismissedInputContextPanelNode = self.inputContextPanelNode
                 self.inputContextPanelNode = inputContextPanelNode
-                
-                self.inputContextPanelContainer.addSubnode(inputContextPanelNode)
+                switch inputContextPanelNode.placement {
+                case .overPanels:
+                    self.inputContextPanelContainer.addSubnode(inputContextPanelNode)
+                case .overTextInput:
+                    self.inputContextOverTextPanelContainer.addSubnode(inputContextPanelNode)
+                }
                 immediatelyLayoutInputContextPanelAndAnimateAppearance = true
             }
         } else if let inputContextPanelNode = self.inputContextPanelNode {
@@ -2358,14 +2377,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation {
             peerId = id
         }
-        let _ = peerId
         
         let inputNode = ChatEntityKeyboardInputNode(
             context: self.context,
             currentInputData: inputMediaNodeData,
             updatedInputData: self.inputMediaNodeDataPromise.get(),
             defaultToEmojiTab: !self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.string.isEmpty,
-            controllerInteraction: self.controllerInteraction
+            controllerInteraction: self.controllerInteraction,
+            interfaceInteraction: self.interfaceInteraction,
+            chatPeerId: peerId
         )
         
         return inputNode
@@ -2962,6 +2982,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
                     self.setupSendActionOnViewUpdate({ [weak self] in
                         if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
+                            strongSelf.collapseInput()
+                            
                             strongSelf.ignoreUpdateHeight = true
                             textInputPanelNode.text = ""
                             strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeDisableUrlPreview(nil) })

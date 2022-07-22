@@ -371,9 +371,9 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatInputMediaPanelGridDismissImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatInputMediaPanelGridDismissImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridDismissIcon"), color: theme.chat.inputMediaPanel.stickersSectionTextColor)
+    public static func chatInputMediaPanelGridDismissImage(_ theme: PresentationTheme, color: UIColor) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatInputMediaPanelGridDismissImage(color: color.argb), { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridDismissIcon"), color: color)
         })
     }
     
@@ -1282,9 +1282,9 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatEntityKeyboardLock(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatEntityKeyboardLock.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: theme.chat.inputMediaPanel.stickersSectionTextColor)
+    public static func chatEntityKeyboardLock(_ theme: PresentationTheme, color: UIColor) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatEntityKeyboardLock(color: color.argb), { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: color)
         })
     }
 }
