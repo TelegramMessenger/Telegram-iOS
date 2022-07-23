@@ -43,7 +43,58 @@ enum FetchMessageHistoryHoleSource {
     }
 }
 
-func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, peers: [PeerId: Peer], storeMessages: [StoreMessage], _ f: @escaping (Transaction, [Peer], [StoreMessage]) -> T) -> Signal<T, NoError> {
+func resolveUnknownEmojiFiles<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, messages: [StoreMessage], result: T) -> Signal<T, NoError> {
+    var fileIds = Set<Int64>()
+    
+    for message in messages {
+        extractEmojiFileIds(message: message, fileIds: &fileIds)
+    }
+    
+    if fileIds.isEmpty {
+        return .single(result)
+    } else {
+        return postbox.transaction { transaction -> Set<Int64> in
+            return transaction.filterStoredMediaIds(namespace: Namespaces.Media.CloudFile, ids: fileIds)
+        }
+        |> mapToSignal { unknownIds -> Signal<T, NoError> in
+            if unknownIds.isEmpty {
+                return .single(result)
+            } else {
+                var signals: [Signal<[Api.Document]?, NoError>] = []
+                var remainingIds = Array(unknownIds)
+                while !remainingIds.isEmpty {
+                    let partIdCount = min(100, remainingIds.count)
+                    let partIds = remainingIds.prefix(partIdCount)
+                    remainingIds.removeFirst(partIdCount)
+                    signals.append(source.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(partIds)))
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<[Api.Document]?, NoError> in
+                        return .single(nil)
+                    })
+                }
+                
+                return combineLatest(signals)
+                |> mapToSignal { documentSets -> Signal<T, NoError> in
+                    return postbox.transaction { transaction -> T in
+                        for documentSet in documentSets {
+                            if let documentSet = documentSet {
+                                for document in documentSet {
+                                    if let file = telegramMediaFileFromApiDocument(document) {
+                                        transaction.storeMediaIfNotPresent(media: file)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        return result
+                    }
+                }
+            }
+        }
+    }
+}
+
+private func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, peers: [PeerId: Peer], storeMessages: [StoreMessage], _ f: @escaping (Transaction, [Peer], [StoreMessage]) -> T) -> Signal<T, NoError> {
     return postbox.transaction { transaction -> Signal<T, NoError> in
         var storedIds = Set<MessageId>()
         var referencedIds = Set<MessageId>()
@@ -60,7 +111,12 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
         referencedIds.subtract(transaction.filterStoredMessageIds(referencedIds))
         
         if referencedIds.isEmpty {
-            return .single(f(transaction, [], []))
+            return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages, result: Void())
+            |> mapToSignal { _ -> Signal<T, NoError> in
+                return postbox.transaction { transaction -> T in
+                    return f(transaction, [], [])
+                }
+            }
         } else {
             var signals: [Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>] = []
             for (peerId, messageIds) in messagesIdsGroupedByPeerId(referencedIds) {
@@ -117,8 +173,12 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                         additionalPeers.append(TelegramUser(user: user))
                     }
                 }
-                return postbox.transaction { transaction -> T in
-                    return f(transaction, additionalPeers, additionalMessages)
+                
+                return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages + additionalMessages, result: Void())
+                |> mapToSignal { _ -> Signal<T, NoError> in
+                    return postbox.transaction { transaction -> T in
+                        return f(transaction, additionalPeers, additionalMessages)
+                    }
                 }
             }
         }
@@ -528,7 +588,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     }
                 }
                 
-                return withResolvedAssociatedMessages(postbox: postbox, source: source, peers: Dictionary(peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: storeMessages, { transaction, additionalPeers, additionalMessages -> FetchMessageHistoryHoleResult in
+                return withResolvedAssociatedMessages(postbox: postbox, source: source, peers: Dictionary(peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: storeMessages, { transaction, additionalPeers, additionalMessages -> FetchMessageHistoryHoleResult? in
                     let _ = transaction.addMessages(storeMessages, location: .Random)
                     let _ = transaction.addMessages(additionalMessages, location: .Random)
                     var filledRange: ClosedRange<MessageId.Id>
@@ -623,13 +683,14 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     
                     print("fetchMessageHistoryHole for \(peerInput) space \(space) done")
                     
-                    return FetchMessageHistoryHoleResult(
+                    let result = FetchMessageHistoryHoleResult(
                         removedIndices: IndexSet(integersIn: Int(filledRange.lowerBound) ... Int(filledRange.upperBound)),
                         strictRemovedIndices: strictFilledIndices,
                         actualPeerId: storeMessages.first?.id.peerId,
                         actualThreadId: storeMessages.first?.threadId,
                         ids: fullIds
                     )
+                    return result
                 })
             }
         }
@@ -665,7 +726,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             }
             |> ignoreValues
         }
-        return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), peers: Dictionary(fetchedChats.peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages in
+        return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), peers: Dictionary(fetchedChats.peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages -> Void in
             updatePeers(transaction: transaction, peers: fetchedChats.peers + additionalPeers, update: { _, updated -> Peer in
                 return updated
             })
@@ -716,8 +777,6 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             for (groupId, summary) in fetchedChats.folderSummaries {
                 transaction.resetPeerGroupSummary(groupId: groupId, namespace: Namespaces.Message.Cloud, summary: summary)
             }
-            
-            return
         })
         |> ignoreValues
     }

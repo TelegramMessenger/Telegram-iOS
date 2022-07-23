@@ -39,7 +39,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             editPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return editPanelNode
         } else {
-            let panelNode = EditAccessoryPanelNode(context: context, messageId: editMessage.messageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat)
+            let panelNode = EditAccessoryPanelNode(context: context, messageId: editMessage.messageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat, animationCache: chatControllerInteraction?.presentationContext.animationCache, animationRenderer: chatControllerInteraction?.presentationContext.animationRenderer)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }

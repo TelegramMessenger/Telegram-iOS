@@ -127,14 +127,14 @@ public final class TextNodeWithEntities {
                     var found = false
                     string.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: fullRange, options: [], using: { value, range, stop in
                         if let value = value as? ChatTextInputTextCustomEmojiAttribute, let font = string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont {
-                            let updatedSubstring = NSMutableAttributedString(string: "😀")
+                            let updatedSubstring = NSMutableAttributedString(string: "&")
                             
                             let replacementRange = NSRange(location: 0, length: updatedSubstring.length)
                             updatedSubstring.addAttributes(string.attributes(at: range.location, effectiveRange: nil), range: replacementRange)
                             updatedSubstring.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: value, file: value.file, fontSize: font.pointSize), range: replacementRange)
                             updatedSubstring.addAttribute(originalTextAttributeKey, value: string.attributedSubstring(from: range).string, range: replacementRange)
                             
-                            let itemSize = (font.pointSize * 24.0 / 17.0) * 0.5
+                            let itemSize = (font.pointSize * 24.0 / 17.0)
                             
                             let runDelegateData = RunDelegateData(
                                 ascent: font.ascender,

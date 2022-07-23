@@ -263,7 +263,7 @@ public func cacheVideoStickerFrames(path: String, size: CGSize, cacheKey: String
     return Signal { subscriber in
         let cancelled = Atomic<Bool>(value: false)
 
-        let source = SoftwareVideoSource(path: path, hintVP9: true)
+        let source = SoftwareVideoSource(path: path, hintVP9: true, unpremultiplyAlpha: true)
         let queue = ThreadPoolQueue(threadPool: softwareVideoWorkers)
         
         queue.addTask(ThreadPoolTask({ _ in

@@ -86,7 +86,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
-    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError> {
+    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool) -> Signal<EmojiPagerContentComponent, NoError> {
         let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
         |> map { peer -> Bool in
             guard case let .user(user) = peer else {
@@ -218,29 +218,31 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             }
             
-            for featuredEmojiPack in featuredEmojiPacks {
-                if installedCollectionIds.contains(featuredEmojiPack.info.id) {
-                    continue
-                }
-                
-                for item in featuredEmojiPack.topItems {
-                    let resultItem = EmojiPagerContentComponent.Item(
-                        file: item.file,
-                        staticEmoji: nil,
-                        subgroupId: nil
-                    )
-                    
-                    let supergroupId = featuredEmojiPack.info.id
-                    let groupId: AnyHashable = supergroupId
-                    let isPremiumLocked: Bool = item.file.isPremiumEmoji && !hasPremium
-                    if isPremiumLocked && isPremiumDisabled {
+            if !isStandalone {
+                for featuredEmojiPack in featuredEmojiPacks {
+                    if installedCollectionIds.contains(featuredEmojiPack.info.id) {
                         continue
                     }
-                    if let groupIndex = itemGroupIndexById[groupId] {
-                        itemGroups[groupIndex].items.append(resultItem)
-                    } else {
-                        itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, isExpandable: true, items: [resultItem]))
+                    
+                    for item in featuredEmojiPack.topItems {
+                        let resultItem = EmojiPagerContentComponent.Item(
+                            file: item.file,
+                            staticEmoji: nil,
+                            subgroupId: nil
+                        )
+                        
+                        let supergroupId = featuredEmojiPack.info.id
+                        let groupId: AnyHashable = supergroupId
+                        let isPremiumLocked: Bool = item.file.isPremiumEmoji && !hasPremium
+                        if isPremiumLocked && isPremiumDisabled {
+                            continue
+                        }
+                        if let groupIndex = itemGroupIndexById[groupId] {
+                            itemGroups[groupIndex].items.append(resultItem)
+                        } else {
+                            itemGroupIndexById[groupId] = itemGroups.count
+                            itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, isExpandable: true, items: [resultItem]))
+                        }
                     }
                 }
             }
@@ -301,7 +303,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             animationRenderer = MultiAnimationRendererImpl()
         //}
         
-        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer)
+        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.PremiumStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
@@ -1484,6 +1486,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         stickerContent?.inputInteractionHolder.inputInteraction = self.stickerInputInteraction
         self.currentInputData.emoji.inputInteractionHolder.inputInteraction = self.emojiInputInteraction
         
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
         let entityKeyboardSize = self.entityKeyboardView.update(
             transition: mappedTransition,
             component: AnyComponent(EntityKeyboardComponent(
@@ -1558,6 +1562,13 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             containerSize: CGSize(width: width, height: expandedHeight)
         )
         transition.updateFrame(view: self.entityKeyboardView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: entityKeyboardSize))
+        
+        let layoutTime = CFAbsoluteTimeGetCurrent() - startTime
+        if layoutTime > 0.1 {
+            #if DEBUG
+            print("EntityKeyboard layout in \(layoutTime * 1000.0) ms")
+            #endif
+        }
         
         return (expandedHeight, 0.0)
     }
@@ -1849,7 +1860,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer).start(next: { value in
+        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })

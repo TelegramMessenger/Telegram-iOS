@@ -173,11 +173,11 @@ final class DctData {
         self.chromaDct = ImageDCT(table: chromaTableData)
     }
     
-    init(generatingTablesAtQuality quality: Int) {
-        self.lumaTable = ImageDCTTable(quality: quality, isChroma: false)
+    init(generatingTablesAtQualityLuma lumaQuality: Int, chroma chromaQuality: Int) {
+        self.lumaTable = ImageDCTTable(quality: lumaQuality, isChroma: false)
         self.lumaDct = ImageDCT(table: self.lumaTable)
         
-        self.chromaTable = ImageDCTTable(quality: quality, isChroma: true)
+        self.chromaTable = ImageDCTTable(quality: chromaQuality, isChroma: true)
         self.chromaDct = ImageDCT(table: self.chromaTable)
     }
 }

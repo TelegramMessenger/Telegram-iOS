@@ -31,6 +31,10 @@ final class MessageMediaTable: Table {
         return key
     }
     
+    func exists(id: MediaId) -> Bool {
+        return self.valueBox.exists(self.table, key: self.key(id))
+    }
+    
     func get(_ id: MediaId, embedded: (MessageIndex, MediaId) -> Media?) -> (MessageIndex?, Media)? {
         if let value = self.valueBox.get(self.table, key: self.key(id)) {
             var type: Int8 = 0

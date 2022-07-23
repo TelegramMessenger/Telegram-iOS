@@ -2537,6 +2537,9 @@ final class MessageHistoryTable: Table {
             }
             for mediaId in attribute.associatedMediaIds {
                 if associatedMedia[mediaId] == nil {
+                    if mediaId.id == 5364107552168613887 {
+                        assert(true)
+                    }
                     if let media = self.getMedia(mediaId) {
                         associatedMedia[mediaId] = media
                     }

@@ -449,7 +449,7 @@ public final class EntityKeyboardComponent: Component {
                         if let file = itemGroup.items[0].file {
                             topEmojiItems.append(EntityKeyboardTopPanelComponent.Item(
                                 id: itemGroup.supergroupId,
-                                isReorderable: true,
+                                isReorderable: !itemGroup.isFeatured,
                                 content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                                     context: component.emojiContent.context,
                                     file: file,

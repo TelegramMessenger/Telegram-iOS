@@ -740,6 +740,14 @@ public final class Transaction {
         return Set()
     }
     
+    public func filterStoredMediaIds(namespace: MediaId.Namespace, ids: Set<Int64>) -> Set<Int64> {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.filterStoredMediaIds(namespace: namespace, ids: ids)
+        }
+        return Set()
+    }
+    
     public func storedMessageId(peerId: PeerId, namespace: MessageId.Namespace, timestamp: Int32) -> MessageId? {
         assert(!self.disposed)
         return self.postbox?.storedMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp)
@@ -2345,6 +2353,18 @@ final class PostboxImpl {
         
         for id in messageIds {
             if self.messageHistoryIndexTable.exists(id) {
+                filteredIds.insert(id)
+            }
+        }
+        
+        return filteredIds
+    }
+    
+    fileprivate func filterStoredMediaIds(namespace: MediaId.Namespace, ids: Set<Int64>) -> Set<Int64> {
+        var filteredIds = Set<Int64>()
+        
+        for id in ids {
+            if !self.mediaTable.exists(id: MediaId(namespace: namespace, id: id)) {
                 filteredIds.insert(id)
             }
         }

@@ -116,7 +116,7 @@ public final class SoftwareVideoLayerFrameManager {
                 let size = fileSize(path)
                 Logger.shared.log("SoftwareVideo", "loaded video from \(stringForResource(resource)) (file size: \(String(describing: size))")
                 
-                let _ = strongSelf.source.swap(SoftwareVideoSource(path: path, hintVP9: strongSelf.hintVP9))
+                let _ = strongSelf.source.swap(SoftwareVideoSource(path: path, hintVP9: strongSelf.hintVP9, unpremultiplyAlpha: true))
             }
         }))
     }

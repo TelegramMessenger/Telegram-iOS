@@ -235,10 +235,12 @@ private final class AnimationCacheItemWriterInternal {
     
     private var frames: [FrameMetadata] = []
     
-    private let dctQuality: Int
+    private let dctQualityLuma: Int
+    private let dctQualityChroma: Int
     
     init?(allocateTempFile: @escaping () -> String) {
-        self.dctQuality = 70
+        self.dctQualityLuma = 70
+        self.dctQualityChroma = 88
         
         self.compressedPath = allocateTempFile()
         
@@ -297,7 +299,7 @@ private final class AnimationCacheItemWriterInternal {
         if let current = self.currentDctData {
             dctData = current
         } else {
-            dctData = DctData(generatingTablesAtQuality: self.dctQuality)
+            dctData = DctData(generatingTablesAtQualityLuma: self.dctQualityLuma, chroma: self.dctQualityChroma)
             self.currentDctData = dctData
         }
         
@@ -433,12 +435,14 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
     
     private var frames: [FrameMetadata] = []
     
-    private let dctQuality: Int
+    private let dctQualityLuma: Int
+    private let dctQualityChroma: Int
     
     private let lock = Lock()
     
     init?(queue: Queue, allocateTempFile: @escaping () -> String, completion: @escaping (CompressedResult?) -> Void) {
-        self.dctQuality = 70
+        self.dctQualityLuma = 70
+        self.dctQualityChroma = 88
         
         self.queue = queue
         self.compressedPath = allocateTempFile()
@@ -511,7 +515,7 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
             if let current = self.currentDctData {
                 dctData = current
             } else {
-                dctData = DctData(generatingTablesAtQuality: self.dctQuality)
+                dctData = DctData(generatingTablesAtQualityLuma: self.dctQualityLuma, chroma: self.dctQualityChroma)
                 self.currentDctData = dctData
             }
             
