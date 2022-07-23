@@ -379,7 +379,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
             environment: {},
             containerSize: animationFrame.size
         )
-//            self.innerIconView.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+
         if let view = animationView.view {
             view.isUserInteractionEnabled = false
             if view.superview == nil {
