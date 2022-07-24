@@ -1470,7 +1470,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 if isSaved {
                     let _ = self?.controllerInteraction.sendGif(file.file, sourceNode.view, sourceRect, false, false)
                 } else if let (collection, result) = file.contextResult {
-                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect, false)
+                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode.view, sourceRect, false)
                 }
             })))
             
@@ -1489,7 +1489,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                 if isSaved {
                                     let _ = self?.controllerInteraction.sendGif(file.file, sourceNode.view, sourceRect, true, false)
                                 } else if let (collection, result) = file.contextResult {
-                                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect, true)
+                                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode.view, sourceRect, true)
                                 }
                             })))
                         }

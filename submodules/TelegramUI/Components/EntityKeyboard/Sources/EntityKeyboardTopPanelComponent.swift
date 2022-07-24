@@ -1821,7 +1821,7 @@ final class EntityKeyboardTopPanelComponent: Component {
                     }
                     
                     let isRound: Bool
-                    if let string = activeContentItemId.base as? String, (string == "recent" || string == "static") {
+                    if let string = activeContentItemId.base as? String, (string == "recent" || string == "static" || string == "trending") {
                         isRound = true
                     } else {
                         isRound = false
