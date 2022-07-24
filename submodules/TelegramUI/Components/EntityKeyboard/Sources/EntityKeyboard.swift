@@ -285,7 +285,7 @@ public final class EntityKeyboardComponent: Component {
                 contentTopPanels.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(EntityKeyboardTopPanelComponent(
                     theme: component.theme,
                     items: topGifItems,
-                    defaultActiveItemId: defaultActiveGifItemId,
+                    forceActiveItemId: defaultActiveGifItemId,
                     activeContentItemIdUpdated: gifsContentItemIdUpdated,
                     reorderItems: { _ in
                     }

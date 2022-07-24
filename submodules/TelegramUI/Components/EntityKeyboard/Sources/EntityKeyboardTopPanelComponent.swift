@@ -996,6 +996,7 @@ final class EntityKeyboardTopPanelComponent: Component {
     let theme: PresentationTheme
     let items: [Item]
     let defaultActiveItemId: AnyHashable?
+    let forceActiveItemId: AnyHashable?
     let activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>
     let reorderItems: ([Item]) -> Void
     
@@ -1003,12 +1004,14 @@ final class EntityKeyboardTopPanelComponent: Component {
         theme: PresentationTheme,
         items: [Item],
         defaultActiveItemId: AnyHashable? = nil,
+        forceActiveItemId: AnyHashable? = nil,
         activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>,
         reorderItems: @escaping ([Item]) -> Void
     ) {
         self.theme = theme
         self.items = items
         self.defaultActiveItemId = defaultActiveItemId
+        self.forceActiveItemId = forceActiveItemId
         self.activeContentItemIdUpdated = activeContentItemIdUpdated
         self.reorderItems = reorderItems
     }
@@ -1021,6 +1024,9 @@ final class EntityKeyboardTopPanelComponent: Component {
             return false
         }
         if lhs.defaultActiveItemId != rhs.defaultActiveItemId {
+            return false
+        }
+        if lhs.forceActiveItemId != rhs.forceActiveItemId {
             return false
         }
         if lhs.activeContentItemIdUpdated !== rhs.activeContentItemIdUpdated {
@@ -1594,7 +1600,9 @@ final class EntityKeyboardTopPanelComponent: Component {
             self.component = component
             self.state = state
             
-            if let defaultActiveItemId = component.defaultActiveItemId {
+            if let forceActiveItemId = component.forceActiveItemId {
+                self.activeContentItemId = forceActiveItemId
+            } else if self.activeContentItemId == nil, let defaultActiveItemId = component.defaultActiveItemId {
                 self.activeContentItemId = defaultActiveItemId
             }
             
