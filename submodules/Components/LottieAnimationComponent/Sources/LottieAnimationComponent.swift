@@ -127,9 +127,13 @@ public final class LottieAnimationComponent: Component {
                 updateColors = true
             }
             
+            var animateSize = true
+            var updateComponent = true
+            
             if self.component?.animation != component.animation {
                 if let animationView = self.animationView {
                     if case .animateTransitionFromPrevious = component.animation.mode, !animationView.isAnimationPlaying, !self.didPlayToCompletion {
+                        updateComponent = false
                         animationView.play { [weak self] _ in
                             self?.currentCompletion?()
                         }
@@ -172,12 +176,15 @@ public final class LottieAnimationComponent: Component {
                         self.animationView = view
                         self.addSubview(view)
                         
+                        animateSize = false
                         updatePlayback = true
                     }
                 }
             }
             
-            self.component = component
+            if updateComponent {
+                self.component = component
+            }
             
             if updateColors, let animationView = self.animationView {
                 if let value = component.colors["__allcolors__"] {
@@ -208,7 +215,7 @@ public final class LottieAnimationComponent: Component {
                 let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - animationSize.width) / 2.0), y: floor((size.height - animationSize.height) / 2.0)), size: animationSize)
                 
                 if animationView.frame != animationFrame {
-                    if !transition.animation.isImmediate && !animationView.frame.isEmpty && animationView.frame.size != animationFrame.size {
+                    if !transition.animation.isImmediate && animateSize && !animationView.frame.isEmpty && animationView.frame.size != animationFrame.size {
                         let previouosAnimationFrame = animationView.frame
                         
                         if let snapshotView = animationView.snapshotView(afterScreenUpdates: false) {

@@ -779,7 +779,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
     }
     
     public init() {
-        if !ProcessInfo.processInfo.isLowPowerModeEnabled && ProcessInfo.processInfo.activeProcessorCount > 2 {
+        if !ProcessInfo.processInfo.isLowPowerModeEnabled && ProcessInfo.processInfo.processorCount > 2 {
             self.frameSkip = 1
         } else {
             self.frameSkip = 2

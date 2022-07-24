@@ -281,7 +281,7 @@ private func textInputBackgroundImage(backgroundColor: UIColor?, inputBackground
             
         context.setBlendMode(.normal)
         context.setStrokeColor(strokeColor.cgColor)
-        let strokeWidth: CGFloat = 1.0
+        let strokeWidth: CGFloat = UIScreenPixel
         context.setLineWidth(strokeWidth)
         context.strokeEllipse(in: CGRect(x: strokeWidth / 2.0, y: strokeWidth / 2.0, width: diameter - strokeWidth, height: diameter - strokeWidth))
     })?.stretchableImage(withLeftCapWidth: Int(diameter) / 2, topCapHeight: Int(diameter) / 2)

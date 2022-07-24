@@ -608,13 +608,16 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         panelSeparatorColor: UIColor(rgb: 0x3d3d40),
         panelIconColor: UIColor(rgb: 0x808080),
         panelHighlightedIconBackgroundColor: UIColor(rgb: 0x262628),
+        panelHighlightedIconColor: UIColor(rgb: 0x808080).mixedWith(UIColor(rgb: 0xffffff), alpha: 0.35),
+        panelContentVibrantOverlayColor: UIColor(rgb: 0x808080),
         stickersBackgroundColor: UIColor(rgb: 0x000000),
         stickersSectionTextColor: UIColor(rgb: 0x7b7b7b),
         stickersSearchBackgroundColor: UIColor(rgb: 0x1c1c1d),
         stickersSearchPlaceholderColor: UIColor(rgb: 0x8d8e93),
         stickersSearchPrimaryColor: UIColor(rgb: 0xffffff),
         stickersSearchControlColor: UIColor(rgb: 0x8d8e93),
-        gifsBackgroundColor: UIColor(rgb: 0x000000)
+        gifsBackgroundColor: UIColor(rgb: 0x000000),
+        backgroundColor: UIColor(rgb: 0x000000, alpha: 0.75)
     )
 
     let inputButtonPanel = PresentationThemeInputButtonPanel(

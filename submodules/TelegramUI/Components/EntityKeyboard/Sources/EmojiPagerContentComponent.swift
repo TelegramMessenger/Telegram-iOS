@@ -599,11 +599,10 @@ private final class GroupHeaderLayer: UIView {
             color = theme.chat.inputPanel.primaryTextColor
             needsTintText = false
         } else {
-            //color = theme.chat.inputMediaPanel.stickersSectionTextColor.withMultipliedAlpha(0.1)
-            color = UIColor(white: 1.0, alpha: 0.0)
+            color = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
             needsTintText = true
         }
-        let subtitleColor = theme.chat.inputMediaPanel.stickersSectionTextColor.withMultipliedAlpha(0.1)
+        let subtitleColor = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
         
         let titleHorizontalOffset: CGFloat
         if isPremiumLocked {
@@ -712,7 +711,12 @@ private final class GroupHeaderLayer: UIView {
             self.currentTextLayout = (title, color, textConstrainedWidth, textSize)
         }
         
-        let textFrame = CGRect(origin: CGPoint(x: titleHorizontalOffset, y: textOffsetY), size: textSize)
+        let textFrame: CGRect
+        if (layoutType == .compact && hasClear) || subtitle != nil {
+            textFrame = CGRect(origin: CGPoint(x: titleHorizontalOffset, y: textOffsetY), size: textSize)
+        } else {
+            textFrame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - textSize.width) / 2.0), y: textOffsetY), size: textSize)
+        }
         self.textLayer.frame = textFrame
         self.tintTextLayer.frame = textFrame
         self.tintTextLayer.isHidden = !needsTintText
@@ -808,7 +812,7 @@ private final class GroupHeaderLayer: UIView {
             }
             
             var clearSize = clearIconLayer.bounds.size
-            if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: theme.chat.inputMediaPanel.stickersSectionTextColor.withMultipliedAlpha(0.1)) {
+            if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor) {
                 clearSize = image.size
                 clearIconLayer.contents = image.cgImage
             }
@@ -816,12 +820,8 @@ private final class GroupHeaderLayer: UIView {
                 tintClearIconLayer.contents = image.cgImage
             }
             
-            switch layoutType {
-            case .compact:
-                clearIconLayer.frame = CGRect(origin: CGPoint(x: titleHorizontalOffset + textSize.width + 4.0, y: floorToScreenPixels((textSize.height - clearSize.height) / 2.0)), size: clearSize)
-            case .detailed:
-                clearIconLayer.frame = CGRect(origin: CGPoint(x: constrainedSize.width - clearSize.width, y: floorToScreenPixels((textSize.height - clearSize.height) / 2.0)), size: clearSize)
-            }
+            clearIconLayer.frame = CGRect(origin: CGPoint(x: constrainedSize.width - clearSize.width, y: floorToScreenPixels((textSize.height - clearSize.height) / 2.0)), size: clearSize)
+            
             tintClearIconLayer.frame = clearIconLayer.frame
             clearWidth = 4.0 + clearSize.width
         } else {
@@ -836,10 +836,9 @@ private final class GroupHeaderLayer: UIView {
         }
         
         var size: CGSize
-        switch layoutType {
-        case .compact:
+        if layoutType == .compact && hasClear {
             size = CGSize(width: titleHorizontalOffset + textSize.width + clearWidth, height: constrainedSize.height)
-        case .detailed:
+        } else {
             size = CGSize(width: constrainedSize.width, height: constrainedSize.height)
         }
         
@@ -885,7 +884,7 @@ private final class GroupHeaderLayer: UIView {
                 self.separatorLayer = separatorLayer
                 self.layer.addSublayer(separatorLayer)
             }
-            separatorLayer.backgroundColor = theme.chat.inputMediaPanel.stickersSectionTextColor.withAlphaComponent(0.15).cgColor
+            separatorLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor.cgColor
             separatorLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel))
             
             let tintSeparatorLayer: SimpleLayer
@@ -1190,7 +1189,7 @@ private final class GroupExpandActionButton: UIButton {
         let textConstrainedWidth: CGFloat = 100.0
         let color = theme.list.itemCheckColors.foregroundColor
         
-        self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.stickersSectionTextColor.withMultipliedAlpha(0.1).cgColor
+        self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor.cgColor
         self.tintContainerLayer.backgroundColor = UIColor.white.cgColor
         
         let textSize: CGSize
@@ -1254,6 +1253,7 @@ public final class EmojiPagerContentComponent: Component {
         public let performItemAction: (AnyHashable, Item, UIView, CGRect, CALayer) -> Void
         public let deleteBackwards: () -> Void
         public let openStickerSettings: () -> Void
+        public let openFeatured: () -> Void
         public let addGroupAction: (AnyHashable, Bool) -> Void
         public let clearGroup: (AnyHashable) -> Void
         public let pushController: (ViewController) -> Void
@@ -1267,6 +1267,7 @@ public final class EmojiPagerContentComponent: Component {
             performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer) -> Void,
             deleteBackwards: @escaping () -> Void,
             openStickerSettings: @escaping () -> Void,
+            openFeatured: @escaping () -> Void,
             addGroupAction: @escaping (AnyHashable, Bool) -> Void,
             clearGroup: @escaping (AnyHashable) -> Void,
             pushController: @escaping (ViewController) -> Void,
@@ -1279,6 +1280,7 @@ public final class EmojiPagerContentComponent: Component {
             self.performItemAction = performItemAction
             self.deleteBackwards = deleteBackwards
             self.openStickerSettings = openStickerSettings
+            self.openFeatured = openFeatured
             self.addGroupAction = addGroupAction
             self.clearGroup = clearGroup
             self.pushController = pushController
@@ -1544,17 +1546,25 @@ public final class EmojiPagerContentComponent: Component {
                 switch layoutType {
                 case .compact:
                     minItemsPerRow = 8
-                    self.nativeItemSize = 36.0
+                    self.nativeItemSize = 40.0
                     self.playbackItemSize = 48.0
                     self.verticalSpacing = 9.0
-                    minSpacing = 9.0
+                    
+                    if width >= 420.0 {
+                        self.itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 5.0, bottom: containerInsets.bottom, right: containerInsets.right + 5.0)
+                        self.headerInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 5.0, bottom: containerInsets.bottom, right: containerInsets.right + 5.0)
+                        minSpacing = 2.0
+                    } else {
+                        self.itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 7.0, bottom: containerInsets.bottom, right: containerInsets.right + 7.0)
+                        self.headerInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 7.0, bottom: containerInsets.bottom, right: containerInsets.right + 7.0)
+                        minSpacing = 9.0
+                    }
+                    
                     self.itemDefaultHeaderHeight = 24.0
                     self.itemFeaturedHeaderHeight = self.itemDefaultHeaderHeight
-                    self.itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 12.0, bottom: containerInsets.bottom, right: containerInsets.right + 12.0)
-                    self.headerInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 12.0, bottom: containerInsets.bottom, right: containerInsets.right + 12.0)
                 case .detailed:
                     minItemsPerRow = 5
-                    self.nativeItemSize = 71.0
+                    self.nativeItemSize = 70.0
                     self.playbackItemSize = 96.0
                     self.verticalSpacing = 2.0
                     minSpacing = 12.0
@@ -1571,9 +1581,13 @@ public final class EmojiPagerContentComponent: Component {
                 
                 self.itemsPerRow = max(minItemsPerRow, Int((itemHorizontalSpace + minSpacing) / (self.nativeItemSize + minSpacing)))
                 
-                self.visibleItemSize = floor((itemHorizontalSpace - CGFloat(self.itemsPerRow - 1) * minSpacing) / CGFloat(self.itemsPerRow))
+                self.visibleItemSize = self.nativeItemSize
                 
-                self.horizontalSpacing = floor((itemHorizontalSpace - self.visibleItemSize * CGFloat(self.itemsPerRow)) / CGFloat(self.itemsPerRow - 1))
+                self.horizontalSpacing = floorToScreenPixels((itemHorizontalSpace - self.visibleItemSize * CGFloat(self.itemsPerRow)) / CGFloat(self.itemsPerRow - 1))
+                
+                let actualContentWidth = self.visibleItemSize * CGFloat(self.itemsPerRow) + self.horizontalSpacing * CGFloat(self.itemsPerRow - 1)
+                self.itemInsets.left = floorToScreenPixels((width - actualContentWidth) / 2.0)
+                self.itemInsets.right = self.itemInsets.left
                 
                 var verticalGroupOrigin: CGFloat = self.itemInsets.top
                 self.itemGroupLayouts = []
@@ -1837,7 +1851,7 @@ public final class EmojiPagerContentComponent: Component {
                                     return
                                 }
                                 
-                                if file.isVideoEmoji {
+                                if file.isVideoEmoji || file.isVideoSticker {
                                     cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
                                 } else if file.isAnimatedSticker {
                                     guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
@@ -2139,7 +2153,7 @@ public final class EmojiPagerContentComponent: Component {
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: nil)
             
-            if ProcessInfo.processInfo.activeProcessorCount > 2 {
+            if ProcessInfo.processInfo.processorCount > 2 {
                 self.shimmerHostView = PortalSourceView()
                 self.standaloneShimmerEffect = StandaloneShimmerEffect()
             } else {
@@ -2867,7 +2881,7 @@ public final class EmojiPagerContentComponent: Component {
                     let position = CGPoint(x: itemLayer.frame.midX, y: itemLayer.frame.midY)
                     let distance = CGPoint(x: localPoint.x - position.x, y: localPoint.y - position.y)
                     let distance2 = distance.x * distance.x + distance.y * distance.y
-                    if distance2 > pow(max(itemLayer.bounds.width, itemLayer.bounds.height) / 2.0, 2.0) {
+                    if distance2 > pow(max(itemLayer.bounds.width, itemLayer.bounds.height), 2.0) {
                         continue
                     }
                     
@@ -3060,10 +3074,7 @@ public final class EmojiPagerContentComponent: Component {
                         actionButtonTitle = itemGroup.actionButtonTitle
                     }
                     
-                    var hasTopSeparator = false
-                    if case .detailed = itemLayout.layoutType, itemGroup.isFeatured, groupItems.groupIndex != 0 {
-                        hasTopSeparator = true
-                    }
+                    let hasTopSeparator = false
                     
                     let groupHeaderSize = groupHeaderView.update(
                         context: component.context,
@@ -3108,7 +3119,7 @@ public final class EmojiPagerContentComponent: Component {
                         self.scrollView.layer.insertSublayer(groupBorderLayer, at: 0)
                         self.mirrorContentScrollView.layer.addSublayer(groupBorderLayer.tintContainerLayer)
                         
-                        groupBorderLayer.strokeColor = theme.chat.inputMediaPanel.stickersSectionTextColor.withMultipliedAlpha(0.1).cgColor
+                        groupBorderLayer.strokeColor = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor.cgColor
                         groupBorderLayer.tintContainerLayer.strokeColor = UIColor.white.cgColor
                         groupBorderLayer.lineWidth = 1.6
                         groupBorderLayer.lineCap = .round
@@ -3293,9 +3304,9 @@ public final class EmojiPagerContentComponent: Component {
                         } else {
                             itemDimensions = CGSize(width: 512.0, height: 512.0)
                         }
-                        let itemNativeFitSize = itemDimensions.fitted(CGSize(width: itemLayout.nativeItemSize, height: itemLayout.nativeItemSize))
-                        let itemVisibleFitSize = itemDimensions.fitted(CGSize(width: itemLayout.visibleItemSize, height: itemLayout.visibleItemSize))
-                        let itemPlaybackSize = itemDimensions.fitted(CGSize(width: itemLayout.playbackItemSize, height: itemLayout.playbackItemSize))
+                        let itemNativeFitSize = itemDimensions.aspectFitted(CGSize(width: itemLayout.nativeItemSize, height: itemLayout.nativeItemSize))
+                        let itemVisibleFitSize = itemDimensions.aspectFitted(CGSize(width: itemLayout.visibleItemSize, height: itemLayout.visibleItemSize))
+                        let itemPlaybackSize = itemDimensions.aspectFitted(CGSize(width: itemLayout.playbackItemSize, height: itemLayout.playbackItemSize))
                         
                         var animateItemIn = false
                         var updateItemLayerPlaceholder = false
@@ -3551,7 +3562,7 @@ public final class EmojiPagerContentComponent: Component {
                 vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
             }
             
-            self.backgroundView.updateColor(color: theme.chat.inputMediaPanel.stickersBackgroundColor.withMultipliedAlpha(0.75), enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
+            self.backgroundView.updateColor(color: theme.chat.inputMediaPanel.backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             

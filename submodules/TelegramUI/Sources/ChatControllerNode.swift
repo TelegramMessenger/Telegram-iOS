@@ -1604,7 +1604,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var apparentInputBackgroundFrame = inputBackgroundFrame
         var apparentNavigateButtonsFrame = navigateButtonsFrame
         if case let .media(_, maybeExpanded, _) = self.chatPresentationInterfaceState.inputMode, let expanded = maybeExpanded, case .search = expanded, let inputPanelFrame = inputPanelFrame {
-            let verticalOffset = -inputPanelFrame.height - 41.0
+            let verticalOffset = -inputPanelFrame.height - 34.0
             apparentInputPanelFrame = inputPanelFrame.offsetBy(dx: 0.0, dy: verticalOffset)
             apparentInputBackgroundFrame.size.height -= verticalOffset
             apparentInputBackgroundFrame.origin.y += verticalOffset

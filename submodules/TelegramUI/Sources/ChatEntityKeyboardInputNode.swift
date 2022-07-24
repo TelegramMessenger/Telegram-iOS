@@ -956,7 +956,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         super.init()
         
-        self.topBackgroundExtension = 41.0
+        self.topBackgroundExtension = 34.0
         self.followsDefaultHeight = true
         
         self.view.addSubview(self.entityKeyboardView)
@@ -1035,6 +1035,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 interfaceInteraction.backwardsDeleteText()
             },
             openStickerSettings: {
+            },
+            openFeatured: {
             },
             addGroupAction: { [weak self, weak controllerInteraction] groupId, isPremiumLocked in
                 guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
@@ -1179,6 +1181,22 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 let controller = installedStickerPacksController(context: context, mode: .modal)
                 controller.navigationPresentation = .modal
                 controllerInteraction.navigationController()?.pushViewController(controller)
+            },
+            openFeatured: { [weak controllerInteraction] in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+
+                controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
+                    context: context,
+                    highlightedPackId: nil,
+                    sendSticker: { [weak controllerInteraction] fileReference, sourceNode, sourceRect in
+                        guard let controllerInteraction = controllerInteraction else {
+                            return false
+                        }
+                        return controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
+                    }
+                ))
             },
             addGroupAction: { groupId, isPremiumLocked in
                 guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
@@ -1492,7 +1510,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             transition: mappedTransition,
             component: AnyComponent(EntityKeyboardComponent(
                 theme: interfaceState.theme,
-                bottomInset: bottomInset,
+                containerInsets: UIEdgeInsets(top: 0.0, left: leftInset, bottom: bottomInset, right: rightInset),
                 emojiContent: self.currentInputData.emoji,
                 stickerContent: stickerContent,
                 gifContent: gifContent?.component,
@@ -1840,6 +1858,8 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                 strongSelf.deleteBackwards?()
             },
             openStickerSettings: {
+            },
+            openFeatured: {
             },
             addGroupAction: { _, _ in
             },

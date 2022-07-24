@@ -264,7 +264,7 @@ private final class AnimationCacheItemWriterInternal {
         }
         
         let width = roundUp(proposedWidth, multiple: 16)
-        let height = roundUp(proposedWidth, multiple: 16)
+        let height = roundUp(proposedHeight, multiple: 16)
         
         var isFirstFrame = false
         
@@ -466,7 +466,7 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
             }
             
             let width = roundUp(proposedWidth, multiple: 16)
-            let height = roundUp(proposedWidth, multiple: 16)
+            let height = roundUp(proposedHeight, multiple: 16)
             
             var isFirstFrame = false
             
@@ -1336,7 +1336,7 @@ public final class AnimationCacheImpl: AnimationCache {
             self.queue = queue
             
             let fetchQueueCount: Int
-            if ProcessInfo.processInfo.activeProcessorCount > 2 {
+            if ProcessInfo.processInfo.processorCount > 2 {
                 fetchQueueCount = 3
             } else {
                 fetchQueueCount = 2

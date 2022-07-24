@@ -65,7 +65,7 @@ public final class PagerComponentChildEnvironment: Equatable {
 public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatable {
     public let contentOffset: CGFloat
     public let contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>]
-    public let contentIcons: [AnyComponentWithIdentity<Empty>]
+    public let contentIcons: [PagerComponentContentIcon]
     public let contentAccessoryLeftButtons: [AnyComponentWithIdentity<Empty>]
     public let contentAccessoryRightButtons: [AnyComponentWithIdentity<Empty>]
     public let activeContentId: AnyHashable?
@@ -76,7 +76,7 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
     init(
         contentOffset: CGFloat,
         contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>],
-        contentIcons: [AnyComponentWithIdentity<Empty>],
+        contentIcons: [PagerComponentContentIcon],
         contentAccessoryLeftButtons: [AnyComponentWithIdentity<Empty>],
         contentAccessoryRightButtons: [AnyComponentWithIdentity<Empty>],
         activeContentId: AnyHashable?,
@@ -141,13 +141,36 @@ public enum PagerComponentPanelHideBehavior {
     case hide
 }
 
+public final class PagerComponentContentIcon: Equatable {
+    public let id: AnyHashable
+    public let imageName: String
+    
+    public init(id: AnyHashable, imageName: String) {
+        self.id = id
+        self.imageName = imageName
+    }
+    
+    public static func ==(lhs: PagerComponentContentIcon, rhs: PagerComponentContentIcon) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.imageName != rhs.imageName {
+            return false
+        }
+        return true
+    }
+}
+
 public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvironment: Equatable>: Component {
     public typealias EnvironmentType = ChildEnvironmentType
     
     public let contentInsets: UIEdgeInsets
     public let contents: [AnyComponentWithIdentity<(ChildEnvironmentType, PagerComponentChildEnvironment)>]
     public let contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>]
-    public let contentIcons: [AnyComponentWithIdentity<Empty>]
+    public let contentIcons: [PagerComponentContentIcon]
     public let contentAccessoryLeftButtons:[AnyComponentWithIdentity<Empty>]
     public let contentAccessoryRightButtons:[AnyComponentWithIdentity<Empty>]
     public let defaultId: AnyHashable?
@@ -163,7 +186,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         contentInsets: UIEdgeInsets,
         contents: [AnyComponentWithIdentity<(ChildEnvironmentType, PagerComponentChildEnvironment)>],
         contentTopPanels: [AnyComponentWithIdentity<TopPanelEnvironment>],
-        contentIcons: [AnyComponentWithIdentity<Empty>],
+        contentIcons: [PagerComponentContentIcon],
         contentAccessoryLeftButtons: [AnyComponentWithIdentity<Empty>],
         contentAccessoryRightButtons: [AnyComponentWithIdentity<Empty>],
         defaultId: AnyHashable?,
@@ -565,7 +588,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 }
             }
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: effectiveTopPanelHeight), size: CGSize(width: availableSize.width, height: availableSize.height - effectiveTopPanelHeight - contentInsets.bottom + bottomPanelOffset))
+            let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: effectiveTopPanelHeight), size: CGSize(width: availableSize.width, height: availableSize.height - effectiveTopPanelHeight + bottomPanelOffset))
             if let contentBackground = component.contentBackground {
                 let contentBackgroundView: ComponentHostView<Empty>
                 var contentBackgroundTransition = panelStateTransition
