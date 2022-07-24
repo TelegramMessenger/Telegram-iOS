@@ -945,6 +945,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     fileprivate var emojiInputInteraction: EmojiPagerContentComponent.InputInteraction?
     private var stickerInputInteraction: EmojiPagerContentComponent.InputInteraction?
     
+    private weak var currentUndoOverlayController: UndoOverlayController?
+    
     init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
         self.context = context
         self.currentInputData = currentInputData
@@ -973,9 +975,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         |> distinctUntilChanged
         
         self.emojiInputInteraction = EmojiPagerContentComponent.InputInteraction(
-            performItemAction: { [weak interfaceInteraction, weak controllerInteraction] _, item, _, _, _ in
+            performItemAction: { [weak self, weak interfaceInteraction, weak controllerInteraction] _, item, _, _, _ in
                 let _ = (hasPremium |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
-                    guard let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
+                    guard let strongSelf = self,  let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
                         return
                     }
                     
@@ -994,10 +996,17 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                         
                         if file.isPremiumEmoji && !hasPremium {
+                            var animateInAsReplacement = false
+                            if let currentUndoOverlayController = strongSelf.currentUndoOverlayController {
+                                currentUndoOverlayController.dismissWithCommitActionAndReplacementAnimation()
+                                strongSelf.currentUndoOverlayController = nil
+                                animateInAsReplacement = true
+                            }
+                            
                             //TODO:localize
                                                         
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Subscribe to Telegram Premium to unlock this emoji.", undoText: "More", customAction: { [weak controllerInteraction] in
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Subscribe to Telegram Premium to unlock this emoji.", undoText: "More", customAction: { [weak controllerInteraction] in
                                 guard let controllerInteraction = controllerInteraction else {
                                     return
                                 }
@@ -1014,7 +1023,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 
                                 /*let controller = PremiumIntroScreen(context: context, source: .stickers)
                                 controllerInteraction.navigationController()?.pushViewController(controller)*/
-                            }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                            }), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                            strongSelf.currentUndoOverlayController = controller
+                            controllerInteraction.presentController(controller, nil)
                             return
                         }
                         

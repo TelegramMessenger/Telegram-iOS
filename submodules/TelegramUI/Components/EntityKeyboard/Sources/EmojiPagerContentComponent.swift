@@ -579,7 +579,7 @@ private final class GroupHeaderLayer: UIView {
         cache: AnimationCache,
         renderer: MultiAnimationRenderer,
         attemptSynchronousLoad: Bool
-    ) -> CGSize {
+    ) -> (size: CGSize, centralContentWidth: CGFloat) {
         var themeUpdated = false
         if self.theme !== theme {
             self.theme = theme
@@ -606,48 +606,8 @@ private final class GroupHeaderLayer: UIView {
         
         let titleHorizontalOffset: CGFloat
         if isPremiumLocked {
-            let lockIconLayer: SimpleLayer
-            if let current = self.lockIconLayer {
-                lockIconLayer = current
-            } else {
-                lockIconLayer = SimpleLayer()
-                self.lockIconLayer = lockIconLayer
-                self.layer.addSublayer(lockIconLayer)
-            }
-            if let image = PresentationResourcesChat.chatEntityKeyboardLock(theme, color: color) {
-                let imageSize = image.size.aspectFitted(CGSize(width: 16.0, height: 16.0))
-                lockIconLayer.contents = image.cgImage
-                titleHorizontalOffset = imageSize.width + 2.0
-                lockIconLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: imageSize)
-            } else {
-                lockIconLayer.contents = nil
-                titleHorizontalOffset = 0.0
-            }
-            
-            let tintLockIconLayer: SimpleLayer
-            if let current = self.tintLockIconLayer {
-                tintLockIconLayer = current
-            } else {
-                tintLockIconLayer = SimpleLayer()
-                self.tintLockIconLayer = tintLockIconLayer
-                self.tintContentLayer.addSublayer(tintLockIconLayer)
-            }
-            if let image = PresentationResourcesChat.chatEntityKeyboardLock(theme, color: .white) {
-                let imageSize = image.size.aspectFitted(CGSize(width: 16.0, height: 16.0))
-                tintLockIconLayer.contents = image.cgImage
-                tintLockIconLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: imageSize)
-            } else {
-                tintLockIconLayer.contents = nil
-            }
+            titleHorizontalOffset = 10.0 + 2.0
         } else {
-            if let lockIconLayer = self.lockIconLayer {
-                self.lockIconLayer = nil
-                lockIconLayer.removeFromSuperlayer()
-            }
-            if let tintLockIconLayer = self.tintLockIconLayer {
-                self.tintLockIconLayer = nil
-                tintLockIconLayer.removeFromSuperlayer()
-            }
             titleHorizontalOffset = 0.0
         }
         
@@ -712,14 +672,52 @@ private final class GroupHeaderLayer: UIView {
         }
         
         let textFrame: CGRect
-        if (layoutType == .compact && hasClear) || subtitle != nil {
-            textFrame = CGRect(origin: CGPoint(x: titleHorizontalOffset, y: textOffsetY), size: textSize)
-        } else {
-            textFrame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - textSize.width) / 2.0), y: textOffsetY), size: textSize)
-        }
+        textFrame = CGRect(origin: CGPoint(x: titleHorizontalOffset + floor((constrainedSize.width - titleHorizontalOffset - textSize.width) / 2.0), y: textOffsetY), size: textSize)
         self.textLayer.frame = textFrame
         self.tintTextLayer.frame = textFrame
         self.tintTextLayer.isHidden = !needsTintText
+        
+        if isPremiumLocked {
+            let lockIconLayer: SimpleLayer
+            if let current = self.lockIconLayer {
+                lockIconLayer = current
+            } else {
+                lockIconLayer = SimpleLayer()
+                self.lockIconLayer = lockIconLayer
+                self.layer.addSublayer(lockIconLayer)
+            }
+            if let image = PresentationResourcesChat.chatEntityKeyboardLock(theme, color: color) {
+                let imageSize = image.size
+                lockIconLayer.contents = image.cgImage
+                lockIconLayer.frame = CGRect(origin: CGPoint(x: textFrame.minX - imageSize.width - 3.0, y: 2.0 + UIScreenPixel), size: imageSize)
+            } else {
+                lockIconLayer.contents = nil
+            }
+            
+            let tintLockIconLayer: SimpleLayer
+            if let current = self.tintLockIconLayer {
+                tintLockIconLayer = current
+            } else {
+                tintLockIconLayer = SimpleLayer()
+                self.tintLockIconLayer = tintLockIconLayer
+                self.tintContentLayer.addSublayer(tintLockIconLayer)
+            }
+            if let image = PresentationResourcesChat.chatEntityKeyboardLock(theme, color: .white) {
+                tintLockIconLayer.contents = image.cgImage
+                tintLockIconLayer.frame = lockIconLayer.frame
+            } else {
+                tintLockIconLayer.contents = nil
+            }
+        } else {
+            if let lockIconLayer = self.lockIconLayer {
+                self.lockIconLayer = nil
+                lockIconLayer.removeFromSuperlayer()
+            }
+            if let tintLockIconLayer = self.tintLockIconLayer {
+                self.tintLockIconLayer = nil
+                tintLockIconLayer.removeFromSuperlayer()
+            }
+        }
         
         let subtitleSize: CGSize
         if let subtitle = subtitle {
@@ -836,11 +834,7 @@ private final class GroupHeaderLayer: UIView {
         }
         
         var size: CGSize
-        if layoutType == .compact && hasClear {
-            size = CGSize(width: titleHorizontalOffset + textSize.width + clearWidth, height: constrainedSize.height)
-        } else {
-            size = CGSize(width: constrainedSize.width, height: constrainedSize.height)
-        }
+        size = CGSize(width: constrainedSize.width, height: constrainedSize.height)
         
         if let embeddedItems = embeddedItems {
             let groupEmbeddedView: GroupEmbeddedView
@@ -908,7 +902,7 @@ private final class GroupHeaderLayer: UIView {
             }
         }
         
-        return size
+        return (size, titleHorizontalOffset + textSize.width + clearWidth)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -1552,13 +1546,13 @@ public final class EmojiPagerContentComponent: Component {
                     
                     if width >= 420.0 {
                         self.itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 5.0, bottom: containerInsets.bottom, right: containerInsets.right + 5.0)
-                        self.headerInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 5.0, bottom: containerInsets.bottom, right: containerInsets.right + 5.0)
                         minSpacing = 2.0
                     } else {
                         self.itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 7.0, bottom: containerInsets.bottom, right: containerInsets.right + 7.0)
-                        self.headerInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 7.0, bottom: containerInsets.bottom, right: containerInsets.right + 7.0)
                         minSpacing = 9.0
                     }
+                    
+                    self.headerInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 16.0, bottom: containerInsets.bottom, right: containerInsets.right + 16.0)
                     
                     self.itemDefaultHeaderHeight = 24.0
                     self.itemFeaturedHeaderHeight = self.itemDefaultHeaderHeight
@@ -3039,7 +3033,7 @@ public final class EmojiPagerContentComponent: Component {
                     assignTopVisibleSubgroupId = true
                 }
                 
-                var headerSize: CGSize?
+                var headerCentralContentWidth: CGFloat?
                 var headerSizeUpdated = false
                 if let title = itemGroup.title {
                     validGroupHeaderIds.insert(itemGroup.groupId)
@@ -3076,7 +3070,7 @@ public final class EmojiPagerContentComponent: Component {
                     
                     let hasTopSeparator = false
                     
-                    let groupHeaderSize = groupHeaderView.update(
+                    let (groupHeaderSize, centralContentWidth) = groupHeaderView.update(
                         context: component.context,
                         theme: theme,
                         layoutType: itemLayout.layoutType,
@@ -3097,11 +3091,11 @@ public final class EmojiPagerContentComponent: Component {
                     if groupHeaderView.bounds.size != groupHeaderSize {
                         headerSizeUpdated = true
                     }
+                    headerCentralContentWidth = centralContentWidth
                     
                     let groupHeaderFrame = CGRect(origin: CGPoint(x: floor((itemLayout.contentSize.width - groupHeaderSize.width) / 2.0), y: itemGroupLayout.frame.minY + 1.0), size: groupHeaderSize)
                     groupHeaderView.bounds = CGRect(origin: CGPoint(), size: groupHeaderFrame.size)
                     groupHeaderTransition.setPosition(view: groupHeaderView, position: CGPoint(x: groupHeaderFrame.midX, y: groupHeaderFrame.midY))
-                    headerSize = CGSize(width: groupHeaderSize.width, height: groupHeaderSize.height)
                 }
                 
                 let groupBorderRadius: CGFloat = 16.0
@@ -3134,8 +3128,8 @@ public final class EmojiPagerContentComponent: Component {
                     
                     if groupBorderLayer.bounds.size != groupBorderFrame.size || headerSizeUpdated {
                         let headerWidth: CGFloat
-                        if let headerSize = headerSize {
-                            headerWidth = headerSize.width + 14.0
+                        if let headerCentralContentWidth = headerCentralContentWidth {
+                            headerWidth = headerCentralContentWidth + 14.0
                         } else {
                             headerWidth = 0.0
                         }

@@ -1374,6 +1374,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 case .overPanels:
                     self.inputContextPanelContainer.addSubnode(inputContextPanelNode)
                 case .overTextInput:
+                    inputContextPanelNode.view.disablesInteractiveKeyboardGestureRecognizer = true
                     self.inputContextOverTextPanelContainer.addSubnode(inputContextPanelNode)
                 }
                 immediatelyLayoutInputContextPanelAndAnimateAppearance = true

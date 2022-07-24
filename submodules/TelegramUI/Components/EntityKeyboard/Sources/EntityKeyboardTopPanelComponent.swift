@@ -185,9 +185,14 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
             } else if let titleView = self.titleView {
                 self.titleView = nil
                 if let view = titleView.view {
-                    transition.setAlpha(view: view, alpha: 0.0, completion: { [weak view] _ in
-                        view?.removeFromSuperview()
-                    })
+                    if !transition.animation.isImmediate {
+                        view.alpha = 0.0
+                        view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, completion: { [weak view] _ in
+                            view?.removeFromSuperview()
+                        })
+                    } else {
+                        view.removeFromSuperview()
+                    }
                 }
             }
             
@@ -392,9 +397,14 @@ final class EntityKeyboardIconTopPanelComponent: Component {
             } else if let titleView = self.titleView {
                 self.titleView = nil
                 if let view = titleView.view {
-                    transition.setAlpha(view: view, alpha: 0.0, completion: { [weak view] _ in
-                        view?.removeFromSuperview()
-                    })
+                    if !transition.animation.isImmediate {
+                        view.alpha = 0.0
+                        view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, completion: { [weak view] _ in
+                            view?.removeFromSuperview()
+                        })
+                    } else {
+                        view.removeFromSuperview()
+                    }
                 }
             }
             
@@ -724,9 +734,14 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
             } else if let titleView = self.titleView {
                 self.titleView = nil
                 if let view = titleView.view {
-                    transition.setAlpha(view: view, alpha: 0.0, completion: { [weak view] _ in
-                        view?.removeFromSuperview()
-                    })
+                    if !transition.animation.isImmediate {
+                        view.alpha = 0.0
+                        view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, completion: { [weak view] _ in
+                            view?.removeFromSuperview()
+                        })
+                    } else {
+                        view.removeFromSuperview()
+                    }
                 }
             }
             
