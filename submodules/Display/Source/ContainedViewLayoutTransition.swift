@@ -154,7 +154,7 @@ public extension ContainedViewLayoutTransition {
                 }
             case let .animated(duration, curve):
                 let previousFrame: CGRect
-                if beginWithCurrentState, let presentation = node.layer.presentation() {
+                if beginWithCurrentState, (node.layer.animation(forKey: "position") != nil || node.layer.animation(forKey: "bounds") != nil), let presentation = node.layer.presentation() {
                     previousFrame = presentation.frame
                 } else {
                     previousFrame = node.frame
@@ -290,7 +290,7 @@ public extension ContainedViewLayoutTransition {
                 }
             case let .animated(duration, curve):
                 let previousBounds: CGRect
-                if beginWithCurrentState, let presentation = node.layer.presentation() {
+                if beginWithCurrentState, node.layer.animation(forKey: "bounds") != nil, let presentation = node.layer.presentation() {
                     previousBounds = presentation.bounds
                 } else {
                     previousBounds = node.bounds
@@ -341,8 +341,8 @@ public extension ContainedViewLayoutTransition {
                 }
             case let .animated(duration, curve):
                 let previousPosition: CGPoint
-                if beginWithCurrentState {
-                    previousPosition = node.layer.presentation()?.position ?? node.position
+                if beginWithCurrentState, node.layer.animation(forKey: "position") != nil, let presentation = node.layer.presentation() {
+                    previousPosition = presentation.position
                 } else {
                     previousPosition = node.position
                 }

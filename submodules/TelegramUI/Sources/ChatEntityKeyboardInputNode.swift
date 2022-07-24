@@ -616,7 +616,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 guard let controllerInteraction = controllerInteraction else {
                     return
                 }
-                let _ = controllerInteraction.sendGif(.savedGif(media: item.file), view, rect, false, false)
+                let _ = controllerInteraction.sendGif(item.file, view, rect, false, false)
             },
             openGifContextMenu: { _, _, _, _, _ in
             },
@@ -776,7 +776,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     var items: [GifPagerContentComponent.Item] = []
                     for gifItem in savedGifs {
                         items.append(GifPagerContentComponent.Item(
-                            file: gifItem.contents.get(RecentMediaItem.self)!.media
+                            file: .savedGif(media: gifItem.contents.get(RecentMediaItem.self)!.media),
+                            contextResult: nil
                         ))
                     }
                     return EntityKeyboardGifContent(
@@ -800,7 +801,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     if let trendingGifs = trendingGifs {
                         for file in trendingGifs.files {
                             items.append(GifPagerContentComponent.Item(
-                                file: file.file.media
+                                file: file.file,
+                                contextResult: file.contextResult
                             ))
                         }
                     } else {
@@ -829,7 +831,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     if let result = result {
                         for file in result.files {
                             items.append(GifPagerContentComponent.Item(
-                                file: file.file.media
+                                file: file.file,
+                                contextResult: file.contextResult
                             ))
                         }
                         loadMoreToken = result.nextOffset
@@ -893,7 +896,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     var existingIds = Set<MediaId>()
                     for item in componentValue.component.items {
                         items.append(item)
-                        existingIds.insert(item.file.fileId)
+                        existingIds.insert(item.file.media.fileId)
                     }
                     
                     var loadMoreToken: String?
@@ -904,7 +907,10 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 continue
                             }
                             existingIds.insert(file.file.media.fileId)
-                            items.append(GifPagerContentComponent.Item(file: file.file.media))
+                            items.append(GifPagerContentComponent.Item(
+                                file: file.file,
+                                contextResult: file.contextResult
+                            ))
                         }
                         if !result.isComplete {
                             loadMoreToken = result.nextOffset
@@ -1399,13 +1405,18 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 guard let controllerInteraction = controllerInteraction else {
                     return
                 }
-                let _ = controllerInteraction.sendGif(.savedGif(media: item.file), view, rect, false, false)
+                
+                if let (collection, result) = item.contextResult {
+                    let _ = controllerInteraction.sendBotContextResultAsGif(collection, result, view, rect, false)
+                } else {
+                    let _ = controllerInteraction.sendGif(item.file, view, rect, false, false)
+                }
             },
-            openGifContextMenu: { [weak self] file, sourceView, sourceRect, gesture, isSaved in
+            openGifContextMenu: { [weak self] item, sourceView, sourceRect, gesture, isSaved in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.openGifContextMenu(file: file, sourceView: sourceView, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
+                strongSelf.openGifContextMenu(item: item, sourceView: sourceView, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
             },
             loadMore: { [weak self] token in
                 guard let strongSelf = self, let gifContext = strongSelf.gifContext else {
@@ -1609,9 +1620,142 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         return (expandedHeight, 0.0)
     }
     
-    private func openGifContextMenu(file: TelegramMediaFile, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
+    private func openGifContextMenu(item: GifPagerContentComponent.Item, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
+        let file = item
+        
         let canSaveGif: Bool
-        if file.fileId.namespace == Namespaces.Media.CloudFile {
+        if file.file.media.fileId.namespace == Namespaces.Media.CloudFile {
+            canSaveGif = true
+        } else {
+            canSaveGif = false
+        }
+        
+        let _ = (self.context.engine.stickers.isGifSaved(id: file.file.media.fileId)
+        |> deliverOnMainQueue).start(next: { [weak self] isGifSaved in
+            guard let strongSelf = self else {
+                return
+            }
+            var isGifSaved = isGifSaved
+            if !canSaveGif {
+                isGifSaved = false
+            }
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+            
+            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
+            
+            let gallery = GalleryController(context: strongSelf.context, source: .standaloneMessage(message), streamSingleVideo: true, replaceRootController: { _, _ in
+            }, baseNavigationController: nil)
+            gallery.setHintWillBePresentedInPreviewingContext(true)
+            
+            var items: [ContextMenuItem] = []
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_Send, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                f(.default)
+                if isSaved {
+                    let _ = self?.controllerInteraction?.sendGif(file.file, sourceView, sourceRect, false, false)
+                } else if let (collection, result) = file.contextResult {
+                    let _ = self?.controllerInteraction?.sendBotContextResultAsGif(collection, result, sourceView, sourceRect, false)
+                }
+            })))
+            
+            if let currentState = strongSelf.currentState {
+                let interfaceState = currentState.interfaceState
+                
+                var isScheduledMessages = false
+                if case .scheduledMessages = interfaceState.subject {
+                    isScheduledMessages = true
+                }
+                if !isScheduledMessages {
+                    if case let .peer(peerId) = interfaceState.chatLocation {
+                        if peerId != self?.context.account.peerId && peerId.namespace != Namespaces.Peer.SecretChat  {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendSilently, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                f(.default)
+                                if isSaved {
+                                    let _ = self?.controllerInteraction?.sendGif(file.file, sourceView, sourceRect, true, false)
+                                } else if let (collection, result) = file.contextResult {
+                                    let _ = self?.controllerInteraction?.sendBotContextResultAsGif(collection, result, sourceView, sourceRect, true)
+                                }
+                            })))
+                        }
+                    
+                        if isSaved {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                f(.default)
+                                
+                                let _ = self?.controllerInteraction?.sendGif(file.file, sourceView, sourceRect, false, true)
+                            })))
+                        }
+                    }
+                }
+            }
+            
+            if isSaved || isGifSaved {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                }, action: { _, f in
+                    f(.dismissWithoutContent)
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: file.file.media.fileId).start()
+                })))
+            } else if canSaveGif && !isGifSaved {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Preview_SaveGif, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    f(.dismissWithoutContent)
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    let context = strongSelf.context
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let _ = (toggleGifSaved(account: context.account, fileReference: file.file, saved: true)
+                    |> deliverOnMainQueue).start(next: { result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        switch result {
+                            case .generic:
+                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                            case let .limitExceeded(limit, premiumLimit):
+                                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                                let text: String
+                                if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
+                                    text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                } else {
+                                    text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
+                                }
+                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                    guard let strongSelf = self else {
+                                        return false
+                                    }
+                                    
+                                    if case .info = action {
+                                        let controller = PremiumIntroScreen(context: context, source: .savedGifs)
+                                        strongSelf.controllerInteraction?.navigationController()?.pushViewController(controller)
+                                        return true
+                                    }
+                                    return false
+                                }), nil)
+                        }
+                    })
+                })))
+            }
+            
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceView: sourceView, sourceRect: sourceRect)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            strongSelf.controllerInteraction?.presentGlobalOverlayController(contextController, nil)
+        })
+        
+        /*let canSaveGif: Bool
+        if item.file.fileId.namespace == Namespaces.Media.CloudFile {
             canSaveGif = true
         } else {
             canSaveGif = false
@@ -1646,15 +1790,19 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }*/
             })))
             
-            /*if let (_, _, _, _, _, _, _, _, interfaceState, _, _, _) = strongSelf.validLayout {
+            if let currentState = strongSelf.currentState {
+                let interfaceState = currentState.interfaceState
+                
                 var isScheduledMessages = false
                 if case .scheduledMessages = interfaceState.subject {
                     isScheduledMessages = true
                 }
                 if !isScheduledMessages {
                     if case let .peer(peerId) = interfaceState.chatLocation {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        
                         if peerId != self?.context.account.peerId && peerId.namespace != Namespaces.Peer.SecretChat  {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_SendSilently, icon: { theme in
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendSilently, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
                                 f(.default)
@@ -1667,7 +1815,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                     
                         if isSaved {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
                                 f(.default)
@@ -1677,7 +1825,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                     }
                 }
-            }*/
+            }
             
             if isSaved || isGifSaved {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
@@ -1731,7 +1879,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             
             let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceView: sourceView, sourceRect: sourceRect)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             strongSelf.controllerInteraction?.presentGlobalOverlayController(contextController, nil)
-        })
+         })*/
     }
 }
 

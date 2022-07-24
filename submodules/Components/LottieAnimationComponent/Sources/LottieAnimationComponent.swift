@@ -141,6 +141,7 @@ public final class LottieAnimationComponent: Component {
                 }
                 
                 if let animationView = self.animationView, animationView.isAnimationPlaying {
+                    updateComponent = false
                     self.currentCompletion = { [weak self] in
                         guard let strongSelf = self else {
                             return
@@ -154,6 +155,7 @@ public final class LottieAnimationComponent: Component {
                     
                     self.animationView?.removeFromSuperview()
                     self.didPlayToCompletion = false
+                    self.currentCompletion = nil
                     
                     if let url = getAppBundle().url(forResource: component.animation.name, withExtension: "json"), let animation = Animation.filepath(url.path) {
                         let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))

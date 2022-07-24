@@ -430,6 +430,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             }
             
             var contentInsets = component.contentInsets
+            contentInsets.bottom = 0.0
             
             var scrollingPanelOffsetFraction: CGFloat
             if case .show = component.panelHideBehavior {

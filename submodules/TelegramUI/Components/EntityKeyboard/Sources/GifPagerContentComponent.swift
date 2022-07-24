@@ -134,12 +134,12 @@ public final class GifPagerContentComponent: Component {
     
     public final class InputInteraction {
         public let performItemAction: (Item, UIView, CGRect) -> Void
-        public let openGifContextMenu: (TelegramMediaFile, UIView, CGRect, ContextGesture, Bool) -> Void
+        public let openGifContextMenu: (Item, UIView, CGRect, ContextGesture, Bool) -> Void
         public let loadMore: (String) -> Void
         
         public init(
             performItemAction: @escaping (Item, UIView, CGRect) -> Void,
-            openGifContextMenu: @escaping (TelegramMediaFile, UIView, CGRect, ContextGesture, Bool) -> Void,
+            openGifContextMenu: @escaping (Item, UIView, CGRect, ContextGesture, Bool) -> Void,
             loadMore: @escaping (String) -> Void
         ) {
             self.performItemAction = performItemAction
@@ -149,17 +149,22 @@ public final class GifPagerContentComponent: Component {
     }
     
     public final class Item: Equatable {
-        public let file: TelegramMediaFile
+        public let file: FileMediaReference
+        public let contextResult: (ChatContextResultCollection, ChatContextResult)?
         
-        public init(file: TelegramMediaFile) {
+        public init(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?) {
             self.file = file
+            self.contextResult = contextResult
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
             if lhs === rhs {
                 return true
             }
-            if lhs.file.fileId != rhs.file.fileId {
+            if lhs.file.media.fileId != rhs.file.media.fileId {
+                return false
+            }
+            if (lhs.contextResult == nil) != (rhs.contextResult != nil) {
                 return false
             }
             
@@ -242,10 +247,16 @@ public final class GifPagerContentComponent: Component {
                 self.horizontalSpacing = 1.0
                 self.verticalSpacing = 1.0
                 
-                let itemHorizontalSpace = width - self.containerInsets.left - self.containerInsets.right
-                self.itemSize = floor((width - self.horizontalSpacing * 2.0) / 3.0)
+                let defaultItemSize: CGFloat = 120.0
                 
-                self.itemsPerRow = Int((itemHorizontalSpace + self.horizontalSpacing) / (self.itemSize + self.horizontalSpacing))
+                let itemHorizontalSpace = width - self.containerInsets.left - self.containerInsets.right
+                var itemsPerRow = Int(floor((itemHorizontalSpace) / (defaultItemSize)))
+                itemsPerRow = max(3, itemsPerRow)
+                
+                self.itemsPerRow = itemsPerRow
+                
+                self.itemSize = floor((itemHorizontalSpace - self.horizontalSpacing * CGFloat(itemsPerRow - 1)) / CGFloat(itemsPerRow))
+                
                 let numRowsInGroup = (itemCount + (self.itemsPerRow - 1)) / self.itemsPerRow
                 self.contentSize = CGSize(width: width, height: self.containerInsets.top + self.containerInsets.bottom + CGFloat(numRowsInGroup) * self.itemSize + CGFloat(max(0, numRowsInGroup - 1)) * self.verticalSpacing)
             }
@@ -265,7 +276,7 @@ public final class GifPagerContentComponent: Component {
                     )
                 )
                 
-                if column == self.itemsPerRow - 1 {
+                if column == self.itemsPerRow - 1 && index < self.itemCount - 1 {
                     rect.size.width = self.width - self.containerInsets.right - rect.minX
                 }
                 
@@ -321,7 +332,7 @@ public final class GifPagerContentComponent: Component {
                 self.item = item
                 self.onUpdateDisplayPlaceholder = onUpdateDisplayPlaceholder
                 
-                super.init(context: context, file: item?.file, synchronousLoad: attemptSynchronousLoad)
+                super.init(context: context, file: item?.file.media, synchronousLoad: attemptSynchronousLoad)
                 
                 if item == nil {
                     self.updateDisplayPlaceholder(displayPlaceholder: true, duration: 0.0)
@@ -453,6 +464,8 @@ public final class GifPagerContentComponent: Component {
             
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
             
+            self.isMultipleTouchEnabled = false
+            
             self.useSublayerTransformForActivation = false
             self.shouldBegin = { [weak self] point in
                 guard let strongSelf = self else {
@@ -475,7 +488,7 @@ public final class GifPagerContentComponent: Component {
                     return
                 }
                 let rect = strongSelf.scrollView.convert(itemLayer.frame, to: strongSelf)
-                component.inputInteraction.openGifContextMenu(item.file, strongSelf, rect, gesture, true)
+                component.inputInteraction.openGifContextMenu(item, strongSelf, rect, gesture, component.subject == .recent)
             }
         }
         
@@ -483,16 +496,16 @@ public final class GifPagerContentComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        private func openGifContextMenu(file: TelegramMediaFile, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
+        private func openGifContextMenu(item: Item, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
             guard let component = self.component else {
                 return
             }
-            component.inputInteraction.openGifContextMenu(file, sourceView, sourceRect, gesture, isSaved)
+            component.inputInteraction.openGifContextMenu(item, sourceView, sourceRect, gesture, isSaved)
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                if let component = self.component, let item = self.item(atPoint: recognizer.location(in: self)), let itemView = self.visibleItemLayers[.media(item.file.fileId)] {
+                if let component = self.component, let item = self.item(atPoint: recognizer.location(in: self)), let itemView = self.visibleItemLayers[.media(item.file.media.fileId)] {
                     component.inputInteraction.performItemAction(item, self, self.scrollView.convert(itemView.frame, to: self))
                 }
             }
@@ -629,7 +642,7 @@ public final class GifPagerContentComponent: Component {
                     let itemId: ItemKey
                     if index < component.items.count {
                         item = component.items[index]
-                        itemId = .media(component.items[index].file.fileId)
+                        itemId = .media(component.items[index].file.media.fileId)
                     } else if component.isLoading || component.loadMoreToken != nil {
                         itemId = .placeholder(index)
                     } else {

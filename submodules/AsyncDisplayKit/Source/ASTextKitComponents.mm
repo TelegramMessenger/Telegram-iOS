@@ -172,8 +172,10 @@
 
   // If our text-view's width is already the constrained width, we can use our existing TextKit stack for this sizing calculation.
   // Otherwise, we create a temporary stack to size for `constrainedWidth`.
+  UIEdgeInsets additionalInsets = UIEdgeInsetsZero;
   if (CGRectGetWidth(components.textView.threadSafeBounds) != constrainedWidth) {
-    components = [ASTextKitComponents componentsWithAttributedSeedString:components.textStorage textContainerSize:CGSizeMake(constrainedWidth, CGFLOAT_MAX)];
+    additionalInsets = self.textView.textContainerInset;
+    components = [ASTextKitComponents componentsWithAttributedSeedString:components.textStorage textContainerSize:CGSizeMake(constrainedWidth - additionalInsets.left - additionalInsets.right, CGFLOAT_MAX)];
   }
 
   // Force glyph generation and layout, which may not have happened yet (and isn't triggered by -usedRectForTextContainer:).

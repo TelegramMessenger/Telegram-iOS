@@ -376,7 +376,9 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                             switch attribute {
                             case let .CustomEmoji(_, alt, _):
                                 if !alt.isEmpty, let keyword = allEmoticons[alt] {
-                                    result.append((alt, item.file, keyword))
+                                    if !item.file.isPremiumEmoji || hasPremium {
+                                        result.append((alt, item.file, keyword))
+                                    }
                                 }
                             default:
                                 break

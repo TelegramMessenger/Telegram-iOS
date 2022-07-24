@@ -60,11 +60,11 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         self.addSubnode(self.iconImageNode)
         
         switch item {
-            case .input, .botInput, .silentPost:
-                self.iconImageNode.isHidden = true
-                self.animationView = ComponentView<Empty>()
-            default:
-                break
+        case .input, .botInput, .silentPost:
+            self.iconImageNode.isHidden = true
+            self.animationView = ComponentView<Empty>()
+        default:
+            break
         }
         
         if let text = text {
@@ -84,9 +84,11 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                 if highlighted {
                     strongSelf.layer.removeAnimation(forKey: "opacity")
                     strongSelf.alpha = 0.4
+                    strongSelf.layer.allowsGroupOpacity = true
                 } else {
                     strongSelf.alpha = 1.0
                     strongSelf.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.layer.allowsGroupOpacity = false
                 }
             }
         }
@@ -117,7 +119,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    static func imageAndInsets(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) -> (UIImage?, String?, String, CGFloat, UIEdgeInsets) {
+    private static func imageAndInsets(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) -> (UIImage?, String?, String, CGFloat, UIEdgeInsets) {
         switch item {
             case let .input(isEnabled, inputMode), let .botInput(isEnabled, inputMode):
                 switch inputMode {
@@ -147,7 +149,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
+    private static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
         switch item {
         case .input, .botInput, .silentPost, .commands, .scheduledMessages:
             return 32.0
@@ -169,12 +171,12 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
             self.iconImageNode.image = AccessoryItemIconButtonNode.imageAndInsets(item: item, theme: self.theme, strings: self.strings).0
             
             let bottomInset: CGFloat = 0.0
-           // let iconSize = CGSize(width: 32.0, height: 32.0)
             let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0) - bottomInset), size: image.size)
             self.iconImageNode.frame = imageFrame
             
             if let animationView = self.animationView {
                 let width = AccessoryItemIconButtonNode.calculateWidth(item: item, image: image, text: "", strings: self.strings)
+                let iconSize = CGSize(width: width, height: width)
                 
                 let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - width) / 2.0), y: floor((size.height - width) / 2.0) - bottomInset), size: CGSize(width: width, height: width))
                 
@@ -185,15 +187,15 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                 if case let .silentPost(muted) = item {
                     if case let .silentPost(previousMuted) = previousItem {
                         if muted {
-                            animationName = "anim_channelMute"
+                            animationName = "input_anim_channelMute"
                         } else {
-                            animationName = "anim_channelUnmute"
+                            animationName = "input_anim_channelUnmute"
                         }
                         if muted != previousMuted {
                             animationMode = .animating(loop: false)
                         }
                     } else {
-                        animationName = "anim_channelMute"
+                        animationName = "input_anim_channelMute"
                     }
                 } else {
                     var previousInputMode: ChatTextInputAccessoryItem.InputMode?
@@ -225,60 +227,60 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                             case .keyboard:
                                 if let previousInputMode = previousInputMode {
                                     if case .stickers = previousInputMode {
-                                        animationName = "anim_stickerToKey"
+                                        animationName = "input_anim_stickerToKey"
                                         animationMode = .animating(loop: false)
                                     } else if case .emoji = previousInputMode {
-                                        animationName = "anim_smileToKey"
+                                        animationName = "input_anim_smileToKey"
                                         animationMode = .animating(loop: false)
                                     } else if case .bot = previousInputMode {
-                                        animationName = "anim_botToKey"
+                                        animationName = "input_anim_botToKey"
                                         animationMode = .animating(loop: false)
                                     } else {
-                                        animationName = "anim_stickerToKey"
+                                        animationName = "input_anim_stickerToKey"
                                     }
                                 } else {
-                                    animationName = "anim_stickerToKey"
+                                    animationName = "input_anim_stickerToKey"
                                 }
                             case .stickers:
                                 if let previousInputMode = previousInputMode {
                                     if case .keyboard = previousInputMode {
-                                        animationName = "anim_keyToSticker"
+                                        animationName = "input_anim_keyToSticker"
                                         animationMode = .animating(loop: false)
                                     } else if case .emoji = previousInputMode {
-                                        animationName = "anim_smileToSticker"
+                                        animationName = "input_anim_smileToSticker"
                                         animationMode = .animating(loop: false)
                                         colorKeys = emojiColorKeys
                                     } else {
-                                        animationName = "anim_keyToSticker"
+                                        animationName = "input_anim_keyToSticker"
                                     }
                                 } else {
-                                    animationName = "anim_keyToSticker"
+                                    animationName = "input_anim_keyToSticker"
                                 }
                             case .emoji:
                                 if let previousInputMode = previousInputMode {
                                     if case .keyboard = previousInputMode {
-                                        animationName = "anim_keyToSmile"
+                                        animationName = "input_anim_keyToSmile"
                                         animationMode = .animating(loop: false)
                                     } else if case .stickers = previousInputMode {
-                                        animationName = "anim_stickerToSmile"
+                                        animationName = "input_anim_stickerToSmile"
                                         animationMode = .animating(loop: false)
                                         colorKeys = emojiColorKeys
                                     } else {
-                                        animationName = "anim_keyToSmile"
+                                        animationName = "input_anim_keyToSmile"
                                     }
                                 } else {
-                                    animationName = "anim_keyToSmile"
+                                    animationName = "input_anim_keyToSmile"
                                 }
                             case .bot:
                                 if let previousInputMode = previousInputMode {
                                     if case .keyboard = previousInputMode {
-                                        animationName = "anim_keyToBot"
+                                        animationName = "input_anim_keyToBot"
                                         animationMode = .animating(loop: false)
                                     } else {
-                                        animationName = "anim_keyToBot"
+                                        animationName = "input_anim_keyToBot"
                                     }
                                 } else {
-                                    animationName = "anim_keyToBot"
+                                    animationName = "input_anim_keyToBot"
                                 }
                         }
                     } else {
@@ -291,7 +293,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                     colors[colorKey] = self.theme.chat.inputPanel.inputControlColor
                 }
                 
-                let _ = animationView.update(
+                let animationSize = animationView.update(
                     transition: .immediate,
                     component: AnyComponent(LottieAnimationComponent(
                         animation: LottieAnimationComponent.AnimationItem(
@@ -299,7 +301,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                             mode: animationMode
                         ),
                         colors: colors,
-                        size: animationFrame.size
+                        size: iconSize
                     )),
                     environment: {},
                     containerSize: animationFrame.size
@@ -309,7 +311,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                     if view.superview == nil {
                         self.view.addSubview(view)
                     }
-                    view.frame = animationFrame
+                    view.frame = CGRect(origin: CGPoint(x: animationFrame.minX + floor((animationFrame.width - animationSize.width) / 2.0), y: animationFrame.minY + floor((animationFrame.height - animationSize.height) / 2.0)), size: animationSize)
                 }
             }
         }
@@ -430,7 +432,7 @@ final class CustomEmojiContainerView: UIView {
         preconditionFailure()
     }
     
-    func update(emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
+    func update(fontSize: CGFloat, emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
         var nextIndexById: [Int64: Int] = [:]
         
         var validKeys = Set<InlineStickerItemLayer.Key>()
@@ -456,7 +458,8 @@ final class CustomEmojiContainerView: UIView {
                 continue
             }
             
-            let size = CGSize(width: 24.0, height: 24.0)
+            let itemSize: CGFloat = floor(24.0 * fontSize / 17.0)
+            let size = CGSize(width: itemSize, height: itemSize)
             
             view.frame = CGRect(origin: CGPoint(x: floor(rect.midX - size.width / 2.0), y: floor(rect.midY - size.height / 2.0)), size: size)
             
@@ -599,13 +602,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, extendedSearchLayout: Bool, accessoryItems: [ChatTextInputAccessoryItem], animated: Bool) {
-        if state.inputText.length != 0 && self.textInputNode == nil {
-            self.loadTextInputNode()
-        }
-        
-        if let textInputNode = self.textInputNode, let currentState = self.presentationInterfaceState {
-            self.updatingInputState = true
-            
+        if let currentState = self.presentationInterfaceState {
             var updateAccessoryButtons = false
             if accessoryItems.count == self.accessoryItemButtons.count {
                 for i in 0 ..< accessoryItems.count {
@@ -642,6 +639,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
                 self.accessoryItemButtons = updatedButtons
             }
+        }
+        
+        if state.inputText.length != 0 && self.textInputNode == nil {
+            self.loadTextInputNode()
+        }
+        
+        if let textInputNode = self.textInputNode, let _ = self.presentationInterfaceState {
+            self.updatingInputState = true
             
             var textColor: UIColor = .black
             var accentTextColor: UIColor = .blue
@@ -915,6 +920,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 strongSelf.ensureFocused()
             }
         }
+        recognizer.waitForTouchUp = { [weak self] in
+            guard let strongSelf = self, let textInputNode = strongSelf.textInputNode else {
+                return true
+            }
+            
+            if textInputNode.textView.isFirstResponder {
+                return true
+            } else {
+                return false
+            }
+        }
         self.textInputBackgroundNode.isUserInteractionEnabled = true
         self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
         
@@ -1011,6 +1027,26 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 strongSelf.ensureFocusedOnTap()
             }
         }
+        recognizer.waitForTouchUp = { [weak self] in
+            guard let strongSelf = self, let textInputNode = strongSelf.textInputNode else {
+                return true
+            }
+            
+            if textInputNode.textView.isFirstResponder {
+                return true
+            } else if let (_, _, _, bottomInset, _, _, metrics, _, _) = strongSelf.validLayout {
+                let textFieldWaitsForTouchUp: Bool
+                if case .regular = metrics.widthClass, bottomInset.isZero {
+                    textFieldWaitsForTouchUp = true
+                } else {
+                    textFieldWaitsForTouchUp = false
+                }
+                
+                return textFieldWaitsForTouchUp
+            } else {
+                return false
+            }
+        }
         textInputNode.view.addGestureRecognizer(recognizer)
         self.touchDownGestureRecognizer = recognizer
         
@@ -1100,14 +1136,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
         let previousAdditionalSideInsets = self.validLayout?.4
         self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded)
-        
-        let textFieldWaitsForTouchUp: Bool
-        if case .regular = metrics.widthClass, bottomInset.isZero {
-            textFieldWaitsForTouchUp = true
-        } else {
-            textFieldWaitsForTouchUp = false
-        }
-        self.touchDownGestureRecognizer?.waitForTouchUp = textFieldWaitsForTouchUp
     
         var transition = transition
         var additionalOffset: CGFloat = 0.0
@@ -2165,6 +2193,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var rects: [CGRect] = []
         var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
         
+        let fontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
+        
         if let attributedText = textInputNode.attributedText {
             let beginning = textInputNode.textView.beginningOfDocument
             attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, range, _ in
@@ -2248,7 +2278,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.customEmojiContainerView = customEmojiContainerView
             }
             
-            customEmojiContainerView.update(emojiRects: customEmojiRects)
+            customEmojiContainerView.update(fontSize: fontSize, emojiRects: customEmojiRects)
         } else if let customEmojiContainerView = self.customEmojiContainerView {
             customEmojiContainerView.removeFromSuperview()
             self.customEmojiContainerView = nil
