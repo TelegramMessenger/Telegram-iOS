@@ -1010,6 +1010,7 @@ final class EntityKeyboardTopPanelComponent: Component {
     
     let theme: PresentationTheme
     let items: [Item]
+    let containerSideInset: CGFloat
     let defaultActiveItemId: AnyHashable?
     let forceActiveItemId: AnyHashable?
     let activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>
@@ -1018,6 +1019,7 @@ final class EntityKeyboardTopPanelComponent: Component {
     init(
         theme: PresentationTheme,
         items: [Item],
+        containerSideInset: CGFloat,
         defaultActiveItemId: AnyHashable? = nil,
         forceActiveItemId: AnyHashable? = nil,
         activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>,
@@ -1025,6 +1027,7 @@ final class EntityKeyboardTopPanelComponent: Component {
     ) {
         self.theme = theme
         self.items = items
+        self.containerSideInset = containerSideInset
         self.defaultActiveItemId = defaultActiveItemId
         self.forceActiveItemId = forceActiveItemId
         self.activeContentItemIdUpdated = activeContentItemIdUpdated
@@ -1036,6 +1039,9 @@ final class EntityKeyboardTopPanelComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.containerSideInset != rhs.containerSideInset {
             return false
         }
         if lhs.defaultActiveItemId != rhs.defaultActiveItemId {
@@ -1064,7 +1070,7 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
             
             let topInset: CGFloat = -3.0
-            let sideInset: CGFloat = 7.0
+            let sideInset: CGFloat
             let itemSize: CGSize
             let staticItemSize: CGSize
             let staticExpandedItemSize: CGSize
@@ -1074,7 +1080,9 @@ final class EntityKeyboardTopPanelComponent: Component {
             let isExpanded: Bool
             let items: [Item]
             
-            init(isExpanded: Bool, height: CGFloat, items: [ItemDescription]) {
+            init(isExpanded: Bool, containerSideInset: CGFloat, height: CGFloat, items: [ItemDescription]) {
+                self.sideInset = containerSideInset + 7.0
+                
                 self.isExpanded = isExpanded
                 self.itemSize = self.isExpanded ? CGSize(width: 54.0, height: 68.0) : CGSize(width: 28.0, height: 28.0)
                 self.staticItemSize = self.itemSize
@@ -1665,7 +1673,7 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
             
             let previousItemLayout = self.itemLayout
-            let itemLayout = ItemLayout(isExpanded: isExpanded, height: availableSize.height, items: self.items.map { item -> ItemLayout.ItemDescription in
+            let itemLayout = ItemLayout(isExpanded: isExpanded, containerSideInset: component.containerSideInset, height: availableSize.height, items: self.items.map { item -> ItemLayout.ItemDescription in
                 let isStatic = item.id == AnyHashable("static")
                 return ItemLayout.ItemDescription(
                     isStatic: isStatic,

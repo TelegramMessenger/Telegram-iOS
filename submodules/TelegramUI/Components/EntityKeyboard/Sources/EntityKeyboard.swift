@@ -285,6 +285,7 @@ public final class EntityKeyboardComponent: Component {
                 contentTopPanels.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(EntityKeyboardTopPanelComponent(
                     theme: component.theme,
                     items: topGifItems,
+                    containerSideInset: component.containerInsets.left,
                     forceActiveItemId: defaultActiveGifItemId,
                     activeContentItemIdUpdated: gifsContentItemIdUpdated,
                     reorderItems: { _ in
@@ -352,7 +353,7 @@ public final class EntityKeyboardComponent: Component {
                             if let file = itemGroup.items[0].file {
                                 topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
                                     id: itemGroup.supergroupId,
-                                    isReorderable: true,
+                                    isReorderable: !itemGroup.isFeatured,
                                     content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                                         context: stickerContent.context,
                                         file: file,
@@ -375,6 +376,7 @@ public final class EntityKeyboardComponent: Component {
                 contentTopPanels.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(EntityKeyboardTopPanelComponent(
                     theme: component.theme,
                     items: topStickerItems,
+                    containerSideInset: component.containerInsets.left,
                     defaultActiveItemId: stickerContent.itemGroups.first?.groupId,
                     activeContentItemIdUpdated: stickersContentItemIdUpdated,
                     reorderItems: { [weak self] items in
@@ -478,6 +480,7 @@ public final class EntityKeyboardComponent: Component {
             contentTopPanels.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(EntityKeyboardTopPanelComponent(
                 theme: component.theme,
                 items: topEmojiItems,
+                containerSideInset: component.containerInsets.left,
                 activeContentItemIdUpdated: emojiContentItemIdUpdated,
                 reorderItems: { [weak self] items in
                     guard let strongSelf = self else {
