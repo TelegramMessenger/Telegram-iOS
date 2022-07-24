@@ -60,11 +60,11 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         self.addSubnode(self.iconImageNode)
         
         switch item {
-            case .input, .botInput:
-                self.iconImageNode.isHidden = true
-                self.animationView = ComponentView<Empty>()
-            default:
-                break
+        case .input, .botInput:
+            self.iconImageNode.isHidden = true
+            self.animationView = ComponentView<Empty>()
+        default:
+            break
         }
         
         if let text = text {
@@ -84,9 +84,11 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                 if highlighted {
                     strongSelf.layer.removeAnimation(forKey: "opacity")
                     strongSelf.alpha = 0.4
+                    strongSelf.layer.allowsGroupOpacity = true
                 } else {
                     strongSelf.alpha = 1.0
                     strongSelf.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.layer.allowsGroupOpacity = false
                 }
             }
         }
@@ -269,7 +271,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                  
                 var colors: [String: UIColor] = [:]
                 for colorKey in colorKeys {
-                    colors[colorKey] = self.theme.chat.inputPanel.inputControlColor
+                    colors[colorKey] = self.theme.chat.inputPanel.inputControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
                 }
                 
                 let _ = animationView.update(

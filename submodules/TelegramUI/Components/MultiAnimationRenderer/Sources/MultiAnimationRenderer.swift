@@ -535,26 +535,37 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
     
     private var groupContext: GroupContext?
     private var frameSkip: Int
-    private var displayLink: ConstantDisplayLinkAnimator?
+    private var displayTimer: Foundation.Timer?
     
     private(set) var isPlaying: Bool = false {
         didSet {
             if self.isPlaying != oldValue {
                 if self.isPlaying {
-                    if self.displayLink == nil {
-                        self.displayLink = ConstantDisplayLinkAnimator { [weak self] in
+                    if self.displayTimer == nil {
+                        final class TimerTarget: NSObject {
+                            private let f: () -> Void
+                            
+                            init(_ f: @escaping () -> Void) {
+                                self.f = f
+                            }
+                            
+                            @objc func timerEvent() {
+                                self.f()
+                            }
+                        }
+                        let displayTimer = Foundation.Timer(timeInterval: CGFloat(self.frameSkip) / 60.0, target: TimerTarget { [weak self] in
                             guard let strongSelf = self else {
                                 return
                             }
                             strongSelf.animationTick()
-                        }
-                        self.displayLink?.frameInterval = self.frameSkip
-                        self.displayLink?.isPaused = false
+                        }, selector: #selector(TimerTarget.timerEvent), userInfo: nil, repeats: true)
+                        self.displayTimer = displayTimer
+                        RunLoop.main.add(displayTimer, forMode: .common)
                     }
                 } else {
-                    if let displayLink = self.displayLink {
-                        self.displayLink = nil
-                        displayLink.invalidate()
+                    if let displayTimer = self.displayTimer {
+                        self.displayTimer = nil
+                        displayTimer.invalidate()
                     }
                 }
             }

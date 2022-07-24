@@ -700,7 +700,7 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
                 for i in 0 ..< items.count {
                     if AnyHashable(items[i].rawValue) == scrollToItem {
                         let itemFrame = itemLayout.frame(at: i)
-                        self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: -itemLayout.sideInset, dy: 0.0), animated: true)
+                        self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: -itemLayout.sideInset - (itemLayout.itemSpacing + itemFrame.width) * 2.0, dy: 0.0), animated: true)
                         break
                     }
                 }
@@ -1898,7 +1898,13 @@ final class EntityKeyboardTopPanelComponent: Component {
                 for i in 0 ..< component.items.count {
                     if component.items[i].id == itemId {
                         let itemFrame = itemLayout.containerFrame(at: i)
-                        self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: -2.0, dy: 0.0), animated: true)
+                        let expandedInset: CGFloat
+                        if itemLayout.isExpanded {
+                            expandedInset = -2.0
+                        } else {
+                            expandedInset = -itemLayout.sideInset - (itemFrame.width + itemLayout.itemSpacing) * 2.0
+                        }
+                        self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: expandedInset, dy: 0.0), animated: true)
                         break
                     }
                 }

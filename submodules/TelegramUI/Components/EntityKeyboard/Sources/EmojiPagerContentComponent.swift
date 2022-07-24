@@ -1205,7 +1205,11 @@ private final class GroupExpandActionButton: UIButton {
             self.currentTextLayout = (title, color, textConstrainedWidth, textSize)
         }
         
-        let size = CGSize(width: textSize.width + 10.0 * 2.0, height: 28.0)
+        var sideInset: CGFloat = 10.0
+        if textSize.width > 24.0 {
+            sideInset = 6.0
+        }
+        let size = CGSize(width: textSize.width + sideInset * 2.0, height: 28.0)
         
         let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: floor((size.height - textSize.height) / 2.0)), size: textSize)
         self.textLayer.frame = textFrame
@@ -2834,6 +2838,7 @@ public final class EmojiPagerContentComponent: Component {
                         let groupHeaderPoint = self.scrollView.convert(locationInScrollView, to: groupHeader)
                         if let clearIconLayer = groupHeader.clearIconLayer, clearIconLayer.frame.insetBy(dx: -4.0, dy: -4.0).contains(groupHeaderPoint) {
                             component.inputInteractionHolder.inputInteraction?.clearGroup(id)
+                            return
                         } else {
                             if groupHeader.tapGesture(recognizer) {
                                 return
@@ -3019,8 +3024,16 @@ public final class EmojiPagerContentComponent: Component {
             
             let contentAnimation = transition.userData(ContentAnimation.self)
             var transitionHintInstalledGroupId: AnyHashable?
-            if let contentAnimation = contentAnimation, case let .groupInstalled(groupId) = contentAnimation.type {
-                transitionHintInstalledGroupId = groupId
+            var transitionHintExpandedGroupId: AnyHashable?
+            if let contentAnimation = contentAnimation {
+                switch contentAnimation.type {
+                case let .groupInstalled(groupId):
+                    transitionHintInstalledGroupId = groupId
+                case let .groupExpanded(groupId):
+                    transitionHintExpandedGroupId = groupId
+                default:
+                    break
+                }
             }
             
             for groupItems in itemLayout.visibleItems(for: effectiveVisibleBounds) {
@@ -3504,8 +3517,19 @@ public final class EmojiPagerContentComponent: Component {
             for (id, button) in self.visibleGroupExpandActionButtons {
                 if !validGroupExpandActionButtons.contains(id) {
                     removedGroupExpandActionButtonIds.append(id)
-                    button.removeFromSuperview()
-                    button.tintContainerLayer.removeFromSuperlayer()
+                    
+                    if !transition.animation.isImmediate && transitionHintExpandedGroupId == id {
+                        button.alpha = 0.0
+                        button.layer.animateScale(from: 1.0, to: 0.5, duration: 0.2)
+                        let tintContainerLayer = button.tintContainerLayer
+                        button.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak button, weak tintContainerLayer] _ in
+                            button?.removeFromSuperview()
+                            tintContainerLayer?.removeFromSuperlayer()
+                        })
+                    } else {
+                        button.removeFromSuperview()
+                        button.tintContainerLayer.removeFromSuperlayer()
+                    }
                 }
             }
             for id in removedGroupExpandActionButtonIds {
