@@ -57,6 +57,25 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
 
     private var enableSynchronousImageApply: Bool = false
     
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            let wasVisible = oldValue != .none
+            let isVisible = self.visibility != .none
+            
+            if wasVisible != isVisible {
+                self.visibilityStatus = isVisible
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool? {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                self.replyInfoNode?.visibility = self.visibilityStatus == true
+            }
+        }
+    }
+    
     required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()

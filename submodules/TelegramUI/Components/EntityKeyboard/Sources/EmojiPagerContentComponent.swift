@@ -1717,35 +1717,38 @@ public final class EmojiPagerContentComponent: Component {
             private let shimmerView: PortalSourceView?
             private var placeholderView: PortalView?
             private let placeholderMaskLayer: SimpleLayer
+            private var placeholderImageView: UIImageView?
             
             public init(
                 context: AccountContext,
                 file: TelegramMediaFile,
                 shimmerView: PortalSourceView?,
-                color: UIColor?,
+                color: UIColor,
                 size: CGSize
             ) {
                 self.shimmerView = shimmerView
-                self.placeholderView = PortalView()
                 self.placeholderMaskLayer = SimpleLayer()
                 
                 super.init(frame: CGRect())
                 
-                if let placeholderView = self.placeholderView, let shimmerView = self.shimmerView {
+                if let shimmerView = self.shimmerView, let placeholderView = PortalView() {
+                    self.placeholderView = placeholderView
+                    
                     placeholderView.view.clipsToBounds = true
                     placeholderView.view.layer.mask = self.placeholderMaskLayer
                     self.addSubview(placeholderView.view)
                     shimmerView.addPortal(view: placeholderView)
                 }
                 
+                let useDirectContent = self.placeholderView == nil
                 Queue.concurrentDefaultQueue().async { [weak self] in
-                    if let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: size, scale: min(2.0, UIScreenScale), imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: color ?? .black) {
+                    if let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: size, scale: min(2.0, UIScreenScale), imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: useDirectContent ? color : .black) {
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
                                 return
                             }
                             
-                            if let _ = color {
+                            if useDirectContent {
                                 strongSelf.layer.contents = image.cgImage
                             } else {
                                 strongSelf.placeholderMaskLayer.contents = image.cgImage
@@ -3329,6 +3332,7 @@ public final class EmojiPagerContentComponent: Component {
                             itemTransition = .immediate
                             animateItemIn = !transition.animation.isImmediate
                             
+                            let placeholderColor = keyboardChildEnvironment.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1)
                             itemLayer = ItemLayer(
                                 item: item,
                                 context: component.context,
@@ -3337,7 +3341,7 @@ public final class EmojiPagerContentComponent: Component {
                                 staticEmoji: item.staticEmoji,
                                 cache: component.animationCache,
                                 renderer: component.animationRenderer,
-                                placeholderColor: keyboardChildEnvironment.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1),
+                                placeholderColor: placeholderColor,
                                 blurredBadgeColor: keyboardChildEnvironment.theme.chat.inputPanel.panelBackgroundColor.withMultipliedAlpha(0.5),
                                 pointSize: item.staticEmoji == nil ? itemPlaybackSize : itemVisibleFitSize,
                                 onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
@@ -3354,7 +3358,7 @@ public final class EmojiPagerContentComponent: Component {
                                                     context: component.context,
                                                     file: file,
                                                     shimmerView: strongSelf.shimmerHostView,
-                                                    color: nil,
+                                                    color: placeholderColor,
                                                     size: itemNativeFitSize
                                                 )
                                                 strongSelf.visibleItemPlaceholderViews[itemId] = placeholderView

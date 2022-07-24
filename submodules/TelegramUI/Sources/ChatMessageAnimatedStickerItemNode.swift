@@ -407,6 +407,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if self.visibilityStatus != oldValue {
                 self.updateVisibility()
                 self.haptic?.enabled = self.visibilityStatus == true
+                
+                self.replyInfoNode?.visibility = self.visibilityStatus == true
             }
         }
     }
