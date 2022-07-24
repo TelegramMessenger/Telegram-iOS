@@ -755,7 +755,7 @@ public final class GifPagerContentComponent: Component {
             guard let theme = self.theme else {
                 return
             }
-            self.backgroundView.updateColor(color: theme.chat.inputMediaPanel.stickersBackgroundColor.withMultipliedAlpha(0.75), enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
+            self.backgroundView.updateColor(color: theme.chat.inputMediaPanel.backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
         }

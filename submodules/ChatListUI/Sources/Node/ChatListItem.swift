@@ -1200,7 +1200,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let draftText = stringWithAppliedEntities(draftState.text, entities: draftState.entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, message: nil)
                         
                         attributedText = foldLineBreaks(draftText)
-                    } else if let message = messages.last {
+                    } else if let message = messages.first {
                         var composedString: NSMutableAttributedString
                         
                         if let peerText = peerText {

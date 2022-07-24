@@ -10,19 +10,31 @@ import ComponentDisplayAdapters
 import BundleIconComponent
 
 private final class BottomPanelIconComponent: Component {
-    let content: AnyComponent<Empty>
+    let imageName: String
+    let isHighlighted: Bool
+    let theme: PresentationTheme
     let action: () -> Void
     
     init(
-        content: AnyComponent<Empty>,
+        imageName: String,
+        isHighlighted: Bool,
+        theme: PresentationTheme,
         action: @escaping () -> Void
     ) {
-        self.content = content
+        self.imageName = imageName
+        self.isHighlighted = isHighlighted
+        self.theme = theme
         self.action = action
     }
     
     static func ==(lhs: BottomPanelIconComponent, rhs: BottomPanelIconComponent) -> Bool {
-        if lhs.content != rhs.content {
+        if lhs.imageName != rhs.imageName {
+            return false
+        }
+        if lhs.isHighlighted != rhs.isHighlighted {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
             return false
         }
         
@@ -30,12 +42,12 @@ private final class BottomPanelIconComponent: Component {
     }
     
     final class View: UIView {
-        let contentView: ComponentHostView<Empty>
+        let contentView: UIImageView
         
         var component: BottomPanelIconComponent?
         
         override init(frame: CGRect) {
-            self.contentView = ComponentHostView<Empty>()
+            self.contentView = UIImageView()
             self.contentView.isUserInteractionEnabled = false
             
             super.init(frame: frame)
@@ -55,16 +67,27 @@ private final class BottomPanelIconComponent: Component {
         }
         
         func update(component: BottomPanelIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            if self.component?.imageName != component.imageName {
+                self.contentView.image = UIImage(bundleImageName: component.imageName)
+            }
+            
             self.component = component
             
-            let size = CGSize(width: 32.0, height: 32.0)
+            let size = CGSize(width: 28.0, height: 28.0)
             
-            let contentSize = self.contentView.update(
-                transition: transition,
-                component: component.content,
-                environment: {},
-                containerSize: size
-            )
+            let color = component.isHighlighted ? component.theme.chat.inputMediaPanel.panelHighlightedIconColor : component.theme.chat.inputMediaPanel.panelIconColor
+            
+            if self.contentView.tintColor != color {
+                if !transition.animation.isImmediate {
+                    UIView.animate(withDuration: 0.15, delay: 0.0, options: [], animations: {
+                        self.contentView.tintColor = color
+                    }, completion: nil)
+                } else {
+                    self.contentView.tintColor = color
+                }
+            }
+            
+            let contentSize = self.contentView.image?.size ?? size
             transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: (size.height - contentSize.height) / 2.0), size: contentSize))
             
             return size
@@ -84,16 +107,16 @@ final class EntityKeyboardBottomPanelComponent: Component {
     typealias EnvironmentType = PagerComponentPanelEnvironment<EntityKeyboardTopContainerPanelEnvironment>
     
     let theme: PresentationTheme
-    let bottomInset: CGFloat
+    let containerInsets: UIEdgeInsets
     let deleteBackwards: () -> Void
     
     init(
         theme: PresentationTheme,
-        bottomInset: CGFloat,
+        containerInsets: UIEdgeInsets,
         deleteBackwards: @escaping () -> Void
     ) {
         self.theme = theme
-        self.bottomInset = bottomInset
+        self.containerInsets = containerInsets
         self.deleteBackwards = deleteBackwards
     }
     
@@ -101,7 +124,7 @@ final class EntityKeyboardBottomPanelComponent: Component {
         if lhs.theme !== rhs.theme {
             return false
         }
-        if lhs.bottomInset != rhs.bottomInset {
+        if lhs.containerInsets != rhs.containerInsets {
             return false
         }
         
@@ -160,8 +183,8 @@ final class EntityKeyboardBottomPanelComponent: Component {
                 self.highlightedIconBackgroundView.backgroundColor = component.theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor
             }
             
-            let intrinsicHeight: CGFloat = 38.0
-            let height = intrinsicHeight + component.bottomInset
+            let intrinsicHeight: CGFloat = 34.0
+            let height = intrinsicHeight + component.containerInsets.bottom
             
             let panelEnvironment = environment[PagerComponentPanelEnvironment<EntityKeyboardTopContainerPanelEnvironment>.self].value
             let activeContentId = panelEnvironment.activeContentId
@@ -194,7 +217,7 @@ final class EntityKeyboardBottomPanelComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: .greatestFiniteMagnitude, height: intrinsicHeight)
                 )
-                leftAccessoryButtonTransition.setFrame(view: leftAccessoryButton.view, frame: CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: leftAccessoryButtonSize))
+                leftAccessoryButtonTransition.setFrame(view: leftAccessoryButton.view, frame: CGRect(origin: CGPoint(x: component.containerInsets.left + 2.0, y: 2.0), size: leftAccessoryButtonSize))
             } else {
                 self.leftAccessoryButton = nil
             }
@@ -246,7 +269,7 @@ final class EntityKeyboardBottomPanelComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: .greatestFiniteMagnitude, height: intrinsicHeight)
                 )
-                rightAccessoryButtonTransition.setFrame(view: rightAccessoryButton.view, frame: CGRect(origin: CGPoint(x: availableSize.width - 2.0 - rightAccessoryButtonSize.width, y: 2.0), size: rightAccessoryButtonSize))
+                rightAccessoryButtonTransition.setFrame(view: rightAccessoryButton.view, frame: CGRect(origin: CGPoint(x: availableSize.width - component.containerInsets.right - 2.0 - rightAccessoryButtonSize.width, y: 2.0), size: rightAccessoryButtonSize))
             } else {
                 self.rightAccessoryButton = nil
             }
@@ -296,13 +319,15 @@ final class EntityKeyboardBottomPanelComponent: Component {
                     let iconSize = iconView.update(
                         transition: iconTransition,
                         component: AnyComponent(BottomPanelIconComponent(
-                            content: icon.component,
+                            imageName: icon.imageName,
+                            isHighlighted: icon.id == activeContentId,
+                            theme: component.theme,
                             action: {
                                 navigateToContentId(icon.id)
                             }
                         )),
                         environment: {},
-                        containerSize: CGSize(width: 32.0, height: 32.0)
+                        containerSize: CGSize(width: 28.0, height: 28.0)
                     )
                     
                     iconInfos[icon.id] = (size: iconSize, transition: iconTransition)
@@ -316,8 +341,8 @@ final class EntityKeyboardBottomPanelComponent: Component {
             }
             
             var nextIconOrigin = CGPoint(x: floor((availableSize.width - iconTotalSize.width) / 2.0), y: floor((intrinsicHeight - iconTotalSize.height) / 2.0))
-            if component.bottomInset > 0.0 {
-                nextIconOrigin.y += 2.0
+            if component.containerInsets.bottom > 0.0 {
+                nextIconOrigin.y += 3.0
             }
             
             if panelEnvironment.contentIcons.count > 1 {
@@ -332,6 +357,14 @@ final class EntityKeyboardBottomPanelComponent: Component {
                     if let activeContentId = activeContentId, activeContentId == icon.id {
                         self.highlightedIconBackgroundView.isHidden = false
                         transition.setFrame(view: self.highlightedIconBackgroundView, frame: iconFrame)
+                        
+                        let cornerRadius: CGFloat
+                        if icon.id == AnyHashable("emoji") {
+                            cornerRadius = min(iconFrame.width, iconFrame.height) / 2.0
+                        } else {
+                            cornerRadius = 10.0
+                        }
+                        transition.setCornerRadius(layer: self.highlightedIconBackgroundView.layer, cornerRadius: cornerRadius)
                     }
                     
                     nextIconOrigin.x += iconInfo.size.width + iconSpacing

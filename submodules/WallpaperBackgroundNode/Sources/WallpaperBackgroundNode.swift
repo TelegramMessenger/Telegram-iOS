@@ -111,18 +111,22 @@ private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOver
     
     private func updateFilters() {
         let useSoftlight: Bool
+        let useFilter: Bool
         switch self.softlightMode {
         case .whileAnimating:
             useSoftlight = self.isAnimating
+            useFilter = useSoftlight
         case .always:
             useSoftlight = true
+            useFilter = useSoftlight
         case .never:
-            useSoftlight = false
+            useSoftlight = true
+            useFilter = false
         }
         if self.isUsingSoftlight != useSoftlight {
             self.isUsingSoftlight = useSoftlight
             
-            if self.isUsingSoftlight {
+            if self.isUsingSoftlight && useFilter {
                 self.compositingFilter = "softLightBlendMode"
             } else {
                 self.compositingFilter = nil
@@ -191,16 +195,16 @@ private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOver
     private static var cachedComposedImage: (size: CGSize, patternContentImage: UIImage, backgroundImageHash: String, image: UIImage)?
     
     private func updateComposedImage() {
-        if self.suspendCompositionUpdates {
-            self.needsCompositionUpdate = true
-            return
-        }
-        
         switch self.softlightMode {
-        case .always:
+        case .always, .never:
             return
         default:
             break
+        }
+        
+        if self.suspendCompositionUpdates {
+            self.needsCompositionUpdate = true
+            return
         }
         
         guard let (size, backgroundImage, backgroundImageHash) = self.compositionData, let patternContentImage = self.patternContentImage else {
@@ -840,7 +844,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 if self.patternImageLayer.contents != nil {
                     self.patternImageLayer.backgroundColor = nil
                 } else {
-                    self.patternImageLayer.backgroundColor = UIColor.black.cgColor
+                    self.patternImageLayer.backgroundColor = nil
                 }
             } else {
                 self.backgroundColor = nil

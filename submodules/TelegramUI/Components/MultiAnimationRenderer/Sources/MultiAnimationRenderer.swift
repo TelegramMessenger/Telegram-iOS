@@ -131,7 +131,9 @@ private final class ItemAnimationContext {
                 let blurredWidth = 12
                 let blurredHeight = 12
                 let context = DrawingContext(size: CGSize(width: CGFloat(blurredWidth), height: CGFloat(blurredHeight)), scale: 1.0, opaque: true, bytesPerRow: bytesPerRow)
-                    
+                
+                let size = CGSize(width: CGFloat(blurredWidth), height: CGFloat(blurredHeight))
+                
                 data.withUnsafeBytes { bytes -> Void in
                     if let dataProvider = CGDataProvider(dataInfo: nil, data: bytes.baseAddress!, size: bytes.count, releaseData: { _, _, _ in }) {
                         let image = CGImage(
@@ -148,7 +150,6 @@ private final class ItemAnimationContext {
                             intent: .defaultIntent
                         )
                         if let image = image {
-                            let size = CGSize(width: CGFloat(blurredWidth), height: CGFloat(blurredHeight))
                             context.withFlippedContext { c in
                                 c.setFillColor((color ?? .white).cgColor)
                                 c.fill(CGRect(origin: CGPoint(), size: size))
@@ -202,6 +203,11 @@ private final class ItemAnimationContext {
                     }
 
                     vImageMatrixMultiply_ARGB8888(&destinationBuffer, &destinationBuffer, &matrix, divisor, nil, nil, vImage_Flags(kvImageDoNotTile))
+                    
+                    context.withFlippedContext { c in
+                        c.setFillColor((color ?? .white).withMultipliedAlpha(0.6).cgColor)
+                        c.fill(CGRect(origin: CGPoint(), size: size))
+                    }
                 }
                 
                 self.blurredRepresentationValue = context.generateImage()
@@ -556,7 +562,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
     }
     
     public init() {
-        if !ProcessInfo.processInfo.isLowPowerModeEnabled && ProcessInfo.processInfo.activeProcessorCount > 2 {
+        if !ProcessInfo.processInfo.isLowPowerModeEnabled && ProcessInfo.processInfo.processorCount > 2 {
             self.frameSkip = 1
         } else {
             self.frameSkip = 2

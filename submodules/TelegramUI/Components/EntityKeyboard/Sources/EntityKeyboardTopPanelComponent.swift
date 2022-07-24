@@ -104,6 +104,9 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
             
             let itemEnvironment = environment[EntityKeyboardTopPanelItemEnvironment.self].value
             
+            let dimensions = component.file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+            let displaySize = dimensions.aspectFitted(CGSize(width: 44.0, height: 44.0))
+            
             if self.itemLayer == nil {
                 let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
                     item: EmojiPagerContentComponent.Item(
@@ -119,7 +122,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                     renderer: component.animationRenderer,
                     placeholderColor: .lightGray,
                     blurredBadgeColor: .clear,
-                    pointSize: CGSize(width: 44.0, height: 44.0),
+                    pointSize: displaySize,
                     onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
                         guard let strongSelf = self else {
                             return
@@ -135,8 +138,9 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                 }
             }
             
-            let iconSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 44.0, height: 44.0) : CGSize(width: 28.0, height: 28.0)
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) / 2.0), y: 0.0), size: iconSize)
+            let iconFitSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 44.0, height: 44.0) : CGSize(width: 26.0, height: 26.0)
+            let iconSize = dimensions.aspectFitted(iconFitSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) / 2.0), y: floor((iconFitSize.height - iconSize.height) / 2.0)), size: iconSize)
             
             if let itemLayer = self.itemLayer {
                 transition.setPosition(layer: itemLayer, position: CGPoint(x: iconFrame.midX, y: iconFrame.midY))
@@ -181,9 +185,14 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
             } else if let titleView = self.titleView {
                 self.titleView = nil
                 if let view = titleView.view {
-                    transition.setAlpha(view: view, alpha: 0.0, completion: { [weak view] _ in
-                        view?.removeFromSuperview()
-                    })
+                    if !transition.animation.isImmediate {
+                        view.alpha = 0.0
+                        view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, completion: { [weak view] _ in
+                            view?.removeFromSuperview()
+                        })
+                    } else {
+                        view.removeFromSuperview()
+                    }
                 }
             }
             
@@ -234,25 +243,33 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
 final class EntityKeyboardIconTopPanelComponent: Component {
     typealias EnvironmentType = EntityKeyboardTopPanelItemEnvironment
     
-    let imageName: String
+    enum Icon {
+        case featured
+        case trending
+        case recent
+        case saved
+        case premium
+    }
+    
+    let icon: Icon
     let theme: PresentationTheme
     let title: String
     let pressed: () -> Void
     
     init(
-        imageName: String,
+        icon: Icon,
         theme: PresentationTheme,
         title: String,
         pressed: @escaping () -> Void
     ) {
-        self.imageName = imageName
+        self.icon = icon
         self.theme = theme
         self.title = title
         self.pressed = pressed
     }
     
     static func ==(lhs: EntityKeyboardIconTopPanelComponent, rhs: EntityKeyboardIconTopPanelComponent) -> Bool {
-        if lhs.imageName != rhs.imageName {
+        if lhs.icon != rhs.icon {
             return false
         }
         if lhs.theme !== rhs.theme {
@@ -293,11 +310,19 @@ final class EntityKeyboardIconTopPanelComponent: Component {
         func update(component: EntityKeyboardIconTopPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             let itemEnvironment = environment[EntityKeyboardTopPanelItemEnvironment.self].value
             
-            if self.component?.imageName != component.imageName {
-                self.iconView.image = generateTintedImage(image: UIImage(bundleImageName: component.imageName), color: component.theme.chat.inputMediaPanel.panelIconColor)
-                
-                if component.imageName.hasSuffix("PremiumIcon") {
-                    self.iconView.image = generateImage(CGSize(width: 44.0, height: 42.0), contextGenerator: { size, context in
+            if self.component?.icon != component.icon {
+                var image: UIImage?
+                switch component.icon {
+                case .featured:
+                    image = UIImage(bundleImageName: "Chat/Input/Media/PanelFeaturedIcon")
+                case .trending:
+                    image = UIImage(bundleImageName: "Chat/Input/Media/PanelTrendingIcon")
+                case .recent:
+                    image = UIImage(bundleImageName: "Chat/Input/Media/PanelRecentIcon")
+                case .saved:
+                    image = UIImage(bundleImageName: "Chat/Input/Media/PanelSavedIcon")
+                case .premium:
+                    image = generateImage(CGSize(width: 44.0, height: 42.0), contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         if let image = UIImage(bundleImageName: "Peer Info/PremiumIcon") {
                             if let cgImage = image.cgImage {
@@ -318,12 +343,26 @@ final class EntityKeyboardIconTopPanelComponent: Component {
                         }
                     })
                 }
+                
+                self.iconView.image = image
             }
                 
             self.component = component
             
-            let nativeIconSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 44.0, height: 44.0) : CGSize(width: 28.0, height: 28.0)
-            let boundingIconSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 38.0, height: 38.0) : CGSize(width: 28.0, height: 28.0)
+            let color = itemEnvironment.isHighlighted ? component.theme.chat.inputMediaPanel.panelHighlightedIconColor : component.theme.chat.inputMediaPanel.panelIconColor
+            
+            if self.iconView.tintColor != color {
+                if !transition.animation.isImmediate {
+                    UIView.animate(withDuration: 0.15, delay: 0.0, options: [], animations: {
+                        self.iconView.tintColor = color
+                    }, completion: nil)
+                } else {
+                    self.iconView.tintColor = color
+                }
+            }
+            
+            let nativeIconSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 44.0, height: 44.0) : CGSize(width: 24.0, height: 24.0)
+            let boundingIconSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 38.0, height: 38.0) : CGSize(width: 24.0, height: 24.0)
             
             let iconSize = (self.iconView.image?.size ?? nativeIconSize).aspectFitted(boundingIconSize)
             let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) / 2.0), y: floor((nativeIconSize.height - iconSize.height) / 2.0)), size: iconSize)
@@ -358,9 +397,14 @@ final class EntityKeyboardIconTopPanelComponent: Component {
             } else if let titleView = self.titleView {
                 self.titleView = nil
                 if let view = titleView.view {
-                    transition.setAlpha(view: view, alpha: 0.0, completion: { [weak view] _ in
-                        view?.removeFromSuperview()
-                    })
+                    if !transition.animation.isImmediate {
+                        view.alpha = 0.0
+                        view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, completion: { [weak view] _ in
+                            view?.removeFromSuperview()
+                        })
+                    } else {
+                        view.removeFromSuperview()
+                    }
                 }
             }
             
@@ -406,6 +450,36 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
     }
     
     final class View: UIView, UIScrollViewDelegate {
+        private struct ItemLayout {
+            var isExpanded: Bool
+            var isActive: Bool
+            var baseItemSize: CGFloat
+            var itemSize: CGFloat
+            var itemSpacing: CGFloat
+            var sideInset: CGFloat
+            var itemOffset: CGFloat
+            var contentSize: CGSize
+            
+            init(isExpanded: Bool, isActive: Bool, width: CGFloat, height: CGFloat, itemCount: Int) {
+                self.isExpanded = isExpanded
+                self.isActive = isActive
+                self.baseItemSize = 42.0
+                self.itemSize = isExpanded ? self.baseItemSize : 24.0
+                self.itemSpacing = 4.0
+                self.sideInset = isExpanded ? 5.0 : 2.0
+                self.itemOffset = isExpanded ? -8.0 : 0.0
+                self.contentSize = CGSize(width: self.sideInset * 2.0 + CGFloat(itemCount) * self.itemSize + CGFloat(itemCount - 1) * self.itemSpacing, height: height)
+            }
+            
+            func frame(at index: Int) -> CGRect {
+                var frame = CGRect(origin: CGPoint(x: self.sideInset + CGFloat(index) * (self.itemSize + self.itemSpacing), y: floor(self.contentSize.height - self.itemSize) / 2.0 + self.itemOffset), size: CGSize(width: self.itemSize, height: self.itemSize))
+                if self.isActive && !self.isExpanded {
+                    frame = frame.insetBy(dx: 2.0, dy: 2.0)
+                }
+                return frame
+            }
+        }
+        
         private let scrollViewContainer: UIView
         private let scrollView: UIScrollView
         private var visibleItemViews: [EmojiPagerContentComponent.StaticEmojiSegment: ComponentView<Empty>] = [:]
@@ -414,6 +488,8 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
         
         private var component: EntityKeyboardStaticStickersPanelComponent?
         private var itemEnvironment: EntityKeyboardTopPanelItemEnvironment?
+        
+        private var itemLayout: ItemLayout?
         
         private var ignoreScrolling: Bool = false
         
@@ -452,12 +528,26 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
+                if !self.bounds.contains(recognizer.location(in: self)) {
+                    return
+                }
                 let scrollViewLocation = recognizer.location(in: self.scrollView)
+                var closestItem: (distance: CGFloat, id: EmojiPagerContentComponent.StaticEmojiSegment)?
                 for (id, itemView) in self.visibleItemViews {
-                    if let view = itemView.view, view.frame.insetBy(dx: -4.0, dy: -4.0).contains(scrollViewLocation) {
-                        self.component?.pressed(id)
-                        break
+                    if let view = itemView.view {
+                        let distance = abs(view.center.x - scrollViewLocation.x)
+                        if let closestItemValue = closestItem {
+                            if distance < closestItemValue.distance {
+                                closestItem = (distance, id)
+                            }
+                        } else {
+                            closestItem = (distance, id)
+                        }
                     }
+                }
+                
+                if let closestItem = closestItem {
+                    self.component?.pressed(closestItem.id)
                 }
             }
         }
@@ -470,25 +560,17 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
         }
         
         private func updateVisibleItems(transition: Transition, animateAppearingItems: Bool) {
-            guard let component = self.component, let itemEnvironment = self.itemEnvironment else {
+            guard let component = self.component, let itemEnvironment = self.itemEnvironment, let itemLayout = self.itemLayout else {
                 return
             }
             
             var validItemIds = Set<EmojiPagerContentComponent.StaticEmojiSegment>()
             let visibleBounds = self.scrollView.bounds
             
-            let componentHeight: CGFloat = self.scrollView.contentSize.height
-            
-            let isExpanded = componentHeight > 32.0
-            
             let items = EmojiPagerContentComponent.StaticEmojiSegment.allCases
-            let itemSize: CGFloat = isExpanded ? 42.0 : 32.0
-            let itemSpacing: CGFloat = 4.0
-            let sideInset: CGFloat = isExpanded ? 5.0 : 2.0
-            let itemOffset: CGFloat = isExpanded ? -8.0 : 0.0
             for i in 0 ..< items.count {
-                let itemFrame = CGRect(origin: CGPoint(x: sideInset + CGFloat(i) * (itemSize + itemSpacing), y: floor(componentHeight - itemSize) / 2.0 + itemOffset), size: CGSize(width: itemSize, height: itemSize))
-                if visibleBounds.intersects(itemFrame) {
+                let itemFrame = itemLayout.frame(at: i)
+                if true/*visibleBounds.intersects(itemFrame)*/ {
                     let item = items[i]
                     validItemIds.insert(item)
                     
@@ -503,6 +585,7 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
                         itemView = ComponentView<Empty>()
                         self.visibleItemViews[item] = itemView
                     }
+                    let _ = animateItem
                     
                     let animationName: String
                     switch item {
@@ -526,29 +609,45 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
                     
                     let color: UIColor
                     if itemEnvironment.highlightedSubgroupId == AnyHashable(items[i].rawValue) {
-                        color = component.theme.chat.inputMediaPanel.panelIconColor.mixedWith(component.theme.chat.inputPanel.primaryTextColor, alpha: 0.35)
+                        color = component.theme.chat.inputMediaPanel.panelHighlightedIconColor
                     } else {
                         color = component.theme.chat.inputMediaPanel.panelIconColor
                     }
                     
+                    let _ = itemTransition
                     let _ = itemView.update(
-                        transition: itemTransition,
+                        transition: .immediate,
                         component: AnyComponent(LottieAnimationComponent(
                             animation: LottieAnimationComponent.AnimationItem(
                                 name: animationName,
-                                mode: animateItem ? .animating(loop: false) : .still(position: .end)
+                                mode: .still(position: .end)
                             ),
                             colors: ["__allcolors__": color],
-                            size: CGSize(width: itemSize, height: itemSize)
+                            size: CGSize(width: itemLayout.baseItemSize, height: itemLayout.baseItemSize)
                         )),
                         environment: {},
-                        containerSize: CGSize(width: itemSize, height: itemSize)
+                        containerSize: CGSize(width: itemLayout.baseItemSize, height: itemLayout.baseItemSize)
                     )
                     if let view = itemView.view {
                         if view.superview == nil {
                             self.scrollView.addSubview(view)
                         }
-                        itemTransition.setFrame(view: view, frame: itemFrame)
+                        
+                        itemTransition.setPosition(view: view, position: CGPoint(x: itemFrame.midX, y: itemFrame.midY))
+                        itemTransition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: CGSize(width: itemLayout.baseItemSize, height: itemLayout.baseItemSize)))
+                        let scaleFactor = itemFrame.width / itemLayout.baseItemSize
+                        itemTransition.setSublayerTransform(view: view, transform: CATransform3DMakeScale(scaleFactor, scaleFactor, 1.0))
+                        
+                        let isHidden = !visibleBounds.intersects(itemFrame)
+                        if isHidden != view.isHidden {
+                            view.isHidden = isHidden
+                            
+                            if !isHidden {
+                                if let view = view as? LottieAnimationComponent.View {
+                                    view.playOnce()
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -566,9 +665,6 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
         }
         
         func update(component: EntityKeyboardStaticStickersPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-            transition.setFrame(view: self.scrollViewContainer, frame: CGRect(origin: CGPoint(), size: availableSize))
-            transition.setCornerRadius(layer: self.scrollViewContainer.layer, cornerRadius: min(availableSize.width / 2.0, availableSize.height / 2.0))
-            
             let itemEnvironment = environment[EntityKeyboardTopPanelItemEnvironment.self].value
             
             var scrollToItem: AnyHashable?
@@ -579,30 +675,32 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
             self.component = component
             self.itemEnvironment = itemEnvironment
             
-            let isExpanded = itemEnvironment.isExpanded
-            let itemSize: CGFloat = isExpanded ? 42.0 : 32.0
-            let itemSpacing: CGFloat = 4.0
-            let sideInset: CGFloat = isExpanded ? 5.0 : 2.0
-            let itemCount = EmojiPagerContentComponent.StaticEmojiSegment.allCases.count
+            let itemLayout = ItemLayout(isExpanded: itemEnvironment.isExpanded, isActive: itemEnvironment.isHighlighted, width: availableSize.width, height: availableSize.height, itemCount: EmojiPagerContentComponent.StaticEmojiSegment.allCases.count)
+            self.itemLayout = itemLayout
+            
+            transition.setFrame(view: self.scrollViewContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
+            transition.setCornerRadius(layer: self.scrollViewContainer.layer, cornerRadius: min(availableSize.width / 2.0, availableSize.height / 2.0))
             
             self.ignoreScrolling = true
-            self.scrollView.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(availableSize.width, 160.0), height: availableSize.height))
-            self.scrollView.contentSize = CGSize(width: sideInset * 2.0 + itemSize * CGFloat(itemCount) + itemSpacing * CGFloat(itemCount - 1), height: availableSize.height)
+            self.scrollView.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(availableSize.width, 126.0), height: availableSize.height))
+            self.scrollView.contentSize = itemLayout.contentSize
             self.ignoreScrolling = false
             
             self.updateVisibleItems(transition: transition, animateAppearingItems: false)
             
-            if (!itemEnvironment.isHighlighted || isExpanded) && self.scrollView.contentOffset.x != 0.0 {
+            if (!itemEnvironment.isHighlighted || itemLayout.isExpanded) && self.scrollView.contentOffset.x != 0.0 {
                 self.scrollView.setContentOffset(CGPoint(), animated: true)
                 scrollToItem = nil
             }
+            
+            self.scrollView.isUserInteractionEnabled = itemEnvironment.isHighlighted && !itemLayout.isExpanded
             
             if let scrollToItem = scrollToItem {
                 let items = EmojiPagerContentComponent.StaticEmojiSegment.allCases
                 for i in 0 ..< items.count {
                     if AnyHashable(items[i].rawValue) == scrollToItem {
-                        let itemFrame = CGRect(origin: CGPoint(x: sideInset + CGFloat(i) * (itemSize + itemSpacing), y: 0.0), size: CGSize(width: itemSize, height: itemSize))
-                        self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: -sideInset, dy: 0.0), animated: true)
+                        let itemFrame = itemLayout.frame(at: i)
+                        self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: -itemLayout.sideInset, dy: 0.0), animated: true)
                         break
                     }
                 }
@@ -636,9 +734,14 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
             } else if let titleView = self.titleView {
                 self.titleView = nil
                 if let view = titleView.view {
-                    transition.setAlpha(view: view, alpha: 0.0, completion: { [weak view] _ in
-                        view?.removeFromSuperview()
-                    })
+                    if !transition.animation.isImmediate {
+                        view.alpha = 0.0
+                        view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, completion: { [weak view] _ in
+                            view?.removeFromSuperview()
+                        })
+                    } else {
+                        view.removeFromSuperview()
+                    }
                 }
             }
             
@@ -908,6 +1011,7 @@ final class EntityKeyboardTopPanelComponent: Component {
     let theme: PresentationTheme
     let items: [Item]
     let defaultActiveItemId: AnyHashable?
+    let forceActiveItemId: AnyHashable?
     let activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>
     let reorderItems: ([Item]) -> Void
     
@@ -915,12 +1019,14 @@ final class EntityKeyboardTopPanelComponent: Component {
         theme: PresentationTheme,
         items: [Item],
         defaultActiveItemId: AnyHashable? = nil,
+        forceActiveItemId: AnyHashable? = nil,
         activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>,
         reorderItems: @escaping ([Item]) -> Void
     ) {
         self.theme = theme
         self.items = items
         self.defaultActiveItemId = defaultActiveItemId
+        self.forceActiveItemId = forceActiveItemId
         self.activeContentItemIdUpdated = activeContentItemIdUpdated
         self.reorderItems = reorderItems
     }
@@ -933,6 +1039,9 @@ final class EntityKeyboardTopPanelComponent: Component {
             return false
         }
         if lhs.defaultActiveItemId != rhs.defaultActiveItemId {
+            return false
+        }
+        if lhs.forceActiveItemId != rhs.forceActiveItemId {
             return false
         }
         if lhs.activeContentItemIdUpdated !== rhs.activeContentItemIdUpdated {
@@ -954,28 +1063,30 @@ final class EntityKeyboardTopPanelComponent: Component {
                 var innerFrame: CGRect
             }
             
+            let topInset: CGFloat = -3.0
             let sideInset: CGFloat = 7.0
             let itemSize: CGSize
             let staticItemSize: CGSize
             let staticExpandedItemSize: CGSize
             let innerItemSize: CGSize
-            let itemSpacing: CGFloat = 15.0
+            let itemSpacing: CGFloat
             let contentSize: CGSize
             let isExpanded: Bool
             let items: [Item]
             
             init(isExpanded: Bool, height: CGFloat, items: [ItemDescription]) {
                 self.isExpanded = isExpanded
-                self.itemSize = self.isExpanded ? CGSize(width: 54.0, height: 68.0) : CGSize(width: 32.0, height: 32.0)
+                self.itemSize = self.isExpanded ? CGSize(width: 54.0, height: 68.0) : CGSize(width: 28.0, height: 28.0)
                 self.staticItemSize = self.itemSize
-                self.staticExpandedItemSize = self.isExpanded ? self.staticItemSize : CGSize(width: 160.0, height: 32.0)
-                self.innerItemSize = self.isExpanded ? CGSize(width: 50.0, height: 62.0) : CGSize(width: 28.0, height: 28.0)
+                self.staticExpandedItemSize = self.isExpanded ? self.staticItemSize : CGSize(width: 126.0, height: 28.0)
+                self.innerItemSize = self.isExpanded ? CGSize(width: 50.0, height: 62.0) : CGSize(width: 24.0, height: 24.0)
+                self.itemSpacing = 8.0
                 
                 var contentSize = CGSize(width: sideInset, height: height)
                 var resultItems: [Item] = []
                 
                 var isFirst = true
-                let itemY = floor((contentSize.height - self.itemSize.height) / 2.0)
+                let itemY = self.topInset + floor((contentSize.height - self.itemSize.height) / 2.0)
                 for item in items {
                     if isFirst {
                         isFirst = false
@@ -1446,8 +1557,8 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
             
             var visibleBounds = self.scrollView.bounds
-            visibleBounds.origin.x -= 200.0
-            visibleBounds.size.width += 400.0
+            visibleBounds.origin.x -= 280.0
+            visibleBounds.size.width += 560.0
             
             let scale = max(0.01, self.visibilityFraction)
             
@@ -1504,14 +1615,16 @@ final class EntityKeyboardTopPanelComponent: Component {
             self.component = component
             self.state = state
             
-            if let defaultActiveItemId = component.defaultActiveItemId {
+            if let forceActiveItemId = component.forceActiveItemId {
+                self.activeContentItemId = forceActiveItemId
+            } else if self.activeContentItemId == nil, let defaultActiveItemId = component.defaultActiveItemId {
                 self.activeContentItemId = defaultActiveItemId
             }
             
             let panelEnvironment = environment[EntityKeyboardTopContainerPanelEnvironment.self].value
             self.environment = panelEnvironment
             
-            let isExpanded = availableSize.height > 41.0
+            let isExpanded = availableSize.height > 34.0
             let wasExpanded = self.isExpanded
             self.isExpanded = isExpanded
             
@@ -1576,8 +1689,8 @@ final class EntityKeyboardTopPanelComponent: Component {
                 }
                 
                 var visibleBounds = self.scrollView.bounds
-                visibleBounds.origin.x -= 200.0
-                visibleBounds.size.width += 400.0
+                visibleBounds.origin.x -= 280.0
+                visibleBounds.size.width += 560.0
                 
                 let previousVisibleRange = previousItemLayout.visibleItemRange(for: visibleBounds)
                 if previousVisibleRange.minIndex <= previousVisibleRange.maxIndex {
@@ -1626,8 +1739,8 @@ final class EntityKeyboardTopPanelComponent: Component {
                     updatedBounds = newBounds
                     
                     var updatedVisibleBounds = newBounds
-                    updatedVisibleBounds.origin.x -= 200.0
-                    updatedVisibleBounds.size.width += 400.0
+                    updatedVisibleBounds.origin.x -= 280.0
+                    updatedVisibleBounds.size.width += 560.0
                     let updatedVisibleRange = itemLayout.visibleItemRange(for: updatedVisibleBounds)
                     
                     if useRightAnchor {

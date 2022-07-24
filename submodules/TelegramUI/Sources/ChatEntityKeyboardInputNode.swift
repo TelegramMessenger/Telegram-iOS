@@ -945,6 +945,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     fileprivate var emojiInputInteraction: EmojiPagerContentComponent.InputInteraction?
     private var stickerInputInteraction: EmojiPagerContentComponent.InputInteraction?
     
+    private weak var currentUndoOverlayController: UndoOverlayController?
+    
     init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
         self.context = context
         self.currentInputData = currentInputData
@@ -956,7 +958,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         super.init()
         
-        self.topBackgroundExtension = 41.0
+        self.topBackgroundExtension = 34.0
         self.followsDefaultHeight = true
         
         self.view.addSubview(self.entityKeyboardView)
@@ -973,9 +975,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         |> distinctUntilChanged
         
         self.emojiInputInteraction = EmojiPagerContentComponent.InputInteraction(
-            performItemAction: { [weak interfaceInteraction, weak controllerInteraction] _, item, _, _, _ in
+            performItemAction: { [weak self, weak interfaceInteraction, weak controllerInteraction] _, item, _, _, _ in
                 let _ = (hasPremium |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
-                    guard let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
+                    guard let strongSelf = self,  let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
                         return
                     }
                     
@@ -994,10 +996,17 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                         
                         if file.isPremiumEmoji && !hasPremium {
+                            var animateInAsReplacement = false
+                            if let currentUndoOverlayController = strongSelf.currentUndoOverlayController {
+                                currentUndoOverlayController.dismissWithCommitActionAndReplacementAnimation()
+                                strongSelf.currentUndoOverlayController = nil
+                                animateInAsReplacement = true
+                            }
+                            
                             //TODO:localize
                                                         
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Subscribe to Telegram Premium to unlock this emoji.", undoText: "More", customAction: { [weak controllerInteraction] in
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Subscribe to Telegram Premium to unlock this emoji.", undoText: "More", customAction: { [weak controllerInteraction] in
                                 guard let controllerInteraction = controllerInteraction else {
                                     return
                                 }
@@ -1014,7 +1023,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 
                                 /*let controller = PremiumIntroScreen(context: context, source: .stickers)
                                 controllerInteraction.navigationController()?.pushViewController(controller)*/
-                            }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                            }), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                            strongSelf.currentUndoOverlayController = controller
+                            controllerInteraction.presentController(controller, nil)
                             return
                         }
                         
@@ -1035,6 +1046,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 interfaceInteraction.backwardsDeleteText()
             },
             openStickerSettings: {
+            },
+            openFeatured: {
             },
             addGroupAction: { [weak self, weak controllerInteraction] groupId, isPremiumLocked in
                 guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
@@ -1179,6 +1192,22 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 let controller = installedStickerPacksController(context: context, mode: .modal)
                 controller.navigationPresentation = .modal
                 controllerInteraction.navigationController()?.pushViewController(controller)
+            },
+            openFeatured: { [weak controllerInteraction] in
+                guard let controllerInteraction = controllerInteraction else {
+                    return
+                }
+
+                controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
+                    context: context,
+                    highlightedPackId: nil,
+                    sendSticker: { [weak controllerInteraction] fileReference, sourceNode, sourceRect in
+                        guard let controllerInteraction = controllerInteraction else {
+                            return false
+                        }
+                        return controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
+                    }
+                ))
             },
             addGroupAction: { groupId, isPremiumLocked in
                 guard let controllerInteraction = controllerInteraction, let collectionId = groupId.base as? ItemCollectionId else {
@@ -1492,7 +1521,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             transition: mappedTransition,
             component: AnyComponent(EntityKeyboardComponent(
                 theme: interfaceState.theme,
-                bottomInset: bottomInset,
+                containerInsets: UIEdgeInsets(top: 0.0, left: leftInset, bottom: bottomInset, right: rightInset),
                 emojiContent: self.currentInputData.emoji,
                 stickerContent: stickerContent,
                 gifContent: gifContent?.component,
@@ -1840,6 +1869,8 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                 strongSelf.deleteBackwards?()
             },
             openStickerSettings: {
+            },
+            openFeatured: {
             },
             addGroupAction: { _, _ in
             },

@@ -862,13 +862,16 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         panelSeparatorColor: UIColor(rgb: 0xbec2c6),
         panelIconColor: UIColor(rgb: 0x858e99),
         panelHighlightedIconBackgroundColor: UIColor(rgb: 0x858e99, alpha: 0.2),
+        panelHighlightedIconColor: UIColor(rgb: 0x4D5561),
+        panelContentVibrantOverlayColor: day ? UIColor(white: 0.0, alpha: 0.3) : UIColor(white: 0.6, alpha: 0.65),
         stickersBackgroundColor: UIColor(rgb: 0xe8ebf0),
         stickersSectionTextColor: UIColor(rgb: 0x9099a2),
         stickersSearchBackgroundColor: UIColor(rgb: 0xd9dbe1),
         stickersSearchPlaceholderColor: UIColor(rgb: 0x8e8e93),
         stickersSearchPrimaryColor: UIColor(rgb: 0x000000),
         stickersSearchControlColor: UIColor(rgb: 0x8e8e93),
-        gifsBackgroundColor: UIColor(rgb: 0xffffff)
+        gifsBackgroundColor: UIColor(rgb: 0xffffff),
+        backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.7)
     )
     
     let inputButtonPanel = PresentationThemeInputButtonPanel(

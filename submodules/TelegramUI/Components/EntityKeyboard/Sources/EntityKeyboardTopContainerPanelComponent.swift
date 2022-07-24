@@ -88,7 +88,7 @@ final class EntityKeyboardTopContainerPanelComponent: Component {
         }
         
         func update(component: EntityKeyboardTopContainerPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-            let intrinsicHeight: CGFloat = 41.0
+            let intrinsicHeight: CGFloat = 34.0
             let height = intrinsicHeight
             
             let panelEnvironment = environment[PagerComponentPanelEnvironment.self].value

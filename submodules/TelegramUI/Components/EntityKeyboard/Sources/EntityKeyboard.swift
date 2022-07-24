@@ -74,7 +74,7 @@ public final class EntityKeyboardComponent: Component {
     }
     
     public let theme: PresentationTheme
-    public let bottomInset: CGFloat
+    public let containerInsets: UIEdgeInsets
     public let emojiContent: EmojiPagerContentComponent
     public let stickerContent: EmojiPagerContentComponent?
     public let gifContent: GifPagerContentComponent?
@@ -93,7 +93,7 @@ public final class EntityKeyboardComponent: Component {
     
     public init(
         theme: PresentationTheme,
-        bottomInset: CGFloat,
+        containerInsets: UIEdgeInsets,
         emojiContent: EmojiPagerContentComponent,
         stickerContent: EmojiPagerContentComponent?,
         gifContent: GifPagerContentComponent?,
@@ -111,7 +111,7 @@ public final class EntityKeyboardComponent: Component {
         isExpanded: Bool
     ) {
         self.theme = theme
-        self.bottomInset = bottomInset
+        self.containerInsets = containerInsets
         self.emojiContent = emojiContent
         self.stickerContent = stickerContent
         self.gifContent = gifContent
@@ -133,7 +133,7 @@ public final class EntityKeyboardComponent: Component {
         if lhs.theme !== rhs.theme {
             return false
         }
-        if lhs.bottomInset != rhs.bottomInset {
+        if lhs.containerInsets != rhs.containerInsets {
             return false
         }
         if lhs.emojiContent != rhs.emojiContent {
@@ -213,7 +213,7 @@ public final class EntityKeyboardComponent: Component {
             
             var contents: [AnyComponentWithIdentity<(EntityKeyboardChildEnvironment, PagerComponentChildEnvironment)>] = []
             var contentTopPanels: [AnyComponentWithIdentity<EntityKeyboardTopContainerPanelEnvironment>] = []
-            var contentIcons: [AnyComponentWithIdentity<Empty>] = []
+            var contentIcons: [PagerComponentContentIcon] = []
             var contentAccessoryLeftButtons: [AnyComponentWithIdentity<Empty>] = []
             var contentAccessoryRightButtons: [AnyComponentWithIdentity<Empty>] = []
             
@@ -233,7 +233,7 @@ public final class EntityKeyboardComponent: Component {
                         id: "recent",
                         isReorderable: false,
                         content: AnyComponent(EntityKeyboardIconTopPanelComponent(
-                            imageName: "Chat/Input/Media/RecentTabIcon",
+                            icon: .recent,
                             theme: component.theme,
                             title: "Recent",
                             pressed: { [weak self] in
@@ -246,7 +246,7 @@ public final class EntityKeyboardComponent: Component {
                     id: "trending",
                     isReorderable: false,
                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
-                        imageName: "Chat/Input/Media/TrendingGifs",
+                        icon: .trending,
                         theme: component.theme,
                         title: "Trending",
                         pressed: { [weak self] in
@@ -285,16 +285,12 @@ public final class EntityKeyboardComponent: Component {
                 contentTopPanels.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(EntityKeyboardTopPanelComponent(
                     theme: component.theme,
                     items: topGifItems,
-                    defaultActiveItemId: defaultActiveGifItemId,
+                    forceActiveItemId: defaultActiveGifItemId,
                     activeContentItemIdUpdated: gifsContentItemIdUpdated,
                     reorderItems: { _ in
                     }
                 ))))
-                contentIcons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(BundleIconComponent(
-                    name: "Chat/Input/Media/EntityInputGifsIcon",
-                    tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
-                    maxSize: nil
-                ))))
+                contentIcons.append(PagerComponentContentIcon(id: "gifs", imageName: "Chat/Input/Media/EntityInputGifsIcon"))
                 contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(Button(
                     content: AnyComponent(BundleIconComponent(
                         name: "Chat/Input/Media/EntityInputSearchIcon",
@@ -310,12 +306,26 @@ public final class EntityKeyboardComponent: Component {
             if let stickerContent = component.stickerContent {
                 var topStickerItems: [EntityKeyboardTopPanelComponent.Item] = []
                 
+                //TODO:localize
+                topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
+                    id: "featuredTop",
+                    isReorderable: false,
+                    content: AnyComponent(EntityKeyboardIconTopPanelComponent(
+                        icon: .featured,
+                        theme: component.theme,
+                        title: "Featured",
+                        pressed: { [weak self] in
+                            self?.component?.stickerContent?.inputInteractionHolder.inputInteraction?.openFeatured()
+                        }
+                    ))
+                ))
+                
                 for itemGroup in stickerContent.itemGroups {
                     if let id = itemGroup.supergroupId.base as? String {
-                        let iconMapping: [String: String] = [
-                            "saved": "Chat/Input/Media/SavedStickersTabIcon",
-                            "recent": "Chat/Input/Media/RecentTabIcon",
-                            "premium": "Peer Info/PremiumIcon"
+                        let iconMapping: [String: EntityKeyboardIconTopPanelComponent.Icon] = [
+                            "saved": .saved,
+                            "recent": .recent,
+                            "premium": .premium
                         ]
                         //TODO:localize
                         let titleMapping: [String: String] = [
@@ -323,12 +333,12 @@ public final class EntityKeyboardComponent: Component {
                             "recent": "Recent",
                             "premium": "Premium"
                         ]
-                        if let iconName = iconMapping[id], let title = titleMapping[id] {
+                        if let icon = iconMapping[id], let title = titleMapping[id] {
                             topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
                                 id: itemGroup.supergroupId,
                                 isReorderable: false,
                                 content: AnyComponent(EntityKeyboardIconTopPanelComponent(
-                                    imageName: iconName,
+                                    icon: icon,
                                     theme: component.theme,
                                     title: title,
                                     pressed: { [weak self] in
@@ -365,6 +375,7 @@ public final class EntityKeyboardComponent: Component {
                 contentTopPanels.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(EntityKeyboardTopPanelComponent(
                     theme: component.theme,
                     items: topStickerItems,
+                    defaultActiveItemId: stickerContent.itemGroups.first?.groupId,
                     activeContentItemIdUpdated: stickersContentItemIdUpdated,
                     reorderItems: { [weak self] items in
                         guard let strongSelf = self else {
@@ -373,11 +384,7 @@ public final class EntityKeyboardComponent: Component {
                         strongSelf.reorderPacks(category: .stickers, items: items)
                     }
                 ))))
-                contentIcons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(BundleIconComponent(
-                    name: "Chat/Input/Media/EntityInputStickersIcon",
-                    tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
-                    maxSize: nil
-                ))))
+                contentIcons.append(PagerComponentContentIcon(id: "stickers", imageName: "Chat/Input/Media/EntityInputStickersIcon"))
                 contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(Button(
                     content: AnyComponent(BundleIconComponent(
                         name: "Chat/Input/Media/EntityInputSearchIcon",
@@ -407,19 +414,19 @@ public final class EntityKeyboardComponent: Component {
                 if !itemGroup.items.isEmpty {
                     if let id = itemGroup.groupId.base as? String {
                         if id == "recent" {
-                            let iconMapping: [String: String] = [
-                                "recent": "Chat/Input/Media/RecentTabIcon",
+                            let iconMapping: [String: EntityKeyboardIconTopPanelComponent.Icon] = [
+                                "recent": .recent,
                             ]
                             //TODO:localize
                             let titleMapping: [String: String] = [
                                 "recent": "Recent",
                             ]
-                            if let iconName = iconMapping[id], let title = titleMapping[id] {
+                            if let icon = iconMapping[id], let title = titleMapping[id] {
                                 topEmojiItems.append(EntityKeyboardTopPanelComponent.Item(
                                     id: itemGroup.supergroupId,
                                     isReorderable: false,
                                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
-                                        imageName: iconName,
+                                        icon: icon,
                                         theme: component.theme,
                                         title: title,
                                         pressed: { [weak self] in
@@ -479,11 +486,7 @@ public final class EntityKeyboardComponent: Component {
                     strongSelf.reorderPacks(category: .emoji, items: items)
                 }
             ))))
-            contentIcons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(BundleIconComponent(
-                name: "Chat/Input/Media/EntityInputEmojiIcon",
-                tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
-                maxSize: nil
-            ))))
+            contentIcons.append(PagerComponentContentIcon(id: "emoji", imageName: "Chat/Input/Media/EntityInputEmojiIcon"))
             contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(Button(
                 content: AnyComponent(BundleIconComponent(
                     name: "Chat/Input/Media/EntityInputGlobeIcon",
@@ -525,7 +528,7 @@ public final class EntityKeyboardComponent: Component {
             let pagerSize = self.pagerView.update(
                 transition: transition,
                 component: AnyComponent(PagerComponent(
-                    contentInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0),
+                    contentInsets: component.containerInsets,
                     contents: contents,
                     contentTopPanels: contentTopPanels,
                     contentIcons: contentIcons,
@@ -544,7 +547,7 @@ public final class EntityKeyboardComponent: Component {
                     externalTopPanelContainer: component.externalTopPanelContainer,
                     bottomPanel: AnyComponent(EntityKeyboardBottomPanelComponent(
                         theme: component.theme,
-                        bottomInset: component.bottomInset,
+                        containerInsets: component.containerInsets,
                         deleteBackwards: { [weak self] in
                             self?.component?.emojiContent.inputInteractionHolder.inputInteraction?.deleteBackwards()
                             AudioServicesPlaySystemSound(0x451)

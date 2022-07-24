@@ -387,7 +387,7 @@ public func assertNotOnMainThread(_ file: String = #file, line: Int = #line) {
 }
 
 public extension UIImage {
-    func precomposed() -> UIImage {
+    func precomposed() -> UIImage {        
         UIGraphicsBeginImageContextWithOptions(self.size, false, self.scale)
         self.draw(at: CGPoint())
         let result = UIGraphicsGetImageFromCurrentImageContext()!
