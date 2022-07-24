@@ -581,13 +581,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, extendedSearchLayout: Bool, accessoryItems: [ChatTextInputAccessoryItem], animated: Bool) {
-        if state.inputText.length != 0 && self.textInputNode == nil {
-            self.loadTextInputNode()
-        }
-        
-        if let textInputNode = self.textInputNode, let currentState = self.presentationInterfaceState {
-            self.updatingInputState = true
-            
+        if let currentState = self.presentationInterfaceState {
             var updateAccessoryButtons = false
             if accessoryItems.count == self.accessoryItemButtons.count {
                 for i in 0 ..< accessoryItems.count {
@@ -624,6 +618,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
                 self.accessoryItemButtons = updatedButtons
             }
+        }
+        
+        if state.inputText.length != 0 && self.textInputNode == nil {
+            self.loadTextInputNode()
+        }
+        
+        if let textInputNode = self.textInputNode, let _ = self.presentationInterfaceState {
+            self.updatingInputState = true
             
             var textColor: UIColor = .black
             var accentTextColor: UIColor = .blue
