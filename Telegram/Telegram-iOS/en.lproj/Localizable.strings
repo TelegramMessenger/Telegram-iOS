@@ -7910,3 +7910,6 @@ Sorry for the inconvenience.";
 "StickerPack.EmojiCount_any" = "%@ emoji";
 
 "StickerSettings.EmojiContextInfo" = "If you archive an emoji set, you can quickly restore it later from the Archived Emoji section.";
+
+"StickerPack.CopyLinks" = "Copy Links";
+"Conversation.LinksCopied" = "Links copied to clipboard";

@@ -586,7 +586,10 @@ private final class StickerPackContainer: ASDisplayNode {
                 strongSelf.controller?.present(shareController, in: .window(.root))
             }
         })))
-        items.append(.action(ContextMenuActionItem(text: strings.StickerPack_CopyLink, icon: { theme in
+        
+        let copyTitle = self.currentStickerPacks.count > 1 ? strings.StickerPack_CopyLinks : strings.StickerPack_CopyLink
+        let copyText = self.currentStickerPacks.count > 1 ? strings.Conversation_LinksCopied : strings.Conversation_LinkCopied
+        items.append(.action(ContextMenuActionItem(text: copyTitle, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
         }, action: {  [weak self] _, f in
             f(.default)
@@ -595,7 +598,7 @@ private final class StickerPackContainer: ASDisplayNode {
             
             if let strongSelf = self {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: copyText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }
         })))
         

@@ -1093,7 +1093,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     var disableTransitionAnimations = false
                     var actionsSignal: Signal<ContextController.Items, NoError> = .single(actions)
-                    if actions.tip == nil, let entitiesAttribute = message.textEntitiesAttribute {
+                    if let entitiesAttribute = message.textEntitiesAttribute {
                         var emojiFileIds: [Int64] = []
                         for entity in entitiesAttribute.entities {
                             if case let .CustomEmoji(_, fileId) = entity.type {
