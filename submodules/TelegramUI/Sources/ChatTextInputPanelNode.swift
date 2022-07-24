@@ -207,60 +207,60 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                         case .keyboard:
                             if let previousInputMode = previousInputMode {
                                 if case .stickers = previousInputMode {
-                                    animationName = "anim_stickerToKey"
+                                    animationName = "input_anim_stickerToKey"
                                     animationMode = .animating(loop: false)
                                 } else if case .emoji = previousInputMode {
-                                    animationName = "anim_smileToKey"
+                                    animationName = "input_anim_smileToKey"
                                     animationMode = .animating(loop: false)
                                 } else if case .bot = previousInputMode {
-                                    animationName = "anim_botToKey"
+                                    animationName = "input_anim_botToKey"
                                     animationMode = .animating(loop: false)
                                 } else {
-                                    animationName = "anim_stickerToKey"
+                                    animationName = "input_anim_stickerToKey"
                                 }
                             } else {
-                                animationName = "anim_stickerToKey"
+                                animationName = "input_anim_stickerToKey"
                             }
                         case .stickers:
                             if let previousInputMode = previousInputMode {
                                 if case .keyboard = previousInputMode {
-                                    animationName = "anim_keyToSticker"
+                                    animationName = "input_anim_keyToSticker"
                                     animationMode = .animating(loop: false)
                                 } else if case .emoji = previousInputMode {
-                                    animationName = "anim_smileToSticker"
+                                    animationName = "input_anim_smileToSticker"
                                     animationMode = .animating(loop: false)
                                     colorKeys = emojiColorKeys
                                 } else {
-                                    animationName = "anim_keyToSticker"
+                                    animationName = "input_anim_keyToSticker"
                                 }
                             } else {
-                                animationName = "anim_keyToSticker"
+                                animationName = "input_anim_keyToSticker"
                             }
                         case .emoji:
                             if let previousInputMode = previousInputMode {
                                 if case .keyboard = previousInputMode {
-                                    animationName = "anim_keyToSmile"
+                                    animationName = "input_anim_keyToSmile"
                                     animationMode = .animating(loop: false)
                                 } else if case .stickers = previousInputMode {
-                                    animationName = "anim_stickerToSmile"
+                                    animationName = "input_anim_stickerToSmile"
                                     animationMode = .animating(loop: false)
                                     colorKeys = emojiColorKeys
                                 } else {
-                                    animationName = "anim_keyToSmile"
+                                    animationName = "input_anim_keyToSmile"
                                 }
                             } else {
-                                animationName = "anim_keyToSmile"
+                                animationName = "input_anim_keyToSmile"
                             }
                         case .bot:
                             if let previousInputMode = previousInputMode {
                                 if case .keyboard = previousInputMode {
-                                    animationName = "anim_keyToBot"
+                                    animationName = "input_anim_keyToBot"
                                     animationMode = .animating(loop: false)
                                 } else {
-                                    animationName = "anim_keyToBot"
+                                    animationName = "input_anim_keyToBot"
                                 }
                             } else {
-                                animationName = "anim_keyToBot"
+                                animationName = "input_anim_keyToBot"
                             }
                     }
                 } else {

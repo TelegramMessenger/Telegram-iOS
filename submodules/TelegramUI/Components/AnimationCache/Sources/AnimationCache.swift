@@ -456,6 +456,10 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
     }
     
     func add(with drawingBlock: (AnimationCacheItemDrawingSurface) -> Double?, proposedWidth: Int, proposedHeight: Int) {
+        if proposedWidth == 0 || proposedHeight == 0 {
+            self.isFailed = true
+            return
+        }
         if self.isFailed || self.isFinished {
             return
         }
