@@ -912,10 +912,17 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         }
         
         func highlightGestureMoved(location: CGPoint) {
+            if let tipNode = self.tipNode {
+                let tipLocation = self.view.convert(location, to: tipNode.view)
+                tipNode.highlightGestureMoved(location: tipLocation)
+            }
             self.node.highlightGestureMoved(location: self.view.convert(location, to: self.node.view))
         }
         
         func highlightGestureFinished(performAction: Bool) {
+            if let tipNode = self.tipNode {
+                tipNode.highlightGestureFinished(performAction: performAction)
+            }
             self.node.highlightGestureFinished(performAction: performAction)
         }
     }

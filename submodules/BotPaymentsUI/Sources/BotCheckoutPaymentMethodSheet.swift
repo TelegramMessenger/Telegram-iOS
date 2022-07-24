@@ -17,6 +17,7 @@ enum BotCheckoutPaymentMethod: Equatable {
     case savedCredentials(BotPaymentSavedCredentials)
     case webToken(BotCheckoutPaymentWebToken)
     case applePay
+    case other(BotPaymentMethod)
     
     var title: String {
         switch self {
@@ -29,6 +30,8 @@ enum BotCheckoutPaymentMethod: Equatable {
                 return token.title
             case .applePay:
                 return "Apple Pay"
+            case let .other(method):
+                return method.title
         }
     }
 }
@@ -68,6 +71,9 @@ final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
                 case .applePay:
                     title = "Apple Pay"
                     icon = UIImage(bundleImageName: "Bot Payments/ApplePayLogo")?.precomposed()
+                case let .other(method):
+                    title = method.title
+                    icon = nil
             }
             let value: Bool?
             if let currentMethod = currentMethod {

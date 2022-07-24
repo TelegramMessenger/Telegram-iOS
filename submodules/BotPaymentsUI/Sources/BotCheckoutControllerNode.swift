@@ -476,17 +476,22 @@ private func formSupportApplePay(_ paymentForm: BotPaymentForm) -> Bool {
 
 private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutPaymentMethod?) -> [BotCheckoutPaymentMethod] {
     var methods: [BotCheckoutPaymentMethod] = []
+    var hasApplePay = false
     if formSupportApplePay(form) && hasApplePaySupport {
         methods.append(.applePay)
-    }
-    if let current = current {
-        if !methods.contains(current) {
-            methods.append(current)
-        }
+        hasApplePay = true
     }
     if let savedCredentials = form.savedCredentials {
         if !methods.contains(.savedCredentials(savedCredentials)) {
             methods.append(.savedCredentials(savedCredentials))
+        }
+    }
+    if !form.additionalPaymentMethods.isEmpty {
+        methods.append(contentsOf: form.additionalPaymentMethods.map { .other($0) })
+    }
+    if let current = current {
+        if !methods.contains(current) {
+            methods.insert(current, at: hasApplePay ? 1 : 0)
         }
     }
     return methods
@@ -1281,6 +1286,22 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             return
         }
         
+        let totalAmount = currentTotalPrice(paymentForm: paymentForm, validatedFormInfo: self.currentValidatedFormInfo, currentShippingOptionId: self.currentShippingOptionId, currentTip: self.currentTipAmount)
+        let currencyValue = formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)
+        
+        let proceedWithCompletion: (Bool, EngineMessage.Id?) -> Void = { [weak self] success, receiptMessageId in
+            guard let strongSelf = self else {
+                return
+            }
+
+            if success {
+                strongSelf.dismissAnimated()
+                strongSelf.completed(currencyValue, receiptMessageId)
+            } else {
+                strongSelf.dismissAnimated()
+            }
+        }
+        
         let credentials: BotPaymentCredentials
         if let receivedCredentials = receivedCredentials {
             credentials = receivedCredentials
@@ -1416,6 +1437,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                         }
                     })
                     return
+                case let .other(method):
+                    let _ = method
+                    return
             }
         }
         
@@ -1461,9 +1485,6 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 tipAmount = 0
             }
 
-            let totalAmount = currentTotalPrice(paymentForm: paymentForm, validatedFormInfo: self.currentValidatedFormInfo, currentShippingOptionId: self.currentShippingOptionId, currentTip: self.currentTipAmount)
-            let currencyValue = formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)
-
             self.payDisposable.set((self.context.engine.payments.sendBotPaymentForm(source: self.source, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     strongSelf.inProgressDimNode.isUserInteractionEnabled = false
@@ -1477,19 +1498,6 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     if let applePayController = strongSelf.applePayController {
                         strongSelf.applePayController = nil
                         applePayController.presentingViewController?.dismiss(animated: true, completion: nil)
-                    }
-
-                    let proceedWithCompletion: (Bool, EngineMessage.Id?) -> Void = { success, receiptMessageId in
-                        guard let strongSelf = self else {
-                            return
-                        }
-
-                        if success {
-                            strongSelf.dismissAnimated()
-                            strongSelf.completed(currencyValue, receiptMessageId)
-                        } else {
-                            strongSelf.dismissAnimated()
-                        }
                     }
                     
                     switch result {

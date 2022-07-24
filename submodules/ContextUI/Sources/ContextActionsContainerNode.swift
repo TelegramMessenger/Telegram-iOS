@@ -356,6 +356,8 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private var file: TelegramMediaFile?
     private let targetSelectionIndex: Int?
     
+    private var hapticFeedback: HapticFeedback?
+    
     private var action: (() -> Void)?
     var requestDismiss: (@escaping () -> Void) -> Void = { _ in }
     
@@ -442,13 +444,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            if highlighted {
-                strongSelf.highlightBackgroundNode.alpha = 1.0
-            } else {
-                let previousAlpha = strongSelf.highlightBackgroundNode.alpha
-                strongSelf.highlightBackgroundNode.alpha = 0.0
-                strongSelf.highlightBackgroundNode.layer.animateAlpha(from: previousAlpha, to: 0.0, duration: 0.2)
-            }
+            strongSelf.updateHighlight(animated: true)
         }
         
         self.buttonNode.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
@@ -593,6 +589,55 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
                 }
                 strongSelf.textSelectionNode?.pretendExtendSelection(to: targetSelectionIndex)
             })
+        }
+    }
+    
+    func updateHighlight(animated: Bool) {
+        if self.buttonNode.isHighlighted || self.isHighlighted {
+            self.highlightBackgroundNode.alpha = 1.0
+        } else {
+            if animated {
+                let previousAlpha = self.highlightBackgroundNode.alpha
+                self.highlightBackgroundNode.alpha = 0.0
+                self.highlightBackgroundNode.layer.animateAlpha(from: previousAlpha, to: 0.0, duration: 0.2)
+            } else {
+                self.highlightBackgroundNode.alpha = 0.0
+            }
+        }
+    }
+    
+    
+    var isHighlighted = false
+    func setHighlighted(_ highlighted: Bool) {
+        guard self.isHighlighted != highlighted else {
+            return
+        }
+        self.isHighlighted = highlighted
+        
+        if highlighted {
+            if self.hapticFeedback == nil {
+                self.hapticFeedback = HapticFeedback()
+            }
+            self.hapticFeedback?.tap()
+        }
+        
+        self.updateHighlight(animated: false)
+    }
+    
+    func highlightGestureMoved(location: CGPoint) {
+        if self.bounds.contains(location) && self.isUserInteractionEnabled {
+            self.setHighlighted(true)
+        } else {
+            self.setHighlighted(false)
+        }
+    }
+    
+    func highlightGestureFinished(performAction: Bool) {
+        if self.isHighlighted {
+            self.setHighlighted(false)
+            if performAction {
+                self.pressed()
+            }
         }
     }
 }

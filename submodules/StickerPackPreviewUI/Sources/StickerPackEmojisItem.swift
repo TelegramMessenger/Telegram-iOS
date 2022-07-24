@@ -348,6 +348,12 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 self.visibleItemLayers[id] = nil
             }
         }
+        for id in self.visibleItemPlaceholderViews.keys {
+            if !validIds.contains(id) {
+                self.visibleItemPlaceholderViews[id]?.removeFromSuperview()
+                self.visibleItemPlaceholderViews[id] = nil
+            }
+        }
     }
     
     private func updateShimmerIfNeeded() {

@@ -322,7 +322,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     
     private var spoilersRevealed = false
     
-    private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
+    public var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
     

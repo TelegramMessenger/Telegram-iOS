@@ -19,6 +19,7 @@ swift_library(
         "//submodules/ChatPresentationInterfaceState:ChatPresentationInterfaceState",
         "//submodules/ContextUI:ContextUI",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/TextFormat:TextFormat",
     ],
     visibility = [
         "//visibility:public",
