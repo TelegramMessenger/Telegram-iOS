@@ -331,6 +331,7 @@ public class Window1 {
         self.hostView = hostView
         self.badgeView = UIImageView()
         self.badgeView.image = UIImage(bundleImageName: "Components/AppBadge")
+        self.badgeView.isHidden = true
         
         self.systemUserInterfaceStyle = hostView.systemUserInterfaceStyle
         
@@ -655,7 +656,7 @@ public class Window1 {
         }
     }
     
-    private var forceBadgeHidden = false
+    private var forceBadgeHidden = true
     public func setForceBadgeHidden(_ hidden: Bool) {
         guard hidden != self.forceBadgeHidden else {
             return

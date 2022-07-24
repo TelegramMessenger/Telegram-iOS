@@ -478,7 +478,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                     addAppLogEvent(postbox: context.account.postbox, type: "deactivate.step_confirmation_cancel")
                     
                     dismissImpl?()
-                })]))
+                })], actionLayout: .vertical))
             }
         }
         
