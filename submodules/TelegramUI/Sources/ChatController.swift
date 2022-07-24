@@ -10940,7 +10940,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return nil
             }
             
-            return EntityInputView(context: strongSelf.context, isDark: true)
+            return EntityInputView(context: strongSelf.context, isDark: true, isSecret: strongSelf.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
         })
         inputPanelNode.interfaceInteraction = interfaceInteraction
         inputPanelNode.effectivePresentationInterfaceState = {
@@ -11180,7 +11180,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return nil
                 }
-                return EntityInputView(context: strongSelf.context, isDark: false)
+                return EntityInputView(context: strongSelf.context, isDark: false, isSecret: strongSelf.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
             })
             attachmentController.requestController = { [weak self, weak attachmentController] type, completion in
                 guard let strongSelf = self else {

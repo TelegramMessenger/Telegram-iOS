@@ -86,7 +86,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
-    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool) -> Signal<EmojiPagerContentComponent, NoError> {
+    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool, isSecret: Bool) -> Signal<EmojiPagerContentComponent, NoError> {
         let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
         |> map { peer -> Bool in
             guard case let .user(user) = peer else {
@@ -132,6 +132,10 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     }
                     
                     if case let .file(file) = item.content, isPremiumDisabled, file.isPremiumEmoji {
+                        continue
+                    }
+                    
+                    if isSecret, case .file = item.content {
                         continue
                     }
                     
@@ -186,62 +190,64 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 installedCollectionIds.insert(id)
             }
             
-            for entry in view.entries {
-                guard let item = entry.item as? StickerPackItem else {
-                    continue
-                }
-                let resultItem = EmojiPagerContentComponent.Item(
-                    file: item.file,
-                    staticEmoji: nil,
-                    subgroupId: nil
-                )
-                
-                let supergroupId = entry.index.collectionId
-                let groupId: AnyHashable = supergroupId
-                let isPremiumLocked: Bool = item.file.isPremiumEmoji && !hasPremium
-                if isPremiumLocked && isPremiumDisabled {
-                    continue
-                }
-                if let groupIndex = itemGroupIndexById[groupId] {
-                    itemGroups[groupIndex].items.append(resultItem)
-                } else {
-                    itemGroupIndexById[groupId] = itemGroups.count
-                    
-                    var title = ""
-                    inner: for (id, info, _) in view.collectionInfos {
-                        if id == entry.index.collectionId, let info = info as? StickerPackCollectionInfo {
-                            title = info.title
-                            break inner
-                        }
-                    }
-                    itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: false, isExpandable: false, items: [resultItem]))
-                }
-            }
-            
-            if !isStandalone {
-                for featuredEmojiPack in featuredEmojiPacks {
-                    if installedCollectionIds.contains(featuredEmojiPack.info.id) {
+            if !isSecret {
+                for entry in view.entries {
+                    guard let item = entry.item as? StickerPackItem else {
                         continue
                     }
+                    let resultItem = EmojiPagerContentComponent.Item(
+                        file: item.file,
+                        staticEmoji: nil,
+                        subgroupId: nil
+                    )
                     
-                    for item in featuredEmojiPack.topItems {
-                        let resultItem = EmojiPagerContentComponent.Item(
-                            file: item.file,
-                            staticEmoji: nil,
-                            subgroupId: nil
-                        )
+                    let supergroupId = entry.index.collectionId
+                    let groupId: AnyHashable = supergroupId
+                    let isPremiumLocked: Bool = item.file.isPremiumEmoji && !hasPremium
+                    if isPremiumLocked && isPremiumDisabled {
+                        continue
+                    }
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    } else {
+                        itemGroupIndexById[groupId] = itemGroups.count
                         
-                        let supergroupId = featuredEmojiPack.info.id
-                        let groupId: AnyHashable = supergroupId
-                        let isPremiumLocked: Bool = item.file.isPremiumEmoji && !hasPremium
-                        if isPremiumLocked && isPremiumDisabled {
+                        var title = ""
+                        inner: for (id, info, _) in view.collectionInfos {
+                            if id == entry.index.collectionId, let info = info as? StickerPackCollectionInfo {
+                                title = info.title
+                                break inner
+                            }
+                        }
+                        itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: false, isExpandable: false, items: [resultItem]))
+                    }
+                }
+                
+                if !isStandalone {
+                    for featuredEmojiPack in featuredEmojiPacks {
+                        if installedCollectionIds.contains(featuredEmojiPack.info.id) {
                             continue
                         }
-                        if let groupIndex = itemGroupIndexById[groupId] {
-                            itemGroups[groupIndex].items.append(resultItem)
-                        } else {
-                            itemGroupIndexById[groupId] = itemGroups.count
-                            itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, isExpandable: true, items: [resultItem]))
+                        
+                        for item in featuredEmojiPack.topItems {
+                            let resultItem = EmojiPagerContentComponent.Item(
+                                file: item.file,
+                                staticEmoji: nil,
+                                subgroupId: nil
+                            )
+                            
+                            let supergroupId = featuredEmojiPack.info.id
+                            let groupId: AnyHashable = supergroupId
+                            let isPremiumLocked: Bool = item.file.isPremiumEmoji && !hasPremium
+                            if isPremiumLocked && isPremiumDisabled {
+                                continue
+                            }
+                            if let groupIndex = itemGroupIndexById[groupId] {
+                                itemGroups[groupIndex].items.append(resultItem)
+                            } else {
+                                itemGroupIndexById[groupId] = itemGroups.count
+                                itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, isExpandable: true, items: [resultItem]))
+                            }
                         }
                     }
                 }
@@ -303,7 +309,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             animationRenderer = MultiAnimationRendererImpl()
         //}
         
-        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false)
+        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, isSecret: chatPeerId?.namespace == Namespaces.Peer.SecretChat)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.PremiumStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
@@ -1932,7 +1938,8 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
     
     init(
         context: AccountContext,
-        isDark: Bool
+        isDark: Bool,
+        isSecret: Bool
     ) {
         self.context = context
         
@@ -2046,7 +2053,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true).start(next: { value in
+        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isSecret: isSecret).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })

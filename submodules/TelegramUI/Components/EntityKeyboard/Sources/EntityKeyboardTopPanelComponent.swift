@@ -322,9 +322,9 @@ final class EntityKeyboardIconTopPanelComponent: Component {
                 case .saved:
                     image = UIImage(bundleImageName: "Chat/Input/Media/PanelSavedIcon")
                 case .premium:
-                    image = generateImage(CGSize(width: 44.0, height: 42.0), contextGenerator: { size, context in
+                    image = generateImage(CGSize(width: 44.0, height: 44.0), contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
-                        if let image = UIImage(bundleImageName: "Peer Info/PremiumIcon") {
+                        if let image = UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon") {
                             if let cgImage = image.cgImage {
                                 context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
                             }
@@ -515,6 +515,7 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
             self.scrollView.alwaysBounceHorizontal = false
             self.scrollView.scrollsToTop = false
             self.scrollView.delegate = self
+            self.scrollView.clipsToBounds = false
             
             self.scrollViewContainer.addSubview(self.scrollView)
             self.addSubview(self.scrollViewContainer)
@@ -682,7 +683,7 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
             transition.setCornerRadius(layer: self.scrollViewContainer.layer, cornerRadius: min(availableSize.width / 2.0, availableSize.height / 2.0))
             
             self.ignoreScrolling = true
-            self.scrollView.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(availableSize.width, 126.0), height: availableSize.height))
+            self.scrollView.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(availableSize.width, 0.0), height: availableSize.height))
             self.scrollView.contentSize = itemLayout.contentSize
             self.ignoreScrolling = false
             
@@ -1902,7 +1903,7 @@ final class EntityKeyboardTopPanelComponent: Component {
                         if itemLayout.isExpanded {
                             expandedInset = -2.0
                         } else {
-                            expandedInset = -itemLayout.sideInset - (itemFrame.width + itemLayout.itemSpacing) * 2.0
+                            expandedInset = -itemLayout.sideInset - (itemLayout.itemSize.width + itemLayout.itemSpacing) * 2.0
                         }
                         self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: expandedInset, dy: 0.0), animated: true)
                         break
