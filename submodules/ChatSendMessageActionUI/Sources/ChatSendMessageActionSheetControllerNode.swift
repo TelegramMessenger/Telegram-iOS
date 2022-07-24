@@ -10,6 +10,7 @@ import AccountContext
 import AppBundle
 import ContextUI
 import TextFormat
+import EmojiTextAttachmentView
 
 private let leftInset: CGFloat = 16.0
 private let rightInset: CGFloat = 16.0
@@ -177,6 +178,9 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     private let toMessageTextNode: EditableTextNode
     private let scrollNode: ASScrollNode
     
+    private var fromCustomEmojiContainerView: CustomEmojiContainerView?
+    private var toCustomEmojiContainerView: CustomEmojiContainerView?
+    
     private var validLayout: ContainerViewLayout?
     
     private var sendButtonFrame: CGRect {
@@ -185,7 +189,9 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private var animateInputField = false
     
-    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool, forwardedCount: Int?, hasEntityKeyboard: Bool, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
+    private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
+    
+    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool, forwardedCount: Int?, hasEntityKeyboard: Bool, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
         self.context = context
         self.presentationData = presentationData
         self.sourceSendButton = sourceSendButton
@@ -194,6 +200,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.attachment = attachment
         self.forwardedCount = forwardedCount
         self.hasEntityKeyboard = hasEntityKeyboard
+        self.emojiViewProvider = emojiViewProvider
         
         self.send = send
         self.cancel = cancel
@@ -351,6 +358,64 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
     }
     
+    func updateTextContents() {
+        var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
+        
+        let textInputNode = self.fromMessageTextNode
+        if let attributedText = textInputNode.attributedText {
+            let beginning = textInputNode.textView.beginningOfDocument
+            attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, range, _ in
+                if let value = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
+                    if let start = textInputNode.textView.position(from: beginning, offset: range.location), let end = textInputNode.textView.position(from: start, offset: range.length), let textRange = textInputNode.textView.textRange(from: start, to: end) {
+                        let textRects = textInputNode.textView.selectionRects(for: textRange)
+                        for textRect in textRects {
+                            customEmojiRects.append((textRect.rect, value))
+                            break
+                        }
+                    }
+                }
+            })
+        }
+        
+        self.updateTextContents(rects: customEmojiRects, textInputNode: self.fromMessageTextNode, from: true)
+        self.updateTextContents(rects: customEmojiRects, textInputNode: self.toMessageTextNode, from: false)
+    }
+    
+    func updateTextContents(rects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)], textInputNode: EditableTextNode, from: Bool) {
+        if !rects.isEmpty {
+            let customEmojiContainerView: CustomEmojiContainerView
+            if from, let current = self.fromCustomEmojiContainerView {
+                customEmojiContainerView = current
+            } else if !from, let current = self.toCustomEmojiContainerView {
+                customEmojiContainerView = current
+            } else {
+                customEmojiContainerView = CustomEmojiContainerView(emojiViewProvider: { [weak self] emoji in
+                    guard let strongSelf = self, let emojiViewProvider = strongSelf.emojiViewProvider else {
+                        return nil
+                    }
+                    return emojiViewProvider(emoji)
+                })
+                customEmojiContainerView.isUserInteractionEnabled = false
+                textInputNode.textView.addSubview(customEmojiContainerView)
+                if from {
+                    self.fromCustomEmojiContainerView = customEmojiContainerView
+                } else {
+                    self.toCustomEmojiContainerView = customEmojiContainerView
+                }
+            }
+            
+            customEmojiContainerView.update(emojiRects: rects)
+        } else {
+            if from, let customEmojiContainerView = self.fromCustomEmojiContainerView {
+                customEmojiContainerView.removeFromSuperview()
+                self.fromCustomEmojiContainerView = nil
+            } else if !from, let customEmojiContainerView = self.toCustomEmojiContainerView {
+                customEmojiContainerView.removeFromSuperview()
+                self.fromCustomEmojiContainerView = nil
+            }
+        }
+    }
+    
     func updatePresentationData(_ presentationData: PresentationData) {
         guard presentationData.theme !== self.presentationData.theme else {
             return
@@ -459,6 +524,10 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let springDamping: CGFloat = 104.0
         self.contentContainerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
         self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+        
+        Queue.mainQueue().after(0.01, {
+            self.updateTextContents()
+        })
     }
     
     func animateOut(cancel: Bool, completion: @escaping () -> Void) {
@@ -690,5 +759,66 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     @objc private func sendButtonPressed() {
         self.sendButtonNode.isUserInteractionEnabled = false
         self.send?()
+    }
+}
+
+final class CustomEmojiContainerView: UIView {
+    private let emojiViewProvider: (ChatTextInputTextCustomEmojiAttribute) -> UIView?
+    
+    private var emojiLayers: [InlineStickerItemLayer.Key: UIView] = [:]
+    
+    init(emojiViewProvider: @escaping (ChatTextInputTextCustomEmojiAttribute) -> UIView?) {
+        self.emojiViewProvider = emojiViewProvider
+        
+        super.init(frame: CGRect())
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    func update(emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
+        var nextIndexById: [Int64: Int] = [:]
+        
+        var validKeys = Set<InlineStickerItemLayer.Key>()
+        for (rect, emoji) in emojiRects {
+            let index: Int
+            if let nextIndex = nextIndexById[emoji.fileId] {
+                index = nextIndex
+            } else {
+                index = 0
+            }
+            nextIndexById[emoji.fileId] = index + 1
+            
+            let key = InlineStickerItemLayer.Key(id: emoji.fileId, index: index)
+            
+            let view: UIView
+            if let current = self.emojiLayers[key] {
+                view = current
+            } else if let newView = self.emojiViewProvider(emoji) {
+                view = newView
+                self.addSubview(newView)
+                self.emojiLayers[key] = view
+            } else {
+                continue
+            }
+            
+            let size = CGSize(width: 24.0, height: 24.0)
+            
+            view.frame = CGRect(origin: CGPoint(x: floor(rect.midX - size.width / 2.0), y: floor(rect.midY - size.height / 2.0)), size: size)
+            
+            validKeys.insert(key)
+        }
+        
+        var removeKeys: [InlineStickerItemLayer.Key] = []
+        for (key, view) in self.emojiLayers {
+            if !validKeys.contains(key) {
+                removeKeys.append(key)
+                view.removeFromSuperview()
+            }
+        }
+        for key in removeKeys {
+            self.emojiLayers.removeValue(forKey: key)
+        }
     }
 }

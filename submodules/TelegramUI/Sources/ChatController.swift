@@ -3617,7 +3617,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }, didDismiss: { [weak self] in
                         if let strongSelf = self {
                             let isFocused = strongSelf.chatDisplayNode.textInputPanelNode?.isFocused ?? false
-                            strongSelf.chatDisplayNode.insertSubnode(strongSelf.chatDisplayNode.inputPanelContainerNode, aboveSubnode: strongSelf.chatDisplayNode.historyNodeContainer)
+                            strongSelf.chatDisplayNode.insertSubnode(strongSelf.chatDisplayNode.inputPanelContainerNode, aboveSubnode: strongSelf.chatDisplayNode.inputContextPanelContainer)
                             if isFocused {
                                 strongSelf.chatDisplayNode.textInputPanelNode?.ensureFocused()
                             }
