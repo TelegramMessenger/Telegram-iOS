@@ -20,6 +20,7 @@ swift_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/AppBundle:AppBundle",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities:TextNodeWithEntities",
     ],
     visibility = [
         "//visibility:public",

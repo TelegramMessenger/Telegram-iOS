@@ -10,6 +10,7 @@ import AccountContext
 import AppBundle
 import ContextUI
 import TextFormat
+import TextNodeWithEntities
 
 private let leftInset: CGFloat = 16.0
 private let rightInset: CGFloat = 16.0
