@@ -119,7 +119,7 @@ public struct BotPaymentForm : Equatable {
     public let url: String
     public let nativeProvider: BotPaymentNativeProvider?
     public let savedInfo: BotPaymentRequestedInfo?
-    public let savedCredentials: BotPaymentSavedCredentials?
+    public let savedCredentials: [BotPaymentSavedCredentials]
     public let additionalPaymentMethods: [BotPaymentMethod]
 }
 
@@ -304,14 +304,13 @@ func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, source: B
                             }
                         }
                         let parsedSavedInfo = savedInfo.flatMap(BotPaymentRequestedInfo.init)
-                        var parsedSavedCredentials: BotPaymentSavedCredentials?
-                        if let savedCredentials = savedCredentials {
+                        let parsedSavedCredentials = savedCredentials?.map({ savedCredentials -> BotPaymentSavedCredentials in
                             switch savedCredentials {
                                 case let .paymentSavedCredentialsCard(id, title):
-                                    parsedSavedCredentials = .card(id: id, title: title)
+                                    return .card(id: id, title: title)
                             }
-                        }
-                    
+                        }) ?? []
+
                         let additionalPaymentMethods = additionalMethods?.map({ BotPaymentMethod(apiPaymentFormMethod: $0) }) ?? []
                         return BotPaymentForm(id: id, canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, paymentBotId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials, additionalPaymentMethods: additionalPaymentMethods)
                 }
