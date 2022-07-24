@@ -103,16 +103,14 @@ final class StickerPackEmojisItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPackEmojisItemNode()
-        node.setup(item: self)
         return node
     }
     
     func update(node: GridItemNode) {
-        guard let node = node as? StickerPackEmojisItemNode else {
+        guard let _ = node as? StickerPackEmojisItemNode else {
             assertionFailure()
             return
         }
-        node.setup(item: self)
     }
 }
 
@@ -173,7 +171,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
         
         let shimmerHostView = PortalSourceView()
         shimmerHostView.alpha = 0.0
-        shimmerHostView.frame = CGRect(origin: CGPoint(), size: self.frame.size)
+        shimmerHostView.frame = CGRect(origin: CGPoint(), size: self.size)
         self.view.addSubview(shimmerHostView)
         self.shimmerHostView = shimmerHostView
         
@@ -194,10 +192,14 @@ final class StickerPackEmojisItemNode: GridItemNode {
         }
         self.boundsChangeTrackerLayer =  boundsChangeTrackerLayer
     }
-                
-    private var setupTimestamp: Double?
-    func setup(item: StickerPackEmojisItem) {
+               
+    private var size = CGSize()
+    override func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
+        guard let item = item as? StickerPackEmojisItem else {
+            return
+        }
         self.item = item
+        self.size = size
         
         if let title = item.title {
             let isInstalled = item.isInstalled ?? false
@@ -217,9 +219,9 @@ final class StickerPackEmojisItemNode: GridItemNode {
         
         self.setNeedsLayout()
     }
-    
+
     func updateVisibleItems(attemptSynchronousLoads: Bool, transition: ContainedViewLayoutTransition) {
-        guard let item = self.item, !self.frame.width.isZero else {
+        guard let item = self.item, !self.size.width.isZero else {
             return
         }
                 
@@ -231,10 +233,10 @@ final class StickerPackEmojisItemNode: GridItemNode {
         var validIds = Set<EmojiPagerContentComponent.View.ItemLayer.Key>()
         
         let itemLayout: ItemLayout
-        if let current = self.itemLayout, current.width == self.frame.width && current.itemsCount == items.count && current.hasTitle == (item.title != nil) {
+        if let current = self.itemLayout, current.width == self.size.width && current.itemsCount == items.count && current.hasTitle == (item.title != nil) {
             itemLayout = current
         } else {
-            itemLayout = ItemLayout(width: self.frame.width, itemsCount: items.count, hasTitle: item.title != nil)
+            itemLayout = ItemLayout(width: self.size.width, itemsCount: items.count, hasTitle: item.title != nil)
             self.itemLayout = itemLayout
         }
         
@@ -368,20 +370,20 @@ final class StickerPackEmojisItemNode: GridItemNode {
         super.layout()
         
         if let _ = self.item {
-            var buttonSize = self.buttonNode.calculateSizeThatFits(self.frame.size)
+            var buttonSize = self.buttonNode.calculateSizeThatFits(self.size)
             buttonSize.width += 24.0
             buttonSize.height = 28.0
             
-            let titleSize = self.titleNode.updateLayout(CGSize(width: self.frame.width - 60.0, height: self.frame.height))
-            let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: self.frame.width - 60.0, height: self.frame.height))
+            let titleSize = self.titleNode.updateLayout(CGSize(width: self.size.width - 60.0, height: self.size.height))
+            let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: self.size.width - 60.0, height: self.size.height))
             
             self.titleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 10.0), size: titleSize)
             self.subtitleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 33.0), size: subtitleSize)
             
-            self.buttonNode.frame = CGRect(origin: CGPoint(x: self.frame.width - buttonSize.width - 16.0, y: 17.0), size: buttonSize)
+            self.buttonNode.frame = CGRect(origin: CGPoint(x: self.size.width - buttonSize.width - 16.0, y: 17.0), size: buttonSize)
         }
         
-        self.shimmerHostView?.frame = CGRect(origin: CGPoint(), size: self.frame.size)
+        self.shimmerHostView?.frame = CGRect(origin: CGPoint(), size: self.size)
         self.updateVisibleItems(attemptSynchronousLoads: false, transition: .immediate)
     }
         

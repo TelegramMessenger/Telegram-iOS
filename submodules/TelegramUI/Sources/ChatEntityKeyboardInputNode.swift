@@ -1067,7 +1067,14 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
                 
                 if isPremiumLocked {
-                    let controller = PremiumIntroScreen(context: context, source: .stickers)
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {
+                        let controller = PremiumIntroScreen(context: context, source: .animatedEmoji)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
                     controllerInteraction.navigationController()?.pushViewController(controller)
                     
                     return

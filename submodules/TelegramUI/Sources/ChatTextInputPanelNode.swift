@@ -60,7 +60,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         self.addSubnode(self.iconImageNode)
         
         switch item {
-        case .input, .botInput:
+        case .input, .botInput, .silentPost:
             self.iconImageNode.isHidden = true
             self.animationView = ComponentView<Empty>()
         default:
@@ -175,105 +175,122 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
             self.iconImageNode.frame = imageFrame
             
             if let animationView = self.animationView {
-                let iconSize: CGSize = CGSize(width: 32.0, height: 32.0)
-                let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0) - bottomInset), size: iconSize)
-                let animationFrame = iconFrame.insetBy(dx: -4.0, dy: -4.0)
+                let width = AccessoryItemIconButtonNode.calculateWidth(item: item, image: image, text: "", strings: self.strings)
+                let iconSize = CGSize(width: width, height: width)
                 
-                var previousInputMode: ChatTextInputAccessoryItem.InputMode?
-                var inputMode: ChatTextInputAccessoryItem.InputMode?
-                
-                switch previousItem {
-                    case let .input(_, itemInputMode), let .botInput(_, itemInputMode):
-                        previousInputMode = itemInputMode
-                    default:
-                        break
-                }
-                switch item {
-                    case let .input(_, itemInputMode), let .botInput(_, itemInputMode):
-                        inputMode = itemInputMode
-                    default:
-                        break
-                }
-                
-                let emojiColorKeys = [
-                    "Ellipse 33.Ellipse 33.Stroke 1",
-                    "Ellipse 34.Ellipse 34.Stroke 1",
-                    "Oval.Oval.Fill 1",
-                    "Oval 2.Oval.Fill 1",
-                    "Path 85.Path 85.Stroke 1"
-                ]
+                let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - width) / 2.0), y: floor((size.height - width) / 2.0) - bottomInset), size: CGSize(width: width, height: width))
                 
                 var colorKeys: [String] = ["__allcolors__"]
                 let animationName: String
                 var animationMode: LottieAnimationComponent.AnimationItem.Mode = .still(position: .end)
-                if let inputMode = inputMode {
-                    switch inputMode {
-                        case .keyboard:
-                            if let previousInputMode = previousInputMode {
-                                if case .stickers = previousInputMode {
-                                    animationName = "input_anim_stickerToKey"
-                                    animationMode = .animating(loop: false)
-                                } else if case .emoji = previousInputMode {
-                                    animationName = "input_anim_smileToKey"
-                                    animationMode = .animating(loop: false)
-                                } else if case .bot = previousInputMode {
-                                    animationName = "input_anim_botToKey"
-                                    animationMode = .animating(loop: false)
-                                } else {
-                                    animationName = "input_anim_stickerToKey"
-                                }
-                            } else {
-                                animationName = "input_anim_stickerToKey"
-                            }
-                        case .stickers:
-                            if let previousInputMode = previousInputMode {
-                                if case .keyboard = previousInputMode {
-                                    animationName = "input_anim_keyToSticker"
-                                    animationMode = .animating(loop: false)
-                                } else if case .emoji = previousInputMode {
-                                    animationName = "input_anim_smileToSticker"
-                                    animationMode = .animating(loop: false)
-                                    colorKeys = emojiColorKeys
-                                } else {
-                                    animationName = "input_anim_keyToSticker"
-                                }
-                            } else {
-                                animationName = "input_anim_keyToSticker"
-                            }
-                        case .emoji:
-                            if let previousInputMode = previousInputMode {
-                                if case .keyboard = previousInputMode {
-                                    animationName = "input_anim_keyToSmile"
-                                    animationMode = .animating(loop: false)
-                                } else if case .stickers = previousInputMode {
-                                    animationName = "input_anim_stickerToSmile"
-                                    animationMode = .animating(loop: false)
-                                    colorKeys = emojiColorKeys
-                                } else {
-                                    animationName = "input_anim_keyToSmile"
-                                }
-                            } else {
-                                animationName = "input_anim_keyToSmile"
-                            }
-                        case .bot:
-                            if let previousInputMode = previousInputMode {
-                                if case .keyboard = previousInputMode {
-                                    animationName = "input_anim_keyToBot"
-                                    animationMode = .animating(loop: false)
-                                } else {
-                                    animationName = "input_anim_keyToBot"
-                                }
-                            } else {
-                                animationName = "input_anim_keyToBot"
-                            }
+                
+                if case let .silentPost(muted) = item {
+                    if case let .silentPost(previousMuted) = previousItem {
+                        if muted {
+                            animationName = "input_anim_channelMute"
+                        } else {
+                            animationName = "input_anim_channelUnmute"
+                        }
+                        if muted != previousMuted {
+                            animationMode = .animating(loop: false)
+                        }
+                    } else {
+                        animationName = "input_anim_channelMute"
                     }
                 } else {
-                    animationName = ""
+                    var previousInputMode: ChatTextInputAccessoryItem.InputMode?
+                    var inputMode: ChatTextInputAccessoryItem.InputMode?
+                    
+                    switch previousItem {
+                        case let .input(_, itemInputMode), let .botInput(_, itemInputMode):
+                            previousInputMode = itemInputMode
+                        default:
+                            break
+                    }
+                    switch item {
+                        case let .input(_, itemInputMode), let .botInput(_, itemInputMode):
+                            inputMode = itemInputMode
+                        default:
+                            break
+                    }
+                    
+                    let emojiColorKeys = [
+                        "Ellipse 33.Ellipse 33.Stroke 1",
+                        "Ellipse 34.Ellipse 34.Stroke 1",
+                        "Oval.Oval.Fill 1",
+                        "Oval 2.Oval.Fill 1",
+                        "Path 85.Path 85.Stroke 1"
+                    ]
+
+                    if let inputMode = inputMode {
+                        switch inputMode {
+                            case .keyboard:
+                                if let previousInputMode = previousInputMode {
+                                    if case .stickers = previousInputMode {
+                                        animationName = "input_anim_stickerToKey"
+                                        animationMode = .animating(loop: false)
+                                    } else if case .emoji = previousInputMode {
+                                        animationName = "input_anim_smileToKey"
+                                        animationMode = .animating(loop: false)
+                                    } else if case .bot = previousInputMode {
+                                        animationName = "input_anim_botToKey"
+                                        animationMode = .animating(loop: false)
+                                    } else {
+                                        animationName = "input_anim_stickerToKey"
+                                    }
+                                } else {
+                                    animationName = "input_anim_stickerToKey"
+                                }
+                            case .stickers:
+                                if let previousInputMode = previousInputMode {
+                                    if case .keyboard = previousInputMode {
+                                        animationName = "input_anim_keyToSticker"
+                                        animationMode = .animating(loop: false)
+                                    } else if case .emoji = previousInputMode {
+                                        animationName = "input_anim_smileToSticker"
+                                        animationMode = .animating(loop: false)
+                                        colorKeys = emojiColorKeys
+                                    } else {
+                                        animationName = "input_anim_keyToSticker"
+                                    }
+                                } else {
+                                    animationName = "input_anim_keyToSticker"
+                                }
+                            case .emoji:
+                                if let previousInputMode = previousInputMode {
+                                    if case .keyboard = previousInputMode {
+                                        animationName = "input_anim_keyToSmile"
+                                        animationMode = .animating(loop: false)
+                                    } else if case .stickers = previousInputMode {
+                                        animationName = "input_anim_stickerToSmile"
+                                        animationMode = .animating(loop: false)
+                                        colorKeys = emojiColorKeys
+                                    } else {
+                                        animationName = "input_anim_keyToSmile"
+                                    }
+                                } else {
+                                    animationName = "input_anim_keyToSmile"
+                                }
+                            case .bot:
+                                if let previousInputMode = previousInputMode {
+                                    if case .keyboard = previousInputMode {
+                                        animationName = "input_anim_keyToBot"
+                                        animationMode = .animating(loop: false)
+                                    } else {
+                                        animationName = "input_anim_keyToBot"
+                                    }
+                                } else {
+                                    animationName = "input_anim_keyToBot"
+                                }
+                        }
+                    } else {
+                        animationName = ""
+                    }
                 }
-                 
+                
                 var colors: [String: UIColor] = [:]
                 for colorKey in colorKeys {
-                    colors[colorKey] = self.theme.chat.inputPanel.inputControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
+                    colors[colorKey] = self.theme.chat.inputPanel.inputControlColor
                 }
                 
                 let animationSize = animationView.update(
@@ -284,7 +301,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                             mode: animationMode
                         ),
                         colors: colors,
-                        size: CGSize(width: 32.0, height: 32.0)
+                        size: iconSize
                     )),
                     environment: {},
                     containerSize: animationFrame.size

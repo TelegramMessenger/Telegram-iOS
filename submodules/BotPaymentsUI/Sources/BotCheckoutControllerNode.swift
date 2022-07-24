@@ -810,9 +810,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             }
         }
         
-        let openNewCard: () -> Void = { [weak self] in
+        let openNewCard: (String?) -> Void = { [weak self] customUrl in
             if let strongSelf = self, let paymentForm = strongSelf.paymentFormValue {
-                if let nativeProvider = paymentForm.nativeProvider, nativeProvider.name == "stripe" {
+                if customUrl == nil, let nativeProvider = paymentForm.nativeProvider, nativeProvider.name == "stripe" {
                     guard let paramsData = nativeProvider.params.data(using: .utf8) else {
                         return
                     }
@@ -891,7 +891,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                         controller?.dismiss()
                     }
                     strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                } else if let nativeProvider = paymentForm.nativeProvider, nativeProvider.name == "smartglocal" {
+                } else if customUrl == nil, let nativeProvider = paymentForm.nativeProvider, nativeProvider.name == "smartglocal" {
                     guard let paramsData = nativeProvider.params.data(using: .utf8) else {
                         return
                     }
@@ -961,7 +961,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 } else {
                     var dismissImpl: (() -> Void)?
-                    let controller = BotCheckoutWebInteractionController(context: context, url: paymentForm.url, intent: .addPaymentMethod({ [weak self] token in
+                    let controller = BotCheckoutWebInteractionController(context: context, url: customUrl ?? paymentForm.url, intent: .addPaymentMethod({ [weak self] token in
                         dismissImpl?()
                         
                         guard let strongSelf = self else {
@@ -1060,12 +1060,14 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 strongSelf.controller?.view.endEditing(true)
                 let methods = availablePaymentMethods(form: paymentForm, current: strongSelf.currentPaymentMethod)
                 if methods.isEmpty {
-                    openNewCard()
+                    openNewCard(nil)
                 } else {
                     strongSelf.present(BotCheckoutPaymentMethodSheetController(context: strongSelf.context, currentMethod: strongSelf.currentPaymentMethod, methods: methods, applyValue: { method in
                         applyPaymentMethod(method)
                     }, newCard: {
-                        openNewCard()
+                        openNewCard(nil)
+                    }, otherMethod: { url in
+                        openNewCard(url)
                     }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             }

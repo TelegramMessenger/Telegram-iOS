@@ -74,11 +74,13 @@ public final class TelegramRootController: NavigationController {
             }
         })
         
-        self.applicationInFocusDisposable = (context.sharedContext.applicationBindings.applicationIsActive
-        |> distinctUntilChanged
-        |> deliverOn(Queue.mainQueue())).start(next: { value in
-            context.sharedContext.mainWindow?.setForceBadgeHidden(!value)
-        })
+        if context.sharedContext.applicationBindings.isMainApp {
+            self.applicationInFocusDisposable = (context.sharedContext.applicationBindings.applicationIsActive
+            |> distinctUntilChanged
+            |> deliverOn(Queue.mainQueue())).start(next: { value in
+                context.sharedContext.mainWindow?.setForceBadgeHidden(!value)
+            })
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

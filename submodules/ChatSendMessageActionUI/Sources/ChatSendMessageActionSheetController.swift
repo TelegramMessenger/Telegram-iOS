@@ -57,7 +57,9 @@ public final class ChatSendMessageActionSheetController: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
-                strongSelf.controllerNode.updatePresentationData(presentationData)
+                if strongSelf.isNodeLoaded {
+                    strongSelf.controllerNode.updatePresentationData(presentationData)
+                }
             }
         })
         
@@ -93,7 +95,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
             hasEntityKeyboard = true
         }
         
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, attachment: self.attachment, forwardedCount: forwardedCount, hasEntityKeyboard: hasEntityKeyboard, send: { [weak self] in
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, attachment: self.attachment, forwardedCount: forwardedCount, hasEntityKeyboard: hasEntityKeyboard, emojiViewProvider: self.emojiViewProvider, send: { [weak self] in
             self?.sendMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in
