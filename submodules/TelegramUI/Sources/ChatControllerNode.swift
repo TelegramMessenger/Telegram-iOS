@@ -1403,13 +1403,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var inputPanelFrame: CGRect?
         var secondaryInputPanelFrame: CGRect?
         
+        var inputPanelHideOffset: CGFloat = 0.0
+        if let inputNode = self.inputNode, inputNode.hideInput {
+            if let inputPanelSize = inputPanelSize {
+                inputPanelHideOffset += -inputPanelSize.height
+            }
+            if let accessoryPanelSize = accessoryPanelSize {
+                inputPanelHideOffset += -accessoryPanelSize.height
+            }
+        }
+        
         if self.inputPanelNode != nil {
             inputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - bottomOverflowOffset - inputPanelsHeight - inputPanelSize!.height), size: CGSize(width: layout.size.width, height: inputPanelSize!.height))
-            if let inputNode = self.inputNode {
-                if inputNode.hideInput {
-                    inputPanelFrame = inputPanelFrame!.offsetBy(dx: 0.0, dy: -inputPanelFrame!.height)
-                }
-            }
+            inputPanelFrame = inputPanelFrame!.offsetBy(dx: 0.0, dy: inputPanelHideOffset)
             if self.dismissedAsOverlay {
                 inputPanelFrame!.origin.y = layout.size.height
             }
@@ -1432,10 +1438,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if self.accessoryPanelNode != nil {
             assert(accessoryPanelSize != nil)
             accessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomOverflowOffset - insets.bottom - inputPanelsHeight - accessoryPanelSize!.height), size: CGSize(width: layout.size.width, height: accessoryPanelSize!.height))
+            accessoryPanelFrame = accessoryPanelFrame!.offsetBy(dx: 0.0, dy: inputPanelHideOffset)
             if self.dismissedAsOverlay {
                 accessoryPanelFrame!.origin.y = layout.size.height
             }
-            inputPanelsHeight += accessoryPanelSize!.height
+            if let inputNode = self.inputNode, inputNode.hideInput {
+            } else {
+                inputPanelsHeight += accessoryPanelSize!.height
+            }
         }
         
         if self.dismissedAsOverlay {

@@ -322,9 +322,9 @@ final class EntityKeyboardIconTopPanelComponent: Component {
                 case .saved:
                     image = UIImage(bundleImageName: "Chat/Input/Media/PanelSavedIcon")
                 case .premium:
-                    image = generateImage(CGSize(width: 44.0, height: 42.0), contextGenerator: { size, context in
+                    image = generateImage(CGSize(width: 44.0, height: 44.0), contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
-                        if let image = UIImage(bundleImageName: "Peer Info/PremiumIcon") {
+                        if let image = UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon") {
                             if let cgImage = image.cgImage {
                                 context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
                             }

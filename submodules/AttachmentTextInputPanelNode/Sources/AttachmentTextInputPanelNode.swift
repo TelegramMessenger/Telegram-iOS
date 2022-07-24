@@ -908,19 +908,16 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             
             var colors: [String: UIColor] = [:]
             let colorKeys: [String] = [
-                "Ellipse 33.Ellipse 33.Stroke 1",
-                "Ellipse 34.Ellipse 34.Stroke 1",
-                "Oval.Oval.Fill 1",
-                "Oval 2.Oval.Fill 1",
-                "Path 85.Path 85.Stroke 1"
+                "__allcolors__"
             ]
+            let color = defaultDarkPresentationTheme.chat.inputPanel.inputControlColor
             for colorKey in colorKeys {
-                colors[colorKey] = presentationInterfaceState.theme.chat.inputPanel.inputControlColor
+                colors[colorKey] = color
             }
             let animationComponent = LottieAnimationComponent(
                 animation: LottieAnimationComponent.AnimationItem(
-                    name: "anim_smiletosticker",
-                    mode: .animateTransitionFromPrevious
+                    name: self.textInputNode?.textView.inputView == nil ? "input_anim_smileToKey" : "input_anim_keyToSmile",
+                    mode: .still(position: .begin)
                 ),
                 colors: colors,
                 size: CGSize(width: 32.0, height: 32.0)
