@@ -375,6 +375,7 @@ public final class EntityKeyboardComponent: Component {
                 contentTopPanels.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(EntityKeyboardTopPanelComponent(
                     theme: component.theme,
                     items: topStickerItems,
+                    defaultActiveItemId: stickerContent.itemGroups.first?.groupId,
                     activeContentItemIdUpdated: stickersContentItemIdUpdated,
                     reorderItems: { [weak self] items in
                         guard let strongSelf = self else {
