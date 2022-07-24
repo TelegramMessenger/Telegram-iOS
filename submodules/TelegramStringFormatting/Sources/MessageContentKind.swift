@@ -300,8 +300,47 @@ public func foldLineBreaks(_ text: String) -> String {
 }
 
 public func foldLineBreaks(_ text: NSAttributedString) -> NSAttributedString {
-    //TODO:localize
-    return text
+    let remainingString = NSMutableAttributedString(attributedString: text)
+    var lines: [NSAttributedString] = []
+    while true {
+        if let range = remainingString.string.range(of: "\n") {
+            let mappedRange = NSRange(range, in: remainingString.string)
+            lines.append(remainingString.attributedSubstring(from: NSRange(location: 0, length: mappedRange.upperBound)))
+            remainingString.replaceCharacters(in: NSRange(location: 0, length: mappedRange.upperBound), with: "")
+        } else {
+            if lines.isEmpty {
+                return text
+            }
+            if !remainingString.string.isEmpty {
+                lines.append(remainingString)
+            }
+            break
+        }
+    }
+    
+    let result = NSMutableAttributedString()
+    
+    for line in lines {
+        if line.string.isEmpty {
+            continue
+        }
+        if result.string.isEmpty {
+            result.append(line)
+        } else {
+            let currentAttributes = line.attributes(at: 0, effectiveRange: nil).filter { key, _ in
+                switch key {
+                case .font, .foregroundColor:
+                    return true
+                default:
+                    return false
+                }
+            }
+            result.append(NSAttributedString(string: " ", attributes: currentAttributes))
+            result.append(line)
+        }
+    }
+    
+    return result
 }
 
 public func trimToLineCount(_ text: String, lineCount: Int) -> String {

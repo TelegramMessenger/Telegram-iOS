@@ -99,6 +99,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
+        let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
+        
         let emojiItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.LocalRecentEmoji], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
             hasPremium,
@@ -160,8 +162,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        //TODO:localize
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Recently Used", subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.Stickers_FrequentlyUsed, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, items: [resultItem]))
                     }
                 }
             }
@@ -179,8 +180,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        //TODO:localize
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Emoji", subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, items: [resultItem]))
                     }
                 }
             }
@@ -418,8 +418,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        //TODO:localize
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Saved", subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleFavoriteStickers, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
                     }
                 }
             }
@@ -444,8 +443,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        //TODO:localize
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Recently Used", subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.Stickers_FrequentlyUsed, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
                     }
                 }
             }
@@ -489,8 +487,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        //TODO:localize
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Premium", subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitlePremiumStickers, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
                     }
                 }
             }
@@ -1014,11 +1011,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 strongSelf.currentUndoOverlayController = nil
                                 animateInAsReplacement = true
                             }
-                            
-                            //TODO:localize
                                                         
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Subscribe to Telegram Premium to unlock this emoji.", undoText: "More", customAction: { [weak controllerInteraction] in
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiInput_PremiumEmojiToast_Text, undoText: presentationData.strings.EmojiInput_PremiumEmojiToast_Action, customAction: { [weak controllerInteraction] in
                                 guard let controllerInteraction = controllerInteraction else {
                                     return
                                 }
@@ -1545,6 +1540,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             transition: mappedTransition,
             component: AnyComponent(EntityKeyboardComponent(
                 theme: interfaceState.theme,
+                strings: interfaceState.strings,
                 containerInsets: UIEdgeInsets(top: 0.0, left: leftInset, bottom: bottomInset, right: rightInset),
                 emojiContent: self.currentInputData.emoji,
                 stickerContent: stickerContent,
@@ -1993,10 +1989,8 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                         }
                         
                         if file.isPremiumEmoji && !hasPremium {
-                            //TODO:localize
-                            
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            strongSelf.presentController?(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Subscribe to Telegram Premium to unlock this emoji.", undoText: "More", customAction: {
+                            strongSelf.presentController?(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiInput_PremiumEmojiToast_Text, undoText: presentationData.strings.EmojiInput_PremiumEmojiToast_Action, customAction: {
                                 guard let strongSelf = self else {
                                     return
                                 }

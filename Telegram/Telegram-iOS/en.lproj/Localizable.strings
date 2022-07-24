@@ -7910,3 +7910,19 @@ Sorry for the inconvenience.";
 "StickerPack.EmojiCount_any" = "%@ emoji";
 
 "StickerSettings.EmojiContextInfo" = "If you archive an emoji set, you can quickly restore it later from the Archived Emoji section.";
+
+"StickersList.EmojiItem" = "Custom Emoji";
+"StickersList.ArchivedEmojiItem" = "Archived Emoji";
+
+"EmojiInput.UnlockPack" = "Unlock %@";
+"EmojiInput.AddPack" = "Add %@";
+"EmojiInput.PanelTitlePremium" = "Premium";
+"EmojiInput.PanelTitleEmoji" = "Emoji";
+"EmojiInput.PanelTitleRecent" = "Recent";
+
+"EmojiInput.SectionTitleEmoji" = "Emoji";
+"EmojiInput.SectionTitleFavoriteStickers" = "Favorite Stickers";
+"EmojiInput.SectionTitlePremiumStickers" = "Premium Stickers";
+
+"EmojiInput.PremiumEmojiToast.Text" = "Subscribe to Telegram Premium to unlock premium emoji.";
+"EmojiInput.PremiumEmojiToast.Action" = "More";

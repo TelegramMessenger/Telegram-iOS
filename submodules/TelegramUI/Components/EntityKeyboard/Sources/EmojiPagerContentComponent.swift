@@ -2144,7 +2144,7 @@ public final class EmojiPagerContentComponent: Component {
         private var component: EmojiPagerContentComponent?
         private weak var state: EmptyComponentState?
         private var pagerEnvironment: PagerComponentChildEnvironment?
-        private var theme: PresentationTheme?
+        private var keyboardChildEnvironment: EntityKeyboardChildEnvironment?
         private var activeItemUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>?
         private var itemLayout: ItemLayout?
         
@@ -3010,7 +3010,7 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         private func updateVisibleItems(transition: Transition, attemptSynchronousLoads: Bool, previousItemPositions: [ItemLayer.Key: CGPoint]?, updatedItemPositions: [ItemLayer.Key: CGPoint]?) {
-            guard let component = self.component, let pagerEnvironment = self.pagerEnvironment, let theme = self.theme, let itemLayout = self.itemLayout else {
+            guard let component = self.component, let pagerEnvironment = self.pagerEnvironment, let keyboardChildEnvironment = self.keyboardChildEnvironment, let itemLayout = self.itemLayout else {
                 return
             }
             
@@ -3089,7 +3089,7 @@ public final class EmojiPagerContentComponent: Component {
                     
                     let (groupHeaderSize, centralContentWidth) = groupHeaderView.update(
                         context: component.context,
-                        theme: theme,
+                        theme: keyboardChildEnvironment.theme,
                         layoutType: itemLayout.layoutType,
                         hasTopSeparator: hasTopSeparator,
                         actionButtonTitle: actionButtonTitle,
@@ -3130,7 +3130,7 @@ public final class EmojiPagerContentComponent: Component {
                         self.scrollView.layer.insertSublayer(groupBorderLayer, at: 0)
                         self.mirrorContentScrollView.layer.addSublayer(groupBorderLayer.tintContainerLayer)
                         
-                        groupBorderLayer.strokeColor = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor.cgColor
+                        groupBorderLayer.strokeColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.panelContentVibrantOverlayColor.cgColor
                         groupBorderLayer.tintContainerLayer.strokeColor = UIColor.white.cgColor
                         groupBorderLayer.lineWidth = 1.6
                         groupBorderLayer.lineCap = .round
@@ -3198,7 +3198,6 @@ public final class EmojiPagerContentComponent: Component {
                         let groupId = itemGroup.groupId
                         let isPremiumLocked = itemGroup.isPremiumLocked
                         
-                        //TODO:localize
                         let title: String
                         let backgroundColor: UIColor
                         let backgroundColors: [UIColor]
@@ -3206,7 +3205,7 @@ public final class EmojiPagerContentComponent: Component {
                         let animationName: String?
                         let gloss: Bool
                         if itemGroup.isPremiumLocked {
-                            title = "Unlock \(itemGroup.title ?? "Emoji")"
+                            title = keyboardChildEnvironment.strings.EmojiInput_UnlockPack(itemGroup.title ?? "Emoji").string
                             backgroundColors = [
                                 UIColor(rgb: 0x0077ff),
                                 UIColor(rgb: 0x6b93ff),
@@ -3218,10 +3217,10 @@ public final class EmojiPagerContentComponent: Component {
                             animationName = "premium_unlock"
                             gloss = true
                         } else {
-                            title = "Add \(itemGroup.title ?? "Emoji")"
+                            title = keyboardChildEnvironment.strings.EmojiInput_AddPack(itemGroup.title ?? "Emoji").string
                             backgroundColors = []
-                            backgroundColor = theme.list.itemCheckColors.fillColor
-                            foregroundColor = theme.list.itemCheckColors.foregroundColor
+                            backgroundColor = keyboardChildEnvironment.theme.list.itemCheckColors.fillColor
+                            foregroundColor = keyboardChildEnvironment.theme.list.itemCheckColors.foregroundColor
                             animationName = nil
                             gloss = false
                         }
@@ -3291,7 +3290,7 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     
                     let baseItemFrame = itemLayout.frame(groupIndex: groupItems.groupIndex, itemIndex: collapsedItemIndex)
-                    let buttonSize = groupExpandActionButton.update(theme: theme, title: collapsedItemText)
+                    let buttonSize = groupExpandActionButton.update(theme: keyboardChildEnvironment.theme, title: collapsedItemText)
                     let buttonFrame = CGRect(origin: CGPoint(x: baseItemFrame.minX + floor((baseItemFrame.width - buttonSize.width) / 2.0), y: baseItemFrame.minY + floor((baseItemFrame.height - buttonSize.height) / 2.0)), size: buttonSize)
                     groupExpandActionButtonTransition.setFrame(view: groupExpandActionButton, frame: buttonFrame)
                 }
@@ -3338,8 +3337,8 @@ public final class EmojiPagerContentComponent: Component {
                                 staticEmoji: item.staticEmoji,
                                 cache: component.animationCache,
                                 renderer: component.animationRenderer,
-                                placeholderColor: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1),
-                                blurredBadgeColor: theme.chat.inputPanel.panelBackgroundColor.withMultipliedAlpha(0.5),
+                                placeholderColor: keyboardChildEnvironment.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1),
+                                blurredBadgeColor: keyboardChildEnvironment.theme.chat.inputPanel.panelBackgroundColor.withMultipliedAlpha(0.5),
                                 pointSize: item.staticEmoji == nil ? itemPlaybackSize : itemVisibleFitSize,
                                 onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
                                     guard let strongSelf = self else {
@@ -3421,7 +3420,7 @@ public final class EmojiPagerContentComponent: Component {
                         if itemGroup.displayPremiumBadges, let file = item.file, file.isPremiumSticker {
                             badge = .premium
                         }
-                        itemLayer.update(transition: transition, size: itemFrame.size, badge: badge, blurredBadgeColor: UIColor(white: 0.0, alpha: 0.1), blurredBadgeBackgroundColor: theme.list.plainBackgroundColor)
+                        itemLayer.update(transition: transition, size: itemFrame.size, badge: badge, blurredBadgeColor: UIColor(white: 0.0, alpha: 0.1), blurredBadgeBackgroundColor: keyboardChildEnvironment.theme.list.plainBackgroundColor)
                         
                         if let placeholderView = self.visibleItemPlaceholderViews[itemId] {
                             if placeholderView.layer.position != itemPosition || placeholderView.layer.bounds != itemBounds {
@@ -3566,7 +3565,7 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         public func pagerUpdateBackground(backgroundFrame: CGRect, transition: Transition) {
-            guard let theme = self.theme else {
+            guard let keyboardChildEnvironment = self.keyboardChildEnvironment else {
                 return
             }
             
@@ -3584,7 +3583,7 @@ public final class EmojiPagerContentComponent: Component {
                 vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
             }
             
-            self.backgroundView.updateColor(color: theme.chat.inputMediaPanel.backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
+            self.backgroundView.updateColor(color: keyboardChildEnvironment.theme.chat.inputMediaPanel.backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             
@@ -3604,7 +3603,7 @@ public final class EmojiPagerContentComponent: Component {
             let keyboardChildEnvironment = environment[EntityKeyboardChildEnvironment.self].value
             let pagerEnvironment = environment[PagerComponentChildEnvironment.self].value
             
-            self.theme = keyboardChildEnvironment.theme
+            self.keyboardChildEnvironment = keyboardChildEnvironment
             self.activeItemUpdated = keyboardChildEnvironment.getContentActiveItemUpdated(component.id)
             
             self.pagerEnvironment = pagerEnvironment

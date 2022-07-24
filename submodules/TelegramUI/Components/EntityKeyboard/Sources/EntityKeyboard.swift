@@ -13,18 +13,24 @@ import SwiftSignalKit
 
 public final class EntityKeyboardChildEnvironment: Equatable {
     public let theme: PresentationTheme
+    public let strings: PresentationStrings
     public let getContentActiveItemUpdated: (AnyHashable) -> ActionSlot<(AnyHashable, AnyHashable?, Transition)>?
     
     public init(
         theme: PresentationTheme,
+        strings: PresentationStrings,
         getContentActiveItemUpdated: @escaping (AnyHashable) -> ActionSlot<(AnyHashable, AnyHashable?, Transition)>?
     ) {
         self.theme = theme
+        self.strings = strings
         self.getContentActiveItemUpdated = getContentActiveItemUpdated
     }
     
     public static func ==(lhs: EntityKeyboardChildEnvironment, rhs: EntityKeyboardChildEnvironment) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         
@@ -74,6 +80,7 @@ public final class EntityKeyboardComponent: Component {
     }
     
     public let theme: PresentationTheme
+    public let strings: PresentationStrings
     public let containerInsets: UIEdgeInsets
     public let emojiContent: EmojiPagerContentComponent
     public let stickerContent: EmojiPagerContentComponent?
@@ -93,6 +100,7 @@ public final class EntityKeyboardComponent: Component {
     
     public init(
         theme: PresentationTheme,
+        strings: PresentationStrings,
         containerInsets: UIEdgeInsets,
         emojiContent: EmojiPagerContentComponent,
         stickerContent: EmojiPagerContentComponent?,
@@ -111,6 +119,7 @@ public final class EntityKeyboardComponent: Component {
         isExpanded: Bool
     ) {
         self.theme = theme
+        self.strings = strings
         self.containerInsets = containerInsets
         self.emojiContent = emojiContent
         self.stickerContent = stickerContent
@@ -131,6 +140,9 @@ public final class EntityKeyboardComponent: Component {
     
     public static func ==(lhs: EntityKeyboardComponent, rhs: EntityKeyboardComponent) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.containerInsets != rhs.containerInsets {
@@ -227,7 +239,6 @@ public final class EntityKeyboardComponent: Component {
             if let gifContent = component.gifContent {
                 contents.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(gifContent)))
                 var topGifItems: [EntityKeyboardTopPanelComponent.Item] = []
-                //TODO:localize
                 if component.hasRecentGifs {
                     topGifItems.append(EntityKeyboardTopPanelComponent.Item(
                         id: "recent",
@@ -235,7 +246,7 @@ public final class EntityKeyboardComponent: Component {
                         content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                             icon: .recent,
                             theme: component.theme,
-                            title: "Recent",
+                            title: component.strings.Stickers_Recent,
                             pressed: { [weak self] in
                                 self?.component?.switchToGifSubject(.recent)
                             }
@@ -248,7 +259,7 @@ public final class EntityKeyboardComponent: Component {
                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                         icon: .trending,
                         theme: component.theme,
-                        title: "Trending",
+                        title: component.strings.Stickers_Trending,
                         pressed: { [weak self] in
                             self?.component?.switchToGifSubject(.trending)
                         }
@@ -307,14 +318,13 @@ public final class EntityKeyboardComponent: Component {
             if let stickerContent = component.stickerContent {
                 var topStickerItems: [EntityKeyboardTopPanelComponent.Item] = []
                 
-                //TODO:localize
                 topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
                     id: "featuredTop",
                     isReorderable: false,
                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                         icon: .featured,
                         theme: component.theme,
-                        title: "Featured",
+                        title: component.strings.Stickers_Trending,
                         pressed: { [weak self] in
                             self?.component?.stickerContent?.inputInteractionHolder.inputInteraction?.openFeatured()
                         }
@@ -328,11 +338,10 @@ public final class EntityKeyboardComponent: Component {
                             "recent": .recent,
                             "premium": .premium
                         ]
-                        //TODO:localize
                         let titleMapping: [String: String] = [
-                            "saved": "Saved",
-                            "recent": "Recent",
-                            "premium": "Premium"
+                            "saved": component.strings.Stickers_Favorites,
+                            "recent": component.strings.Stickers_Recent,
+                            "premium": component.strings.EmojiInput_PanelTitlePremium
                         ]
                         if let icon = iconMapping[id], let title = titleMapping[id] {
                             topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
@@ -419,9 +428,8 @@ public final class EntityKeyboardComponent: Component {
                             let iconMapping: [String: EntityKeyboardIconTopPanelComponent.Icon] = [
                                 "recent": .recent,
                             ]
-                            //TODO:localize
                             let titleMapping: [String: String] = [
-                                "recent": "Recent",
+                                "recent": component.strings.Stickers_Recent,
                             ]
                             if let icon = iconMapping[id], let title = titleMapping[id] {
                                 topEmojiItems.append(EntityKeyboardTopPanelComponent.Item(
@@ -438,13 +446,12 @@ public final class EntityKeyboardComponent: Component {
                                 ))
                             }
                         } else if id == "static" {
-                            //TODO:localize
                             topEmojiItems.append(EntityKeyboardTopPanelComponent.Item(
                                 id: itemGroup.supergroupId,
                                 isReorderable: false,
                                 content: AnyComponent(EntityKeyboardStaticStickersPanelComponent(
                                     theme: component.theme,
-                                    title: "Emoji",
+                                    title: component.strings.EmojiInput_PanelTitleEmoji,
                                     pressed: { [weak self] subgroupId in
                                         guard let strongSelf = self else {
                                             return
@@ -538,10 +545,7 @@ public final class EntityKeyboardComponent: Component {
                     contentAccessoryLeftButtons: contentAccessoryLeftButtons,
                     contentAccessoryRightButtons: contentAccessoryRightButtons,
                     defaultId: component.defaultToEmojiTab ? "emoji" : "stickers",
-                    contentBackground: nil/*AnyComponent(BlurredBackgroundComponent(
-                        color: component.theme.chat.inputMediaPanel.stickersBackgroundColor.withMultipliedAlpha(0.75),
-                        tintContainerView: self.tintContainerView
-                    ))*/,
+                    contentBackground: nil,
                     topPanel: AnyComponent(EntityKeyboardTopContainerPanelComponent(
                         theme: component.theme,
                         overflowHeight: component.hiddenInputHeight,
@@ -573,6 +577,7 @@ public final class EntityKeyboardComponent: Component {
                 environment: {
                     EntityKeyboardChildEnvironment(
                         theme: component.theme,
+                        strings: component.strings,
                         getContentActiveItemUpdated: { id in
                             if id == AnyHashable("gifs") {
                                 return gifsContentItemIdUpdated
