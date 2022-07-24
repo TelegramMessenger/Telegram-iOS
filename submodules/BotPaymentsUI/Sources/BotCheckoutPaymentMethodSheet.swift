@@ -39,7 +39,7 @@ enum BotCheckoutPaymentMethod: Equatable {
 final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
     
-    init(context: AccountContext, currentMethod: BotCheckoutPaymentMethod?, methods: [BotCheckoutPaymentMethod], applyValue: @escaping (BotCheckoutPaymentMethod) -> Void, newCard: @escaping () -> Void) {
+    init(context: AccountContext, currentMethod: BotCheckoutPaymentMethod?, methods: [BotCheckoutPaymentMethod], applyValue: @escaping (BotCheckoutPaymentMethod) -> Void, newCard: @escaping () -> Void, otherMethod: @escaping (String) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let strings = presentationData.strings
         
@@ -82,7 +82,11 @@ final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
                 value = nil
             }
             items.append(BotCheckoutPaymentMethodItem(title: title, icon: icon, value: value, action: { [weak self] _ in
-                applyValue(method)
+                if case let .other(method) = method {
+                    otherMethod(method.url)
+                } else {
+                    applyValue(method)
+                }
                 self?.dismissAnimated()
             }))
         }
