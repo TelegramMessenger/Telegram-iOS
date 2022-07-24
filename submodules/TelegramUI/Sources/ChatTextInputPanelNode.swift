@@ -290,7 +290,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                 
                 var colors: [String: UIColor] = [:]
                 for colorKey in colorKeys {
-                    colors[colorKey] = self.theme.chat.inputPanel.inputControlColor
+                    colors[colorKey] = self.theme.chat.inputPanel.inputControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
                 }
                 
                 let animationSize = animationView.update(

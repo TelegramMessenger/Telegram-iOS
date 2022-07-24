@@ -65,6 +65,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             
             if wasVisible != isVisible {
                 self.interactiveVideoNode.visibility = isVisible
+                self.replyInfoNode?.visibility = isVisible
             }
         }
     }

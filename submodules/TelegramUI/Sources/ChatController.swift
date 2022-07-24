@@ -7123,9 +7123,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
                 
                 if let firstLockedPremiumEmoji = firstLockedPremiumEmoji {
-                    //let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                    //TODO:localize
-                    strongSelf.controllerInteraction?.displayUndo(.sticker(context: strongSelf.context, file: firstLockedPremiumEmoji, title: nil, text: "Subscribe to Telegram Premium to unlock premium emoji.", undoText: "More", customAction: {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.controllerInteraction?.displayUndo(.sticker(context: strongSelf.context, file: firstLockedPremiumEmoji, title: nil, text: presentationData.strings.EmojiInput_PremiumEmojiToast_Text, undoText: presentationData.strings.EmojiInput_PremiumEmojiToast_Action, customAction: {
                         guard let strongSelf = self else {
                             return
                         }

@@ -568,8 +568,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
         }
         entries.append(.masks(presentationData.theme, presentationData.strings.MaskStickerSettings_Title))
         
-        //TODO:localize
-        entries.append(.emoji(presentationData.theme, "Emoji"))
+        entries.append(.emoji(presentationData.theme, presentationData.strings.StickersList_EmojiItem))
         
         entries.append(.quickReaction(presentationData.strings.Settings_QuickReactionSetup_NavigationTitle, quickReactionImage))
         
@@ -614,8 +613,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
         }
     case .emoji:
         if let archived = archived, !archived.isEmpty {
-            //TODO:localize
-            entries.append(.archived(presentationData.theme, "Archived Emoji", Int32(archived.count), archived))
+            entries.append(.archived(presentationData.theme, presentationData.strings.StickersList_ArchivedEmojiItem, Int32(archived.count), archived))
         }
     }
     

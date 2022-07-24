@@ -138,9 +138,9 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                 }
             }
             
-            let iconFitSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 44.0, height: 44.0) : CGSize(width: 26.0, height: 26.0)
+            let iconFitSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 44.0, height: 44.0) : CGSize(width: 24.0, height: 24.0)
             let iconSize = dimensions.aspectFitted(iconFitSize)
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) / 2.0), y: floor((iconFitSize.height - iconSize.height) / 2.0)), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) / 2.0), y: floor((iconFitSize.height - iconSize.height) / 2.0)), size: iconSize).insetBy(dx: -1.0, dy: -1.0)
             
             if let itemLayer = self.itemLayer {
                 transition.setPosition(layer: itemLayer, position: CGPoint(x: iconFrame.midX, y: iconFrame.midY))
@@ -464,7 +464,7 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
                 self.isExpanded = isExpanded
                 self.isActive = isActive
                 self.baseItemSize = 42.0
-                self.itemSize = isExpanded ? self.baseItemSize : 24.0
+                self.itemSize = isExpanded ? self.baseItemSize : 26.0
                 self.itemSpacing = 4.0
                 self.sideInset = isExpanded ? 5.0 : 2.0
                 self.itemOffset = isExpanded ? -8.0 : 0.0
@@ -608,12 +608,15 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
                         animationName = "emojicat_flags"
                     }
                     
-                    let color: UIColor
+                    let baseColor: UIColor
                     if itemEnvironment.highlightedSubgroupId == AnyHashable(items[i].rawValue) {
-                        color = component.theme.chat.inputMediaPanel.panelHighlightedIconColor
+                        baseColor = component.theme.chat.inputMediaPanel.panelHighlightedIconColor
                     } else {
-                        color = component.theme.chat.inputMediaPanel.panelIconColor
+                        baseColor = component.theme.chat.inputMediaPanel.panelIconColor
                     }
+                    
+                    let baseHighlightedColor = component.theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.blitOver(component.theme.chat.inputPanel.panelBackgroundColor, alpha: 1.0)
+                    let color = baseColor.blitOver(baseHighlightedColor, alpha: 1.0)
                     
                     let _ = itemTransition
                     let _ = itemView.update(
