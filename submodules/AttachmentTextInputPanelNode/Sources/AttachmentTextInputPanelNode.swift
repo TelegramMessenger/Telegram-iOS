@@ -405,6 +405,17 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 strongSelf.ensureFocused()
             }
         }
+        recognizer.waitForTouchUp = { [weak self] in
+            guard let strongSelf = self, let textInputNode = strongSelf.textInputNode else {
+                return true
+            }
+            
+            if textInputNode.textView.isFirstResponder {
+                return true
+            } else {
+                return false
+            }
+        }
         self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
         
         self.emojiViewProvider = { [weak self] emoji in
@@ -523,6 +534,17 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         recognizer.touchDown = { [weak self] in
             if let strongSelf = self {
                 strongSelf.ensureFocused()
+            }
+        }
+        recognizer.waitForTouchUp = { [weak self] in
+            guard let strongSelf = self, let textInputNode = strongSelf.textInputNode else {
+                return true
+            }
+            
+            if textInputNode.textView.isFirstResponder {
+                return true
+            } else {
+                return false
             }
         }
         textInputNode.view.addGestureRecognizer(recognizer)

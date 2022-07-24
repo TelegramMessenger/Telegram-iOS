@@ -7883,7 +7883,12 @@ Sorry for the inconvenience.";
 "EmojiPackActionInfo.AddedTitle" = "Emoji Added";
 "EmojiPackActionInfo.AddedText" = "%@ has been added to your emoji.";
 "EmojiPackActionInfo.RemovedTitle" = "Emoji Removed";
+"EmojiPackActionInfo.ArchivedTitle" = "Emoji Archived";
 "EmojiPackActionInfo.RemovedText" = "%@ is no longer in your emoji.";
+
+"MaskPackActionInfo.RemovedTitle" = "Masks Removed";
+"MaskPackActionInfo.ArchivedTitle" = "Masks Archived";
+"MaskPackActionInfo.RemovedText" = "%@ is no longer in your masks.";
 
 "WebApp.ShareMyPhoneNumber" = "Share My Phone Number";
 "WebApp.ShareMyPhoneNumberConfirmation" = "Are you sure you want to share your phone number **%1$@** with **%2$@**?";
@@ -7893,3 +7898,15 @@ Sorry for the inconvenience.";
 "Emoji.ClearRecent" = "Clear Recent Emoji";
 
 "Premium.AnimatedEmoji.Proceed" = "Unlock Animated Emoji";
+
+"EmojiPacksSettings.Title" = "Emoji";
+
+"EmojiStickerSettings.Info" = "Artists are welcome to add their own emoji sets using our @stickers bot.\n\nTap on a message to view and add the whole set.";
+
+"StickerPack.MaskCount_1" = "1 mask";
+"StickerPack.MaskCount_any" = "%@ masks";
+
+"StickerPack.EmojiCount_1" = "1 emoji";
+"StickerPack.EmojiCount_any" = "%@ emoji";
+
+"StickerSettings.EmojiContextInfo" = "If you archive an emoji set, you can quickly restore it later from the Archived Emoji section.";

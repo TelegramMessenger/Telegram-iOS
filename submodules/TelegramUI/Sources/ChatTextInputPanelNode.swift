@@ -411,7 +411,7 @@ final class CustomEmojiContainerView: UIView {
         preconditionFailure()
     }
     
-    func update(emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
+    func update(fontSize: CGFloat, emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
         var nextIndexById: [Int64: Int] = [:]
         
         var validKeys = Set<InlineStickerItemLayer.Key>()
@@ -437,7 +437,8 @@ final class CustomEmojiContainerView: UIView {
                 continue
             }
             
-            let size = CGSize(width: 24.0, height: 24.0)
+            let itemSize: CGFloat = floor(24.0 * fontSize / 17.0)
+            let size = CGSize(width: itemSize, height: itemSize)
             
             view.frame = CGRect(origin: CGPoint(x: floor(rect.midX - size.width / 2.0), y: floor(rect.midY - size.height / 2.0)), size: size)
             
@@ -896,6 +897,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 strongSelf.ensureFocused()
             }
         }
+        recognizer.waitForTouchUp = { [weak self] in
+            guard let strongSelf = self, let textInputNode = strongSelf.textInputNode else {
+                return true
+            }
+            
+            if textInputNode.textView.isFirstResponder {
+                return true
+            } else {
+                return false
+            }
+        }
         self.textInputBackgroundNode.isUserInteractionEnabled = true
         self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
         
@@ -992,6 +1004,26 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 strongSelf.ensureFocusedOnTap()
             }
         }
+        recognizer.waitForTouchUp = { [weak self] in
+            guard let strongSelf = self, let textInputNode = strongSelf.textInputNode else {
+                return true
+            }
+            
+            if textInputNode.textView.isFirstResponder {
+                return true
+            } else if let (_, _, _, bottomInset, _, _, metrics, _, _) = strongSelf.validLayout {
+                let textFieldWaitsForTouchUp: Bool
+                if case .regular = metrics.widthClass, bottomInset.isZero {
+                    textFieldWaitsForTouchUp = true
+                } else {
+                    textFieldWaitsForTouchUp = false
+                }
+                
+                return textFieldWaitsForTouchUp
+            } else {
+                return false
+            }
+        }
         textInputNode.view.addGestureRecognizer(recognizer)
         self.touchDownGestureRecognizer = recognizer
         
@@ -1081,14 +1113,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
         let previousAdditionalSideInsets = self.validLayout?.4
         self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded)
-        
-        let textFieldWaitsForTouchUp: Bool
-        if case .regular = metrics.widthClass, bottomInset.isZero {
-            textFieldWaitsForTouchUp = true
-        } else {
-            textFieldWaitsForTouchUp = false
-        }
-        self.touchDownGestureRecognizer?.waitForTouchUp = textFieldWaitsForTouchUp
     
         var transition = transition
         var additionalOffset: CGFloat = 0.0
@@ -2146,6 +2170,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var rects: [CGRect] = []
         var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
         
+        let fontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
+        
         if let attributedText = textInputNode.attributedText {
             let beginning = textInputNode.textView.beginningOfDocument
             attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, range, _ in
@@ -2229,7 +2255,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.customEmojiContainerView = customEmojiContainerView
             }
             
-            customEmojiContainerView.update(emojiRects: customEmojiRects)
+            customEmojiContainerView.update(fontSize: fontSize, emojiRects: customEmojiRects)
         } else if let customEmojiContainerView = self.customEmojiContainerView {
             customEmojiContainerView.removeFromSuperview()
             self.customEmojiContainerView = nil

@@ -1624,9 +1624,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let previousInputPanelBackgroundFrame = self.inputPanelBackgroundNode.frame
         transition.updateFrame(node: self.inputPanelContainerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         self.inputPanelContainerNode.update(size: layout.size, scrollableDistance: max(0.0, maximumInputNodeHeight - layout.standardInputHeight), isExpansionEnabled: isInputExpansionEnabled, transition: transition)
-        transition.updatePosition(node: self.inputPanelClippingNode, position: CGRect(origin: apparentInputBackgroundFrame.origin, size: layout.size).center)
-        transition.updateBounds(node: self.inputPanelClippingNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: layout.size))
-        transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame)
+        transition.updatePosition(node: self.inputPanelClippingNode, position: CGRect(origin: apparentInputBackgroundFrame.origin, size: layout.size).center, beginWithCurrentState: true)
+        transition.updateBounds(node: self.inputPanelClippingNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: layout.size), beginWithCurrentState: true)
+        transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame, beginWithCurrentState: true)
         
         transition.updateFrame(node: self.contentDimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: apparentInputBackgroundFrame.origin.y)))
         
@@ -1644,7 +1644,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputPanelUpdateTransition = .immediate
         }
         
-        self.inputPanelBackgroundNode.update(size: CGSize(width: intrinsicInputPanelBackgroundNodeSize.width, height: intrinsicInputPanelBackgroundNodeSize.height + inputPanelBackgroundExtension), transition: inputPanelUpdateTransition)
+        self.inputPanelBackgroundNode.update(size: CGSize(width: intrinsicInputPanelBackgroundNodeSize.width, height: intrinsicInputPanelBackgroundNodeSize.height + inputPanelBackgroundExtension), transition: inputPanelUpdateTransition, beginWithCurrentState: true)
         self.inputPanelBottomBackgroundSeparatorBaseOffset = intrinsicInputPanelBackgroundNodeSize.height
         inputPanelUpdateTransition.updateFrame(node: self.inputPanelBottomBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: intrinsicInputPanelBackgroundNodeSize.height + inputPanelBackgroundExtension), size: CGSize(width: intrinsicInputPanelBackgroundNodeSize.width, height: UIScreenPixel)), beginWithCurrentState: true)
         

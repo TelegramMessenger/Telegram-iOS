@@ -207,7 +207,16 @@ private func archivedStickerPacksControllerEntries(presentationData: Presentatio
         var index: Int32 = 0
         for item in packs {
             if !installedIds.contains(item.info.id) {
-                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, item.topItems.first, presentationData.strings.StickerPack_StickerCount(item.info.count), stickerSettings.loopAnimatedStickers, !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id, reorderable: false, selectable: true)))
+                let countTitle: String
+                if item.info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                    countTitle = presentationData.strings.StickerPack_EmojiCount(item.info.count)
+                } else if item.info.id.namespace == Namespaces.ItemCollection.CloudMaskPacks {
+                    countTitle = presentationData.strings.StickerPack_MaskCount(item.info.count)
+                } else {
+                    countTitle = presentationData.strings.StickerPack_StickerCount(item.info.count)
+                }
+                
+                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, item.topItems.first, countTitle, stickerSettings.loopAnimatedStickers, !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id, reorderable: false, selectable: true)))
                 index += 1
             }
         }
