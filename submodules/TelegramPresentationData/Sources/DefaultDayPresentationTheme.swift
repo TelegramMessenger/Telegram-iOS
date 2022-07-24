@@ -849,7 +849,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         inputStrokeColor: UIColor(rgb: 0x000000, alpha: 0.1),
         inputPlaceholderColor: UIColor(rgb: 0xbebec0),
         inputTextColor: UIColor(rgb: 0x000000),
-        inputControlColor: UIColor(rgb: 0xa0a7b0),
+        inputControlColor: UIColor(rgb: 0x868D98),
         actionControlFillColor: defaultDayAccentColor,
         actionControlForegroundColor: UIColor(rgb: 0xffffff),
         primaryTextColor: UIColor(rgb: 0x000000),

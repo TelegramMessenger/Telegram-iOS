@@ -119,7 +119,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    static func imageAndInsets(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) -> (UIImage?, String?, String, CGFloat, UIEdgeInsets) {
+    private static func imageAndInsets(item: ChatTextInputAccessoryItem, theme: PresentationTheme, strings: PresentationStrings) -> (UIImage?, String?, String, CGFloat, UIEdgeInsets) {
         switch item {
             case let .input(isEnabled, inputMode), let .botInput(isEnabled, inputMode):
                 switch inputMode {
@@ -149,7 +149,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
+    private static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
         switch item {
         case .input, .botInput, .silentPost, .commands, .scheduledMessages:
             return 32.0
@@ -175,7 +175,9 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
             self.iconImageNode.frame = imageFrame
             
             if let animationView = self.animationView {
-                let animationFrame = imageFrame.insetBy(dx: -4.0, dy: -4.0)
+                let iconSize: CGSize = CGSize(width: 32.0, height: 32.0)
+                let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0) - bottomInset), size: iconSize)
+                let animationFrame = iconFrame.insetBy(dx: -4.0, dy: -4.0)
                 
                 var previousInputMode: ChatTextInputAccessoryItem.InputMode?
                 var inputMode: ChatTextInputAccessoryItem.InputMode?
@@ -274,7 +276,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                     colors[colorKey] = self.theme.chat.inputPanel.inputControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
                 }
                 
-                let _ = animationView.update(
+                let animationSize = animationView.update(
                     transition: .immediate,
                     component: AnyComponent(LottieAnimationComponent(
                         animation: LottieAnimationComponent.AnimationItem(
@@ -282,7 +284,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                             mode: animationMode
                         ),
                         colors: colors,
-                        size: animationFrame.size
+                        size: CGSize(width: 32.0, height: 32.0)
                     )),
                     environment: {},
                     containerSize: animationFrame.size
@@ -292,7 +294,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                     if view.superview == nil {
                         self.view.addSubview(view)
                     }
-                    view.frame = animationFrame
+                    view.frame = CGRect(origin: CGPoint(x: animationFrame.minX + floor((animationFrame.width - animationSize.width) / 2.0), y: animationFrame.minY + floor((animationFrame.height - animationSize.height) / 2.0)), size: animationSize)
                 }
             }
         }
