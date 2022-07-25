@@ -408,10 +408,6 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func unreadMessageRangeUpdated() {
-        self.updateVisibility()
-    }
-    
     private func updateVisibility() {
         guard let item = self.item else {
             return
