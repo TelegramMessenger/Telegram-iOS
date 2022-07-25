@@ -632,14 +632,15 @@ private final class StickerPackContainer: ASDisplayNode {
                     })
                 }
             } else {
+                var installedPacks: [(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)] = []
                 for (info, items, isInstalled) in self.currentStickerPacks {
                     if !isInstalled {
+                        installedPacks.append((info, items, .add))
                         let _ = self.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
-//                        if dismissed {
-//                            actionPerformed?(info, items, .add)
-//                        }
                     }
                 }
+                
+                self.controller?.actionPerformed?(installedPacks)
             }
             self.requestDismiss()
         } else if let (info, items, installed) = self.currentStickerPack {
@@ -660,13 +661,13 @@ private final class StickerPackContainer: ASDisplayNode {
                         return
                     }
                     if dismissed {
-                        actionPerformed?(info, items, .remove(positionInList: positionInList))
+                        actionPerformed?([(info, items, .remove(positionInList: positionInList))])
                     }
                 })
             } else {
                 let _ = self.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
                 if dismissed {
-                    actionPerformed?(info, items, .add)
+                    actionPerformed?([(info, items, .add)])
                 }
             }
         } else {
@@ -1220,7 +1221,6 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         super.didLoad()
         
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimNodeTapGesture(_:))))
-//        self.containerContainingNode.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -1238,11 +1238,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.containerContainingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let expandProgress: CGFloat = 1.0
-//        if self.stickerPacks.count == 1 {
-//            expandProgress = 1.0
-//        } else {
-//            expandProgress = self.containers[self.selectedStickerPackIndex]?.expandProgress ?? 0.0
-//        }
+
         let scaledInset: CGFloat = 12.0
         let scaledDistance: CGFloat = 4.0
         let minScale = (layout.size.width - scaledInset * 2.0) / layout.size.width
@@ -1250,108 +1246,106 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         
         let containerVerticalOffset: CGFloat = (1.0 - expandProgress) * scaledInset * 2.0
                 
-//        for i in 0 ..< self.stickerPacks.count {
         let i = 0
-            let indexOffset = i - self.selectedStickerPackIndex
-            var scaledOffset: CGFloat = 0.0
-            scaledOffset = -CGFloat(indexOffset) * (1.0 - expandProgress) * (scaledInset * 2.0) + CGFloat(indexOffset) * scaledDistance
-            
-            if abs(indexOffset) <= 1 {
-                let containerTransition: ContainedViewLayoutTransition
-                let container: StickerPackContainer
-                var wasAdded = false
-                if let current = self.containers[i] {
-                    containerTransition = transition
-                    container = current
-                } else {
-                    wasAdded = true
-                    containerTransition = .immediate
-                    let index = i
-                    container = StickerPackContainer(index: index, context: context, presentationData: self.presentationData, stickerPacks: self.stickerPacks, decideNextAction: { [weak self] container, action in
-                        guard let strongSelf = self, let layout = strongSelf.validLayout else {
-                            return .dismiss
-                        }
-                        if index == strongSelf.stickerPacks.count - 1 {
-                            return .dismiss
-                        } else {
-                            switch action {
-                            case .add:
-                                var allAdded = true
-                                for _ in index + 1 ..< strongSelf.stickerPacks.count {
-                                    if let container = strongSelf.containers[index], let (_, _, installed) = container.currentStickerPack {
-                                        if !installed {
-                                            allAdded = false
-                                        }
-                                    } else {
+        let indexOffset = i - self.selectedStickerPackIndex
+        var scaledOffset: CGFloat = 0.0
+        scaledOffset = -CGFloat(indexOffset) * (1.0 - expandProgress) * (scaledInset * 2.0) + CGFloat(indexOffset) * scaledDistance
+        
+        if abs(indexOffset) <= 1 {
+            let containerTransition: ContainedViewLayoutTransition
+            let container: StickerPackContainer
+            var wasAdded = false
+            if let current = self.containers[i] {
+                containerTransition = transition
+                container = current
+            } else {
+                wasAdded = true
+                containerTransition = .immediate
+                let index = i
+                container = StickerPackContainer(index: index, context: context, presentationData: self.presentationData, stickerPacks: self.stickerPacks, decideNextAction: { [weak self] container, action in
+                    guard let strongSelf = self, let layout = strongSelf.validLayout else {
+                        return .dismiss
+                    }
+                    if index == strongSelf.stickerPacks.count - 1 {
+                        return .dismiss
+                    } else {
+                        switch action {
+                        case .add:
+                            var allAdded = true
+                            for _ in index + 1 ..< strongSelf.stickerPacks.count {
+                                if let container = strongSelf.containers[index], let (_, _, installed) = container.currentStickerPack {
+                                    if !installed {
                                         allAdded = false
                                     }
-                                }
-                                if allAdded {
-                                    return .dismiss
-                                }
-                            case .remove:
-                                if strongSelf.stickerPacks.count == 1 {
-                                    return .dismiss
                                 } else {
-                                    return .ignored
+                                    allAdded = false
                                 }
                             }
-                        }
-                        
-                        strongSelf.selectedStickerPackIndex = strongSelf.selectedStickerPackIndex + 1
-                        strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
-                        return .navigatedNext
-                    }, requestDismiss: { [weak self] in
-                        self?.dismiss()
-                    }, expandProgressUpdated: { [weak self] container, transition, expandTransition in
-                        guard let strongSelf = self, let layout = strongSelf.validLayout else {
-                            return
-                        }
-                        if index == strongSelf.selectedStickerPackIndex, let container = strongSelf.containers[strongSelf.selectedStickerPackIndex] {
-                            let modalProgress = container.modalProgress
-                            strongSelf.modalProgressUpdated(modalProgress, transition)
-                            strongSelf.containerLayoutUpdated(layout, transition: expandTransition)
-                            for (_, otherContainer) in strongSelf.containers {
-                                if otherContainer !== container {
-                                    otherContainer.syncExpandProgress(expandScrollProgress: container.expandScrollProgress, expandProgress: container.expandProgress, modalProgress: container.modalProgress, transition: expandTransition)
-                                }
+                            if allAdded {
+                                return .dismiss
+                            }
+                        case .remove:
+                            if strongSelf.stickerPacks.count == 1 {
+                                return .dismiss
+                            } else {
+                                return .ignored
                             }
                         }
-                    }, presentInGlobalOverlay: presentInGlobalOverlay, sendSticker: sendSticker, openMention: openMention, controller: self.controller)
-                    container.onReady = { [weak self] in
-                        self?.onReady()
                     }
-                    container.onLoading = { [weak self] in
-                        self?.onLoading()
+                    
+                    strongSelf.selectedStickerPackIndex = strongSelf.selectedStickerPackIndex + 1
+                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                    return .navigatedNext
+                }, requestDismiss: { [weak self] in
+                    self?.dismiss()
+                }, expandProgressUpdated: { [weak self] container, transition, expandTransition in
+                    guard let strongSelf = self, let layout = strongSelf.validLayout else {
+                        return
                     }
-                    container.onError = { [weak self] in
-                        self?.onError()
-                    }
-                    self.containerContainingNode.addSubnode(container)
-                    self.containers[i] = container
-                }
-                
-                let containerFrame = CGRect(origin: CGPoint(x: CGFloat(indexOffset) * layout.size.width + self.relativeToSelectedStickerPackTransition + scaledOffset, y: containerVerticalOffset), size: layout.size)
-                containerTransition.updateFrame(node: container, frame: containerFrame, beginWithCurrentState: true)
-                containerTransition.updateSublayerTransformScaleAndOffset(node: container, scale: containerScale, offset: CGPoint(), beginWithCurrentState: true)
-                if container.validLayout?.0 != layout {
-                    container.updateLayout(layout: layout, transition: containerTransition)
-                }
-                
-                if wasAdded {
-                    if let selectedContainer = self.containers[self.selectedStickerPackIndex] {
-                        if selectedContainer !== container {
-                            container.syncExpandProgress(expandScrollProgress: selectedContainer.expandScrollProgress, expandProgress: selectedContainer.expandProgress, modalProgress: selectedContainer.modalProgress, transition: .immediate)
+                    if index == strongSelf.selectedStickerPackIndex, let container = strongSelf.containers[strongSelf.selectedStickerPackIndex] {
+                        let modalProgress = container.modalProgress
+                        strongSelf.modalProgressUpdated(modalProgress, transition)
+                        strongSelf.containerLayoutUpdated(layout, transition: expandTransition)
+                        for (_, otherContainer) in strongSelf.containers {
+                            if otherContainer !== container {
+                                otherContainer.syncExpandProgress(expandScrollProgress: container.expandScrollProgress, expandProgress: container.expandProgress, modalProgress: container.modalProgress, transition: expandTransition)
+                            }
                         }
                     }
+                }, presentInGlobalOverlay: presentInGlobalOverlay, sendSticker: sendSticker, openMention: openMention, controller: self.controller)
+                container.onReady = { [weak self] in
+                    self?.onReady()
                 }
-            } else {
-                if let container = self.containers[i] {
-                    container.removeFromSupernode()
-                    self.containers.removeValue(forKey: i)
+                container.onLoading = { [weak self] in
+                    self?.onLoading()
+                }
+                container.onError = { [weak self] in
+                    self?.onError()
+                }
+                self.containerContainingNode.addSubnode(container)
+                self.containers[i] = container
+            }
+            
+            let containerFrame = CGRect(origin: CGPoint(x: CGFloat(indexOffset) * layout.size.width + self.relativeToSelectedStickerPackTransition + scaledOffset, y: containerVerticalOffset), size: layout.size)
+            containerTransition.updateFrame(node: container, frame: containerFrame, beginWithCurrentState: true)
+            containerTransition.updateSublayerTransformScaleAndOffset(node: container, scale: containerScale, offset: CGPoint(), beginWithCurrentState: true)
+            if container.validLayout?.0 != layout {
+                container.updateLayout(layout: layout, transition: containerTransition)
+            }
+            
+            if wasAdded {
+                if let selectedContainer = self.containers[self.selectedStickerPackIndex] {
+                    if selectedContainer !== container {
+                        container.syncExpandProgress(expandScrollProgress: selectedContainer.expandScrollProgress, expandProgress: selectedContainer.expandProgress, modalProgress: selectedContainer.modalProgress, transition: .immediate)
+                    }
                 }
             }
-//        }
+        } else {
+            if let container = self.containers[i] {
+                container.removeFromSupernode()
+                self.containers.removeValue(forKey: i)
+            }
+        }
         
         if firstTime {
             if !self.containers.isEmpty {
@@ -1515,7 +1509,7 @@ public final class StickerPackScreenImpl: ViewController {
     }
     
     public var dismissed: (() -> Void)?
-    public var actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)?
+    public var actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -1530,7 +1524,7 @@ public final class StickerPackScreenImpl: ViewController {
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil, actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)? = nil) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.stickerPacks = stickerPacks
@@ -1709,7 +1703,7 @@ public enum StickerPackScreenPerformedAction {
     case remove(positionInList: Int)
 }
 
-public func StickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
+public func StickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil, actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
     //let stickerPacks = [mainStickerPack]
     let controller = StickerPackScreenImpl(context: context, stickerPacks: stickerPacks, selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0, parentNavigationController: parentNavigationController, sendSticker: sendSticker, actionPerformed: actionPerformed)
     controller.dismissed = dismissed

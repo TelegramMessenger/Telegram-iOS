@@ -2667,20 +2667,22 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             let baseNavigationController = strongSelf.baseNavigationController()
             baseNavigationController?.view.endEditing(true)
-            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: Array(packs.prefix(1)), sendSticker: nil, actionPerformed: { info, items, action in
-                let animateInAsReplacement = false
-                switch action {
-                case .add:
-                    topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                        return true
-                    }), in: .window(.root))
-                case let .remove(positionInList):
-                    topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
-                        if case .undo = action {
-                            let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
-                        }
-                        return true
-                    }), in: .window(.root))
+            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: Array(packs.prefix(1)), sendSticker: nil, actionPerformed: { actions in
+                if let (info, items, action) = actions.first {
+                    let animateInAsReplacement = false
+                    switch action {
+                    case .add:
+                        topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                            return true
+                        }), in: .window(.root))
+                    case let .remove(positionInList):
+                        topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                            if case .undo = action {
+                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                            }
+                            return true
+                        }), in: .window(.root))
+                    }
                 }
             }, dismissed: { [weak self] in
                 self?.isInteractingPromise.set(false)

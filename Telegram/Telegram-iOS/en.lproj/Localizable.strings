@@ -7886,6 +7886,12 @@ Sorry for the inconvenience.";
 "EmojiPackActionInfo.ArchivedTitle" = "Emoji Archived";
 "EmojiPackActionInfo.RemovedText" = "%@ is no longer in your emoji.";
 
+"EmojiPackActionInfo.MultipleAddedText_1" = "%@ pack has been added to your emoji.";
+"EmojiPackActionInfo.MultipleAddedText_any" = "%@ packs have been added to your emoji.";
+
+"EmojiPackActionInfo.MultipleRemovedText_1" = "%@ pack is no longer in your emoji.";
+"EmojiPackActionInfo.MultipleRemovedText_any" = "%@ packs are no longer in your emoji.";
+
 "MaskPackActionInfo.RemovedTitle" = "Masks Removed";
 "MaskPackActionInfo.ArchivedTitle" = "Masks Archived";
 "MaskPackActionInfo.RemovedText" = "%@ is no longer in your masks.";

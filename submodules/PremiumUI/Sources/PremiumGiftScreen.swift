@@ -820,7 +820,9 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                     }
 
                     strongSelf.products = gifts
-                    strongSelf.selectedProductId = strongSelf.products?.first?.id
+                    if strongSelf.selectedProductId == nil {
+                        strongSelf.selectedProductId = strongSelf.products?.first?.id
+                    }
                     strongSelf.peer = peer
                     strongSelf.updated(transition: .immediate)
                 }
