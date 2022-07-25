@@ -837,7 +837,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     }
                     
                     var dismissImpl: (() -> Void)?
-                    let canSave = paymentForm.canSaveCredentials || paymentForm.passwordMissing
+                    let canSave = customUrl == nil && (paymentForm.canSaveCredentials || paymentForm.passwordMissing)
                     let controller = BotCheckoutNativeCardEntryController(context: strongSelf.context, provider: .stripe(additionalFields: additionalFields, publishableKey: publishableKey), completion: { method in
                         guard let strongSelf = self else {
                             return

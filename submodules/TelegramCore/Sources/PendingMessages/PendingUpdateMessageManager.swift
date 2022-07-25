@@ -64,7 +64,7 @@ private final class PendingUpdateMessageManagerImpl {
         }
     }
     
-    func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: TelegramMediaFile], disableUrlPreview: Bool) {
+    func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], disableUrlPreview: Bool) {
         if let context = self.contexts[messageId] {
             self.contexts.removeValue(forKey: messageId)
             context.disposable.dispose()
@@ -163,7 +163,7 @@ public final class PendingUpdateMessageManager {
         })
     }
     
-    public func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: TelegramMediaFile], disableUrlPreview: Bool = false) {
+    public func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], disableUrlPreview: Bool = false) {
         self.impl.with { impl in
             impl.add(messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, disableUrlPreview: disableUrlPreview)
         }

@@ -471,7 +471,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         if self.animateInputField {
             self.fromMessageTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
             self.toMessageTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, removeOnCompletion: false)
-            self.textInputNode.isHidden = true
         } else {
             self.messageBackgroundNode.isHidden = true
             self.fromMessageTextNode.isHidden = true
@@ -526,6 +525,9 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
         
         Queue.mainQueue().after(0.01, {
+            if self.animateInputField {
+                self.textInputNode.isHidden = true
+            }
             self.updateTextContents()
         })
     }
