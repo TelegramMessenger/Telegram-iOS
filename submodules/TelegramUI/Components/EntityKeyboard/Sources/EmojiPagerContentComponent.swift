@@ -586,6 +586,8 @@ private final class GroupHeaderLayer: UIView {
             themeUpdated = true
         }
         
+        let needsVibrancy = !theme.overallDarkAppearance
+        
         let textOffsetY: CGFloat
         if hasTopSeparator {
             textOffsetY = 9.0
@@ -668,6 +670,7 @@ private final class GroupHeaderLayer: UIView {
                 
                 UIGraphicsPopContext()
             })?.cgImage
+            self.tintTextLayer.isHidden = !needsVibrancy
             self.currentTextLayout = (title, color, textConstrainedWidth, textSize)
         }
         
@@ -709,6 +712,7 @@ private final class GroupHeaderLayer: UIView {
             if let image = PresentationResourcesChat.chatEntityKeyboardLock(theme, color: .white) {
                 tintLockIconLayer.contents = image.cgImage
                 tintLockIconLayer.frame = lockIconLayer.frame
+                tintLockIconLayer.isHidden = !needsVibrancy
             } else {
                 tintLockIconLayer.contents = nil
             }
@@ -774,6 +778,7 @@ private final class GroupHeaderLayer: UIView {
                 self.tintSubtitleLayer = tintSubtitleLayer
                 self.tintContentLayer.addSublayer(tintSubtitleLayer)
             }
+            tintSubtitleLayer.isHidden = !needsVibrancy
             
             if let updateTintSubtitleContents = updateTintSubtitleContents {
                 tintSubtitleLayer.contents = updateTintSubtitleContents.cgImage
@@ -812,6 +817,8 @@ private final class GroupHeaderLayer: UIView {
                 self.tintClearIconLayer = tintClearIconLayer
                 self.tintContentLayer.addSublayer(tintClearIconLayer)
             }
+            
+            tintClearIconLayer.isHidden = !needsVibrancy
             
             var clearSize = clearIconLayer.bounds.size
             if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor) {
@@ -895,6 +902,8 @@ private final class GroupHeaderLayer: UIView {
             }
             tintSeparatorLayer.backgroundColor = UIColor.white.cgColor
             tintSeparatorLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel))
+            
+            tintSeparatorLayer.isHidden = !needsVibrancy
         } else {
             if let separatorLayer = self.separatorLayer {
                 self.separatorLayer = separatorLayer
@@ -3672,18 +3681,25 @@ public final class EmojiPagerContentComponent: Component {
                 return
             }
             
-            if self.vibrancyEffectView == nil {
-                let style: UIBlurEffect.Style
-                style = .extraLight
-                let blurEffect = UIBlurEffect(style: style)
-                let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
-                let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
-                self.vibrancyEffectView = vibrancyEffectView
-                self.backgroundView.addSubview(vibrancyEffectView)
-                for subview in vibrancyEffectView.subviews {
-                    let _ = subview
+            if keyboardChildEnvironment.theme.overallDarkAppearance {
+                if let vibrancyEffectView = self.vibrancyEffectView {
+                    self.vibrancyEffectView = nil
+                    vibrancyEffectView.removeFromSuperview()
                 }
-                vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
+            } else {
+                if self.vibrancyEffectView == nil {
+                    let style: UIBlurEffect.Style
+                    style = .extraLight
+                    let blurEffect = UIBlurEffect(style: style)
+                    let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
+                    let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
+                    self.vibrancyEffectView = vibrancyEffectView
+                    self.backgroundView.addSubview(vibrancyEffectView)
+                    for subview in vibrancyEffectView.subviews {
+                        let _ = subview
+                    }
+                    vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
+                }
             }
             
             self.backgroundView.updateColor(color: keyboardChildEnvironment.theme.chat.inputMediaPanel.backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
