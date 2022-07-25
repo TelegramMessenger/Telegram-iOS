@@ -18,6 +18,9 @@ import RadialStatusNode
 import InvisibleInkDustNode
 import TextFormat
 import ChatPresentationInterfaceState
+import TextNodeWithEntities
+import AnimationCache
+import MultiAnimationRenderer
 
 private enum PinnedMessageAnimation {
     case slideToTop
@@ -52,8 +55,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let contentTextContainer: ASDisplayNode
     private let lineNode: AnimatedNavigationStripeNode
     private let titleNode: AnimatedCountLabelNode
-    private let textNode: TextNode
-    private var spoilerTextNode: TextNode?
+    private let textNode: TextNodeWithEntities
+    private var spoilerTextNode: TextNodeWithEntities?
     private var dustNode: InvisibleInkDustNode?
     private let actionButton: HighlightableButtonNode
     private let actionButtonTitleNode: ImmediateTextNode
@@ -73,6 +76,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let fetchDisposable = MetaDisposable()
     
     private var statusDisposable: Disposable?
+    
+    private let animationCache: AnimationCache?
+    private let animationRenderer: MultiAnimationRenderer?
 
     private let queue = Queue()
     
@@ -85,8 +91,10 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         return result
     }
     
-    init(context: AccountContext) {
+    init(context: AccountContext, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
         self.context = context
+        self.animationCache = animationCache
+        self.animationRenderer = animationRenderer
         
         self.tapButton = HighlightTrackingButtonNode()
         
@@ -133,9 +141,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.reverseAnimationDirection = true
         
-        self.textNode = TextNode()
-        self.textNode.displaysAsynchronously = false
-        self.textNode.isUserInteractionEnabled = false
+        self.textNode = TextNodeWithEntities()
+        self.textNode.textNode.displaysAsynchronously = false
+        self.textNode.textNode.isUserInteractionEnabled = false
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -149,15 +157,15 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                 if highlighted {
                     strongSelf.titleNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleNode.alpha = 0.4
-                    strongSelf.textNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.textNode.alpha = 0.4
+                    strongSelf.textNode.textNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.textNode.textNode.alpha = 0.4
                     strongSelf.lineNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.lineNode.alpha = 0.4
                 } else {
                     strongSelf.titleNode.alpha = 1.0
                     strongSelf.titleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    strongSelf.textNode.alpha = 1.0
-                    strongSelf.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.textNode.textNode.alpha = 1.0
+                    strongSelf.textNode.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     strongSelf.lineNode.alpha = 1.0
                     strongSelf.lineNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
@@ -186,7 +194,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.clippingContainer.addSubnode(self.contentContainer)
         self.contextContainer.addSubnode(self.lineNode)
         self.contentTextContainer.addSubnode(self.titleNode)
-        self.contentTextContainer.addSubnode(self.textNode)
+        self.contentTextContainer.addSubnode(self.textNode.textNode)
         self.contentContainer.addSubnode(self.contentTextContainer)
         
         self.imageNodeContainer.addSubnode(self.imageNode)
@@ -495,7 +503,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         if let animation = animation {
             animationTransition = .animated(duration: 0.2, curve: .easeInOut)
             
-            if let copyView = self.textNode.view.snapshotView(afterScreenUpdates: false) {
+            if let copyView = self.textNode.textNode.view.snapshotView(afterScreenUpdates: false) {
                 let offset: CGFloat
                 switch animation {
                 case .slideToTop:
@@ -504,20 +512,20 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     offset = 10.0
                 }
                 
-                copyView.frame = self.textNode.frame
-                self.textNode.view.superview?.addSubview(copyView)
+                copyView.frame = self.textNode.textNode.frame
+                self.textNode.textNode.view.superview?.addSubview(copyView)
                 copyView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.2, removeOnCompletion: false, additive: true)
                 copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyView] _ in
                     copyView?.removeFromSuperview()
                 })
-                self.textNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -offset), to: CGPoint(), duration: 0.2, additive: true)
-                self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                self.textNode.textNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -offset), to: CGPoint(), duration: 0.2, additive: true)
+                self.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
         }
         
         let makeTitleLayout = self.titleNode.asyncLayout()
-        let makeTextLayout = TextNode.asyncLayout(self.textNode)
-        let makeSpoilerTextLayout = TextNode.asyncLayout(self.spoilerTextNode)
+        let makeTextLayout = TextNodeWithEntities.asyncLayout(self.textNode)
+        let makeSpoilerTextLayout = TextNodeWithEntities.asyncLayout(self.spoilerTextNode)
         let imageNodeLayout = self.imageNode.asyncLayout()
         
         let previousMediaReference = self.previousMediaReference
@@ -640,28 +648,29 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             let textFont = Font.regular(15.0)
             if isText {
                 let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
-                    if case .Spoiler = entity.type {
+                    switch entity.type {
+                    case .Spoiler, .CustomEmoji:
                         return true
-                    } else {
+                    default:
                         return false
                     }
                 }
                 let textColor = theme.chat.inputPanel.primaryTextColor
                 if entities.count > 0 {
-                    messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                    messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message)
                 } else {
-                    messageText = NSAttributedString(string: foldLineBreaks(textString), font: textFont, textColor: textColor)
+                    messageText = NSAttributedString(string: foldLineBreaks(textString.string), font: textFont, textColor: textColor)
                 }
             } else {
-                messageText = NSAttributedString(string: foldLineBreaks(textString), font: textFont, textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor)
+                messageText = NSAttributedString(string: foldLineBreaks(textString.string), font: textFont, textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor)
             }
             
             let textConstrainedSize = CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude)
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
             
-            let spoilerTextLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            let spoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
             if !textLayout.spoilers.isEmpty {
-                spoilerTextLayoutAndApply = makeSpoilerTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0), displaySpoilers: true))
+                spoilerTextLayoutAndApply = makeSpoilerTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0), displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
             } else {
                 spoilerTextLayoutAndApply = nil
             }
@@ -669,7 +678,18 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     let _ = titleApply(animation != nil)
-                    let _ = textApply()
+                    
+                    var textArguments: TextNodeWithEntities.Arguments?
+                    if let cache = strongSelf.animationCache, let renderer = strongSelf.animationRenderer {
+                        textArguments = TextNodeWithEntities.Arguments(
+                            context: strongSelf.context,
+                            cache: cache,
+                            renderer: renderer,
+                            placeholderColor: theme.list.mediaPlaceholderColor,
+                            attemptSynchronous: false
+                        )
+                    }
+                    let _ = textApply(textArguments)
                     
                     strongSelf.previousMediaReference = updatedMediaReference
                     
@@ -678,42 +698,45 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 5.0), size: titleLayout.size)
                     
                     let textFrame = CGRect(origin: CGPoint(x: 0.0, y: 23.0), size: textLayout.size)
-                    strongSelf.textNode.frame = textFrame
+                    strongSelf.textNode.textNode.frame = textFrame
                     
                     if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
-                        let spoilerTextNode = spoilerTextApply()
+                        let spoilerTextNode = spoilerTextApply(textArguments)
                         if strongSelf.spoilerTextNode == nil {
-                            spoilerTextNode.alpha = 0.0
-                            spoilerTextNode.isUserInteractionEnabled = false
-                            spoilerTextNode.contentMode = .topLeft
-                            spoilerTextNode.contentsScale = UIScreenScale
-                            spoilerTextNode.displaysAsynchronously = false
-                            strongSelf.contentTextContainer.insertSubnode(spoilerTextNode, aboveSubnode: strongSelf.textNode)
+                            spoilerTextNode.textNode.alpha = 0.0
+                            spoilerTextNode.textNode.isUserInteractionEnabled = false
+                            spoilerTextNode.textNode.contentMode = .topLeft
+                            spoilerTextNode.textNode.contentsScale = UIScreenScale
+                            spoilerTextNode.textNode.displaysAsynchronously = false
+                            strongSelf.contentTextContainer.insertSubnode(spoilerTextNode.textNode, aboveSubnode: strongSelf.textNode.textNode)
                             
                             strongSelf.spoilerTextNode = spoilerTextNode
                         }
                         
-                        strongSelf.spoilerTextNode?.frame = textFrame
+                        strongSelf.spoilerTextNode?.textNode.frame = textFrame
                         
                         let dustNode: InvisibleInkDustNode
                         if let current = strongSelf.dustNode {
                             dustNode = current
                         } else {
-                            dustNode = InvisibleInkDustNode(textNode: spoilerTextNode)
+                            dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode)
                             strongSelf.dustNode = dustNode
-                            strongSelf.contentTextContainer.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
+                            strongSelf.contentTextContainer.insertSubnode(dustNode, aboveSubnode: spoilerTextNode.textNode)
                         }
                         dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
                         dustNode.update(size: dustNode.frame.size, color: theme.chat.inputPanel.secondaryTextColor, textColor: theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                     } else if let spoilerTextNode = strongSelf.spoilerTextNode {
                         strongSelf.spoilerTextNode = nil
-                        spoilerTextNode.removeFromSupernode()
+                        spoilerTextNode.textNode.removeFromSupernode()
                         
                         if let dustNode = strongSelf.dustNode {
                             strongSelf.dustNode = nil
                             dustNode.removeFromSupernode()
                         }
                     }
+                    
+                    strongSelf.textNode.visibilityRect = CGRect.infinite
+                    strongSelf.spoilerTextNode?.visibilityRect = CGRect.infinite
                     
                     let lineFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: 0.0), size: CGSize(width: 2.0, height: panelHeight))
                     animationTransition.updateFrame(node: strongSelf.lineNode, frame: lineFrame)

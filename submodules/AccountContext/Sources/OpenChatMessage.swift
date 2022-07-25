@@ -36,7 +36,7 @@ public final class OpenChatMessageParams {
     public let openPeer: (Peer, ChatControllerInteractionNavigateToPeer) -> Void
     public let callPeer: (PeerId, Bool) -> Void
     public let enqueueMessage: (EnqueueMessage) -> Void
-    public let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
+    public let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     public let setupTemporaryHiddenMedia: (Signal<Any?, NoError>, Int, Media) -> Void
     public let chatAvatarHiddenMedia: (Signal<MessageId?, NoError>, Media) -> Void
     public let actionInteraction: GalleryControllerActionInteraction?
@@ -63,7 +63,7 @@ public final class OpenChatMessageParams {
         openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void,
         callPeer: @escaping (PeerId, Bool) -> Void,
         enqueueMessage: @escaping (EnqueueMessage) -> Void,
-        sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?,
+        sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?,
         setupTemporaryHiddenMedia: @escaping (Signal<Any?, NoError>, Int, Media) -> Void,
         chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void,
         actionInteraction: GalleryControllerActionInteraction? = nil,

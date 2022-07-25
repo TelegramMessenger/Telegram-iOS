@@ -19,6 +19,7 @@ public final class ManagedFile {
     private let queue: Queue?
     private let fd: Int32
     private let mode: Mode
+    private var isClosed: Bool = false
     
     public init?(queue: Queue?, path: String, mode: Mode) {
         if let queue = queue {
@@ -51,13 +52,24 @@ public final class ManagedFile {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
+        if !self.isClosed {
+            close(self.fd)
+        }
+    }
+    
+    public func _unsafeClose() {
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
         close(self.fd)
+        self.isClosed = true
     }
     
     public func write(_ data: UnsafeRawPointer, count: Int) -> Int {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
+        assert(!self.isClosed)
         return wrappedWrite(self.fd, data, count)
     }
     
@@ -65,6 +77,7 @@ public final class ManagedFile {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
+        assert(!self.isClosed)
         return wrappedRead(self.fd, data, count)
     }
     
@@ -72,6 +85,7 @@ public final class ManagedFile {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
+        assert(!self.isClosed)
         var result = Data(count: count)
         result.withUnsafeMutableBytes { buffer -> Void in
             guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
@@ -87,6 +101,7 @@ public final class ManagedFile {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
+        assert(!self.isClosed)
         lseek(self.fd, position, SEEK_SET)
     }
     
@@ -94,6 +109,7 @@ public final class ManagedFile {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
+        assert(!self.isClosed)
         ftruncate(self.fd, count)
     }
     
@@ -101,6 +117,7 @@ public final class ManagedFile {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
+        assert(!self.isClosed)
         var value = stat()
         if fstat(self.fd, &value) == 0 {
             return value.st_size
@@ -113,6 +130,7 @@ public final class ManagedFile {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
+        assert(!self.isClosed)
         
         return lseek(self.fd, 0, SEEK_CUR);
     }
@@ -121,6 +139,7 @@ public final class ManagedFile {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
+        assert(!self.isClosed)
         fsync(self.fd)
     }
 }

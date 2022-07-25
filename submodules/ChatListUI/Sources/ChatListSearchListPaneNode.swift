@@ -1691,7 +1691,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
         }
         
-        let chatListInteraction = ChatListNodeInteraction(activateSearch: {
+        let chatListInteraction = ChatListNodeInteraction(context: context, activateSearch: {
         }, peerSelected: { [weak self] peer, chatPeer, _ in
             interaction.dismissInput()
             interaction.openPeer(peer, chatPeer, false)
@@ -2924,7 +2924,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
             let timestamp1: Int32 = 100000
             var peers: [EnginePeer.Id: EnginePeer] = [:]
             peers[peer1.id] = peer1
-            let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _, _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
+            let interaction = ChatListNodeInteraction(context: context, activateSearch: {}, peerSelected: { _, _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
             }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in }, activateChatPreview: { _, _, gesture in
                 gesture?.cancel()
             }, present: { _ in })
@@ -2952,7 +2952,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             media: [],
                             peers: peers,
                             associatedMessages: [:],
-                            associatedMessageIds: []
+                            associatedMessageIds: [],
+                            associatedMedia: [:]
                         )
                         let readState = EnginePeerReadCounters()
                         return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, filterData: nil, index: EngineChatList.Item.Index(pinningIndex: 0, messageIndex: EngineMessage.Index(id: EngineMessage.Id(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(messages: [message], peer: EngineRenderedPeer(peer: peer1), combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, hasUnseenMentions: false, hasUnseenReactions: false, draftState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
@@ -2981,7 +2982,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             media: media,
                             peers: peers,
                             associatedMessages: [:],
-                            associatedMessageIds: []
+                            associatedMessageIds: [],
+                            associatedMedia: [:]
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: true, isGlobalSearchResult: true)
@@ -3008,7 +3010,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             media: media,
                             peers: peers,
                             associatedMessages: [:],
-                            associatedMessageIds: []
+                            associatedMessageIds: [],
+                            associatedMedia: [:]
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
@@ -3035,7 +3038,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             media: media,
                             peers: peers,
                             associatedMessages: [:],
-                            associatedMessageIds: []
+                            associatedMessageIds: [],
+                            associatedMedia: [:]
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
@@ -3062,7 +3066,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             media: media,
                             peers: peers,
                             associatedMessages: [:],
-                            associatedMessageIds: []
+                            associatedMessageIds: [],
+                            associatedMedia: [:]
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)

@@ -591,6 +591,10 @@ private final class MultipartFetchManager {
             if totalTime > 0.0 {
                 let speed = Double(totalByteCount) / totalTime
                 Logger.shared.log("MultipartFetch", "\(self.resource.id.stringRepresentation) \(speed) bytes/s")
+                
+                #if DEBUG
+                self.checkState()
+                #endif
             }
         }
     }

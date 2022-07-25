@@ -99,6 +99,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 isAction = true
                 if case .phoneCall = action.action {
                     result.append((message, ChatMessageCallBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                } else if case .giftPremium = action.action {
+                    result.append((message, ChatMessageGiftBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 } else {
                     result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 }
@@ -299,7 +301,15 @@ class ChatPresentationContext {
         self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
             return TempBox.shared.tempFile(fileName: "file").path
         })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        
+        let animationRenderer: MultiAnimationRenderer
+        /*if #available(iOS 13.0, *) {
+            animationRenderer = MultiAnimationMetalRendererImpl()
+        } else {*/
+            animationRenderer = MultiAnimationRendererImpl()
+        //}
+        
+        self.animationRenderer = animationRenderer
     }
 }
 
@@ -528,13 +538,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     contentNode.visibility = mapVisibility(self.visibility, boundsSize: self.bounds.size, insets: self.insets, to: contentNode)
                 }
                 
-                /*switch self.visibility {
-                case let .visible(_, subRect):
-                    let topEdge = self.bounds.height - self.insets.top - (subRect.origin.y + subRect.height)
-                    self.debugNode.frame = CGRect(origin: CGPoint(x: 0.0, y: topEdge), size: CGSize(width: 100.0, height: 2.0))
-                case .none:
-                    break
-                }*/
+                if let replyInfoNode = self.replyInfoNode {
+                    replyInfoNode.visibility = self.visibility != .none
+                }
             }
         }
     }
@@ -1037,7 +1043,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
-        replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
+        replyInfoLayout: (ChatMessageReplyInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
         reactionButtonsLayout: (ChatMessageReactionButtonsNode.Arguments) -> (minWidth: CGFloat, layout: (CGFloat) -> (size: CGSize, apply: (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)),
         mosaicStatusLayout: (ChatMessageDateAndStatusNode.Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)),
@@ -1693,7 +1699,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var adminNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
         
         var replyInfoOriginY: CGFloat = 0.0
-        var replyInfoSizeApply: (CGSize, () -> ChatMessageReplyInfoNode?) = (CGSize(), { nil })
+        var replyInfoSizeApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode?) = (CGSize(), {  _ in nil })
         
         var forwardInfoOriginY: CGFloat = 0.0
         var forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode?) = (CGSize(), { _ in nil })
@@ -1800,8 +1806,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 } else {
                     headerSize.height += 2.0
                 }
-                let sizeAndApply = replyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .bubble(incoming: incoming), replyMessage, item.message, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
-                replyInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
+                let sizeAndApply = replyInfoLayout(ChatMessageReplyInfoNode.Arguments(
+                    presentationData: item.presentationData,
+                    strings: item.presentationData.strings,
+                    context: item.context,
+                    type: .bubble(incoming: incoming),
+                    message: replyMessage,
+                    parentMessage: item.message,
+                    constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude),
+                    animationCache: item.controllerInteraction.presentationContext.animationCache,
+                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                ))
+                replyInfoSizeApply = (sizeAndApply.0, { synchronousLoads in sizeAndApply.1(synchronousLoads) })
                 
                 replyInfoOriginY = headerSize.height
                 headerSize.width = max(headerSize.width, replyInfoSizeApply.0.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
@@ -2275,7 +2291,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         contentUpperRightCorner: CGPoint,
         forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode?),
         forwardInfoOriginY: CGFloat,
-        replyInfoSizeApply: (CGSize, () -> ChatMessageReplyInfoNode?),
+        replyInfoSizeApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode?),
         replyInfoOriginY: CGFloat,
         removedContentNodeIndices: [Int]?,
         addedContentNodes: [(Message, Bool, ChatMessageBubbleContentNode)]?,
@@ -2481,12 +2497,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
-        if let replyInfoNode = replyInfoSizeApply.1() {
+        if let replyInfoNode = replyInfoSizeApply.1(synchronousLoads) {
             strongSelf.replyInfoNode = replyInfoNode
             var animateFrame = true
             if replyInfoNode.supernode == nil {
                 strongSelf.clippingNode.addSubnode(replyInfoNode)
                 animateFrame = false
+                
+                replyInfoNode.visibility = strongSelf.visibility != .none
             }
             let previousReplyInfoNodeFrame = replyInfoNode.frame
             replyInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: replyInfoSizeApply.0)

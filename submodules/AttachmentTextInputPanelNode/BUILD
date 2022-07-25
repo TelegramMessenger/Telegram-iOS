@@ -29,6 +29,11 @@ swift_library(
         "//submodules/Pasteboard:Pasteboard",
         "//submodules/ContextUI:ContextUI",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
+        "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities:TextNodeWithEntities",
     ],
     visibility = [
         "//visibility:public",

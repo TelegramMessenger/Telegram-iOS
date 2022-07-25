@@ -82,7 +82,6 @@ swift_library(
         "//submodules/Components/SheetComponent:SheetComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/Components/SolidRoundedButtonComponent:SolidRoundedButtonComponent",
-        "//submodules/Components/Forms/PrefixSectionGroupComponent:PrefixSectionGroupComponent",
         "//submodules/InAppPurchaseManager:InAppPurchaseManager",
         "//submodules/ConfettiEffect:ConfettiEffect",
         "//submodules/TextFormat:TextFormat",
@@ -93,6 +92,7 @@ swift_library(
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/CheckNode:CheckNode",
     ],
     visibility = [
         "//visibility:public",

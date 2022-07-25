@@ -548,6 +548,18 @@ final class MessageHistoryTable: Table {
         }
     }
     
+    func storeMediaIfNotPresent(media: Media) {
+        guard let id = media.id else {
+            return
+        }
+        if let _ = self.messageMediaTable.get(id, embedded: { index, id in
+            return self.embeddedMediaForIndex(index, id: id)
+        }) {
+        } else {
+            let _ = self.messageMediaTable.set(media, index: nil, messageHistoryTable: self)
+        }
+    }
+    
     func getMedia(_ id: MediaId) -> Media? {
         return self.messageMediaTable.get(id, embedded: { index, id in
             return self.embeddedMediaForIndex(index, id: id)
@@ -2516,10 +2528,21 @@ final class MessageHistoryTable: Table {
         
         var associatedMessageIds: [MessageId] = []
         var associatedMessages = SimpleDictionary<MessageId, Message>()
+        var associatedMedia: [MediaId: Media] = [:]
         for attribute in parsedAttributes {
             for peerId in attribute.associatedPeerIds {
                 if let peer = peerTable.get(peerId) {
                     peers[peer.id] = peer
+                }
+            }
+            for mediaId in attribute.associatedMediaIds {
+                if associatedMedia[mediaId] == nil {
+                    if mediaId.id == 5364107552168613887 {
+                        assert(true)
+                    }
+                    if let media = self.getMedia(mediaId) {
+                        associatedMedia[mediaId] = media
+                    }
                 }
             }
             associatedMessageIds.append(contentsOf: attribute.associatedMessageIds)
@@ -2534,7 +2557,7 @@ final class MessageHistoryTable: Table {
             }
         }
         
-        return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: parsedAttributes, media: parsedMedia, peers: peers, associatedMessages: associatedMessages, associatedMessageIds: associatedMessageIds)
+        return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: parsedAttributes, media: parsedMedia, peers: peers, associatedMessages: associatedMessages, associatedMessageIds: associatedMessageIds, associatedMedia: associatedMedia)
     }
     
     func renderMessagePeers(_ message: Message, peerTable: PeerTable) -> Message {

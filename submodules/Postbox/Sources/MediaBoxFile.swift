@@ -108,7 +108,7 @@ private final class MediaBoxFileMap {
                 return nil
             }
             
-            if count < 0 || length < 4 + 4 + count * 2 * 4 {
+            if count < 0 || UInt64(length) < 4 + 4 + UInt64(count) * 2 * 4 {
                 return nil
             }
             

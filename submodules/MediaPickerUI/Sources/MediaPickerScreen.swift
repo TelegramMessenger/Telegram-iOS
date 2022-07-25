@@ -1326,12 +1326,20 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self?.dismissAllTooltips()
                 completion()
             })])
-            controller.dismissed = { [weak self] in
+            controller.dismissed = { [weak self] _ in
                 self?.isDismissing = false
             }
             self.present(controller, in: .window(.root))
         } else {
             completion()
+        }
+    }
+    
+    public func shouldDismissImmediately() -> Bool {
+        if let selectionState = self.interaction?.selectionState, selectionState.count() > 0 {
+            return false
+        } else {
+            return true
         }
     }
     

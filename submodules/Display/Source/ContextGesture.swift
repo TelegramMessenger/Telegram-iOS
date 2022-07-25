@@ -20,9 +20,12 @@ private class TimerTargetWrapper: NSObject {
     }
 }
 
-public func cancelParentGestures(view: UIView) {
+public func cancelParentGestures(view: UIView, ignore: [UIGestureRecognizer] = []) {
     if let gestureRecognizers = view.gestureRecognizers {
         for recognizer in gestureRecognizers {
+            if ignore.contains(where: { $0 === recognizer }) {
+                continue
+            }
             recognizer.state = .failed
         }
     }
@@ -33,7 +36,7 @@ public func cancelParentGestures(view: UIView) {
         node.highligthedChanged(false)
     }
     if let superview = view.superview {
-        cancelParentGestures(view: superview)
+        cancelParentGestures(view: superview, ignore: ignore)
     }
 }
 
@@ -66,6 +69,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     public var externalUpdated: ((UIView?, CGPoint) -> Void)?
     public var externalEnded: (((UIView?, CGPoint)?) -> Void)?
     public var activatedAfterCompletion: (() -> Void)?
+    public var cancelGesturesOnActivation: (() -> Void)?
     
     override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
@@ -142,11 +146,12 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
                             strongSelf.animator?.invalidate()
                             strongSelf.activated?(strongSelf, location)
                             strongSelf.wasActivated = true
-                            if let view = strongSelf.view?.superview {
+                            if let view = strongSelf.view {
                                 if let window = view.window {
                                     cancelOtherGestures(gesture: strongSelf, view: window)
                                 }
-                                cancelParentGestures(view: view)
+                                strongSelf.cancelGesturesOnActivation?()
+                                cancelParentGestures(view: view, ignore: [strongSelf])
                             }
                             strongSelf.state = .began
                         default:

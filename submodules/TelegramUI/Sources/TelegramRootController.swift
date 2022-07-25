@@ -74,14 +74,13 @@ public final class TelegramRootController: NavigationController {
             }
         })
         
-        self.applicationInFocusDisposable = (context.sharedContext.applicationBindings.applicationIsActive
-        |> distinctUntilChanged
-        |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.setForceBadgeHidden(!value)
-        })
+        if context.sharedContext.applicationBindings.isMainApp {
+            self.applicationInFocusDisposable = (context.sharedContext.applicationBindings.applicationIsActive
+            |> distinctUntilChanged
+            |> deliverOn(Queue.mainQueue())).start(next: { value in
+                context.sharedContext.mainWindow?.setForceBadgeHidden(!value)
+            })
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -126,11 +125,11 @@ public final class TelegramRootController: NavigationController {
         }
         
         let accountSettingsController = PeerInfoScreenImpl(context: self.context, updatedPresentationData: nil, peerId: self.context.account.peerId, avatarInitiallyExpanded: false, isOpenedFromChat: false, nearbyPeerDistance: nil, callMessages: [], isSettings: true)
-        accountSettingsController.tabBarItemDebugTapAction = { [weak self, weak accountSettingsController] in
-            guard let strongSelf = self, let accountSettingsController = accountSettingsController else {
+        accountSettingsController.tabBarItemDebugTapAction = { [weak self] in
+            guard let strongSelf = self else {
                 return
             }
-            accountSettingsController.push(debugController(sharedContext: strongSelf.context.sharedContext, context: strongSelf.context))
+            strongSelf.pushViewController(debugController(sharedContext: strongSelf.context.sharedContext, context: strongSelf.context))
         }
         controllers.append(accountSettingsController)
         

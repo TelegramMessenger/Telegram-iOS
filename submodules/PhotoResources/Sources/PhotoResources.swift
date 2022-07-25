@@ -532,12 +532,25 @@ private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaRef
             
             return thumbnail
             |> mapToSignal { thumbnailData in
-                return combineLatest(fullSizeDataAndPath, reducedSizeDataAndPath)
-                |> map { fullSize, reducedSize in
-                    if !fullSize._1 && reducedSize._1 {
-                        return Tuple(thumbnailData, reducedSize._0, false)
+                if synchronousLoad, let thumbnailData = thumbnailData {
+                    return .single(Tuple(thumbnailData, nil, false))
+                    |> then(
+                        combineLatest(fullSizeDataAndPath, reducedSizeDataAndPath)
+                        |> map { fullSize, reducedSize in
+                            if !fullSize._1 && reducedSize._1 {
+                                return Tuple(thumbnailData, reducedSize._0, false)
+                            }
+                            return Tuple(thumbnailData, fullSize._0, fullSize._1)
+                        }
+                    )
+                } else {
+                    return combineLatest(fullSizeDataAndPath, reducedSizeDataAndPath)
+                    |> map { fullSize, reducedSize in
+                        if !fullSize._1 && reducedSize._1 {
+                            return Tuple(thumbnailData, reducedSize._0, false)
+                        }
+                        return Tuple(thumbnailData, fullSize._0, fullSize._1)
                     }
-                    return Tuple(thumbnailData, fullSize._0, fullSize._1)
                 }
             }
         }

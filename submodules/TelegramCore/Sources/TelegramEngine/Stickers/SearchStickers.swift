@@ -306,7 +306,7 @@ func _internal_searchStickerSetsRemotely(network: Network, query: String) -> Sig
             case let .foundStickerSets(_, sets: sets):
                 var result = FoundStickerSets()
                 for set in sets {
-                    let parsed = parsePreviewStickerSet(set)
+                    let parsed = parsePreviewStickerSet(set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
                     let values = parsed.1.map({ ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: index, collectionId: parsed.0.id, itemIndex: $0.index), item: $0) })
                     result = result.withUpdatedInfosAndEntries(infos: [(parsed.0.id, parsed.0, parsed.1.first, false)], entries: values)
                     index += 1

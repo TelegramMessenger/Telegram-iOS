@@ -68,10 +68,6 @@ public struct MediaId: Hashable, PostboxCoding, CustomStringConvertible, Codable
     }
 }
 
-public protocol AssociatedMediaData: AnyObject, PostboxCoding {
-    func isEqual(to: AssociatedMediaData) -> Bool
-}
-
 public protocol Media: AnyObject, PostboxCoding {
     var id: MediaId? { get }
     var peerIds: [PeerId] { get }
