@@ -1592,7 +1592,12 @@ public final class EmojiPagerContentComponent: Component {
                 
                 self.itemsPerRow = max(minItemsPerRow, Int((itemHorizontalSpace + minSpacing) / (self.nativeItemSize + minSpacing)))
                 
-                self.visibleItemSize = self.nativeItemSize
+                //self.itemsPerRow * x + minSpacing * (x - 1) = itemHorizontalSpace
+                //self.itemsPerRow * x + minSpacing * (self.itemsPerRow - 1) = itemHorizontalSpace
+                //x = (itemHorizontalSpace - minSpacing * (self.itemsPerRow - 1)) / self.itemsPerRow
+                let proposedItemSize = floor((itemHorizontalSpace - minSpacing * (CGFloat(self.itemsPerRow) - 1.0)) / CGFloat(self.itemsPerRow))
+                
+                self.visibleItemSize = proposedItemSize < self.nativeItemSize ? proposedItemSize : self.nativeItemSize
                 
                 self.horizontalSpacing = floorToScreenPixels((itemHorizontalSpace - self.visibleItemSize * CGFloat(self.itemsPerRow)) / CGFloat(self.itemsPerRow - 1))
                 
