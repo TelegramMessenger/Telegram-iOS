@@ -408,7 +408,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
 
     let rootTabBar = PresentationThemeRootTabBar(
         backgroundColor: rootNavigationBar.blurredBackgroundColor,
-        separatorColor: UIColor(rgb: 0xa3a3a3),
+        separatorColor: UIColor(rgb: 0xb2b2b2),
         iconColor: UIColor(rgb: 0x959595),
         selectedIconColor: defaultDayAccentColor,
         textColor: UIColor(rgb: 0x959595),

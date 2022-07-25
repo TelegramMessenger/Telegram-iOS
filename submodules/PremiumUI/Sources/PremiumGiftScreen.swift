@@ -1151,7 +1151,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             )
             
             let bottomPanelAlpha: CGFloat
-            if let bottomContentOffset = state.bottomContentOffset {
+            if let bottomContentOffset = state.bottomContentOffset, context.availableSize.width > 320.0 {
                 bottomPanelAlpha = min(16.0, bottomContentOffset) / 16.0
             } else {
                 bottomPanelAlpha = 0.0
@@ -1205,45 +1205,47 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 let availableWidth = context.availableSize.width
                 let sideInsets = sideInset * 2.0 + environment.safeInsets.left + environment.safeInsets.right
                 
-                let termsFont = Font.regular(13.0)
-                let termsTextColor = environment.theme.list.freeTextColor
-                let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
-                    return (TelegramTextAttributes.URL, contents)
-                })
-                           
-                let termsString: MultilineTextComponent.TextContent = .markdown(
-                    text: environment.strings.Premium_Gift_Info,
-                    attributes: termsMarkdownAttributes
-                )
-                
-                let termsText = termsText.update(
-                    component: MultilineTextComponent(
-                        text: termsString,
-                        horizontalAlignment: .center,
-                        maximumNumberOfLines: 0,
-                        lineSpacing: 0.0,
-                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.3),
-                        highlightAction: { attributes in
-                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                            } else {
-                                return nil
+                if availableWidth > 320.0 {
+                    let termsFont = Font.regular(13.0)
+                    let termsTextColor = environment.theme.list.freeTextColor
+                    let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
+                        return (TelegramTextAttributes.URL, contents)
+                    })
+                               
+                    let termsString: MultilineTextComponent.TextContent = .markdown(
+                        text: environment.strings.Premium_Gift_Info,
+                        attributes: termsMarkdownAttributes
+                    )
+                    
+                    let termsText = termsText.update(
+                        component: MultilineTextComponent(
+                            text: termsString,
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.0,
+                            highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.3),
+                            highlightAction: { attributes in
+                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                    return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                                } else {
+                                    return nil
+                                }
+                            },
+                            tapAction: { attributes, _ in
+                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                                    let controller = PremiumIntroScreen(context: accountContext, source: .giftTerms)
+                                    present(controller)
+                                }
                             }
-                        },
-                        tapAction: { attributes, _ in
-                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                                let controller = PremiumIntroScreen(context: accountContext, source: .giftTerms)
-                                present(controller)
-                            }
-                        }
-                    ),
-                    environment: {},
-                    availableSize: CGSize(width: availableWidth - sideInsets - textSideInset * 2.0, height: .greatestFiniteMagnitude),
-                    transition: context.transition
-                )
-                context.add(termsText
-                    .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + termsText.size.width / 2.0, y: context.availableSize.height - bottomPanel.size.height - termsText.size.height))
-                )
+                        ),
+                        environment: {},
+                        availableSize: CGSize(width: availableWidth - sideInsets - textSideInset * 2.0, height: .greatestFiniteMagnitude),
+                        transition: context.transition
+                    )
+                    context.add(termsText
+                        .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + termsText.size.width / 2.0, y: context.availableSize.height - bottomPanel.size.height - termsText.size.height))
+                    )
+                }
             }
             
             return context.availableSize
@@ -1311,11 +1313,18 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer {
             if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
                 var controllers = navigationController.viewControllers
                 controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
+                var foundController = false
                 for controller in controllers.reversed() {
                     if let chatController = controller as? ChatController, case .peer(id: peerId) = chatController.chatLocation {
                         chatController.hintPlayNextOutgoingGift()
+                        foundController = true
                         break
                     }
+                }
+                if !foundController {
+                    let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
+                    chatController.hintPlayNextOutgoingGift()
+                    controllers.append(chatController)
                 }
                 navigationController.setViewControllers(controllers, animated: true)
             }

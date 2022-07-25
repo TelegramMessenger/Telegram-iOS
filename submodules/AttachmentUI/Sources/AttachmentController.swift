@@ -691,7 +691,14 @@ public class AttachmentController: ViewController {
                 
                 let insets = layout.insets(options: [.input])
                 let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
-                let position: CGPoint = CGPoint(x: masterWidth - 174.0, y: layout.size.height - size.height - insets.bottom - 40.0)
+                                
+                let position: CGPoint
+                let positionY = layout.size.height - size.height - insets.bottom - 40.0
+                if let sourceRect = controller.getSourceRect?() {
+                    position = CGPoint(x: floor(sourceRect.midX - size.width / 2.0), y: min(positionY, sourceRect.minY - size.height))
+                } else {
+                    position = CGPoint(x: masterWidth - 174.0, y: positionY)
+                }
                 
                 if controller.isStandalone {
                     var containerY = floorToScreenPixels((layout.size.height - size.height) / 2.0)
@@ -846,6 +853,8 @@ public class AttachmentController: ViewController {
     }
     
     public var getInputContainerNode: () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }
+    
+    public var getSourceRect: (() -> CGRect?)?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
         self.context = context
