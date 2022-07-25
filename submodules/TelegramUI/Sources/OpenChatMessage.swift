@@ -83,7 +83,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     
                     if actions.count > 1, let first = actions.first {
                         if case .add = first.2 {
-                            params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.EmojiPackActionInfo_AddedTitle, text: presentationData.strings.EmojiPackActionInfo_MultipleAddedText(Int32(actions.count)), cancel: ""), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                            params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.EmojiPackActionInfo_AddedTitle, text: presentationData.strings.EmojiPackActionInfo_MultipleAddedText(Int32(actions.count)), undo: false, info: first.0, topItem: first.1.first, context: params.context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
                                 return true
                             }))
                         }
