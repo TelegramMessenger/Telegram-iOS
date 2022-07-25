@@ -3404,7 +3404,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemTransition.setBounds(layer: itemLayer, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                         
                         if animateItemIn, !transition.animation.isImmediate {
-                            if let previousItemPosition = previousItemPositions?[itemId], transitionHintInstalledGroupId != itemId.groupId {
+                            if let previousItemPosition = previousItemPositions?[itemId], transitionHintInstalledGroupId != itemId.groupId, transitionHintExpandedGroupId != itemId.groupId {
                                 itemTransition = transition
                                 itemLayer.position = previousItemPosition
                             } else {
@@ -3435,6 +3435,11 @@ public final class EmojiPagerContentComponent: Component {
                             if itemLayer.displayPlaceholder {
                                 itemLayer.onUpdateDisplayPlaceholder(true, 0.0)
                             }
+                        }
+                        
+                        if animateItemIn, !transition.animation.isImmediate, let contentAnimation = contentAnimation, case .groupExpanded(id: itemGroup.groupId) = contentAnimation.type, let placeholderView = self.visibleItemPlaceholderViews[itemId] {
+                            placeholderView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+                            placeholderView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                         }
                         
                         itemLayer.isVisibleForAnimations = true
