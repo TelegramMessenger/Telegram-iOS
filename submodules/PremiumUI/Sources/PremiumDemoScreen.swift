@@ -909,7 +909,7 @@ private final class DemoSheetContent: CombinedComponent {
                                     decoration: .emoji
                                 )),
                                 title: strings.Premium_AnimatedEmoji,
-                                text: strings.Premium_AnimatedEmojiInfo,
+                                text: isStandalone ? strings.Premium_AnimatedEmojiStandaloneInfo : strings.Premium_AnimatedEmojiInfo,
                                 textColor: textColor
                             )
                         )
