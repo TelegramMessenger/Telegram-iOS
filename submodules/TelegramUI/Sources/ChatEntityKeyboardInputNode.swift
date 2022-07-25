@@ -2030,7 +2030,25 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             },
             addGroupAction: { _, _ in
             },
-            clearGroup: { _ in
+            clearGroup: { [weak self] groupId in
+                guard let strongSelf = self else {
+                    return
+                }
+                if groupId == AnyHashable("recent") {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        let _ = context.engine.stickers.clearRecentlyUsedEmoji().start()
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    strongSelf.presentController?(actionSheet)
+                }
             },
             pushController: { _ in
             },
@@ -2062,7 +2080,14 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                     gifs: nil,
                     availableGifSearchEmojies: []
                 ),
-                updatedInputData: .never(),
+                updatedInputData: ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isSecret: isSecret) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
+                    return ChatEntityKeyboardInputNode.InputData(
+                        emoji: emojiComponent,
+                        stickers: nil,
+                        gifs: nil,
+                        availableGifSearchEmojies: []
+                    )
+                },
                 defaultToEmojiTab: true,
                 controllerInteraction: nil,
                 interfaceInteraction: nil,

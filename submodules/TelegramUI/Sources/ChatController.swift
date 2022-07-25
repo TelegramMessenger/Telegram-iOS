@@ -10963,7 +10963,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
-        let inputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: presentationInterfaceState, isCaption: true, presentController: { _ in }, makeEntityInputView: { [weak self] in
+        let inputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: presentationInterfaceState, isCaption: true, presentController: { [weak self] c in
+            self?.presentInGlobalOverlay(c)
+        }, makeEntityInputView: { [weak self] in
             guard let strongSelf = self else {
                 return nil
             }
