@@ -1090,7 +1090,7 @@ final class EntityKeyboardTopPanelComponent: Component {
                 self.isExpanded = isExpanded
                 self.itemSize = self.isExpanded ? CGSize(width: 54.0, height: 68.0) : CGSize(width: 28.0, height: 28.0)
                 self.staticItemSize = self.itemSize
-                self.staticExpandedItemSize = self.isExpanded ? self.staticItemSize : CGSize(width: 126.0, height: 28.0)
+                self.staticExpandedItemSize = self.isExpanded ? self.staticItemSize : CGSize(width: 134.0, height: 28.0)
                 self.innerItemSize = self.isExpanded ? CGSize(width: 50.0, height: 62.0) : CGSize(width: 24.0, height: 24.0)
                 self.itemSpacing = 8.0
                 
