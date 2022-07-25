@@ -408,6 +408,10 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
+    override func unreadMessageRangeUpdated() {
+        self.updateVisibility()
+    }
+    
     private func updateVisibility() {
         guard let item = self.item else {
             return
@@ -422,18 +426,16 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         if isPlaying {
             var alreadySeen = true
             
-            if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
-                if unreadRange.contains(item.message.id.id) {
-                    if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+            if item.message.flags.contains(.Incoming) {
+                if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
+                    if unreadRange.contains(item.message.id.id) {
                         alreadySeen = false
                     }
                 }
-            }
-            
-            if !item.message.effectivelyIncoming(item.context.account.peerId)
-                && item.controllerInteraction.playNextOutgoingGift
-                && !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
-                alreadySeen = false
+            } else {
+                if item.controllerInteraction.playNextOutgoingGift && !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                    alreadySeen = false
+                }
             }
             
             if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
