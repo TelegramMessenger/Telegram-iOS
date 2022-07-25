@@ -11210,6 +11210,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 return EntityInputView(context: strongSelf.context, isDark: false, isSecret: strongSelf.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
             })
+            attachmentController.getSourceRect = { [weak self] in
+                if let strongSelf = self {
+                    return strongSelf.chatDisplayNode.frameForAttachmentButton()?.offsetBy(dx: strongSelf.chatDisplayNode.supernode?.frame.minX ?? 0.0, dy: 0.0)
+                } else {
+                    return nil
+                }
+            }
             attachmentController.requestController = { [weak self, weak attachmentController] type, completion in
                 guard let strongSelf = self else {
                     return

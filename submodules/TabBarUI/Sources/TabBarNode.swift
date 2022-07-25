@@ -646,7 +646,7 @@ class TabBarNode: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         self.backgroundNode.update(size: size, transition: transition)
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -separatorHeight), size: CGSize(width: size.width, height: separatorHeight)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: separatorHeight)))
         
         let horizontal = !leftInset.isZero
         if self.horizontal != horizontal {

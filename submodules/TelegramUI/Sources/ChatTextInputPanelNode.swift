@@ -3148,6 +3148,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         return nil
     }
     
+    func frameForMenuButton() -> CGRect? {
+        if !self.menuButton.alpha.isZero {
+            return self.menuButton.frame
+        }
+        return nil
+    }
+    
     func frameForInputActionButton() -> CGRect? {
         if !self.actionButtons.alpha.isZero {
             if self.actionButtons.micButton.alpha.isZero {

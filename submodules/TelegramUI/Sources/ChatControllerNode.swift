@@ -2504,6 +2504,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
+    func frameForMenuButton() -> CGRect? {
+        if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
+            return textInputPanelNode.frameForMenuButton().flatMap {
+                return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
+            }
+        }
+        return nil
+    }
+    
     func frameForStickersButton() -> CGRect? {
         if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
             return textInputPanelNode.frameForStickersButton().flatMap {
