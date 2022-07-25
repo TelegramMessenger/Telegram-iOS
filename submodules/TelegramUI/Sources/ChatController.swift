@@ -1093,7 +1093,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     var disableTransitionAnimations = false
                     var actionsSignal: Signal<ContextController.Items, NoError> = .single(actions)
-                    if actions.tip == nil, let entitiesAttribute = message.textEntitiesAttribute {
+                    if let entitiesAttribute = message.textEntitiesAttribute {
                         var emojiFileIds: [Int64] = []
                         for entity in entitiesAttribute.entities {
                             if case let .CustomEmoji(_, fileId) = entity.type {
@@ -1128,7 +1128,36 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             return
                                         }
                                         strongSelf.chatDisplayNode.dismissTextInput()
-                                        let controller = StickerPackScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(packReferences), parentNavigationController: strongSelf.effectiveNavigationController)
+                                        
+                                        let presentationData = strongSelf.presentationData
+                                        let controller = StickerPackScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(packReferences), parentNavigationController: strongSelf.effectiveNavigationController, actionPerformed: { [weak self] actions in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            if actions.count > 1, let first = actions.first {
+                                                if case .add = first.2 {
+                                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.EmojiPackActionInfo_AddedTitle, text: presentationData.strings.EmojiPackActionInfo_MultipleAddedText(Int32(actions.count)), undo: false, info: first.0, topItem: first.1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                                                        return true
+                                                    }))
+                                                }
+                                            } else if let (info, items, action) = actions.first {
+                                                let isEmoji = info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
+                                                
+                                                switch action {
+                                                case .add:
+                                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedTitle : presentationData.strings.StickerPackActionInfo_AddedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedText(info.title).string : presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                                                        return true
+                                                    }))
+                                                case let .remove(positionInList):
+                                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string : presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
+                                                        if case .undo = action {
+                                                            let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                                                        }
+                                                        return true
+                                                    }))
+                                                }
+                                            }
+                                        })
                                         strongSelf.present(controller, in: .window(.root))
                                     }
                                     
@@ -9412,7 +9441,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         canSendMedia = true
                     }
-                    if canSendMedia {
+                    if canSendMedia && self.presentationInterfaceState.voiceMessagesAvailable {
                         let _ = (ApplicationSpecificNotice.getChatMediaMediaRecordingTips(accountManager: self.context.sharedContext.accountManager)
                         |> deliverOnMainQueue).start(next: { [weak self] counter in
                             guard let strongSelf = self else {
@@ -16302,6 +16331,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.present(controller, in: .window(.root))
             strongSelf.themeSceen = controller
         })
+    }
+    
+    public func hintPlayNextOutgoingGift() {
+        self.controllerInteraction?.playNextOutgoingGift = true
     }
     
     private var effectiveNavigationController: NavigationController? {

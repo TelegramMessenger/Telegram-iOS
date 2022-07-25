@@ -160,6 +160,7 @@ public final class ChatControllerInteraction {
     var currentMessageWithLoadingReplyThread: MessageId?
     var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     let presentationContext: ChatPresentationContext
+    var playNextOutgoingGift: Bool = false
     
     init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,

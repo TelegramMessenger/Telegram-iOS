@@ -1267,7 +1267,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 packs.insert(packReference, at: 0)
             }
             if let mainStickerPack = mainStickerPack {
-                presentControllerImpl?(StickerPackScreen(context: context, mode: .settings, mainStickerPack: mainStickerPack, stickerPacks: [mainStickerPack], parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { info, items, action in
+                presentControllerImpl?(StickerPackScreen(context: context, mode: .settings, mainStickerPack: mainStickerPack, stickerPacks: [mainStickerPack], parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { actions in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     var animateInAsReplacement = false
                     if let navigationController = navigationControllerImpl?() {
@@ -1278,31 +1278,33 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                             }
                         }
                     }
-                    switch action {
-                    case .add:
-                        navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                            return true
-                        }))
-                    case let .remove(positionInList):
-                        let removedTitle: String
-                        let removedText: String
-                        if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
-                            removedTitle = presentationData.strings.EmojiPackActionInfo_RemovedTitle
-                            removedText = presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string
-                        } else if info.id.namespace == Namespaces.ItemCollection.CloudMaskPacks {
-                            removedTitle = presentationData.strings.MaskPackActionInfo_RemovedTitle
-                            removedText = presentationData.strings.MaskPackActionInfo_RemovedText(info.title).string
-                        } else {
-                            removedTitle = presentationData.strings.StickerPackActionInfo_RemovedTitle
-                            removedText = presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string
-                        }
-                        
-                        navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: removedTitle, text: removedText, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
-                            if case .undo = action {
-                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                    if let (info, items, action) = actions.first {
+                        switch action {
+                        case .add:
+                            navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                                return true
+                            }))
+                        case let .remove(positionInList):
+                            let removedTitle: String
+                            let removedText: String
+                            if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                                removedTitle = presentationData.strings.EmojiPackActionInfo_RemovedTitle
+                                removedText = presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string
+                            } else if info.id.namespace == Namespaces.ItemCollection.CloudMaskPacks {
+                                removedTitle = presentationData.strings.MaskPackActionInfo_RemovedTitle
+                                removedText = presentationData.strings.MaskPackActionInfo_RemovedText(info.title).string
+                            } else {
+                                removedTitle = presentationData.strings.StickerPackActionInfo_RemovedTitle
+                                removedText = presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string
                             }
-                            return true
-                        }))
+                            
+                            navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: removedTitle, text: removedText, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
+                                if case .undo = action {
+                                    let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                                }
+                                return true
+                            }))
+                        }
                     }
                 }), nil)
             }

@@ -728,13 +728,13 @@ public extension Api.payments {
 }
 public extension Api.payments {
     enum PaymentForm: TypeConstructorDescription {
-        case paymentForm(flags: Int32, formId: Int64, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, providerId: Int64, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, additionalMethods: [Api.PaymentFormMethod]?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: Api.PaymentSavedCredentials?, users: [Api.User])
+        case paymentForm(flags: Int32, formId: Int64, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, providerId: Int64, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, additionalMethods: [Api.PaymentFormMethod]?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: [Api.PaymentSavedCredentials]?, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentForm(let flags, let formId, let botId, let title, let description, let photo, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let additionalMethods, let savedInfo, let savedCredentials, let users):
                     if boxed {
-                        buffer.appendInt32(1288001087)
+                        buffer.appendInt32(-1610250415)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(formId, buffer: buffer, boxed: false)
@@ -753,7 +753,11 @@ public extension Api.payments {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags) & Int(1 << 0) != 0 {savedInfo!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 1) != 0 {savedCredentials!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(savedCredentials!.count))
+                    for item in savedCredentials! {
+                        item.serialize(buffer, true)
+                    }}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
@@ -807,9 +811,9 @@ public extension Api.payments {
             if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
                 _13 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
             } }
-            var _14: Api.PaymentSavedCredentials?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _14 = Api.parse(reader, signature: signature) as? Api.PaymentSavedCredentials
+            var _14: [Api.PaymentSavedCredentials]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _14 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PaymentSavedCredentials.self)
             } }
             var _15: [Api.User]?
             if let _ = reader.readInt32() {

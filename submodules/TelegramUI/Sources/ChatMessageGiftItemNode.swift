@@ -41,8 +41,6 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private var absoluteRect: (CGRect, CGSize)?
     
     private var isPlaying: Bool = false
-    private var wasPending: Bool = false
-    private var didChangeFromPendingToSent: Bool = false
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -165,9 +163,9 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             duration = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
                             switch months {
                             case 12:
-                                animationName = "Gift2"
+                                animationName = "Gift12"
                             case 6:
-                                animationName = "Gift1"
+                                animationName = "Gift6"
                             case 3:
                                 animationName = "Gift3"
                             default:
@@ -227,13 +225,7 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
                             }
                             strongSelf.item = item
-                            
-                            if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal {
-                                strongSelf.wasPending = true
-                            }
-                            if strongSelf.wasPending && (item.message.id.namespace != Namespaces.Message.Local && item.message.id.namespace != Namespaces.Message.ScheduledLocal) {
-                                strongSelf.didChangeFromPendingToSent = true
-                            }
+
                             strongSelf.updateVisibility()
                             
                             strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
@@ -416,6 +408,10 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
+    override func unreadMessageRangeUpdated() {
+        self.updateVisibility()
+    }
+    
     private func updateVisibility() {
         guard let item = self.item else {
             return
@@ -430,11 +426,15 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         if isPlaying {
             var alreadySeen = true
             
-            if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
-                if unreadRange.contains(item.message.id.id) {
-                    if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+            if item.message.flags.contains(.Incoming) {
+                if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
+                    if unreadRange.contains(item.message.id.id) {
                         alreadySeen = false
                     }
+                }
+            } else {
+                if item.controllerInteraction.playNextOutgoingGift && !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                    alreadySeen = false
                 }
             }
             
@@ -444,7 +444,9 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             if !alreadySeen {
-                item.controllerInteraction.animateDiceSuccess(false, true)
+                Queue.mainQueue().after(1.0) {
+                    item.controllerInteraction.animateDiceSuccess(false, true)
+                }
             }
         }
     }

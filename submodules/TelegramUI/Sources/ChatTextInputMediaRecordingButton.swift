@@ -363,7 +363,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         let colorKeys = ["__allcolors__"]
         var colors: [String: UIColor] = [:]
         for colorKey in colorKeys {
-            colors[colorKey] = self.theme.chat.inputPanel.panelControlColor
+            colors[colorKey] = self.theme.chat.inputPanel.panelControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
         }
         
         let _ = animationView.update(
@@ -497,8 +497,11 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         micDecoration.isHidden = false
         micDecoration.startAnimating()
 
-        self.animationView.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
-        self.animationView.view?.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false)
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
+        if let layer = self.animationView.view?.layer {
+            transition.updateAlpha(layer: layer, alpha: 0.0)
+            transition.updateTransformScale(layer: layer, scale: 0.3)
+        }
     }
 
     override func animateOut(_ toSmallSize: Bool) {
@@ -510,8 +513,11 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
             micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.03, delay: 0.15, removeOnCompletion: false)
         } else {
             micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false)
-            self.animationView.view?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
-            self.animationView.view?.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, removeOnCompletion: false)
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
+            if let layer = self.animationView.view?.layer {
+                transition.updateAlpha(layer: layer, alpha: 1.0)
+                transition.updateTransformScale(layer: layer, scale: 1.0)
+            }
         }
     }
     

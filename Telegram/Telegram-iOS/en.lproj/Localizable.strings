@@ -7869,6 +7869,7 @@ Sorry for the inconvenience.";
 
 "Premium.AnimatedEmoji" = "Animated Emoji";
 "Premium.AnimatedEmojiInfo" = "Include animated emoji from different emoji sets in any message you send.";
+"Premium.AnimatedEmojiStandaloneInfo" = "Include animated emoji from different emoji sets in any message you send.";
 
 "ChatContextMenu.EmojiSetSingle" = "This message contains\n#[%@]() emoji.";
 "ChatContextMenu.EmojiSet_1" = "This message contains emoji from [%@ pack]().";
@@ -7885,6 +7886,12 @@ Sorry for the inconvenience.";
 "EmojiPackActionInfo.RemovedTitle" = "Emoji Removed";
 "EmojiPackActionInfo.ArchivedTitle" = "Emoji Archived";
 "EmojiPackActionInfo.RemovedText" = "%@ is no longer in your emoji.";
+
+"EmojiPackActionInfo.MultipleAddedText_1" = "%@ emoji pack has been added to your emoji.";
+"EmojiPackActionInfo.MultipleAddedText_any" = "%@ emoji packs have been added to your emoji.";
+
+"EmojiPackActionInfo.MultipleRemovedText_1" = "%@ emoji pack is no longer in your emoji.";
+"EmojiPackActionInfo.MultipleRemovedText_any" = "%@ emoji packs are no longer in your emoji.";
 
 "MaskPackActionInfo.RemovedTitle" = "Masks Removed";
 "MaskPackActionInfo.ArchivedTitle" = "Masks Archived";
@@ -7910,6 +7917,9 @@ Sorry for the inconvenience.";
 "StickerPack.EmojiCount_any" = "%@ emoji";
 
 "StickerSettings.EmojiContextInfo" = "If you archive an emoji set, you can quickly restore it later from the Archived Emoji section.";
+
+"StickerPack.CopyLinks" = "Copy Links";
+"Conversation.LinksCopied" = "Links copied to clipboard";
 
 "StickersList.EmojiItem" = "Custom Emoji";
 "StickersList.ArchivedEmojiItem" = "Archived Emoji";

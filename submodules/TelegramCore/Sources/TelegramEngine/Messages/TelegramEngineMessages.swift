@@ -85,7 +85,7 @@ public extension TelegramEngine {
             return _internal_clearAuthorHistory(account: self.account, peerId: peerId, memberId: memberId)
         }
 
-        public func requestEditMessage(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: TelegramMediaFile], disableUrlPreview: Bool = false, scheduleTime: Int32? = nil) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
+        public func requestEditMessage(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], disableUrlPreview: Bool = false, scheduleTime: Int32? = nil) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
             return _internal_requestEditMessage(account: self.account, messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, disableUrlPreview: disableUrlPreview, scheduleTime: scheduleTime)
         }
 

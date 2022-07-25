@@ -481,11 +481,13 @@ private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutP
         methods.append(.applePay)
         hasApplePay = true
     }
-    if let savedCredentials = form.savedCredentials {
+    
+    for savedCredentials in form.savedCredentials {
         if !methods.contains(.savedCredentials(savedCredentials)) {
             methods.append(.savedCredentials(savedCredentials))
         }
     }
+    
     if !form.additionalPaymentMethods.isEmpty {
         methods.append(contentsOf: form.additionalPaymentMethods.map { .other($0) })
     }
@@ -835,7 +837,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     }
                     
                     var dismissImpl: (() -> Void)?
-                    let canSave = paymentForm.canSaveCredentials || paymentForm.passwordMissing
+                    let canSave = customUrl == nil && (paymentForm.canSaveCredentials || paymentForm.passwordMissing)
                     let controller = BotCheckoutNativeCardEntryController(context: strongSelf.context, provider: .stripe(additionalFields: additionalFields, publishableKey: publishableKey), completion: { method in
                         guard let strongSelf = self else {
                             return
@@ -1106,7 +1108,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 strongSelf.botPeerValue = formAndValidatedInfo.botPeer
                 strongSelf.currentFormInfo = savedInfo
                 strongSelf.currentValidatedFormInfo = formAndValidatedInfo.validatedFormInfo
-                if let savedCredentials = formAndValidatedInfo.form.savedCredentials {
+                if let savedCredentials = formAndValidatedInfo.form.savedCredentials.first {
                     strongSelf.currentPaymentMethod = .savedCredentials(savedCredentials)
                 }
                 strongSelf.actionButton.isEnabled = true

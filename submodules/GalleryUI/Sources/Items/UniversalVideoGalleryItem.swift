@@ -2476,16 +2476,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
                 c.setItems(strongSelf.contextMenuSpeedItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
             })))
-            
-            if #available(iOS 11.0, *) {
-                items.append(.action(ContextMenuActionItem(text: "AirPlay", textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/AirPlay"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
-                    f(.default)
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.beginAirPlaySetup()
-                })))
-            }
+
+//            if #available(iOS 11.0, *) {
+//                items.append(.action(ContextMenuActionItem(text: "AirPlay", textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/AirPlay"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+//                    f(.default)
+//                    guard let strongSelf = self else {
+//                        return
+//                    }
+//                    strongSelf.beginAirPlaySetup()
+//                })))
+//            }
             
             if let (message, _, _) = strongSelf.contentInfo() {
                 for media in message.media {
@@ -2667,20 +2667,22 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             let baseNavigationController = strongSelf.baseNavigationController()
             baseNavigationController?.view.endEditing(true)
-            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: Array(packs.prefix(1)), sendSticker: nil, actionPerformed: { info, items, action in
-                let animateInAsReplacement = false
-                switch action {
-                case .add:
-                    topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                        return true
-                    }), in: .window(.root))
-                case let .remove(positionInList):
-                    topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
-                        if case .undo = action {
-                            let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
-                        }
-                        return true
-                    }), in: .window(.root))
+            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packs[0], stickerPacks: Array(packs.prefix(1)), sendSticker: nil, actionPerformed: { actions in
+                if let (info, items, action) = actions.first {
+                    let animateInAsReplacement = false
+                    switch action {
+                    case .add:
+                        topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                            return true
+                        }), in: .window(.root))
+                    case let .remove(positionInList):
+                        topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                            if case .undo = action {
+                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                            }
+                            return true
+                        }), in: .window(.root))
+                    }
                 }
             }, dismissed: { [weak self] in
                 self?.isInteractingPromise.set(false)
