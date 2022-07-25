@@ -165,9 +165,9 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             duration = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
                             switch months {
                             case 12:
-                                animationName = "Gift2"
+                                animationName = "Gift12"
                             case 6:
-                                animationName = "Gift1"
+                                animationName = "Gift6"
                             case 3:
                                 animationName = "Gift3"
                             default:

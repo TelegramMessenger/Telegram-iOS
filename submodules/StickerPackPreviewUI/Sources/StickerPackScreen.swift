@@ -1220,7 +1220,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         super.didLoad()
         
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimNodeTapGesture(_:))))
-        self.containerContainingNode.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+//        self.containerContainingNode.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
