@@ -186,6 +186,13 @@ final class EntityKeyboardBottomPanelComponent: Component {
             let intrinsicHeight: CGFloat = 34.0
             let height = intrinsicHeight + component.containerInsets.bottom
             
+            let accessoryButtonOffset: CGFloat
+            if component.containerInsets.bottom > 0.0 {
+                accessoryButtonOffset = 2.0
+            } else {
+                accessoryButtonOffset = -2.0
+            }
+            
             let panelEnvironment = environment[PagerComponentPanelEnvironment<EntityKeyboardTopContainerPanelEnvironment>.self].value
             let activeContentId = panelEnvironment.activeContentId
             
@@ -217,7 +224,7 @@ final class EntityKeyboardBottomPanelComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: .greatestFiniteMagnitude, height: intrinsicHeight)
                 )
-                leftAccessoryButtonTransition.setFrame(view: leftAccessoryButton.view, frame: CGRect(origin: CGPoint(x: component.containerInsets.left + 2.0, y: 2.0), size: leftAccessoryButtonSize))
+                leftAccessoryButtonTransition.setFrame(view: leftAccessoryButton.view, frame: CGRect(origin: CGPoint(x: component.containerInsets.left + 2.0, y: accessoryButtonOffset), size: leftAccessoryButtonSize))
             } else {
                 self.leftAccessoryButton = nil
             }
@@ -269,7 +276,7 @@ final class EntityKeyboardBottomPanelComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: .greatestFiniteMagnitude, height: intrinsicHeight)
                 )
-                rightAccessoryButtonTransition.setFrame(view: rightAccessoryButton.view, frame: CGRect(origin: CGPoint(x: availableSize.width - component.containerInsets.right - 2.0 - rightAccessoryButtonSize.width, y: 2.0), size: rightAccessoryButtonSize))
+                rightAccessoryButtonTransition.setFrame(view: rightAccessoryButton.view, frame: CGRect(origin: CGPoint(x: availableSize.width - component.containerInsets.right - 2.0 - rightAccessoryButtonSize.width, y: accessoryButtonOffset), size: rightAccessoryButtonSize))
             } else {
                 self.rightAccessoryButton = nil
             }

@@ -1643,7 +1643,7 @@ extension PresentationThemeInputMediaPanel: Codable {
                   panelIconColor: try decodeColor(values, .panelIcon),
                   panelHighlightedIconBackgroundColor: try decodeColor(values, .panelHighlightedIconBg),
                   panelHighlightedIconColor: panelHighlightedIconColor,
-                  panelContentVibrantOverlayColor: try decodeColor(values, .panelContentVibrantOverlay, fallbackKey: "\(codingPath).panelIcon"),
+                  panelContentVibrantOverlayColor: try decodeColor(values, .panelContentVibrantOverlay, fallbackKey: "\(codingPath).stickersSectionText"),
                   stickersBackgroundColor: try decodeColor(values, .stickersBg),
                   stickersSectionTextColor: try decodeColor(values, .stickersSectionText),
                   stickersSearchBackgroundColor: try decodeColor(values, .stickersSearchBg),
