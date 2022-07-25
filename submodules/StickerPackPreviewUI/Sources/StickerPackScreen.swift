@@ -620,17 +620,28 @@ private final class StickerPackContainer: ASDisplayNode {
             }
             
             if installedCount == self.currentStickerPacks.count {
+                var removedPacks: Signal<[(info: ItemCollectionInfo, index: Int, items: [ItemCollectionItem])], NoError> = .single([])
                 for (info, _, _) in self.currentStickerPacks {
-                    let _ = (self.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
-                    |> deliverOnMainQueue).start(next: { _ in
-//                        guard let (positionInList, _) = indexAndItems else {
-//                            return
-//                        }
-//                        if dismissed {
-//                            actionPerformed?(info, items, .remove(positionInList: positionInList))
-//                        }
-                    })
+                    removedPacks = removedPacks
+                    |> mapToSignal { current -> Signal<[(info: ItemCollectionInfo, index: Int, items: [ItemCollectionItem])], NoError> in
+                        return self.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
+                        |> map { result -> [(info: ItemCollectionInfo, index: Int, items: [ItemCollectionItem])] in
+                            if let result = result {
+                                return current + [(info, result.0, result.1)]
+                            } else {
+                                return current
+                            }
+                        }
+                    }
                 }
+                let _ = (removedPacks
+                |> deliverOnMainQueue).start(next: { [weak self] results in
+                    if !results.isEmpty {
+                        self?.controller?.actionPerformed?(results.map { result -> (StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) in
+                            return (result.0 as! StickerPackCollectionInfo, result.2.map { $0 as! StickerPackItem }, .remove(positionInList: result.1))
+                        })
+                    }
+                })
             } else {
                 var installedPacks: [(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)] = []
                 for (info, items, isInstalled) in self.currentStickerPacks {

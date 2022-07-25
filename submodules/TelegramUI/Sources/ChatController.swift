@@ -1139,6 +1139,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.EmojiPackActionInfo_AddedTitle, text: presentationData.strings.EmojiPackActionInfo_MultipleAddedText(Int32(actions.count)), undo: false, info: first.0, topItem: first.1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
                                                         return true
                                                     }))
+                                                } else if actions.allSatisfy({
+                                                    if case .remove = $0.2 {
+                                                        return true
+                                                    } else {
+                                                        return false
+                                                    }
+                                                }) {
+                                                    let isEmoji = actions[0].0.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
+                                                    
+                                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_MultipleRemovedText(Int32(actions.count)) : presentationData.strings.StickerPackActionInfo_MultipleRemovedText(Int32(actions.count)), undo: true, info: actions[0].0, topItem: actions[0].1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
+                                                        if case .undo = action {
+                                                            var itemsAndIndices: [(StickerPackCollectionInfo, [StickerPackItem], Int)] = actions.compactMap { action -> (StickerPackCollectionInfo, [StickerPackItem], Int)? in
+                                                                if case let .remove(index) = action.2 {
+                                                                    return (action.0, action.1, index)
+                                                                } else {
+                                                                    return nil
+                                                                }
+                                                            }
+                                                            itemsAndIndices.sort(by: { $0.2 < $1.2 })
+                                                            for (info, items, index) in itemsAndIndices.reversed() {
+                                                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: index).start()
+                                                            }
+                                                        }
+                                                        return true
+                                                    }))
                                                 }
                                             } else if let (info, items, action) = actions.first {
                                                 let isEmoji = info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
