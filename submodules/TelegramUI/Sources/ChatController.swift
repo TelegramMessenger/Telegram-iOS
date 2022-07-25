@@ -16333,6 +16333,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
+    public func hintPlayNextOutgoingGift() {
+        self.controllerInteraction?.playNextOutgoingGift = true
+    }
+    
     private var effectiveNavigationController: NavigationController? {
         if let navigationController = self.navigationController as? NavigationController {
             return navigationController

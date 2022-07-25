@@ -1311,6 +1311,12 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer {
             if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
                 var controllers = navigationController.viewControllers
                 controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
+                for controller in controllers.reversed() {
+                    if let chatController = controller as? ChatController, case .peer(id: peerId) = chatController.chatLocation {
+                        chatController.hintPlayNextOutgoingGift()
+                        break
+                    }
+                }
                 navigationController.setViewControllers(controllers, animated: true)
             }
         }

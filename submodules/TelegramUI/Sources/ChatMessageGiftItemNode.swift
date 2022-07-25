@@ -41,8 +41,6 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private var absoluteRect: (CGRect, CGSize)?
     
     private var isPlaying: Bool = false
-    private var wasPending: Bool = false
-    private var didChangeFromPendingToSent: Bool = false
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -227,13 +225,7 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
                             }
                             strongSelf.item = item
-                            
-                            if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal {
-                                strongSelf.wasPending = true
-                            }
-                            if strongSelf.wasPending && (item.message.id.namespace != Namespaces.Message.Local && item.message.id.namespace != Namespaces.Message.ScheduledLocal) {
-                                strongSelf.didChangeFromPendingToSent = true
-                            }
+
                             strongSelf.updateVisibility()
                             
                             strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
@@ -438,13 +430,21 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
+            if !item.message.effectivelyIncoming(item.context.account.peerId)
+                && item.controllerInteraction.playNextOutgoingGift
+                && !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                alreadySeen = false
+            }
+            
             if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
                 item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
                 self.animationNode.playOnce()
             }
             
             if !alreadySeen {
-                item.controllerInteraction.animateDiceSuccess(false, true)
+                Queue.mainQueue().after(1.0) {
+                    item.controllerInteraction.animateDiceSuccess(false, true)
+                }
             }
         }
     }
