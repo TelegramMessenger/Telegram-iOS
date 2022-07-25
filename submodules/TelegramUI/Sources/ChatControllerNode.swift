@@ -793,8 +793,21 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.contentContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
-        let visibleRootModalDismissProgress: CGFloat = 1.0 - self.inputPanelContainerNode.expansionFraction
-        if self.inputPanelContainerNode.expansionFraction != 0.0 {
+        let isOverlay: Bool
+        switch self.chatPresentationInterfaceState.mode {
+        case .overlay:
+            isOverlay = true
+        default:
+            isOverlay = false
+        }
+        
+        let visibleRootModalDismissProgress: CGFloat
+        if isOverlay {
+            visibleRootModalDismissProgress = 1.0
+        } else {
+            visibleRootModalDismissProgress = 1.0 - self.inputPanelContainerNode.expansionFraction
+        }
+        if !isOverlay && self.inputPanelContainerNode.expansionFraction != 0.0 {
             let navigationModalFrame: NavigationModalFrame
             var animateFromFraction: CGFloat?
             if let current = self.navigationModalFrame {
@@ -886,6 +899,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 containerNode.cornerRadius = 15.0
                 containerNode.addSubnode(self.backgroundNode)
                 containerNode.addSubnode(self.historyNodeContainer)
+                self.contentContainerNode.isHidden = true
                 if let restrictedNode = self.restrictedNode {
                     containerNode.addSubnode(restrictedNode)
                 }
@@ -2663,6 +2677,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
         
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let inputMediaNode = self.inputMediaNode, self.inputNode === inputMediaNode {
+            let convertedPoint = self.view.convert(point, to: inputMediaNode.view)
+            if inputMediaNode.point(inside: convertedPoint, with: event) {
+                return inputMediaNode.hitTest(convertedPoint, with: event)
+            }
+        }
         switch self.chatPresentationInterfaceState.mode {
         case .standard(previewing: true):
             if let result = self.historyNode.view.hitTest(self.view.convert(point, to: self.historyNode.view), with: event), let node = result.asyncdisplaykit_node, node is ChatMessageSelectionNode || node is GridMessageSelectionNode {

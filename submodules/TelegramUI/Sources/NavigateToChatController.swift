@@ -52,6 +52,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     }
                     params.completion(controller)
                 }
+                
                 controller.purposefulAction = params.purposefulAction
                 if params.activateInput {
                     controller.activateInput()

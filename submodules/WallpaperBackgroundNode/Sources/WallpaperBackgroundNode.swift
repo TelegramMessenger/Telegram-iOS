@@ -71,6 +71,22 @@ private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOver
         case never
     }
     
+    var fillWithColorUntilLoaded: UIColor? {
+        didSet {
+            if self.fillWithColorUntilLoaded != oldValue {
+                if let fillWithColorUntilLoaded = self.fillWithColorUntilLoaded {
+                    if self.currentContents == nil {
+                        self.backgroundColor = fillWithColorUntilLoaded.cgColor
+                    } else {
+                        self.backgroundColor = nil
+                    }
+                } else {
+                    self.backgroundColor = nil
+                }
+            }
+        }
+    }
+    
     var patternContentImage: UIImage? {
         didSet {
             if self.patternContentImage !== oldValue {
@@ -252,6 +268,8 @@ private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOver
             self.allowSettingContents = true
             self.contents = contents?.cgImage
             self.allowSettingContents = false
+            
+            self.backgroundColor = nil
         }
     }
     
@@ -836,16 +854,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             
             self.patternImageLayer.isHidden = false
             let invertPattern = intensity < 0
+            
+            self.patternImageLayer.fillWithColorUntilLoaded = invertPattern ? .black : nil
+            
             if invertPattern {
                 self.backgroundColor = .black
                 let contentAlpha = abs(intensity)
                 self.gradientBackgroundNode?.contentView.alpha = contentAlpha
                 self.contentNode.alpha = contentAlpha
-                if self.patternImageLayer.contents != nil {
-                    self.patternImageLayer.backgroundColor = nil
-                } else {
-                    self.patternImageLayer.backgroundColor = nil
-                }
             } else {
                 self.backgroundColor = nil
                 self.gradientBackgroundNode?.contentView.alpha = 1.0
@@ -856,6 +872,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             self.patternImageDisposable.set(nil)
             self.validPatternImage = nil
             self.patternImageLayer.isHidden = true
+            self.patternImageLayer.fillWithColorUntilLoaded = nil
             self.patternImageLayer.backgroundColor = nil
             self.backgroundColor = nil
             self.gradientBackgroundNode?.contentView.alpha = 1.0
@@ -953,11 +970,6 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             if invertPattern {
                 patternColor = .clear
                 patternBackgroundColor = .clear
-                if self.patternImageLayer.contents == nil {
-                    self.patternImageLayer.backgroundColor = UIColor.black.cgColor
-                } else {
-                    self.patternImageLayer.backgroundColor = nil
-                }
             } else {
                 if patternIsLight {
                     patternColor = .black

@@ -2659,6 +2659,15 @@ final class ChatMediaInputNode: ChatInputNode {
         self.updatePaneClippingContainer(size: self.paneClippingContainer.bounds.size, offset: collectionListPanelOffset, transition: transition)
     }
     
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        if self.panelIsFocused {
+            if point.y > -41.0 {
+                return true
+            }
+        }
+        return super.point(inside: point, with: event)
+    }
+    
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.panelIsFocused {
             if point.y > -41.0 && point.y < 38.0 {
