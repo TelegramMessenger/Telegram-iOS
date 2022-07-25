@@ -13,6 +13,18 @@ private let productIdentifiers = [
     "org.telegram.telegramPremium.threeMonths"
 ]
 
+private extension NSDecimalNumber {
+    func round(_ decimals: Int) -> NSDecimalNumber {
+        return self.rounding(accordingToBehavior:
+                            NSDecimalNumberHandler(roundingMode: .down,
+                                   scale: Int16(decimals),
+                                   raiseOnExactness: false,
+                                   raiseOnOverflow: false,
+                                   raiseOnUnderflow: false,
+                                   raiseOnDivideByZero: false))
+    }
+}
+
 public final class InAppPurchaseManager: NSObject {
     public final class Product: Equatable {
         private lazy var numberFormatter: NumberFormatter = {
@@ -47,7 +59,7 @@ public final class InAppPurchaseManager: NSObject {
         }
         
         public func pricePerMonth(_ monthsCount: Int) -> String {
-            let price = self.skProduct.price.dividing(by: NSDecimalNumber(value: monthsCount))
+            let price = self.skProduct.price.dividing(by: NSDecimalNumber(value: monthsCount)).round(2)
             return self.numberFormatter.string(from: price) ?? ""
         }
         
@@ -57,7 +69,7 @@ public final class InAppPurchaseManager: NSObject {
         
         public var priceCurrencyAndAmount: (currency: String, amount: Int64) {
             if let currencyCode = self.numberFormatter.currencyCode,
-               let amount = fractionalToCurrencyAmount(value: self.priceValue.doubleValue, currency: currencyCode) {
+                let amount = fractionalToCurrencyAmount(value: self.priceValue.doubleValue, currency: currencyCode) {
                 return (currencyCode, amount)
             } else {
                 return ("", 0)
