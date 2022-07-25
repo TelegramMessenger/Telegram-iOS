@@ -1,4 +1,88 @@
 public extension Api {
+    enum HighScore: TypeConstructorDescription {
+        case highScore(pos: Int32, userId: Int64, score: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .highScore(let pos, let userId, let score):
+                    if boxed {
+                        buffer.appendInt32(1940093419)
+                    }
+                    serializeInt32(pos, buffer: buffer, boxed: false)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt32(score, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .highScore(let pos, let userId, let score):
+                return ("highScore", [("pos", String(describing: pos)), ("userId", String(describing: userId)), ("score", String(describing: score))])
+    }
+    }
+    
+        public static func parse_highScore(_ reader: BufferReader) -> HighScore? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.HighScore.highScore(pos: _1!, userId: _2!, score: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum ImportedContact: TypeConstructorDescription {
+        case importedContact(userId: Int64, clientId: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .importedContact(let userId, let clientId):
+                    if boxed {
+                        buffer.appendInt32(-1052885936)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt64(clientId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .importedContact(let userId, let clientId):
+                return ("importedContact", [("userId", String(describing: userId)), ("clientId", String(describing: clientId))])
+    }
+    }
+    
+        public static func parse_importedContact(_ reader: BufferReader) -> ImportedContact? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ImportedContact.importedContact(userId: _1!, clientId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InlineBotSwitchPM: TypeConstructorDescription {
         case inlineBotSwitchPM(text: String, startParam: String)
     
@@ -1052,64 +1136,6 @@ public extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.InputContact.inputPhoneContact(clientId: _1!, phone: _2!, firstName: _3!, lastName: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputDialogPeer: TypeConstructorDescription {
-        case inputDialogPeer(peer: Api.InputPeer)
-        case inputDialogPeerFolder(folderId: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputDialogPeer(let peer):
-                    if boxed {
-                        buffer.appendInt32(-55902537)
-                    }
-                    peer.serialize(buffer, true)
-                    break
-                case .inputDialogPeerFolder(let folderId):
-                    if boxed {
-                        buffer.appendInt32(1684014375)
-                    }
-                    serializeInt32(folderId, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputDialogPeer(let peer):
-                return ("inputDialogPeer", [("peer", String(describing: peer))])
-                case .inputDialogPeerFolder(let folderId):
-                return ("inputDialogPeerFolder", [("folderId", String(describing: folderId))])
-    }
-    }
-    
-        public static func parse_inputDialogPeer(_ reader: BufferReader) -> InputDialogPeer? {
-            var _1: Api.InputPeer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputDialogPeer.inputDialogPeer(peer: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputDialogPeerFolder(_ reader: BufferReader) -> InputDialogPeer? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputDialogPeer.inputDialogPeerFolder(folderId: _1!)
             }
             else {
                 return nil

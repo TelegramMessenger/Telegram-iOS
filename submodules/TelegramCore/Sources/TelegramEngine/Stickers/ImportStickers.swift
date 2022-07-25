@@ -170,9 +170,11 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
                     case let .stickerSet(set, packs, documents):
                         let namespace: ItemCollectionId.Namespace
                         switch set {
-                            case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _):
+                            case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _, _):
                                 if (flags & (1 << 3)) != 0 {
                                     namespace = Namespaces.ItemCollection.CloudMaskPacks
+                                } else if (flags & (1 << 7)) != 0 {
+                                    namespace = Namespaces.ItemCollection.CloudEmojiPacks
                                 } else {
                                     namespace = Namespaces.ItemCollection.CloudStickerPacks
                                 }

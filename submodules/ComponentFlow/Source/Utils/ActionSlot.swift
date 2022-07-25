@@ -15,7 +15,7 @@ public final class Action<Arguments> {
 public final class ActionSlot<Arguments>: Equatable {
     private var target: ((Arguments) -> Void)?
     
-    init() {
+    public init() {
     }
     
     public static func ==(lhs: ActionSlot<Arguments>, rhs: ActionSlot<Arguments>) -> Bool {

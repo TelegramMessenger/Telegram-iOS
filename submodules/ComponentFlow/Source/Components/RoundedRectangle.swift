@@ -10,15 +10,17 @@ public final class RoundedRectangle: Component {
     public let colors: [UIColor]
     public let cornerRadius: CGFloat
     public let gradientDirection: GradientDirection
+    public let stroke: CGFloat?
     
-    public convenience init(color: UIColor, cornerRadius: CGFloat) {
-        self.init(colors: [color], cornerRadius: cornerRadius)
+    public convenience init(color: UIColor, cornerRadius: CGFloat, stroke: CGFloat? = nil) {
+        self.init(colors: [color], cornerRadius: cornerRadius, stroke: stroke)
     }
     
-    public init(colors: [UIColor], cornerRadius: CGFloat, gradientDirection: GradientDirection = .horizontal) {
+    public init(colors: [UIColor], cornerRadius: CGFloat, gradientDirection: GradientDirection = .horizontal, stroke: CGFloat? = nil) {
         self.colors = colors
         self.cornerRadius = cornerRadius
         self.gradientDirection = gradientDirection
+        self.stroke = stroke
     }
 
     public static func ==(lhs: RoundedRectangle, rhs: RoundedRectangle) -> Bool {
@@ -31,6 +33,9 @@ public final class RoundedRectangle: Component {
         if lhs.gradientDirection != rhs.gradientDirection {
             return false
         }
+        if lhs.stroke != rhs.stroke {
+            return false
+        }
         return true
     }
     
@@ -40,11 +45,16 @@ public final class RoundedRectangle: Component {
         func update(component: RoundedRectangle, availableSize: CGSize, transition: Transition) -> CGSize {
             if self.component != component {
                 if component.colors.count == 1, let color = component.colors.first {
-                    let imageSize = CGSize(width: component.cornerRadius * 2.0, height: component.cornerRadius * 2.0)
+                    let imageSize = CGSize(width: max(component.stroke ?? 0.0, component.cornerRadius) * 2.0, height: max(component.stroke ?? 0.0, component.cornerRadius) * 2.0)
                     UIGraphicsBeginImageContextWithOptions(imageSize, false, 0.0)
                     if let context = UIGraphicsGetCurrentContext() {
                         context.setFillColor(color.cgColor)
                         context.fillEllipse(in: CGRect(origin: CGPoint(), size: imageSize))
+                        
+                        if let stroke = component.stroke, stroke > 0.0 {
+                            context.setBlendMode(.clear)
+                            context.fillEllipse(in: CGRect(origin: CGPoint(), size: imageSize).insetBy(dx: stroke, dy: stroke))
+                        }
                     }
                     self.image = UIGraphicsGetImageFromCurrentImageContext()?.stretchableImage(withLeftCapWidth: Int(component.cornerRadius), topCapHeight: Int(component.cornerRadius))
                     UIGraphicsEndImageContext()
@@ -66,6 +76,14 @@ public final class RoundedRectangle: Component {
                         }
                         let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
                         context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: component.gradientDirection == .horizontal ? CGPoint(x: imageSize.width, y: 0.0) : CGPoint(x: 0.0, y: imageSize.height), options: CGGradientDrawingOptions())
+                        
+                        if let stroke = component.stroke, stroke > 0.0 {
+                            context.resetClip()
+                            
+                            context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: imageSize).insetBy(dx: stroke, dy: stroke), cornerRadius: component.cornerRadius).cgPath)
+                            context.setBlendMode(.clear)
+                            context.fill(CGRect(origin: .zero, size: imageSize))
+                        }
                     }
                     self.image = UIGraphicsGetImageFromCurrentImageContext()?.stretchableImage(withLeftCapWidth: Int(component.cornerRadius), topCapHeight: Int(component.cornerRadius))
                     UIGraphicsEndImageContext()

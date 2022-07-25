@@ -20,6 +20,11 @@ public final class QueueLocalObject<T: AnyObject> {
         }
     }
     
+    public func unsafeGet() -> T? {
+        assert(self.queue.isCurrent())
+        return self.valueRef?.takeUnretainedValue()
+    }
+    
     public func with(_ f: @escaping (T) -> Void) {
         self.queue.async {
             if let valueRef = self.valueRef {

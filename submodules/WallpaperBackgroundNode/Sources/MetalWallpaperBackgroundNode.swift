@@ -64,6 +64,7 @@ private func makePipelineState(device: MTLDevice, library: MTLLibrary, vertexPro
     return pipelineState
 }
 
+
 @available(iOS 13.0, *)
 final class MetalWallpaperBackgroundNode: ASDisplayNode, WallpaperBackgroundNode {
     private let device: MTLDevice

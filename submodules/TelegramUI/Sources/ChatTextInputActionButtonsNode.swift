@@ -132,7 +132,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         self.backdropNode.update(rect: rect, within: containerSize, transition: transition)
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    func updateLayout(size: CGSize, isMediaInputExpanded: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         self.validLayout = size
         transition.updateFrame(layer: self.micButton.layer, frame: CGRect(origin: CGPoint(), size: size))
         self.micButton.layoutItems()
@@ -183,10 +183,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.expandMediaInputButton, frame: CGRect(origin: CGPoint(), size: size))
-        var expanded = false
-        if case let .media(_, maybeExpanded, _) = interfaceState.inputMode, maybeExpanded != nil {
-            expanded = true
-        }
+        let expanded = isMediaInputExpanded
         transition.updateSublayerTransformScale(node: self.expandMediaInputButton, scale: CGPoint(x: 1.0, y: expanded ? 1.0 : -1.0))
     }
     

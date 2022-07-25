@@ -87,6 +87,8 @@
             MTDatacenterAuthMessageService *authService = [[MTDatacenterAuthMessageService alloc] initWithContext:context tempAuth:tempAuth];
             authService.delegate = self;
             [_authMtProto addMessageService:authService];
+            
+            [_authMtProto resume];
         }
     }
     else

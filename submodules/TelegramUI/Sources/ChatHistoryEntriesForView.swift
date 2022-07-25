@@ -71,7 +71,8 @@ func chatHistoryEntriesForView(
             media: [TelegramMediaAction(action: .joinedByRequest)],
             peers: SimpleDictionary<PeerId, Peer>(),
             associatedMessages: SimpleDictionary<MessageId, Message>(),
-            associatedMessageIds: []
+            associatedMessageIds: [],
+            associatedMedia: [:]
         )
     }
         
@@ -134,7 +135,9 @@ func chatHistoryEntriesForView(
         }
         
         if presentationData.largeEmoji, message.media.isEmpty {
-            if stickersEnabled && message.text.count == 1, let _ = associatedData.animatedEmojiStickers[message.text.basicEmoji.0], (message.textEntitiesAttribute?.entities.isEmpty ?? true) {
+            if stickersEnabled && message.text.count == 1, let entities = message.textEntitiesAttribute?.entities, entities.count == 1, case let .CustomEmoji(_, fileId) = entities[0].type, let file = message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile, !file.isVideoEmoji {
+                contentTypeHint = .animatedEmoji
+            } else if stickersEnabled && message.text.count == 1, let _ = associatedData.animatedEmojiStickers[message.text.basicEmoji.0], (message.textEntitiesAttribute?.entities.isEmpty ?? true) {
                 contentTypeHint = .animatedEmoji
             } else if message.text.count < 10 && messageIsElligibleForLargeEmoji(message) {
                 contentTypeHint = .largeEmoji
@@ -323,7 +326,8 @@ func chatHistoryEntriesForView(
                         media: message.media,
                         peers: message.peers,
                         associatedMessages: message.associatedMessages,
-                        associatedMessageIds: message.associatedMessageIds
+                        associatedMessageIds: message.associatedMessageIds,
+                        associatedMedia: message.associatedMedia
                     )
                     nextAdMessageId += 1
                     entries.append(.MessageEntry(updatedMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false)))

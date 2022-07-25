@@ -9,47 +9,47 @@ public enum EnqueueMessageGrouping {
 }
 
 public enum EnqueueMessage {
-    case message(text: String, attributes: [MessageAttribute], mediaReference: AnyMediaReference?, replyToMessageId: MessageId?, localGroupingKey: Int64?, correlationId: Int64?)
+    case message(text: String, attributes: [MessageAttribute], inlineStickers: [MediaId: Media], mediaReference: AnyMediaReference?, replyToMessageId: MessageId?, localGroupingKey: Int64?, correlationId: Int64?)
     case forward(source: MessageId, grouping: EnqueueMessageGrouping, attributes: [MessageAttribute], correlationId: Int64?)
     
     public func withUpdatedReplyToMessageId(_ replyToMessageId: MessageId?) -> EnqueueMessage {
         switch self {
-            case let .message(text, attributes, mediaReference, _, localGroupingKey, correlationId):
-                return .message(text: text, attributes: attributes, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId)
-            case .forward:
-                return self
+        case let .message(text, attributes, inlineStickers, mediaReference, _, localGroupingKey, correlationId):
+            return .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId)
+        case .forward:
+            return self
         }
     }
     
     public func withUpdatedAttributes(_ f: ([MessageAttribute]) -> [MessageAttribute]) -> EnqueueMessage {
         switch self {
-            case let .message(text, attributes, mediaReference, replyToMessageId, localGroupingKey, correlationId):
-                return .message(text: text, attributes: f(attributes), mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId)
-            case let .forward(source, grouping, attributes, correlationId):
-                return .forward(source: source, grouping: grouping, attributes: f(attributes), correlationId: correlationId)
+        case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, correlationId):
+            return .message(text: text, attributes: f(attributes), inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId)
+        case let .forward(source, grouping, attributes, correlationId):
+            return .forward(source: source, grouping: grouping, attributes: f(attributes), correlationId: correlationId)
         }
     }
     
     public func withUpdatedGroupingKey(_ f: (Int64?) -> Int64?) -> EnqueueMessage {
         switch self {
-            case let .message(text, attributes, mediaReference, replyToMessageId, localGroupingKey, correlationId):
-                return .message(text: text, attributes: attributes, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: f(localGroupingKey), correlationId: correlationId)
-            case .forward:
-                return self
+        case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, correlationId):
+            return .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: f(localGroupingKey), correlationId: correlationId)
+        case .forward:
+            return self
         }
     }
 
     public func withUpdatedCorrelationId(_ value: Int64?) -> EnqueueMessage {
         switch self {
-            case let .message(text, attributes, mediaReference, replyToMessageId, localGroupingKey, _):
-                return .message(text: text, attributes: attributes, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: value)
-            case let .forward(source, grouping, attributes, _):
-                return .forward(source: source, grouping: grouping, attributes: attributes, correlationId: value)
+        case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, _):
+            return .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: value)
+        case let .forward(source, grouping, attributes, _):
+            return .forward(source: source, grouping: grouping, attributes: attributes, correlationId: value)
         }
     }
     
     public var groupingKey: Int64? {
-        if case let .message(_, _, _, _, localGroupingKey, _) = self {
+        if case let .message(_, _, _, _, _, localGroupingKey, _) = self {
             return localGroupingKey
         } else {
             return nil
@@ -60,7 +60,7 @@ public enum EnqueueMessage {
 private extension EnqueueMessage {
     var correlationId: Int64? {
         switch self {
-        case let .message(_, _, _, _, _, correlationId):
+        case let .message(_, _, _, _, _, _, correlationId):
             return correlationId
         case let .forward(_, _, _, correlationId):
             return correlationId
@@ -179,7 +179,7 @@ private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: 
     var hasMedia = false
     loop: for message in messages {
         switch message {
-            case let .message(_, _, mediaReference, _, _, _):
+            case let .message(_, _, _, mediaReference, _, _, _):
                 if mediaReference != nil {
                     hasMedia = true
                     break loop
@@ -196,14 +196,14 @@ private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: 
     var signals: [Signal<(Bool, EnqueueMessage), NoError>] = []
     for message in messages {
         switch message {
-            case let .message(text, attributes, mediaReference, replyToMessageId, localGroupingKey, correlationId):
+            case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, correlationId):
                 if let mediaReference = mediaReference {
                     signals.append(opportunisticallyTransformMessageWithMedia(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, mediaReference: mediaReference, userInteractive: userInteractive)
                     |> map { result -> (Bool, EnqueueMessage) in
                         if let result = result {
-                            return (true, .message(text: text, attributes: attributes, mediaReference: .standalone(media: result.media), replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId))
+                            return (true, .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: .standalone(media: result.media), replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId))
                         } else {
-                            return (false, .message(text: text, attributes: attributes, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId))
+                            return (false, .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId))
                         }
                     })
                 } else {
@@ -275,7 +275,7 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
                         }
                     }
                     
-                    messages.append(.message(text: message.text, attributes: filteredAttributes, mediaReference: message.media.first.flatMap(AnyMediaReference.standalone), replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey, correlationId: nil))
+                    messages.append(.message(text: message.text, attributes: filteredAttributes, inlineStickers: [:], mediaReference: message.media.first.flatMap(AnyMediaReference.standalone), replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey, correlationId: nil))
                 }
             }
             let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages.map { (false, $0) })
@@ -305,7 +305,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
             }
         }
         switch message {
-            case let .message(_, attributes, _, replyToMessageId, _, _):
+            case let .message(_, attributes, _, _, replyToMessageId, _, _):
                 if let replyToMessageId = replyToMessageId, replyToMessageId.peerId != peerId, let replyMessage = transaction.getMessage(replyToMessageId) {
                     var canBeForwarded = true
                     if replyMessage.id.namespace != Namespaces.Message.Cloud {
@@ -329,7 +329,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             mediaReference = .standalone(media: media)
                         }
                     }
-                    updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)))
+                    updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, inlineStickers: [:], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)))
                     continue outer
                 }
         }
@@ -351,6 +351,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
         }
         
         var addedHashtags: [String] = []
+        var emojiItems: [RecentEmojiItem] = []
         
         var localGroupingKeyBySourceKey: [Int64: Int64] = [:]
         
@@ -370,7 +371,11 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
             globallyUniqueIds.append(randomId)
             
             switch message {
-                case let .message(text, requestedAttributes, mediaReference, replyToMessageId, localGroupingKey, _):
+                case let .message(text, requestedAttributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, _):
+                    for (_, file) in inlineStickers {
+                        transaction.storeMediaIfNotPresent(media: file)
+                    }
+                
                     var peerAutoremoveTimeout: Int32?
                     if let peer = peer as? TelegramSecretChat {
                         var isAction = false
@@ -470,6 +475,13 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                         entityRange.length -= 1
                                         let hashtag = nsText.substring(with: entityRange)
                                         addedHashtags.append(hashtag)
+                                    }
+                                } else if case let .CustomEmoji(_, fileId) = entity.type {
+                                    let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                    if let file = inlineStickers[mediaId] as? TelegramMediaFile {
+                                        emojiItems.append(RecentEmojiItem(.file(file)))
+                                    } else if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                                        emojiItems.append(RecentEmojiItem(.file(file)))
                                     }
                                 }
                             }
@@ -782,6 +794,19 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
         }
         var messageIds: [MessageId?] = []
         if !storeMessages.isEmpty {
+            for emojiItem in emojiItems {
+                if let entry = CodableEntry(emojiItem) {
+                    let id: RecentEmojiItemId
+                    switch emojiItem.content {
+                    case let .file(file):
+                        id = RecentEmojiItemId(file.fileId)
+                    case let .text(text):
+                        id = RecentEmojiItemId(text)
+                    }
+                    transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.LocalRecentEmoji, item: OrderedItemListEntry(id: id.rawValue, contents: entry), removeTailIfCountExceeds: 20)
+                }
+            }
+            
             let globallyUniqueIdToMessageId = transaction.addMessages(storeMessages, location: .Random)
             for globallyUniqueId in globallyUniqueIds {
                 messageIds.append(globallyUniqueIdToMessageId[globallyUniqueId])

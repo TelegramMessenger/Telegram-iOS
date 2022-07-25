@@ -20,6 +20,7 @@ public enum ItemListDisclosureLabelStyle {
     case text
     case detailText
     case coloredText(UIColor)
+    case textWithIcon(UIImage)
     case multilineDetailText
     case badge(UIColor)
     case color(UIColor)
@@ -235,7 +236,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     updatedLabelImage = generateFilledCircleImage(diameter: 17.0, color: color)
                 }
             }
-            if case let .image(image, _) = item.labelStyle {
+            if case let .textWithIcon(image) = item.labelStyle {
+                updatedLabelImage = generateTintedImage(image: image, color: item.presentationData.theme.list.itemSecondaryTextColor)
+            } else if case let .image(image, _) = item.labelStyle {
                 updatedLabelImage = image
             }
             
@@ -473,7 +476,18 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     strongSelf.labelNode.frame = labelFrame
  
-                    if case let .image(_, size) = item.labelStyle {
+                    if case .textWithIcon = item.labelStyle {
+                        if let updatedLabelImage = updatedLabelImage {
+                            strongSelf.labelImageNode.image = updatedLabelImage
+                        }
+                        if strongSelf.labelImageNode.supernode == nil {
+                            strongSelf.addSubnode(strongSelf.labelImageNode)
+                        }
+                        
+                        if let size = strongSelf.labelImageNode.image?.size {
+                            strongSelf.labelImageNode.frame = CGRect(origin: CGPoint(x: labelFrame.minX - size.width - 5.0, y: floor((layout.contentSize.height - size.height) / 2.0) - 1.0), size: size)
+                        }
+                    } else if case let .image(_, size) = item.labelStyle {
                         if let updatedLabelImage = updatedLabelImage {
                             strongSelf.labelImageNode.image = updatedLabelImage
                         }

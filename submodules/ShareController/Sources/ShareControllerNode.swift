@@ -650,21 +650,23 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             let doneImpl: (Bool) -> Void = { [weak self] shouldDelay in
                 let minDelay: Double = shouldDelay ? 0.9 : 0.6
                 let delay: Double
+                let hapticDelay: Double
+                
                 if let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareProlongedLoadingContainerNode {
                     delay = contentNode.completionDuration
-                    
-                    if shouldDelay {
-                        Queue.mainQueue().after(delay - 1.5, {
-                            if strongSelf.hapticFeedback == nil {
-                                strongSelf.hapticFeedback = HapticFeedback()
-                            }
-                            strongSelf.hapticFeedback?.success()
-                        })
-                    }
+                    hapticDelay = shouldDelay ? delay - 1.5 : delay
                 } else {
                     delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
+                    hapticDelay = delay
                 }
-                                
+                         
+                Queue.mainQueue().after(hapticDelay, {
+                    if self?.hapticFeedback == nil {
+                        self?.hapticFeedback = HapticFeedback()
+                    }
+                    self?.hapticFeedback?.success()
+                })
+                
                 Queue.mainQueue().after(delay, {
                     self?.animateOut(shared: true, completion: {
                         self?.dismiss?(true)

@@ -48,13 +48,14 @@ public final class AudioTranscriptionButtonComponent: Component {
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
             self.animationView = ComponentHostView<Empty>()
-            self.animationView.isUserInteractionEnabled = false
             
             super.init(frame: frame)
             
             self.backgroundLayer.masksToBounds = true
             self.backgroundLayer.cornerRadius = 10.0
             self.layer.addSublayer(self.backgroundLayer)
+            
+            self.animationView.isUserInteractionEnabled = false
             
             self.addSubview(self.animationView)
             
@@ -109,18 +110,18 @@ public final class AudioTranscriptionButtonComponent: Component {
                     component: AnyComponent(LottieAnimationComponent(
                         animation: LottieAnimationComponent.AnimationItem(
                             name: animationName,
-                            colors: [
-                                "icon.Group 3.Stroke 1": foregroundColor,
-                                "icon.Group 1.Stroke 1": foregroundColor,
-                                "icon.Group 4.Stroke 1": foregroundColor,
-                                "icon.Group 2.Stroke 1": foregroundColor,
-                                "Artboard Copy 2 Outlines.Group 5.Stroke 1": foregroundColor,
-                                "Artboard Copy 2 Outlines.Group 1.Stroke 1": foregroundColor,
-                                "Artboard Copy 2 Outlines.Group 4.Stroke 1": foregroundColor,
-                                "Artboard Copy Outlines.Group 1.Stroke 1": foregroundColor,
-                            ],
                             mode: .animateTransitionFromPrevious
                         ),
+                        colors: [
+                            "icon.Group 3.Stroke 1": foregroundColor,
+                            "icon.Group 1.Stroke 1": foregroundColor,
+                            "icon.Group 4.Stroke 1": foregroundColor,
+                            "icon.Group 2.Stroke 1": foregroundColor,
+                            "Artboard Copy 2 Outlines.Group 5.Stroke 1": foregroundColor,
+                            "Artboard Copy 2 Outlines.Group 1.Stroke 1": foregroundColor,
+                            "Artboard Copy 2 Outlines.Group 4.Stroke 1": foregroundColor,
+                            "Artboard Copy Outlines.Group 1.Stroke 1": foregroundColor,
+                        ],
                         size: CGSize(width: 30.0, height: 30.0)
                     )),
                     environment: {},
@@ -141,11 +142,11 @@ public final class AudioTranscriptionButtonComponent: Component {
                     component: AnyComponent(LottieAnimationComponent(
                         animation: LottieAnimationComponent.AnimationItem(
                             name: "voicets_progress",
-                            colors: [
-                                "Rectangle 60.Rectangle 60.Stroke 1": foregroundColor
-                            ],
                             mode: .animating(loop: true)
                         ),
+                        colors: [
+                            "Rectangle 60.Rectangle 60.Stroke 1": foregroundColor
+                        ],
                         size: progressFrame.size
                     )),
                     environment: {},

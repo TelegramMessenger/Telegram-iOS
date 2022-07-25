@@ -225,6 +225,7 @@ public enum AnyMediaReference: Equatable {
     case savedGif(media: Media)
     case avatarList(peer: PeerReference, media: Media)
     case attachBot(peer: PeerReference, media: Media)
+    case customEmoji(media: Media)
     
     public static func ==(lhs: AnyMediaReference, rhs: AnyMediaReference) -> Bool {
         switch lhs {
@@ -270,6 +271,12 @@ public enum AnyMediaReference: Equatable {
                 } else {
                     return false
                 }
+            case let .customEmoji(lhsMedia):
+                if case let .customEmoji(rhsMedia) = rhs, lhsMedia.isEqual(to: rhsMedia) {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -288,6 +295,8 @@ public enum AnyMediaReference: Equatable {
             case .avatarList:
                 return nil
             case .attachBot:
+                return nil
+            case .customEmoji:
                 return nil
         }
     }
@@ -322,6 +331,10 @@ public enum AnyMediaReference: Equatable {
                 if let media = media as? T {
                     return .attachBot(peer: peer, media: media)
                 }
+            case let .customEmoji(media):
+                if let media = media as? T {
+                    return .customEmoji(media: media)
+                }
         }
         return nil
     }
@@ -341,6 +354,8 @@ public enum AnyMediaReference: Equatable {
             case let .avatarList(_, media):
                 return media
             case let .attachBot(_, media):
+                return media
+            case let .customEmoji(media):
                 return media
         }
     }
@@ -421,6 +436,7 @@ public enum MediaReference<T: Media> {
         case savedGif
         case avatarList
         case attachBot
+        case customEmoji
     }
     
     case standalone(media: T)
@@ -430,6 +446,7 @@ public enum MediaReference<T: Media> {
     case savedGif(media: T)
     case avatarList(peer: PeerReference, media: T)
     case attachBot(peer: PeerReference, media: T)
+    case customEmoji(media: T)
     
     public init?(decoder: PostboxDecoder) {
         guard let caseIdValue = decoder.decodeOptionalInt32ForKey("_r"), let caseId = CodingCase(rawValue: caseIdValue) else {
@@ -476,6 +493,11 @@ public enum MediaReference<T: Media> {
                     return nil
                 }
                 self = .attachBot(peer: peer, media: media)
+            case .customEmoji:
+                guard let media = decoder.decodeObjectForKey("m") as? T else {
+                    return nil
+                }
+                self = .customEmoji(media: media)
         }
     }
     
@@ -507,6 +529,9 @@ public enum MediaReference<T: Media> {
                 encoder.encodeInt32(CodingCase.attachBot.rawValue, forKey: "_r")
                 encoder.encodeObject(peer, forKey: "pr")
                 encoder.encodeObject(media, forKey: "m")
+            case let .customEmoji(media):
+                encoder.encodeInt32(CodingCase.customEmoji.rawValue, forKey: "_r")
+                encoder.encodeObject(media, forKey: "m")
         }
     }
     
@@ -526,6 +551,8 @@ public enum MediaReference<T: Media> {
                 return .avatarList(peer: peer, media: media)
             case let .attachBot(peer, media):
                 return .attachBot(peer: peer, media: media)
+            case let .customEmoji(media):
+                return .customEmoji(media: media)
         }
     }
     
@@ -548,6 +575,8 @@ public enum MediaReference<T: Media> {
             case let .avatarList(_, media):
                 return media
             case let .attachBot(_, media):
+                return media
+            case let .customEmoji(media):
                 return media
         }
     }

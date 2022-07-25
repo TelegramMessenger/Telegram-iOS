@@ -17,11 +17,11 @@ final class HorizontalStickerGridItem: GridItem {
     let file: TelegramMediaFile
     let theme: PresentationTheme
     let isPreviewed: (HorizontalStickerGridItem) -> Bool
-    let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Void
+    let sendSticker: (FileMediaReference, UIView, CGRect) -> Void
     
     let section: GridSection? = nil
     
-    init(account: Account, file: TelegramMediaFile, theme: PresentationTheme, isPreviewed: @escaping (HorizontalStickerGridItem) -> Bool, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void) {
+    init(account: Account, file: TelegramMediaFile, theme: PresentationTheme, isPreviewed: @escaping (HorizontalStickerGridItem) -> Bool, sendSticker: @escaping (FileMediaReference, UIView, CGRect) -> Void) {
         self.account = account
         self.file = file
         self.theme = theme
@@ -54,7 +54,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     
     private let stickerFetchedDisposable = MetaDisposable()
     
-    var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
+    var sendSticker: ((FileMediaReference, UIView, CGRect) -> Void)?
     
     private var currentIsPreviewing: Bool = false
     
@@ -238,7 +238,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
         if let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            self.sendSticker?(.standalone(media: item.file), self, self.bounds)
+            self.sendSticker?(.standalone(media: item.file), self.view, self.bounds)
         }
     }
     

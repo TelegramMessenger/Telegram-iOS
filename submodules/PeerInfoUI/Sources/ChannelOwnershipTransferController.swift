@@ -438,7 +438,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, u
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
         contentNode?.inputFieldNode.updateTheme(presentationData.theme)
     })
-    controller.dismissed = {
+    controller.dismissed = { _ in
         presentationDataDisposable.dispose()
         disposable.dispose()
     }

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 
 public enum PeekControllerContentPresentation {
     case contained
@@ -26,6 +27,7 @@ public protocol PeekControllerContent {
 }
 
 public protocol PeekControllerContentNode {
+    func ready() -> Signal<Bool, NoError>
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
 }
 

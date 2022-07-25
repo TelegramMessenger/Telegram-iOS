@@ -199,7 +199,7 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
                     let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.35)
                     animation.fillMode = .both
                     if !fastOut {
-                        animation.beginTime = CACurrentMediaTime() + 0.1
+                        animation.beginTime = contentNode.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.1
                     }
                     contentNode.layer.add(animation, forKey: "opacity")
                     

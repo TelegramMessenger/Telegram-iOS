@@ -50,6 +50,7 @@ public class ActionSheetTextNode: ActionSheetItemNode {
         self.label.displaysAsynchronously = false
         self.label.truncationType = .end
         self.label.isAccessibilityElement = false
+        self.label.textAlignment = .center
         
         self.accessibilityArea = AccessibilityAreaNode()
         self.accessibilityArea.accessibilityTraits = .staticText

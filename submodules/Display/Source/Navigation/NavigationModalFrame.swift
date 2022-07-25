@@ -34,7 +34,7 @@ private func generateCornerImage(radius: CGFloat, type: CornerType) -> UIImage? 
     })
 }
 
-final class NavigationModalFrame: ASDisplayNode {
+public final class NavigationModalFrame: ASDisplayNode {
     private let topShade: ASDisplayNode
     private let leftShade: ASDisplayNode
     private let rightShade: ASDisplayNode
@@ -50,7 +50,7 @@ final class NavigationModalFrame: ASDisplayNode {
     private var additionalProgress: CGFloat = 0.0
     private var validLayout: ContainerViewLayout?
     
-    init(theme: NavigationControllerTheme) {
+    override public init() {
         self.topShade = ASDisplayNode()
         self.topShade.backgroundColor = .black
         self.leftShade = ASDisplayNode()
@@ -81,13 +81,13 @@ final class NavigationModalFrame: ASDisplayNode {
         self.addSubnode(self.bottomRightCorner)
     }
     
-    func update(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public func update(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
         self.updateShades(layout: layout, progress: 1.0 - self.progress, additionalProgress: self.additionalProgress, transition: transition, completion: {})
     }
     
-    func updateDismissal(transition: ContainedViewLayoutTransition, progress: CGFloat, additionalProgress: CGFloat, completion: @escaping () -> Void) {
+    public func updateDismissal(transition: ContainedViewLayoutTransition, progress: CGFloat, additionalProgress: CGFloat, completion: @escaping () -> Void) {
         self.progress = progress
         self.additionalProgress = additionalProgress
         

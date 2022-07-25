@@ -111,8 +111,8 @@
             {
                 if (request.requestContext != nil)
                 {
-                    [_dropReponseContexts addObject:[[MTDropResponseContext alloc] initWithDropMessageId:request.requestContext.messageId]];
-                    anyNewDropRequests = true;
+                    //[_dropReponseContexts addObject:[[MTDropResponseContext alloc] initWithDropMessageId:request.requestContext.messageId]];
+                    //anyNewDropRequests = true;
                 }
                 
                 if (request.requestContext.messageId != 0) {

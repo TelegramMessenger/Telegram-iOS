@@ -119,7 +119,22 @@ public struct BotPaymentForm : Equatable {
     public let url: String
     public let nativeProvider: BotPaymentNativeProvider?
     public let savedInfo: BotPaymentRequestedInfo?
-    public let savedCredentials: BotPaymentSavedCredentials?
+    public let savedCredentials: [BotPaymentSavedCredentials]
+    public let additionalPaymentMethods: [BotPaymentMethod]
+}
+
+public struct BotPaymentMethod: Equatable {
+    public let url: String
+    public let title: String
+}
+
+extension BotPaymentMethod {
+    init(apiPaymentFormMethod: Api.PaymentFormMethod) {
+        switch apiPaymentFormMethod {
+            case let .paymentFormMethod(url, title):
+                self.init(url: url, title: title)
+        }
+    }
 }
 
 public enum BotPaymentFormRequestError {
@@ -213,7 +228,7 @@ func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source
         |> mapToSignal { result -> Signal<TelegramMediaInvoice, BotPaymentFormRequestError> in
             return postbox.transaction { transaction -> TelegramMediaInvoice in
                 switch result {
-                case let .paymentForm(_, _, _, title, description, photo, invoice, _, _, _, _, _, _, _):
+                case let .paymentForm(_, _, _, title, description, photo, invoice, _, _, _, _, _, _, _, _):
                     let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                     
                     var parsedFlags = TelegramMediaInvoiceFlags()
@@ -266,11 +281,11 @@ func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, source: B
         |> mapToSignal { result -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
             return postbox.transaction { transaction -> BotPaymentForm in
                 switch result {
-                    case let .paymentForm(flags, id, botId, title, description, photo, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
+                    case let .paymentForm(flags, id, botId, title, description, photo, invoice, providerId, url, nativeProvider, nativeParams, additionalMethods, savedInfo, savedCredentials, apiUsers):
                         let _ = title
                         let _ = description
                         let _ = photo
-                    
+                        
                         var peers: [Peer] = []
                         for user in apiUsers {
                             let parsed = TelegramUser(user: user)
@@ -289,14 +304,15 @@ func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, source: B
                             }
                         }
                         let parsedSavedInfo = savedInfo.flatMap(BotPaymentRequestedInfo.init)
-                        var parsedSavedCredentials: BotPaymentSavedCredentials?
-                        if let savedCredentials = savedCredentials {
+                        let parsedSavedCredentials = savedCredentials?.map({ savedCredentials -> BotPaymentSavedCredentials in
                             switch savedCredentials {
                                 case let .paymentSavedCredentialsCard(id, title):
-                                    parsedSavedCredentials = .card(id: id, title: title)
+                                    return .card(id: id, title: title)
                             }
-                        }
-                        return BotPaymentForm(id: id, canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, paymentBotId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
+                        }) ?? []
+
+                        let additionalPaymentMethods = additionalMethods?.map({ BotPaymentMethod(apiPaymentFormMethod: $0) }) ?? []
+                        return BotPaymentForm(id: id, canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, paymentBotId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials, additionalPaymentMethods: additionalPaymentMethods)
                 }
             }
             |> mapError { _ -> BotPaymentFormRequestError in }
