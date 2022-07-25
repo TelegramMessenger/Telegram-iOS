@@ -3975,6 +3975,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         return nil
     }
     
+    override func unreadMessageRangeUpdated() {
+        for contentNode in self.contentNodes {
+            contentNode.unreadMessageRangeUpdated()
+        }
+    }
+    
     func animateQuizInvalidOptionSelected() {
         if let supernode = self.supernode, let subnodes = supernode.subnodes {
             for i in 0 ..< subnodes.count {

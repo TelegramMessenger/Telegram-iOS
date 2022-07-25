@@ -662,14 +662,17 @@ public class Window1 {
             return
         }
         self.forceBadgeHidden = hidden
-        self.updateBadgeVisibility(layout: self.windowLayout)
+        self.updateBadgeVisibility()
     }
     
-    private func updateBadgeVisibility(layout: WindowLayout) {
-        let badgeIsHidden = !self.deviceMetrics.hasTopNotch || self.forceBadgeHidden || layout.size.width > layout.size.height
+    private func updateBadgeVisibility() {
+        let badgeIsHidden = !self.deviceMetrics.hasTopNotch || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
         if badgeIsHidden != self.badgeView.isHidden && !badgeIsHidden {
-            Queue.mainQueue().after(0.3) {
-                self.badgeView.isHidden = badgeIsHidden
+            Queue.mainQueue().after(0.4) {
+                let badgeShouldBeHidden = !self.deviceMetrics.hasTopNotch || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
+                if badgeShouldBeHidden == badgeIsHidden {
+                    self.badgeView.isHidden = badgeIsHidden
+                }
             }
         } else {
             self.badgeView.isHidden = badgeIsHidden
@@ -1115,7 +1118,7 @@ public class Window1 {
                 }
                 
                 if let image = self.badgeView.image {
-                    self.updateBadgeVisibility(layout: self.windowLayout)
+                    self.updateBadgeVisibility()
                     self.badgeView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.windowLayout.size.width - image.size.width) / 2.0), y: 6.0), size: image.size)
                 }
             }
