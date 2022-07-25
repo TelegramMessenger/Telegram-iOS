@@ -553,11 +553,12 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
                                 self.f()
                             }
                         }
-                        let displayTimer = Foundation.Timer(timeInterval: CGFloat(self.frameSkip) / 60.0, target: TimerTarget { [weak self] in
+                        let frameInterval = Double(self.frameSkip) / 60.0
+                        let displayTimer = Foundation.Timer(timeInterval: frameInterval, target: TimerTarget { [weak self] in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.animationTick()
+                            strongSelf.animationTick(frameInterval: frameInterval)
                         }, selector: #selector(TimerTarget.timerEvent), userInfo: nil, repeats: true)
                         self.displayTimer = displayTimer
                         RunLoop.main.add(displayTimer, forMode: .common)
@@ -646,8 +647,8 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         self.isPlaying = isPlaying
     }
     
-    private func animationTick() {
-        let secondsPerFrame = Double(self.frameSkip) / 60.0
+    private func animationTick(frameInterval: Double) {
+        let secondsPerFrame = frameInterval
         
         var tasks: [LoadFrameGroupTask] = []
         if let groupContext = self.groupContext {
