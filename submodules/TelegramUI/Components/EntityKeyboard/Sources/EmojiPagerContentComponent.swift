@@ -2123,6 +2123,13 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
+        private enum VisualItemKey: Hashable {
+            case item(id: ItemLayer.Key)
+            case header(groupId: AnyHashable)
+            case groupExpandButton(groupId: AnyHashable)
+            case groupActionButton(groupId: AnyHashable)
+        }
+        
         private let shimmerHostView: PortalSourceView?
         private let standaloneShimmerEffect: StandaloneShimmerEffect?
         
@@ -3012,7 +3019,7 @@ public final class EmojiPagerContentComponent: Component {
             self.updateScrollingOffset(isReset: false, transition: transition)
         }
         
-        private func updateVisibleItems(transition: Transition, attemptSynchronousLoads: Bool, previousItemPositions: [ItemLayer.Key: CGPoint]?, updatedItemPositions: [ItemLayer.Key: CGPoint]?) {
+        private func updateVisibleItems(transition: Transition, attemptSynchronousLoads: Bool, previousItemPositions: [VisualItemKey: CGPoint]?, previousAbsoluteItemPositions: [VisualItemKey: CGPoint]? = nil, updatedItemPositions: [VisualItemKey: CGPoint]?, hintDisappearingGroupFrame: (groupId: AnyHashable, frame: CGRect)? = nil) {
             guard let component = self.component, let pagerEnvironment = self.pagerEnvironment, let keyboardChildEnvironment = self.keyboardChildEnvironment, let itemLayout = self.itemLayout else {
                 return
             }
@@ -3190,10 +3197,12 @@ public final class EmojiPagerContentComponent: Component {
                         
                         let groupPremiumButton: ComponentView<Empty>
                         var groupPremiumButtonTransition = transition
+                        var animateButtonIn = false
                         if let current = self.visibleGroupPremiumButtons[itemGroup.groupId] {
                             groupPremiumButton = current
                         } else {
                             groupPremiumButtonTransition = .immediate
+                            animateButtonIn = !transition.animation.isImmediate
                             groupPremiumButton = ComponentView<Empty>()
                             self.visibleGroupPremiumButtons[itemGroup.groupId] = groupPremiumButton
                         }
@@ -3257,13 +3266,19 @@ public final class EmojiPagerContentComponent: Component {
                         )
                         let groupPremiumButtonFrame = CGRect(origin: CGPoint(x: itemLayout.itemInsets.left, y: itemGroupLayout.frame.maxY - groupPremiumButtonSize.height + 1.0), size: groupPremiumButtonSize)
                         if let view = groupPremiumButton.view {
-                            var animateIn = false
                             if view.superview == nil {
-                                animateIn = true
                                 self.scrollView.addSubview(view)
                             }
+                            
+                            if animateButtonIn, !transition.animation.isImmediate {
+                                if let previousItemPosition = previousItemPositions?[.groupActionButton(groupId: itemGroup.groupId)], transitionHintInstalledGroupId != itemGroup.groupId, transitionHintExpandedGroupId != itemGroup.groupId {
+                                    groupPremiumButtonTransition = transition
+                                    view.center = previousItemPosition
+                                }
+                            }
+                            
                             groupPremiumButtonTransition.setFrame(view: view, frame: groupPremiumButtonFrame)
-                            if animateIn, !transition.animation.isImmediate {
+                            if animateButtonIn, !transition.animation.isImmediate {
                                 view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 transition.animateScale(view: view, from: 0.01, to: 1.0)
                             }
@@ -3275,12 +3290,14 @@ public final class EmojiPagerContentComponent: Component {
                     validGroupExpandActionButtons.insert(itemGroup.groupId)
                     let groupId = itemGroup.groupId
                     
+                    var animateButtonIn = false
                     var groupExpandActionButtonTransition = transition
                     let groupExpandActionButton: GroupExpandActionButton
                     if let current = self.visibleGroupExpandActionButtons[itemGroup.groupId] {
                         groupExpandActionButton = current
                     } else {
                         groupExpandActionButtonTransition = .immediate
+                        animateButtonIn = !transition.animation.isImmediate
                         groupExpandActionButton = GroupExpandActionButton(pressed: { [weak self] in
                             guard let strongSelf = self else {
                                 return
@@ -3290,6 +3307,13 @@ public final class EmojiPagerContentComponent: Component {
                         self.visibleGroupExpandActionButtons[itemGroup.groupId] = groupExpandActionButton
                         self.scrollView.addSubview(groupExpandActionButton)
                         self.mirrorContentScrollView.layer.addSublayer(groupExpandActionButton.tintContainerLayer)
+                    }
+                    
+                    if animateButtonIn, !transition.animation.isImmediate {
+                        if let previousItemPosition = previousItemPositions?[.groupExpandButton(groupId: itemGroup.groupId)], transitionHintInstalledGroupId != itemGroup.groupId, transitionHintExpandedGroupId != itemGroup.groupId {
+                            groupExpandActionButtonTransition = transition
+                            groupExpandActionButton.center = previousItemPosition
+                        }
                     }
                     
                     let baseItemFrame = itemLayout.frame(groupIndex: groupItems.groupIndex, itemIndex: collapsedItemIndex)
@@ -3404,11 +3428,11 @@ public final class EmojiPagerContentComponent: Component {
                         itemTransition.setBounds(layer: itemLayer, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                         
                         if animateItemIn, !transition.animation.isImmediate {
-                            if let previousItemPosition = previousItemPositions?[itemId], transitionHintInstalledGroupId != itemId.groupId, transitionHintExpandedGroupId != itemId.groupId {
+                            if let previousItemPosition = previousItemPositions?[.item(id: itemId)], transitionHintInstalledGroupId != itemId.groupId, transitionHintExpandedGroupId != itemId.groupId {
                                 itemTransition = transition
                                 itemLayer.position = previousItemPosition
                             } else {
-                                if let contentAnimation = contentAnimation, case .groupExpanded(id: itemGroup.groupId) = contentAnimation.type {
+                                if transitionHintInstalledGroupId == itemId.groupId || transitionHintExpandedGroupId == itemId.groupId {
                                     itemLayer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
                                     itemLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                                 } else {
@@ -3454,7 +3478,18 @@ public final class EmojiPagerContentComponent: Component {
                     removedIds.append(id)
                     
                     if !transition.animation.isImmediate {
-                        if let position = updatedItemPositions?[id], transitionHintInstalledGroupId != id.groupId {
+                        if let hintDisappearingGroupFrame = hintDisappearingGroupFrame, hintDisappearingGroupFrame.groupId == id.groupId {
+                            if let previousAbsolutePosition = previousAbsoluteItemPositions?[.item(id: id)] {
+                                itemLayer.position = self.convert(previousAbsolutePosition, to: self.scrollView)
+                                transition.setPosition(layer: itemLayer, position: CGPoint(x: hintDisappearingGroupFrame.frame.midX, y: hintDisappearingGroupFrame.frame.minY + 20.0))
+                            }
+                            
+                            itemLayer.opacity = 0.0
+                            itemLayer.animateScale(from: 1.0, to: 0.01, duration: 0.16)
+                            itemLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, completion: { [weak itemLayer] _ in
+                                itemLayer?.removeFromSuperlayer()
+                            })
+                        } else if let position = updatedItemPositions?[.item(id: id)], transitionHintInstalledGroupId != id.groupId {
                             transition.setPosition(layer: itemLayer, position: position, completion: { [weak itemLayer] _ in
                                 itemLayer?.removeFromSuperlayer()
                             })
@@ -3485,13 +3520,28 @@ public final class EmojiPagerContentComponent: Component {
                     removedGroupHeaderIds.append(id)
                     
                     if !transition.animation.isImmediate {
-                        groupHeaderLayer.alpha = 0.0
-                        groupHeaderLayer.layer.animateScale(from: 1.0, to: 0.5, duration: 0.2)
+                        var isAnimatingDisappearance = false
+                        if let hintDisappearingGroupFrame = hintDisappearingGroupFrame, hintDisappearingGroupFrame.groupId == id, let previousAbsolutePosition = previousAbsoluteItemPositions?[VisualItemKey.header(groupId: id)] {
+                            groupHeaderLayer.center = self.convert(previousAbsolutePosition, to: self.scrollView)
+                            transition.setPosition(layer: groupHeaderLayer.layer, position: CGPoint(x: hintDisappearingGroupFrame.frame.midX, y: hintDisappearingGroupFrame.frame.minY + 20.0))
+                            isAnimatingDisappearance = true
+                        }
+                        
                         let tintContentLayer = groupHeaderLayer.tintContentLayer
-                        groupHeaderLayer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak groupHeaderLayer, weak tintContentLayer] _ in
-                            groupHeaderLayer?.removeFromSuperview()
-                            tintContentLayer?.removeFromSuperlayer()
-                        })
+                        
+                        if !isAnimatingDisappearance, let position = updatedItemPositions?[.header(groupId: id)] {
+                            transition.setPosition(layer: groupHeaderLayer.layer, position: position, completion: { [weak groupHeaderLayer, weak tintContentLayer] _ in
+                                groupHeaderLayer?.removeFromSuperview()
+                                tintContentLayer?.removeFromSuperlayer()
+                            })
+                        } else {
+                            groupHeaderLayer.alpha = 0.0
+                            groupHeaderLayer.layer.animateScale(from: 1.0, to: 0.5, duration: 0.16)
+                            groupHeaderLayer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, completion: { [weak groupHeaderLayer, weak tintContentLayer] _ in
+                                groupHeaderLayer?.removeFromSuperview()
+                                tintContentLayer?.removeFromSuperlayer()
+                            })
+                        }
                     } else {
                         groupHeaderLayer.removeFromSuperview()
                         groupHeaderLayer.tintContentLayer.removeFromSuperlayer()
@@ -3516,9 +3566,35 @@ public final class EmojiPagerContentComponent: Component {
             
             var removedGroupPremiumButtonIds: [AnyHashable] = []
             for (id, groupPremiumButton) in self.visibleGroupPremiumButtons {
-                if !validGroupPremiumButtonIds.contains(id) {
-                    removedGroupPremiumButtonIds.append(id)
-                    groupPremiumButton.view?.removeFromSuperview()
+                if !validGroupPremiumButtonIds.contains(id), let buttonView = groupPremiumButton.view {
+                    if !transition.animation.isImmediate {
+                        var isAnimatingDisappearance = false
+                        if let position = updatedItemPositions?[.groupActionButton(groupId: id)], position.y > buttonView.center.y {
+                        } else if let hintDisappearingGroupFrame = hintDisappearingGroupFrame, hintDisappearingGroupFrame.groupId == id, let previousAbsolutePosition = previousAbsoluteItemPositions?[VisualItemKey.groupActionButton(groupId: id)] {
+                            buttonView.center = self.convert(previousAbsolutePosition, to: self.scrollView)
+                            transition.setPosition(layer: buttonView.layer, position: CGPoint(x: hintDisappearingGroupFrame.frame.midX, y: hintDisappearingGroupFrame.frame.minY + 20.0))
+                            isAnimatingDisappearance = true
+                        }
+                        
+                        if !isAnimatingDisappearance, let position = updatedItemPositions?[.groupActionButton(groupId: id)] {
+                            buttonView.alpha = 0.0
+                            buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, completion: { [weak buttonView] _ in
+                                buttonView?.removeFromSuperview()
+                            })
+                            transition.setPosition(layer: buttonView.layer, position: position)
+                        } else {
+                            buttonView.alpha = 0.0
+                            if transitionHintExpandedGroupId == id || hintDisappearingGroupFrame?.groupId == id {
+                                buttonView.layer.animateScale(from: 1.0, to: 0.5, duration: 0.16)
+                            }
+                            buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, completion: { [weak buttonView] _ in
+                                buttonView?.removeFromSuperview()
+                            })
+                        }
+                    } else {
+                        removedGroupPremiumButtonIds.append(id)
+                        buttonView.removeFromSuperview()
+                    }
                 }
             }
             for id in removedGroupPremiumButtonIds {
@@ -3530,14 +3606,32 @@ public final class EmojiPagerContentComponent: Component {
                 if !validGroupExpandActionButtons.contains(id) {
                     removedGroupExpandActionButtonIds.append(id)
                     
-                    if !transition.animation.isImmediate && transitionHintExpandedGroupId == id {
-                        button.alpha = 0.0
-                        button.layer.animateScale(from: 1.0, to: 0.5, duration: 0.2)
+                    if !transition.animation.isImmediate {
+                        var isAnimatingDisappearance = false
+                        if self.visibleGroupHeaders[id] == nil, let hintDisappearingGroupFrame = hintDisappearingGroupFrame, hintDisappearingGroupFrame.groupId == id, let previousAbsolutePosition = previousAbsoluteItemPositions?[.groupExpandButton(groupId: id)] {
+                            button.center = self.convert(previousAbsolutePosition, to: self.scrollView)
+                            button.tintContainerLayer.position = button.center
+                            transition.setPosition(layer: button.layer, position: CGPoint(x: hintDisappearingGroupFrame.frame.midX, y: hintDisappearingGroupFrame.frame.minY + 20.0))
+                            isAnimatingDisappearance = true
+                        }
+                        
                         let tintContainerLayer = button.tintContainerLayer
-                        button.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak button, weak tintContainerLayer] _ in
-                            button?.removeFromSuperview()
-                            tintContainerLayer?.removeFromSuperlayer()
-                        })
+                        
+                        if !isAnimatingDisappearance, let position = updatedItemPositions?[.groupExpandButton(groupId: id)] {
+                            transition.setPosition(layer: button.layer, position: position, completion: { [weak button, weak tintContainerLayer] _ in
+                                button?.removeFromSuperview()
+                                tintContainerLayer?.removeFromSuperlayer()
+                            })
+                        } else {
+                            button.alpha = 0.0
+                            if transitionHintExpandedGroupId == id || hintDisappearingGroupFrame?.groupId == id {
+                                button.layer.animateScale(from: 1.0, to: 0.5, duration: 0.16)
+                            }
+                            button.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, completion: { [weak button, weak tintContainerLayer] _ in
+                                button?.removeFromSuperview()
+                                tintContainerLayer?.removeFromSuperlayer()
+                            })
+                        }
                     } else {
                         button.removeFromSuperview()
                         button.tintContainerLayer.removeFromSuperlayer()
@@ -3627,15 +3721,34 @@ public final class EmojiPagerContentComponent: Component {
                 standaloneShimmerEffect.update(background: shimmerBackgroundColor, foreground: shimmerForegroundColor)
             }
             
-            var previousItemPositions: [ItemLayer.Key: CGPoint]?
+            var previousItemPositions: [VisualItemKey: CGPoint]?
             
             var calculateUpdatedItemPositions = false
-            var updatedItemPositions: [ItemLayer.Key: CGPoint]?
+            var updatedItemPositions: [VisualItemKey: CGPoint]?
             
-            var anchorItem: (key: ItemLayer.Key, frame: CGRect)?
+            let contentAnimation = transition.userData(ContentAnimation.self)
+            
+            var transitionHintInstalledGroupId: AnyHashable?
+            var transitionHintExpandedGroupId: AnyHashable?
+            if let contentAnimation = contentAnimation {
+                switch contentAnimation.type {
+                case let .groupInstalled(groupId):
+                    transitionHintInstalledGroupId = groupId
+                case let .groupExpanded(groupId):
+                    transitionHintExpandedGroupId = groupId
+                default:
+                    break
+                }
+            }
+            let _ = transitionHintExpandedGroupId
+            
+            var hintDisappearingGroupFrame: (groupId: AnyHashable, frame: CGRect)?
+            var previousAbsoluteItemPositions: [VisualItemKey: CGPoint] = [:]
+            
+            var anchorItems: [ItemLayer.Key: CGRect] = [:]
             if let previousComponent = previousComponent, let previousItemLayout = self.itemLayout, previousComponent.itemGroups != component.itemGroups {
                 if !transition.animation.isImmediate {
-                    var previousItemPositionsValue: [ItemLayer.Key: CGPoint] = [:]
+                    var previousItemPositionsValue: [VisualItemKey: CGPoint] = [:]
                     for groupIndex in 0 ..< previousComponent.itemGroups.count {
                         let itemGroup = previousComponent.itemGroups[groupIndex]
                         for itemIndex in 0 ..< itemGroup.items.count {
@@ -3649,7 +3762,7 @@ public final class EmojiPagerContentComponent: Component {
                                 continue
                             }
                             let itemFrame = previousItemLayout.frame(groupIndex: groupIndex, itemIndex: itemIndex)
-                            previousItemPositionsValue[itemKey] = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
+                            previousItemPositionsValue[.item(id: itemKey)] = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
                         }
                     }
                     previousItemPositions = previousItemPositionsValue
@@ -3657,23 +3770,78 @@ public final class EmojiPagerContentComponent: Component {
                 }
                 
                 let effectiveVisibleBounds = CGRect(origin: self.scrollView.bounds.origin, size: self.effectiveVisibleSize)
-                let topVisibleDetectionBounds = effectiveVisibleBounds.offsetBy(dx: 0.0, dy: pagerEnvironment.containerInsets.top)
+                let topVisibleDetectionBounds = effectiveVisibleBounds
                 for (key, itemLayer) in self.visibleItemLayers {
                     if !topVisibleDetectionBounds.intersects(itemLayer.frame) {
                         continue
                     }
-                    if let anchorItemValue = anchorItem {
-                        if itemLayer.frame.minY < anchorItemValue.frame.minY {
-                            anchorItem = (key, itemLayer.frame)
-                        } else if itemLayer.frame.minY == anchorItemValue.frame.minY && itemLayer.frame.minX < anchorItemValue.frame.minX {
-                            anchorItem = (key, itemLayer.frame)
+                    
+                    let absoluteFrame = self.scrollView.convert(itemLayer.frame, to: self)
+                    
+                    if let transitionHintInstalledGroupId = transitionHintInstalledGroupId, transitionHintInstalledGroupId == key.groupId {
+                        if let hintDisappearingGroupFrameValue = hintDisappearingGroupFrame {
+                            hintDisappearingGroupFrame = (hintDisappearingGroupFrameValue.groupId, absoluteFrame.union(hintDisappearingGroupFrameValue.frame))
+                        } else {
+                            hintDisappearingGroupFrame = (key.groupId, absoluteFrame)
                         }
+                        previousAbsoluteItemPositions[.item(id: key)] = CGPoint(x: absoluteFrame.midX, y: absoluteFrame.midY)
                     } else {
-                        anchorItem = (key, itemLayer.frame)
+                        anchorItems[key] = absoluteFrame
                     }
                 }
-                if let anchorItemValue = anchorItem {
-                    anchorItem = (anchorItemValue.key, self.scrollView.convert(anchorItemValue.frame, to: self))
+                
+                for (id, groupHeader) in self.visibleGroupHeaders {
+                    if !topVisibleDetectionBounds.intersects(groupHeader.frame) {
+                        continue
+                    }
+                    
+                    let absoluteFrame = self.scrollView.convert(groupHeader.frame, to: self)
+                    
+                    if let transitionHintInstalledGroupId = transitionHintInstalledGroupId, transitionHintInstalledGroupId == id {
+                        if let hintDisappearingGroupFrameValue = hintDisappearingGroupFrame {
+                            hintDisappearingGroupFrame = (hintDisappearingGroupFrameValue.groupId, absoluteFrame.union(hintDisappearingGroupFrameValue.frame))
+                        } else {
+                            hintDisappearingGroupFrame = (id, absoluteFrame)
+                        }
+                        previousAbsoluteItemPositions[.header(groupId: id)] = CGPoint(x: absoluteFrame.midX, y: absoluteFrame.midY)
+                    }
+                }
+                
+                for (id, button) in self.visibleGroupExpandActionButtons {
+                    if !topVisibleDetectionBounds.intersects(button.frame) {
+                        continue
+                    }
+                    
+                    let absoluteFrame = self.scrollView.convert(button.frame, to: self)
+                    
+                    if let transitionHintInstalledGroupId = transitionHintInstalledGroupId, transitionHintInstalledGroupId == id {
+                        if let hintDisappearingGroupFrameValue = hintDisappearingGroupFrame {
+                            hintDisappearingGroupFrame = (hintDisappearingGroupFrameValue.groupId, absoluteFrame.union(hintDisappearingGroupFrameValue.frame))
+                        } else {
+                            hintDisappearingGroupFrame = (id, absoluteFrame)
+                        }
+                        previousAbsoluteItemPositions[.groupExpandButton(groupId: id)] = CGPoint(x: absoluteFrame.midX, y: absoluteFrame.midY)
+                    }
+                }
+                
+                for (id, button) in self.visibleGroupPremiumButtons {
+                    guard let buttonView = button.view else {
+                        continue
+                    }
+                    if !topVisibleDetectionBounds.intersects(buttonView.frame) {
+                        continue
+                    }
+                    
+                    let absoluteFrame = self.scrollView.convert(buttonView.frame, to: self)
+                    
+                    if let transitionHintInstalledGroupId = transitionHintInstalledGroupId, transitionHintInstalledGroupId == id {
+                        if let hintDisappearingGroupFrameValue = hintDisappearingGroupFrame {
+                            hintDisappearingGroupFrame = (hintDisappearingGroupFrameValue.groupId, absoluteFrame.union(hintDisappearingGroupFrameValue.frame))
+                        } else {
+                            hintDisappearingGroupFrame = (id, absoluteFrame)
+                        }
+                        previousAbsoluteItemPositions[.groupActionButton(groupId: id)] = CGPoint(x: absoluteFrame.midX, y: absoluteFrame.midY)
+                    }
                 }
             }
             
@@ -3742,37 +3910,50 @@ public final class EmojiPagerContentComponent: Component {
             }
             self.previousScrollingOffset = ScrollingOffsetState(value: scrollView.contentOffset.y, isDraggingOrDecelerating: scrollView.isDragging || scrollView.isDecelerating)
             
-            if let anchorItem = anchorItem {
-                outer: for i in 0 ..< component.itemGroups.count {
-                    if component.itemGroups[i].groupId != anchorItem.key.groupId {
-                        continue
+            var animatedScrollOffset: CGFloat = 0.0
+            if !anchorItems.isEmpty {
+                let sortedAnchorItems: [(ItemLayer.Key, CGRect)] = anchorItems.sorted(by: { lhs, rhs in
+                    if lhs.value.minY != rhs.value.minY {
+                        return lhs.value.minY < rhs.value.minY
+                    } else {
+                        return lhs.value.minX < rhs.value.minX
                     }
-                    for j in 0 ..< component.itemGroups[i].items.count {
-                        let itemKey: ItemLayer.Key
-                        if let file = component.itemGroups[i].items[j].file {
-                            itemKey = ItemLayer.Key(groupId: component.itemGroups[i].groupId, fileId: file.fileId, staticEmoji: nil)
-                        } else if let staticEmoji = component.itemGroups[i].items[j].staticEmoji {
-                            itemKey = ItemLayer.Key(groupId: component.itemGroups[i].groupId, fileId: nil, staticEmoji: staticEmoji)
-                        } else {
+                })
+                
+                outer: for i in 0 ..< component.itemGroups.count {
+                    for anchorItem in sortedAnchorItems {
+                        if component.itemGroups[i].groupId != anchorItem.0.groupId {
                             continue
                         }
-                        
-                        if itemKey == anchorItem.key {
-                            let itemFrame = itemLayout.frame(groupIndex: i, itemIndex: j)
-                            
-                            var contentOffsetY = itemFrame.minY - anchorItem.frame.minY
-                            if contentOffsetY > self.scrollView.contentSize.height - self.scrollView.bounds.height {
-                                contentOffsetY = self.scrollView.contentSize.height - self.scrollView.bounds.height
-                            }
-                            if contentOffsetY < 0.0 {
-                                contentOffsetY = 0.0
+                        for j in 0 ..< component.itemGroups[i].items.count {
+                            let itemKey: ItemLayer.Key
+                            if let file = component.itemGroups[i].items[j].file {
+                                itemKey = ItemLayer.Key(groupId: component.itemGroups[i].groupId, fileId: file.fileId, staticEmoji: nil)
+                            } else if let staticEmoji = component.itemGroups[i].items[j].staticEmoji {
+                                itemKey = ItemLayer.Key(groupId: component.itemGroups[i].groupId, fileId: nil, staticEmoji: staticEmoji)
+                            } else {
+                                continue
                             }
                             
-                            let previousBounds = self.scrollView.bounds
-                            self.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffsetY), animated: false)
-                            transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: previousBounds.minY - contentOffsetY), to: CGPoint(), additive: true)
-                            
-                            break outer
+                            if itemKey == anchorItem.0 {
+                                let itemFrame = itemLayout.frame(groupIndex: i, itemIndex: j)
+                                
+                                var contentOffsetY = itemFrame.minY - anchorItem.1.minY
+                                if contentOffsetY > self.scrollView.contentSize.height - self.scrollView.bounds.height {
+                                    contentOffsetY = self.scrollView.contentSize.height - self.scrollView.bounds.height
+                                }
+                                if contentOffsetY < 0.0 {
+                                    contentOffsetY = 0.0
+                                }
+                                
+                                let previousBounds = self.scrollView.bounds
+                                self.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffsetY), animated: false)
+                                let scrollOffset = previousBounds.minY - contentOffsetY
+                                transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: scrollOffset), to: CGPoint(), additive: true)
+                                animatedScrollOffset = scrollOffset
+                                
+                                break outer
+                            }
                         }
                     }
                 }
@@ -3781,9 +3962,10 @@ public final class EmojiPagerContentComponent: Component {
             self.ignoreScrolling = false
             
             if calculateUpdatedItemPositions {
-                var updatedItemPositionsValue: [ItemLayer.Key: CGPoint] = [:]
+                var updatedItemPositionsValue: [VisualItemKey: CGPoint] = [:]
                 for groupIndex in 0 ..< component.itemGroups.count {
                     let itemGroup = component.itemGroups[groupIndex]
+                    let itemGroupLayout = itemLayout.itemGroupLayouts[groupIndex]
                     for itemIndex in 0 ..< itemGroup.items.count {
                         let item = itemGroup.items[itemIndex]
                         let itemKey: ItemLayer.Key
@@ -3795,13 +3977,24 @@ public final class EmojiPagerContentComponent: Component {
                             continue
                         }
                         let itemFrame = itemLayout.frame(groupIndex: groupIndex, itemIndex: itemIndex)
-                        updatedItemPositionsValue[itemKey] = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
+                        updatedItemPositionsValue[.item(id: itemKey)] = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
                     }
+                    
+                    let groupPremiumButtonFrame = CGRect(origin: CGPoint(x: itemLayout.itemInsets.left, y: itemGroupLayout.frame.maxY - itemLayout.premiumButtonHeight + 1.0), size: CGSize(width: itemLayout.width - itemLayout.itemInsets.left - itemLayout.itemInsets.right, height: itemLayout.premiumButtonHeight))
+                    updatedItemPositionsValue[.groupActionButton(groupId: itemGroup.groupId)] = CGPoint(x: groupPremiumButtonFrame.midX, y: groupPremiumButtonFrame.midY)
                 }
                 updatedItemPositions = updatedItemPositionsValue
             }
             
-            self.updateVisibleItems(transition: itemTransition, attemptSynchronousLoads: !(scrollView.isDragging || scrollView.isDecelerating), previousItemPositions: previousItemPositions, updatedItemPositions: updatedItemPositions)
+            if let hintDisappearingGroupFrameValue = hintDisappearingGroupFrame {
+                hintDisappearingGroupFrame = (hintDisappearingGroupFrameValue.groupId, self.scrollView.convert(hintDisappearingGroupFrameValue.frame, from: self))
+            }
+            
+            for (id, position) in previousAbsoluteItemPositions {
+                previousAbsoluteItemPositions[id] = position.offsetBy(dx: 0.0, dy: animatedScrollOffset)
+            }
+            
+            self.updateVisibleItems(transition: itemTransition, attemptSynchronousLoads: !(scrollView.isDragging || scrollView.isDecelerating), previousItemPositions: previousItemPositions, previousAbsoluteItemPositions: previousAbsoluteItemPositions, updatedItemPositions: updatedItemPositions, hintDisappearingGroupFrame: hintDisappearingGroupFrame)
             
             return availableSize
         }

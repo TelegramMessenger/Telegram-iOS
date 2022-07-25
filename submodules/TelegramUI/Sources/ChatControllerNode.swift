@@ -793,8 +793,21 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.contentContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
-        let visibleRootModalDismissProgress: CGFloat = 1.0 - self.inputPanelContainerNode.expansionFraction
-        if self.inputPanelContainerNode.expansionFraction != 0.0 {
+        let isOverlay: Bool
+        switch self.chatPresentationInterfaceState.mode {
+        case .overlay:
+            isOverlay = true
+        default:
+            isOverlay = false
+        }
+        
+        let visibleRootModalDismissProgress: CGFloat
+        if isOverlay {
+            visibleRootModalDismissProgress = 1.0
+        } else {
+            visibleRootModalDismissProgress = 1.0 - self.inputPanelContainerNode.expansionFraction
+        }
+        if !isOverlay && self.inputPanelContainerNode.expansionFraction != 0.0 {
             let navigationModalFrame: NavigationModalFrame
             var animateFromFraction: CGFloat?
             if let current = self.navigationModalFrame {
@@ -886,6 +899,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 containerNode.cornerRadius = 15.0
                 containerNode.addSubnode(self.backgroundNode)
                 containerNode.addSubnode(self.historyNodeContainer)
+                self.contentContainerNode.isHidden = true
                 if let restrictedNode = self.restrictedNode {
                     containerNode.addSubnode(restrictedNode)
                 }

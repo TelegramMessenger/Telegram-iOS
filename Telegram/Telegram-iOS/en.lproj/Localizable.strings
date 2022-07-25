@@ -7893,6 +7893,9 @@ Sorry for the inconvenience.";
 "EmojiPackActionInfo.MultipleRemovedText_1" = "%@ emoji pack is no longer in your emoji.";
 "EmojiPackActionInfo.MultipleRemovedText_any" = "%@ emoji packs are no longer in your emoji.";
 
+"StickerPackActionInfo.MultipleRemovedText_1" = "%@ sticker pack is no longer in your stickers.";
+"StickerPackActionInfo.MultipleRemovedText_any" = "%@ sticker packs are no longer in your stickers.";
+
 "MaskPackActionInfo.RemovedTitle" = "Masks Removed";
 "MaskPackActionInfo.ArchivedTitle" = "Masks Archived";
 "MaskPackActionInfo.RemovedText" = "%@ is no longer in your masks.";
@@ -7936,3 +7939,6 @@ Sorry for the inconvenience.";
 
 "EmojiInput.PremiumEmojiToast.Text" = "Subscribe to Telegram Premium to unlock premium emoji.";
 "EmojiInput.PremiumEmojiToast.Action" = "More";
+
+"StickerPacks.DeleteEmojiPacksConfirmation_1" = "Delete 1 Emoji Pack";
+"StickerPacks.DeleteEmojiPacksConfirmation_any" = "Delete %@ Emoji Packs";

@@ -951,13 +951,15 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 })))
             }
             
-            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                c.dismiss(completion: { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.forwardMessages(messageIds: Set([message.id]))
-                    }
-                })
-            })))
+            if !message._asMessage().isCopyProtected() {
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                    c.dismiss(completion: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.forwardMessages(messageIds: Set([message.id]))
+                        }
+                    })
+                })))
+            }
             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c.dismiss(completion: { [weak self] in
                     self?.openMessage(EnginePeer(message.peers[message.id.peerId]!), message.id, false)
