@@ -1005,7 +1005,16 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 toolbarItem = StickersToolbarItem(selectedCount: selectedCount, actions: [.init(title: presentationData.strings.StickerPacks_ActionDelete, isEnabled: selectedCount > 0, action: {
                     let actionSheet = ActionSheetController(presentationData: presentationData)
                     var items: [ActionSheetItem] = []
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.StickerPacks_DeleteStickerPacksConfirmation(selectedCount), color: .destructive, action: { [weak actionSheet] in
+                    
+                    let title: String
+                    switch mode {
+                    case .emoji:
+                        title = presentationData.strings.StickerPacks_DeleteEmojiPacksConfirmation(selectedCount)
+                    default:
+                        title = presentationData.strings.StickerPacks_DeleteStickerPacksConfirmation(selectedCount)
+                    }
+                    
+                    items.append(ActionSheetButtonItem(title: title, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                        
                         if case .modal = mode {

@@ -7936,3 +7936,6 @@ Sorry for the inconvenience.";
 
 "EmojiInput.PremiumEmojiToast.Text" = "Subscribe to Telegram Premium to unlock premium emoji.";
 "EmojiInput.PremiumEmojiToast.Action" = "More";
+
+"StickerPacks.DeleteEmojiPacksConfirmation_1" = "Delete 1 Emoji Pack";
+"StickerPacks.DeleteEmojiPacksConfirmation_any" = "Delete %@ Emoji Packs";
