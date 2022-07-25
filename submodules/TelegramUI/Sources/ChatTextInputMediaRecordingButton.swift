@@ -363,7 +363,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         let colorKeys = ["__allcolors__"]
         var colors: [String: UIColor] = [:]
         for colorKey in colorKeys {
-            colors[colorKey] = self.theme.chat.inputPanel.panelControlColor
+            colors[colorKey] = self.theme.chat.inputPanel.panelControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
         }
         
         let _ = animationView.update(
