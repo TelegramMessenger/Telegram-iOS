@@ -7869,6 +7869,7 @@ Sorry for the inconvenience.";
 
 "Premium.AnimatedEmoji" = "Animated Emoji";
 "Premium.AnimatedEmojiInfo" = "Include animated emoji from different emoji sets in any message you send.";
+"Premium.AnimatedEmojiStandaloneInfo" = "Include animated emoji from different emoji sets in any message you send.";
 
 "ChatContextMenu.EmojiSetSingle" = "This message contains\n#[%@]() emoji.";
 "ChatContextMenu.EmojiSet_1" = "This message contains emoji from [%@ pack]().";
