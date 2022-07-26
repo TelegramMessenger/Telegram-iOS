@@ -607,7 +607,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
     let inputMediaPanel = PresentationThemeInputMediaPanel(
         panelSeparatorColor: UIColor(rgb: 0x3d3d40),
         panelIconColor: UIColor(rgb: 0x808080),
-        panelHighlightedIconBackgroundColor: UIColor(rgb: 0x262628),
+        panelHighlightedIconBackgroundColor: UIColor(rgb: 0x808080).withMultipliedAlpha(0.25),
         panelHighlightedIconColor: UIColor(rgb: 0x808080).mixedWith(UIColor(rgb: 0xffffff), alpha: 0.35),
         panelContentVibrantOverlayColor: UIColor(rgb: 0x808080),
         stickersBackgroundColor: UIColor(rgb: 0x000000),

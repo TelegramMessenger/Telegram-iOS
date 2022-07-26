@@ -2420,7 +2420,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if !self.didInitializeInputMediaNodeDataPromise, let interfaceInteraction = self.interfaceInteraction {
             self.didInitializeInputMediaNodeDataPromise = true
             
-            self.inputMediaNodeDataPromise.set(ChatEntityKeyboardInputNode.inputData(context: self.context, interfaceInteraction: interfaceInteraction, controllerInteraction: self.controllerInteraction, chatPeerId: self.chatLocation.peerId))
+            let areCustomEmojiEnabled = self.chatPresentationInterfaceState.customEmojiAvailable
+            
+            self.inputMediaNodeDataPromise.set(ChatEntityKeyboardInputNode.inputData(context: self.context, interfaceInteraction: interfaceInteraction, controllerInteraction: self.controllerInteraction, chatPeerId: self.chatLocation.peerId, areCustomEmojiEnabled: areCustomEmojiEnabled))
         }
         
         if self.inputMediaNode == nil && !"".isEmpty {

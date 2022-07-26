@@ -86,7 +86,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
-    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool, isSecret: Bool) -> Signal<EmojiPagerContentComponent, NoError> {
+    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool, areCustomEmojiEnabled: Bool) -> Signal<EmojiPagerContentComponent, NoError> {
         let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
         |> map { peer -> Bool in
             guard case let .user(user) = peer else {
@@ -137,7 +137,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         continue
                     }
                     
-                    if isSecret, case .file = item.content {
+                    if !areCustomEmojiEnabled, case .file = item.content {
                         continue
                     }
                     
@@ -190,7 +190,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 installedCollectionIds.insert(id)
             }
             
-            if !isSecret {
+            if areCustomEmojiEnabled {
                 for entry in view.entries {
                     guard let item = entry.item as? StickerPackItem else {
                         continue
@@ -286,7 +286,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         return emojiItems
     }
     
-    static func inputData(context: AccountContext, interfaceInteraction: ChatPanelInterfaceInteraction, controllerInteraction: ChatControllerInteraction?, chatPeerId: PeerId?) -> Signal<InputData, NoError> {
+    static func inputData(context: AccountContext, interfaceInteraction: ChatPanelInterfaceInteraction, controllerInteraction: ChatControllerInteraction?, chatPeerId: PeerId?, areCustomEmojiEnabled: Bool) -> Signal<InputData, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
@@ -309,7 +309,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             animationRenderer = MultiAnimationRendererImpl()
         //}
         
-        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, isSecret: chatPeerId?.namespace == Namespaces.Peer.SecretChat)
+        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, areCustomEmojiEnabled: areCustomEmojiEnabled)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.PremiumStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
@@ -1935,7 +1935,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
     init(
         context: AccountContext,
         isDark: Bool,
-        isSecret: Bool
+        areCustomEmojiEnabled: Bool
     ) {
         self.context = context
         
@@ -2065,7 +2065,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isSecret: isSecret).start(next: { value in
+        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, areCustomEmojiEnabled: areCustomEmojiEnabled).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })
@@ -2080,7 +2080,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                     gifs: nil,
                     availableGifSearchEmojies: []
                 ),
-                updatedInputData: ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isSecret: isSecret) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
+                updatedInputData: ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, areCustomEmojiEnabled: areCustomEmojiEnabled) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
                     return ChatEntityKeyboardInputNode.InputData(
                         emoji: emojiComponent,
                         stickers: nil,

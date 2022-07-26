@@ -439,7 +439,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         inputMediaPanel: chat.inputMediaPanel.withUpdated(
             panelSeparatorColor: mainBackgroundColor,
             panelIconColor: mainSecondaryTextColor?.withAlphaComponent(0.5),
-            panelHighlightedIconBackgroundColor: inputBackgroundColor,
+            panelHighlightedIconBackgroundColor: mainSecondaryTextColor?.withAlphaComponent(0.5).withMultipliedAlpha(0.25),
             panelHighlightedIconColor: mainSecondaryTextColor?.withAlphaComponent(0.5).mixedWith(chat.inputPanel.primaryTextColor, alpha: 0.35),
             panelContentVibrantOverlayColor: mainSecondaryTextColor?.withAlphaComponent(0.5),
             stickersBackgroundColor: additionalBackgroundColor,
@@ -839,7 +839,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
     let inputMediaPanel = PresentationThemeInputMediaPanel(
         panelSeparatorColor: mainBackgroundColor,
         panelIconColor: mainSecondaryTextColor.withAlphaComponent(0.5),
-        panelHighlightedIconBackgroundColor: inputBackgroundColor,
+        panelHighlightedIconBackgroundColor: mainSecondaryTextColor.withAlphaComponent(0.5).withMultipliedAlpha(0.25),
         panelHighlightedIconColor: mainSecondaryTextColor.withAlphaComponent(0.5).mixedWith(inputPanel.primaryTextColor, alpha: 0.35),
         panelContentVibrantOverlayColor: mainSecondaryTextColor.withAlphaComponent(0.5),
         stickersBackgroundColor: additionalBackgroundColor,

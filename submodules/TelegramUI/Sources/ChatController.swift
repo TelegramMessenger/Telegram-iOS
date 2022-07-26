@@ -5750,7 +5750,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if let peerId = self.chatLocation.peerId {
-            self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage).start(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage in
+            let customEmojiAvailable: Signal<Bool, NoError> = self.context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.SecretChatLayer(id: peerId)
+            )
+            |> map { layer -> Bool in
+                guard let layer = layer else {
+                    return true
+                }
+                
+                return layer >= 144
+            }
+            |> distinctUntilChanged
+            
+            self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages,
+                hasPendingMessages,
+                isTopReplyThreadMessageShown,
+                topPinnedMessage,
+                customEmojiAvailable
+            ).start(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage, customEmojiAvailable in
                 if let strongSelf = self {
                     let (cachedData, messages) = cachedDataAndMessages
                     
@@ -5919,7 +5936,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 
-                    if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage != pinnedMessage || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || voiceMessagesAvailableUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState || strongSelf.presentationInterfaceState.activeGroupCallInfo != activeGroupCallInfo {
+                    if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage != pinnedMessage || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || voiceMessagesAvailableUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState || strongSelf.presentationInterfaceState.activeGroupCallInfo != activeGroupCallInfo || customEmojiAvailable != strongSelf.presentationInterfaceState.customEmojiAvailable {
                         strongSelf.updateChatPresentationInterfaceState(animated: strongSelf.willAppear, interactive: strongSelf.willAppear, { state in
                             return state
                             .updatedPinnedMessageId(pinnedMessageId)
@@ -5929,6 +5946,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             .updatedCallsAvailable(callsAvailable)
                             .updatedCallsPrivate(callsPrivate)
                             .updatedVoiceMessagesAvailable(voiceMessagesAvailable)
+                            .updatedCustomEmojiAvailable(customEmojiAvailable)
                             .updatedTitlePanelContext({ context in
                                 if pinnedMessageId != nil {
                                     if !context.contains(where: {
@@ -10995,7 +11013,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return nil
             }
             
-            return EntityInputView(context: strongSelf.context, isDark: true, isSecret: strongSelf.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
+            let areCustomEmojiEnabled = strongSelf.presentationInterfaceState.customEmojiAvailable
+            
+            return EntityInputView(context: strongSelf.context, isDark: true, areCustomEmojiEnabled: areCustomEmojiEnabled)
         })
         inputPanelNode.interfaceInteraction = interfaceInteraction
         inputPanelNode.effectivePresentationInterfaceState = {
@@ -11235,7 +11255,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return nil
                 }
-                return EntityInputView(context: strongSelf.context, isDark: false, isSecret: strongSelf.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
+                
+                let areCustomEmojiEnabled = strongSelf.presentationInterfaceState.customEmojiAvailable
+                
+                return EntityInputView(context: strongSelf.context, isDark: false, areCustomEmojiEnabled: areCustomEmojiEnabled)
             })
             attachmentController.getSourceRect = { [weak self] in
                 if let strongSelf = self {
