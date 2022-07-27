@@ -25,13 +25,13 @@ public final class HorizontalPeerItem: ListViewItem {
     let context: AccountContext
     public let peer: EnginePeer
     let action: (EnginePeer) -> Void
-    let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?
+    let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     let isPeerSelected: (EnginePeer.Id) -> Bool
     let customWidth: CGFloat?
     let presence: EnginePeer.Presence?
     let unreadBadge: (Int32, Bool)?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, context: AccountContext, peer: EnginePeer, presence: EnginePeer.Presence?, unreadBadge: (Int32, Bool)?, action: @escaping (EnginePeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, customWidth: CGFloat?) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, context: AccountContext, peer: EnginePeer, presence: EnginePeer.Presence?, unreadBadge: (Int32, Bool)?, action: @escaping (EnginePeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, customWidth: CGFloat?) {
         self.theme = theme
         self.strings = strings
         self.mode = mode
@@ -191,9 +191,9 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                     strongSelf.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: false)
                     
                     if let contextAction = item.contextAction {
-                        strongSelf.peerNode.contextAction = { [weak item] node, gesture in
+                        strongSelf.peerNode.contextAction = { [weak item] node, gesture, location in
                             if let item = item {
-                                contextAction(item.peer, node, gesture)
+                                contextAction(item.peer, node, gesture, location)
                             }
                         }
                     } else {

@@ -141,7 +141,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 case .action, .optionalAction:
                     break
                 case let .openContextMenu(tapMessage, selectAll, subFrame):
-                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture)
+                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture, nil)
                 }
             }
         }
@@ -322,7 +322,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 case .options:
                     if let item = self.item {
-                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil, nil)
                     }
             }
         }
@@ -1105,7 +1105,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         if canAddMessageReactions(message: item.message) {
                             item.controllerInteraction.updateMessageReaction(tapMessage, .default)
                         } else {
-                            item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
+                            item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil, nil)
                         }
                     }
                 } else if case .tap = gesture {
@@ -1165,7 +1165,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             
                 return nil
-            case .longTap, .doubleTap:
+            case .longTap, .doubleTap, .secondaryTap:
                 if let item = self.item, self.imageNode.frame.contains(location) {
                     return .openContextMenu(tapMessage: item.message, selectAll: false, subFrame: self.imageNode.frame)
                 }
@@ -1610,7 +1610,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         guard let item = self.item else {
             return
         }
-        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
+        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil, nil)
     }
     
     override func targetReactionView(value: String) -> UIView? {

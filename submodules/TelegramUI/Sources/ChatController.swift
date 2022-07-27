@@ -952,7 +952,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
-        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, anyRecognizer in
+        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, anyRecognizer, location in
             guard let strongSelf = self, strongSelf.isNodeLoaded else {
                 return
             }
@@ -1225,7 +1225,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message, selectAll: selectAll)), items: actionsSignal, recognizer: recognizer, gesture: gesture)
+                    let source: ContextContentSource
+                    if let location = location {
+                        source = .location(ChatMessageContextLocationContentSource(controller: strongSelf, location: node.view.convert(node.bounds, to: nil).origin.offsetBy(dx: location.x, dy: location.y)))
+                    } else {
+                        source = .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message, selectAll: selectAll))
+                    }
+                    
+                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: source, items: actionsSignal, recognizer: recognizer, gesture: gesture)
                     controller.immediateItemsTransitionAnimation = disableTransitionAnimations
                     controller.getOverlayViews = { [weak self] in
                         guard let strongSelf = self else {

@@ -163,7 +163,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
                 self.interaction.groupSelected(groupId)
         }
     }
-    
+        
     static func mergeType(item: ChatListItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool) {
         var first = false
         var last = false
@@ -734,13 +734,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.interaction.activateChatPreview(item, strongSelf.contextContainer, gesture)
+            item.interaction.activateChatPreview(item, strongSelf.contextContainer, gesture, nil)
         }
     }
     
     deinit {
         self.cachedDataDisposable.dispose()
         self.playbackStartDisposable.dispose()
+    }
+    
+    override func secondaryAction(at point: CGPoint) {
+        guard let item = self.item else {
+            return
+        }
+        item.interaction.activateChatPreview(item, self.contextContainer, nil, point)
     }
     
     func setupItem(item: ChatListItem, synchronousLoads: Bool) {
