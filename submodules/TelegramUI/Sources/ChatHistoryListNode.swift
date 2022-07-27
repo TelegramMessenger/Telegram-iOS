@@ -197,7 +197,7 @@ extension ListMessageItemInteraction {
         self.init(openMessage: { message, mode -> Bool in
             return controllerInteraction.openMessage(message, mode)
         }, openMessageContextMenu: { message, bool, node, rect, gesture in
-            controllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture)
+            controllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture, nil)
         }, toggleMessagesSelection: { messageId, selected in
             controllerInteraction.toggleMessagesSelection(messageId, selected)
         }, openUrl: { url, param1, param2, message in

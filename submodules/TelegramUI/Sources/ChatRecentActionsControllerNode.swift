@@ -254,8 +254,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
-        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _ in
-            self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
+        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _, location in
+            self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame, location: location)
         }, openMessageReactionContextMenu: { _, _, _, _ in
         }, updateMessageReaction: { _, _ in
         }, activateMessagePinch: { _ in
@@ -795,7 +795,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }))
     }
     
-    private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect) {
+    private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect, location: CGPoint?) {
         var actions: [ContextMenuAction] = []
         if !message.text.isEmpty {
             actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {

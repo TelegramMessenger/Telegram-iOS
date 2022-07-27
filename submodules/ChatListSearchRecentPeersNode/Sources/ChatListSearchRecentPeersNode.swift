@@ -73,9 +73,9 @@ private struct ChatListSearchRecentPeersEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, mode: HorizontalPeerItemMode, peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool) -> ListViewItem {
-        return HorizontalPeerItem(theme: self.theme, strings: self.strings, mode: mode, context: context, peer: self.peer, presence: self.presence, unreadBadge: self.unreadBadge, action: peerSelected, contextAction: { peer, node, gesture in
-            peerContextAction(peer, node, gesture)
+    func item(context: AccountContext, mode: HorizontalPeerItemMode, peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool) -> ListViewItem {
+        return HorizontalPeerItem(theme: self.theme, strings: self.strings, mode: mode, context: context, peer: self.peer, presence: self.presence, unreadBadge: self.unreadBadge, action: peerSelected, contextAction: { peer, node, gesture, location in
+            peerContextAction(peer, node, gesture, location)
         }, isPeerSelected: isPeerSelected, customWidth: self.itemCustomWidth)
     }
 }
@@ -88,7 +88,7 @@ private struct ChatListSearchRecentNodeTransition {
     let animated: Bool
 }
 
-private func preparedRecentPeersTransition(context: AccountContext, mode: HorizontalPeerItemMode, peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, share: Bool = false, from fromEntries: [ChatListSearchRecentPeersEntry], to toEntries: [ChatListSearchRecentPeersEntry], firstTime: Bool, animated: Bool) -> ChatListSearchRecentNodeTransition {
+private func preparedRecentPeersTransition(context: AccountContext, mode: HorizontalPeerItemMode, peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, share: Bool = false, from fromEntries: [ChatListSearchRecentPeersEntry], to toEntries: [ChatListSearchRecentPeersEntry], firstTime: Bool, animated: Bool) -> ChatListSearchRecentNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -107,7 +107,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private let share: Bool
     
     private let peerSelected: (EnginePeer) -> Void
-    private let peerContextAction: (EnginePeer, ASDisplayNode, ContextGesture?) -> Void
+    private let peerContextAction: (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void
     private let isPeerSelected: (EnginePeer.Id) -> Bool
     
     private let disposable = MetaDisposable()
@@ -122,7 +122,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         return self.ready.get()
     }
     
-    public init(context: AccountContext, theme: PresentationTheme, mode: HorizontalPeerItemMode, strings: PresentationStrings, peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, share: Bool = false) {
+    public init(context: AccountContext, theme: PresentationTheme, mode: HorizontalPeerItemMode, strings: PresentationStrings, peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, share: Bool = false) {
         self.theme = theme
         self.strings = strings
         self.themeAndStringsPromise = Promise((self.theme, self.strings))

@@ -602,7 +602,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 case .action, .optionalAction:
                     break
                 case let .openContextMenu(tapMessage, selectAll, subFrame):
-                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture)
+                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture, nil)
                 }
             }
         }
@@ -942,6 +942,20 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     recognizer.cancel()
                 case .openContextMenu:
                     break
+                }
+            }
+        }
+        recognizer.secondaryTap = { [weak self] point, recognizer in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+
+            if let action = strongSelf.gestureRecognized(gesture: .secondaryTap, location: point, recognizer: recognizer) {
+                switch action {
+                case .action, .optionalAction:
+                    break
+                case let .openContextMenu(tapMessage, selectAll, subFrame):
+                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, nil, point)
                 }
             }
         }
@@ -3051,7 +3065,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                 }
                             }
                         }
-                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, subFrame, nil)
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, subFrame, nil, nil)
                     }
             }
         }
@@ -3128,7 +3142,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         if canAddMessageReactions(message: tapMessage) {
                             item.controllerInteraction.updateMessageReaction(tapMessage, .default)
                         } else {
-                            item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
+                            item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil, nil)
                         }
                     }
                 } else if case .tap = gesture {
@@ -3365,7 +3379,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 return nil
-            case .longTap, .doubleTap:
+            case .longTap, .doubleTap, .secondaryTap:
                 if let item = self.item, self.backgroundNode.frame.contains(location) {
                     let message = item.message
                     
@@ -3957,7 +3971,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             return
         }
         let subFrame = self.backgroundNode.frame
-        item.controllerInteraction.openMessageContextMenu(item.message, true, self, subFrame, nil)
+        item.controllerInteraction.openMessageContextMenu(item.message, true, self, subFrame, nil, nil)
     }
     
     override func targetReactionView(value: String) -> UIView? {

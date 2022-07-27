@@ -127,7 +127,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                     break
                 case let .openContextMenu(tapMessage, selectAll, subFrame):
                     strongSelf.recognizer?.cancel()
-                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture)
+                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture, nil)
                     if (strongSelf.appliedCurrentlyPlaying ?? false) && strongSelf.interactiveVideoNode.isPlaying {
                         strongSelf.wasPlaying = true
                         strongSelf.interactiveVideoNode.pause()
@@ -241,7 +241,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                     }
                 case .options:
                     if let item = self.item {
-                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.interactiveVideoNode.frame, nil)
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.interactiveVideoNode.frame, nil, nil)
                     }
             }
         }
@@ -932,7 +932,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 }
             }
             return nil
-        case .longTap, .doubleTap:
+        case .longTap, .doubleTap, .secondaryTap:
             if let item = self.item, self.interactiveVideoNode.frame.contains(location) {
                 return .openContextMenu(tapMessage: item.message, selectAll: false, subFrame: self.interactiveVideoNode.frame)
             }
@@ -1308,7 +1308,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         guard let item = self.item else {
             return
         }
-        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.interactiveVideoNode.frame, nil)
+        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.interactiveVideoNode.frame, nil, nil)
     }
     
     private var absoluteRect: (CGRect, CGSize)?

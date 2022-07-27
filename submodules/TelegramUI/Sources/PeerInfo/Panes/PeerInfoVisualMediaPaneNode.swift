@@ -1690,7 +1690,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 return chatControllerInteraction.openMessage(message, mode)
             },
             openMessageContextMenu: { message, bool, node, rect, gesture in
-                chatControllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture)
+                chatControllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture, nil)
             },
             toggleMessagesSelection: { messageId, selected in
                 chatControllerInteraction.toggleMessagesSelection(messageId, selected)

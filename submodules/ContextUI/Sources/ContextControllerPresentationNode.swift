@@ -28,7 +28,7 @@ protocol ContextControllerPresentationNode: ASDisplayNode {
     func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void)
     func cancelReactionAnimation()
     
-    func highlightGestureMoved(location: CGPoint)
+    func highlightGestureMoved(location: CGPoint, hover: Bool)
     func highlightGestureFinished(performAction: Bool)
     
     func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition)

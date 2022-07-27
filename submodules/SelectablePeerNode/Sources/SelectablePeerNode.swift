@@ -74,7 +74,7 @@ public final class SelectablePeerNode: ASDisplayNode {
     private let textNode: ASTextNode
 
     public var toggleSelection: (() -> Void)?
-    public var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? {
+    public var contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? {
         didSet {
             self.contextContainer.isGestureEnabled = self.contextAction != nil
         }
@@ -133,7 +133,7 @@ public final class SelectablePeerNode: ASDisplayNode {
                 gesture.cancel()
                 return
             }
-            contextAction(strongSelf.contextContainer, gesture)
+            contextAction(strongSelf.contextContainer, gesture, nil)
         }
     }
     

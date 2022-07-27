@@ -1885,6 +1885,8 @@ plist_fragment(
     </array>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
     )

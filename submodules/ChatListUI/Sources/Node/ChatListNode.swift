@@ -72,7 +72,7 @@ public final class ChatListNodeInteraction {
     let togglePeerMarkedUnread: (EnginePeer.Id, Bool) -> Void
     let toggleArchivedFolderHiddenByDefault: () -> Void
     let hidePsa: (EnginePeer.Id) -> Void
-    let activateChatPreview: (ChatListItem, ASDisplayNode, ContextGesture?) -> Void
+    let activateChatPreview: (ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void
     let present: (ViewController) -> Void
     
     public var searchTextHighightState: String?
@@ -81,7 +81,7 @@ public final class ChatListNodeInteraction {
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     
-    public init(context: AccountContext, activateSearch: @escaping () -> Void, peerSelected: @escaping (EnginePeer, EnginePeer?, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (EnginePeer) -> Void, togglePeerSelected: @escaping (EnginePeer) -> Void, togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (EnginePeer, EngineMessage, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (EngineChatList.Group) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, setItemPinned: @escaping (EngineChatList.PinnedItem.Id, Bool) -> Void, setPeerMuted: @escaping (EnginePeer.Id, Bool) -> Void, deletePeer: @escaping (EnginePeer.Id, Bool) -> Void, updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void, togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (EnginePeer.Id) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, activateSearch: @escaping () -> Void, peerSelected: @escaping (EnginePeer, EnginePeer?, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (EnginePeer) -> Void, togglePeerSelected: @escaping (EnginePeer) -> Void, togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (EnginePeer, EngineMessage, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (EngineChatList.Group) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, setItemPinned: @escaping (EngineChatList.PinnedItem.Id, Bool) -> Void, setPeerMuted: @escaping (EnginePeer.Id, Bool) -> Void, deletePeer: @escaping (EnginePeer.Id, Bool) -> Void, updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void, togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (EnginePeer.Id) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void, present: @escaping (ViewController) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.disabledPeerSelected = disabledPeerSelected
@@ -631,7 +631,7 @@ public final class ChatListNode: ListView {
     public var push: ((ViewController) -> Void)?
     public var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     public var hidePsa: ((EnginePeer.Id) -> Void)?
-    public var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
+    public var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     
     private var theme: PresentationTheme
     
@@ -917,12 +917,12 @@ public final class ChatListNode: ListView {
             self?.toggleArchivedFolderHiddenByDefault?()
         }, hidePsa: { [weak self] id in
             self?.hidePsa?(id)
-        }, activateChatPreview: { [weak self] item, node, gesture in
+        }, activateChatPreview: { [weak self] item, node, gesture, location in
             guard let strongSelf = self else {
                 return
             }
             if let activateChatPreview = strongSelf.activateChatPreview {
-                activateChatPreview(item, node, gesture)
+                activateChatPreview(item, node, gesture, location)
             } else {
                 gesture?.cancel()
             }

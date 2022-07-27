@@ -1119,7 +1119,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self?.toolbarActionSelected(action: action)
         }
         
-        self.chatListDisplayNode.containerNode.activateChatPreview = { [weak self] item, node, gesture in
+        self.chatListDisplayNode.containerNode.activateChatPreview = { [weak self] item, node, gesture, location in
             guard let strongSelf = self else {
                 gesture?.cancel()
                 return
@@ -1141,14 +1141,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId._asGroup(), chatListController: strongSelf) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             case let .peer(_, peer, _, _, _, _, _, _, _, promoInfo, _, _, _):
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
-                chatController.canReadHistory.set(false)
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                let source: ContextContentSource
+                if let location = location {
+                    source = .location(ChatListContextLocationContentSource(controller: strongSelf, location: location))
+                } else {
+                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
+                    chatController.canReadHistory.set(false)
+                    source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
+                }
+                
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: source, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             }
         }
         
-        self.chatListDisplayNode.peerContextAction = { [weak self] peer, source, node, gesture in
+        self.chatListDisplayNode.peerContextAction = { [weak self] peer, source, node, gesture, location in
             guard let strongSelf = self else {
                 gesture?.cancel()
                 return
@@ -3413,5 +3420,19 @@ private final class ChatListHeaderBarContextExtractedContentSource: ContextExtra
     
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class ChatListContextLocationContentSource: ContextLocationContentSource {    
+    private let controller: ViewController
+    private let location: CGPoint
+    
+    init(controller: ViewController, location: CGPoint) {
+        self.controller = controller
+        self.location = location
+    }
+    
+    func transitionInfo() -> ContextControllerLocationViewInfo? {
+        return ContextControllerLocationViewInfo(location: self.location, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

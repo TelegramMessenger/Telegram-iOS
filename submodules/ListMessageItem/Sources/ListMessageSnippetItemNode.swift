@@ -826,7 +826,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                     item.interaction.openUrl(url, false, true, nil)
                                 }
                             }
-                        case .hold, .doubleTap:
+                        case .hold, .doubleTap, .secondaryTap:
                             break
                     }
                 }

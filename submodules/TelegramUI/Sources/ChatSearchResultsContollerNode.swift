@@ -225,7 +225,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, togglePeerMarkedUnread: { _, _ in
         }, toggleArchivedFolderHiddenByDefault: {
         }, hidePsa: { _ in
-        }, activateChatPreview: { [weak self] item, node, gesture in
+        }, activateChatPreview: { [weak self] item, node, gesture, _ in
             guard let strongSelf = self else {
                 gesture?.cancel()
                 return

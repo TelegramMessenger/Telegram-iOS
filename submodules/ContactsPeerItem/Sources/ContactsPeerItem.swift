@@ -148,7 +148,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)?
     let deletePeer: ((EnginePeer.Id) -> Void)?
     let itemHighlighting: ContactItemHighlighting?
-    let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    let contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     let arrowAction: (() -> Void)?
     
     public let selectable: Bool
@@ -157,7 +157,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     
     public let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, selectionPosition: ContactsPeerItemSelectionPosition = .right, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], additionalActions: [ContactsPeerItemAction] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: SortIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)? = nil, deletePeer: ((EnginePeer.Id) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, arrowAction: (() -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, selectionPosition: ContactsPeerItemSelectionPosition = .right, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], additionalActions: [ContactsPeerItemAction] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: SortIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)? = nil, deletePeer: ((EnginePeer.Id) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, arrowAction: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.style = style
         self.sectionId = sectionId
@@ -427,7 +427,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 gesture.cancel()
                 return
             }
-            contextAction(strongSelf.containerNode, gesture)
+            contextAction(strongSelf.containerNode, gesture, nil)
         }
         
         self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
@@ -451,6 +451,13 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 }
             })
         }
+    }
+    
+    public override func secondaryAction(at point: CGPoint) {
+        guard let item = self.item, let contextAction = item.contextAction else {
+            return
+        }
+        contextAction(self.containerNode, nil, point)
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {

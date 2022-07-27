@@ -1878,7 +1878,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 self?.openPeer(peerId: id, navigation: navigation)
             }
         }, openPeerMention: { _ in
-        }, openMessageContextMenu: { [weak self] message, _, node, frame, anyRecognizer in
+        }, openMessageContextMenu: { [weak self] message, _, node, frame, anyRecognizer, _ in
             guard let strongSelf = self, let node = node as? ContextExtractedContentContainingNode else {
                 return
             }
