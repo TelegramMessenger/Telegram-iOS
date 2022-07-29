@@ -302,7 +302,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         var slotIndex: Int
         private let preferredRowAlignment: Int
         
-        init(slotIndex: Int, preferredRowAlignment: Int, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable, stateUpdated: @escaping () -> Void) {
+        init(slotIndex: Int, preferredRowAlignment: Int, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable, stateUpdated: @escaping () -> Void) {
             self.slotIndex = slotIndex
             self.preferredRowAlignment = preferredRowAlignment
             self.cache = cache
@@ -517,7 +517,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             return nullAction
         }
         
-        func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable? {
+        func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable? {
             if size != self.cellSize {
                 return nil
             }
@@ -798,7 +798,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         self.isPlaying = isPlaying
     }
     
-    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable {
+    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
         assert(Thread.isMainThread)
         
         let alignedSize = CGSize(width: CGFloat(alignUp(size: Int(size.width), align: 16)), height: CGFloat(alignUp(size: Int(size.height), align: 16)))
@@ -829,8 +829,8 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         return false
     }
     
-    public func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable {
-        completion(false)
+    public func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (Bool, Bool) -> Void) -> Disposable {
+        completion(false, true)
         
         return EmptyDisposable
     }

@@ -6,9 +6,9 @@ import AnimationCache
 import Accelerate
 
 public protocol MultiAnimationRenderer: AnyObject {
-    func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable
+    func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable
     func loadFirstFrameSynchronously(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize) -> Bool
-    func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable
+    func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (Bool, Bool) -> Void) -> Disposable
 }
 
 private var nextRenderTargetId: Int64 = 1
@@ -240,7 +240,7 @@ private final class ItemAnimationContext {
     
     let targets = Bag<Weak<MultiAnimationRenderTarget>>()
     
-    init(cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable, stateUpdated: @escaping () -> Void) {
+    init(cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable, stateUpdated: @escaping () -> Void) {
         self.cache = cache
         self.stateUpdated = stateUpdated
         
@@ -396,7 +396,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             self.stateUpdated = stateUpdated
         }
         
-        func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable {
+        func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
             let itemKey = ItemKey(id: itemId, width: Int(size.width), height: Int(size.height))
             let itemContext: ItemAnimationContext
             if let current = self.itemContexts[itemKey] {
@@ -469,11 +469,14 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             }
         }
         
-        func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable {
-            return cache.getFirstFrame(queue: self.firstFrameQueue, sourceId: itemId, size: size, completion: { [weak target] item in
-                guard let item = item else {
+        func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (Bool, Bool) -> Void) -> Disposable {
+            var hadIntermediateUpdate = false
+            return cache.getFirstFrame(queue: self.firstFrameQueue, sourceId: itemId, size: size, fetch: fetch, completion: { [weak target] item in
+                guard let item = item.item else {
+                    let isFinal = item.isFinal
+                    hadIntermediateUpdate = true
                     Queue.mainQueue().async {
-                        completion(false)
+                        completion(false, isFinal)
                     }
                     return
                 }
@@ -487,19 +490,25 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
                 
                 Queue.mainQueue().async {
                     guard let target = target else {
-                        completion(false)
+                        completion(false, true)
                         return
                     }
                     if let loadedFrame = loadedFrame {
-                        target.contents = loadedFrame.image.cgImage
+                        if let cgImage = loadedFrame.image.cgImage {
+                            if hadIntermediateUpdate {
+                                target.transitionToContents(cgImage)
+                            } else {
+                                target.contents = cgImage
+                            }
+                        }
                         
                         if let blurredRepresentationTarget = target.blurredRepresentationTarget {
                             blurredRepresentationTarget.contents = loadedFrame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
                         }
                         
-                        completion(true)
+                        completion(true, true)
                     } else {
-                        completion(false)
+                        completion(false, true)
                     }
                 }
             })
@@ -581,7 +590,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
     }
     
-    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (CGSize, AnimationCacheItemWriter) -> Disposable) -> Disposable {
+    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
         let groupContext: GroupContext
         if let current = self.groupContext {
             groupContext = current
@@ -619,7 +628,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         return groupContext.loadFirstFrameSynchronously(target: target, cache: cache, itemId: itemId, size: size)
     }
     
-    public func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, completion: @escaping (Bool) -> Void) -> Disposable {
+    public func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (Bool, Bool) -> Void) -> Disposable {
         let groupContext: GroupContext
         if let current = self.groupContext {
             groupContext = current
@@ -633,7 +642,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             self.groupContext = groupContext
         }
         
-        return groupContext.loadFirstFrame(target: target, cache: cache, itemId: itemId, size: size, completion: completion)
+        return groupContext.loadFirstFrame(target: target, cache: cache, itemId: itemId, size: size, fetch: fetch, completion: completion)
     }
     
     private func updateIsPlaying() {

@@ -16,6 +16,37 @@ import MultiAnimationRenderer
 import ShimmerEffect
 import TextFormat
 
+public func animationCacheFetchFile(context: AccountContext, file: TelegramMediaFile, keyframeOnly: Bool) -> (AnimationCacheFetchOptions) -> Disposable {
+    return { options in
+        let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
+        
+        let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
+            guard let result = result else {
+                return
+            }
+            
+            if file.isVideoEmoji || file.isVideoSticker {
+                cacheVideoAnimation(path: result, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, firstFrameOnly: options.firstFrameOnly)
+            } else if file.isAnimatedSticker {
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
+                    options.writer.finish()
+                    return
+                }
+                cacheLottieAnimation(data: data, width: Int(options.size.width), height: Int(options.size.height), keyframeOnly: keyframeOnly, writer: options.writer, firstFrameOnly: options.firstFrameOnly)
+            } else {
+                cacheStillSticker(path: result, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer)
+            }
+        })
+        
+        let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: stickerPackFileReference(file), resource: file.resource).start()
+        
+        return ActionDisposable {
+            dataDisposable.dispose()
+            fetchDisposable.dispose()
+        }
+    }
+}
+
 public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     public static let queue = Queue()
     
@@ -134,8 +165,12 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         } else {
             let pointSize = self.pointSize
             let placeholderColor = self.placeholderColor
-            self.loadDisposable = self.renderer.loadFirstFrame(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, completion: { [weak self] result in
+            self.loadDisposable = self.renderer.loadFirstFrame(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: self.context, file: file, keyframeOnly: true), completion: { [weak self] result, isFinal in
                 if !result {
+                    if !isFinal {
+                        return
+                    }
+                    
                     MultiAnimationRendererImpl.firstFrameQueue.async {
                         let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: pointSize, scale: min(2.0, UIScreenScale), imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor)
                         
@@ -167,40 +202,17 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         
         let context = self.context
         if file.isAnimatedSticker || file.isVideoEmoji {
-            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: { size, writer in
-                let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
-                
-                let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
-                    guard let result = result else {
-                        return
-                    }
-                    
-                    if file.isVideoEmoji {
-                        cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
-                    } else {
-                        guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
-                            writer.finish()
-                            return
-                        }
-                        cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
-                    }
-                })
-                
-                let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .customEmoji(media: file), resource: file.resource).start()
-                
-                return ActionDisposable {
-                    dataDisposable.dispose()
-                    fetchDisposable.dispose()
-                }
-            })
+            let keyframeOnly = self.pixelSize.width >= 120.0
+            
+            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: context, file: file, keyframeOnly: keyframeOnly))
         } else {
-            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: { size, writer in
+            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: { options in
                 let dataDisposable = context.account.postbox.mediaBox.resourceData(file.resource).start(next: { result in
                     guard result.complete else {
                         return
                     }
                     
-                    cacheStillSticker(path: result.path, width: Int(size.width), height: Int(size.height), writer: writer)
+                    cacheStillSticker(path: result.path, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer)
                 })
                 
                 let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .customEmoji(media: file), resource: file.resource).start()

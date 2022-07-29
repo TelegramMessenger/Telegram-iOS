@@ -910,7 +910,7 @@ private func decryptedEntities144(_ entities: [MessageTextEntity]?) -> [SecretAp
             case .BankCard:
                 break
             case .Spoiler:
-                break
+                result.append(.messageEntitySpoiler(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count)))
             case let .CustomEmoji(_, fileId):
                 result.append(.messageEntityCustomEmoji(offset: Int32(entity.range.lowerBound), length: Int32(entity.range.count), documentId: fileId))
             case .Custom:

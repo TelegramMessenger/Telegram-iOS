@@ -18,6 +18,7 @@ struct DctAuxiliaryData *createDctAuxiliaryData();
 void freeDctAuxiliaryData(struct DctAuxiliaryData *data);
 
 void dct_jpeg_idct_ifast(struct DctAuxiliaryData *auxiliaryData, void *dct_table, JCOEFPTR coef_block, JSAMPROW output_buf);
+void dct_jpeg_idct_ifast_normalized(struct DctAuxiliaryData *auxiliaryData, void *dct_table, JCOEFPTR coef_block, JCOEFPTR output_buf);
 void dct_jpeg_fdct_ifast(DCTELEM *data);
 
 #ifdef __cplusplus

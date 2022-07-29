@@ -57,10 +57,8 @@ extension StickerPackCollectionInfo {
                     thumbnailRepresentation = representations.first
                     immediateThumbnailData = data
                 }
-            
-                let _ = thumbDocumentId
                 
-                self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, thumbnail: thumbnailRepresentation, immediateThumbnailData: immediateThumbnailData, hash: nHash, count: count)
+                self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, thumbnail: thumbnailRepresentation, thumbnailFileId: thumbDocumentId, immediateThumbnailData: immediateThumbnailData, hash: nHash, count: count)
         }
     }
 }

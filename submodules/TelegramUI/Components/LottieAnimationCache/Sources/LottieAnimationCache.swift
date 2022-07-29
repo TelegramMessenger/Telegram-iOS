@@ -6,7 +6,7 @@ import RLottieBinding
 import GZip
 import WebPBinding
 
-public func cacheLottieAnimation(data: Data, width: Int, height: Int, writer: AnimationCacheItemWriter) {
+public func cacheLottieAnimation(data: Data, width: Int, height: Int, keyframeOnly: Bool, writer: AnimationCacheItemWriter, firstFrameOnly: Bool) {
     writer.queue.async {
         let decompressedData = TGGUnzipData(data, 1 * 1024 * 1024) ?? data
         guard let animation = LottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
@@ -34,7 +34,11 @@ public func cacheLottieAnimation(data: Data, width: Int, height: Int, writer: An
             writer.add(with: { surface in
                 animation.renderFrame(with: i, into: surface.argb, width: Int32(surface.width), height: Int32(surface.height), bytesPerRow: Int32(surface.bytesPerRow))
                 return frameDuration
-            }, proposedWidth: width, proposedHeight: height)
+            }, proposedWidth: width, proposedHeight: height, insertKeyframe: i == 0 || keyframeOnly)
+            
+            if firstFrameOnly {
+                break
+            }
         }
         
         writer.finish()
@@ -53,7 +57,7 @@ public func cacheStillSticker(path: String, width: Int, height: Int, writer: Ani
                 }
                 memcpy(surface.argb, context.bytes, surface.height * surface.bytesPerRow)
                 return 1.0
-            }, proposedWidth: width, proposedHeight: height)
+            }, proposedWidth: width, proposedHeight: height, insertKeyframe: true)
         }
         
         writer.finish()

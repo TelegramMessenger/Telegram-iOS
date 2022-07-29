@@ -16,4 +16,19 @@ public final class Lock {
         f()
         pthread_mutex_unlock(&self.mutex)
     }
+    
+    public func throwingLocked(_ f: () throws -> Void) throws {
+        var error: Error?
+        pthread_mutex_lock(&self.mutex)
+        do {
+            try f()
+        } catch let e {
+            error = e
+        }
+        pthread_mutex_unlock(&self.mutex)
+        
+        if let error = error {
+            throw(error)
+        }
+    }
 }
