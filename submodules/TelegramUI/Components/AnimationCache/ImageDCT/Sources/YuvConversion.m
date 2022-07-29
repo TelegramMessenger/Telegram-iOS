@@ -53,7 +53,7 @@ void splitRGBAIntoYUVAPlanes(uint8_t const *argb, uint8_t *outY, uint8_t *outU, 
     vImageExtractChannel_ARGB8888(&src, &destA, 3, kvImageDoNotTile);
 }
 
-void combineYUVAPlanesIntoARBB(uint8_t *argb, uint8_t const *inY, uint8_t const *inU, uint8_t const *inV, uint8_t const *inA, int width, int height, int bytesPerRow) {
+void combineYUVAPlanesIntoARGB(uint8_t *argb, uint8_t const *inY, uint8_t const *inU, uint8_t const *inV, uint8_t const *inA, int width, int height, int bytesPerRow) {
     static vImage_YpCbCrToARGB info;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -94,8 +94,11 @@ void combineYUVAPlanesIntoARBB(uint8_t *argb, uint8_t const *inY, uint8_t const 
     srcA.rowBytes = width;
     
     error = vImageConvert_420Yp8_Cb8_Cr8ToARGB8888(&srcYp, &srcCb, &srcCr, &destArgb, &info, permuteMap, 255, kvImageDoNotTile);
-    
     error = vImageOverwriteChannels_ARGB8888(&srcA, &destArgb, &destArgb, 1 << 0, kvImageDoNotTile);
+    
+    //error = vImageOverwriteChannels_ARGB8888(&srcYp, &destArgb, &destArgb, 1 << 1, kvImageDoNotTile);
+    //error = vImageOverwriteChannels_ARGB8888(&srcYp, &destArgb, &destArgb, 1 << 2, kvImageDoNotTile);
+    //error = vImageOverwriteChannels_ARGB8888(&srcYp, &destArgb, &destArgb, 1 << 3, kvImageDoNotTile);
 }
 
 void scaleImagePlane(uint8_t *outPlane, int outWidth, int outHeight, int outBytesPerRow, uint8_t const *inPlane, int inWidth, int inHeight, int inBytesPerRow) {
@@ -112,4 +115,43 @@ void scaleImagePlane(uint8_t *outPlane, int outWidth, int outHeight, int outByte
     dst.rowBytes = outBytesPerRow;
     
     vImageScale_Planar8(&src, &dst, nil, kvImageDoNotTile);
+}
+
+void subtractArraysInt16(int16_t const *a, int16_t const *b, uint16_t *dest, int length) {
+    for (int i = 0; i < length; i += 8) {
+        int16x8_t lhs = vld1q_s16((int16_t *)&a[i]);
+        int16x8_t rhs = vld1q_s16((int16_t *)&b[i]);
+        int16x8_t result = vsubq_s16(lhs, rhs);
+        vst1q_s16((int16_t *)&dest[i], result);
+    }
+    if (length % 8 != 0) {
+        for (int i = length - (length % 8); i < length; i++) {
+            dest[i] = a[i] - b[i];
+        }
+    }
+}
+
+void subtractArraysUInt8Int16(uint8_t const *a, int16_t const *b, uint8_t *dest, int length) {
+    for (int i = 0; i < length; i += 8) {
+        uint8x8_t lhs8 = vld1_u8(&a[i]);
+        int16x8_t lhs = vreinterpretq_s16_u16(vmovl_u8(lhs8));
+        
+        int16x8_t rhs = vld1q_s16((int16_t *)&b[i]);
+        int16x8_t result = vsubq_s16(lhs, rhs);
+        
+        uint8x8_t result8 = vqmovun_s16(result);
+        vst1_u8(&dest[i], result8);
+    }
+    if (length % 8 != 0) {
+        for (int i = length - (length % 8); i < length; i++) {
+            int16_t result = ((int16_t)a[i]) - b[i];
+            if (result < 0) {
+                result = 0;
+            }
+            if (result > 255) {
+                result = 255;
+            }
+            dest[i] = (int8_t)result;
+        }
+    }
 }

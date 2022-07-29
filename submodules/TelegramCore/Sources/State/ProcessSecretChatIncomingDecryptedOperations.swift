@@ -1224,6 +1224,8 @@ private func parseEntities(_ entities: [SecretApi144.MessageEntity]) -> TextEnti
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Underline))
         case let .messageEntityBlockquote(offset, length):
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BlockQuote))
+        case let .messageEntitySpoiler(offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Spoiler))
         case let .messageEntityCustomEmoji(offset, length, documentId):
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .CustomEmoji(stickerPack: nil, fileId: documentId)))
         case .messageEntityUnknown:

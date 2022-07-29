@@ -115,6 +115,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 var isPremiumLocked: Bool
                 var isFeatured: Bool
                 var isExpandable: Bool
+                var headerItem: EntityKeyboardGroupHeaderItem?
                 var items: [EmojiPagerContentComponent.Item]
             }
             var itemGroups: [ItemGroup] = []
@@ -162,7 +163,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.Stickers_FrequentlyUsed, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.Stickers_FrequentlyUsed, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
                     }
                 }
             }
@@ -180,7 +181,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
                     }
                 }
             }
@@ -213,13 +214,28 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroupIndexById[groupId] = itemGroups.count
                         
                         var title = ""
+                        var headerItem: EntityKeyboardGroupHeaderItem?
                         inner: for (id, info, _) in view.collectionInfos {
                             if id == entry.index.collectionId, let info = info as? StickerPackCollectionInfo {
                                 title = info.title
+                                
+                                if let thumbnail = info.thumbnail {
+                                    let type: EntityKeyboardGroupHeaderItem.ThumbnailType
+                                    if item.file.isAnimatedSticker {
+                                        type = .lottie
+                                    } else if item.file.isVideoEmoji || item.file.isVideoSticker {
+                                        type = .video
+                                    } else {
+                                        type = .still
+                                    }
+                                    
+                                    headerItem = .packThumbnail(resource: MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource), immediateThumbnailData: info.immediateThumbnailData, dimensions: thumbnail.dimensions.cgSize, type: type)
+                                }
+                                
                                 break inner
                             }
                         }
-                        itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: false, isExpandable: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: false, isExpandable: false, headerItem: headerItem, items: [resultItem]))
                     }
                 }
                 
@@ -246,7 +262,23 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 itemGroups[groupIndex].items.append(resultItem)
                             } else {
                                 itemGroupIndexById[groupId] = itemGroups.count
-                                itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, isExpandable: true, items: [resultItem]))
+                                
+                                var headerItem: EntityKeyboardGroupHeaderItem?
+                                
+                                if let thumbnail = featuredEmojiPack.info.thumbnail {
+                                    let type: EntityKeyboardGroupHeaderItem.ThumbnailType
+                                    if item.file.isAnimatedSticker {
+                                        type = .lottie
+                                    } else if item.file.isVideoEmoji || item.file.isVideoSticker {
+                                        type = .video
+                                    } else {
+                                        type = .still
+                                    }
+                                    
+                                    headerItem = .packThumbnail(resource: MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: featuredEmojiPack.info.id.id, accessHash: featuredEmojiPack.info.accessHash), resource: thumbnail.resource), immediateThumbnailData: featuredEmojiPack.info.immediateThumbnailData, dimensions: thumbnail.dimensions.cgSize, type: type)
+                                }
+                                
+                                itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, isExpandable: true, headerItem: headerItem, items: [resultItem]))
                             }
                         }
                     }
@@ -277,6 +309,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         hasClear: hasClear,
                         isExpandable: group.isExpandable,
                         displayPremiumBadges: false,
+                        headerItem: group.headerItem,
                         items: group.items
                     )
                 },
@@ -312,7 +345,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, areCustomEmojiEnabled: areCustomEmojiEnabled)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
-        let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.PremiumStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
+        let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
         
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
@@ -333,6 +366,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 var isPremiumLocked: Bool
                 var isFeatured: Bool
                 var displayPremiumBadges: Bool
+                var headerItem: EntityKeyboardGroupHeaderItem?
                 var items: [EmojiPagerContentComponent.Item]
             }
             var itemGroups: [ItemGroup] = []
@@ -340,15 +374,12 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             
             var savedStickers: OrderedItemListView?
             var recentStickers: OrderedItemListView?
-            var premiumStickers: OrderedItemListView?
             var cloudPremiumStickers: OrderedItemListView?
             for orderedView in view.orderedItemListsViews {
                 if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
                     recentStickers = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudSavedStickers {
                     savedStickers = orderedView
-                } else if orderedView.collectionId == Namespaces.OrderedItemList.PremiumStickers {
-                    premiumStickers = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudPremiumStickers {
                     cloudPremiumStickers = orderedView
                 }
@@ -393,7 +424,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         let trendingIsPremium = featuredStickersConfiguration?.isPremium ?? false
                         let title = trendingIsPremium ? strings.Stickers_TrendingPremiumStickers : strings.StickerPacksSettings_FeaturedPacks
                         
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, headerItem: nil, items: [resultItem]))
                     }
                 }
             }
@@ -418,7 +449,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleFavoriteStickers, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleFavoriteStickers, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, headerItem: nil, items: [resultItem]))
                     }
                 }
             }
@@ -443,41 +474,45 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.Stickers_FrequentlyUsed, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.Stickers_FrequentlyUsed, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, headerItem: nil, items: [resultItem]))
                     }
                 }
             }
             
-            var hasPremiumStickers = false
+            var premiumStickers: [StickerPackItem] = []
             if hasPremium {
-                if let premiumStickers = premiumStickers, !premiumStickers.items.isEmpty {
-                    hasPremiumStickers = true
-                } else if let cloudPremiumStickers = cloudPremiumStickers, !cloudPremiumStickers.items.isEmpty {
-                    hasPremiumStickers = true
-                }
-            }
-            
-            if hasPremiumStickers {
-                var premiumStickers = premiumStickers?.items ?? []
-                if let cloudPremiumStickers = cloudPremiumStickers {
-                    premiumStickers.append(contentsOf: cloudPremiumStickers.items)
+                for entry in view.entries {
+                    guard let item = entry.item as? StickerPackItem else {
+                        continue
+                    }
+                    
+                    if item.file.isPremiumSticker {
+                        premiumStickers.append(item)
+                    }
                 }
                 
+                if let cloudPremiumStickers = cloudPremiumStickers, !cloudPremiumStickers.items.isEmpty {
+                    premiumStickers.append(contentsOf: cloudPremiumStickers.items.compactMap { item -> StickerPackItem? in guard let item = item.contents.get(RecentMediaItem.self) else {
+                            return nil
+                        }
+                        return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: item.media, indexKeys: [])
+                    })
+                }
+            }
+            
+            if !premiumStickers.isEmpty {
                 var processedIds = Set<MediaId>()
                 for item in premiumStickers {
-                    guard let item = item.contents.get(RecentMediaItem.self) else {
+                    if isPremiumDisabled && item.file.isPremiumSticker {
                         continue
                     }
-                    if isPremiumDisabled && item.media.isPremiumSticker {
+                    if processedIds.contains(item.file.fileId) {
                         continue
                     }
-                    if processedIds.contains(item.media.fileId) {
-                        continue
-                    }
-                    processedIds.insert(item.media.fileId)
+                    processedIds.insert(item.file.fileId)
                     
                     let resultItem = EmojiPagerContentComponent.Item(
-                        file: item.media,
+                        file: item.file,
                         staticEmoji: nil,
                         subgroupId: nil
                     )
@@ -487,7 +522,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitlePremiumStickers, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitlePremiumStickers, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, headerItem: nil, items: [resultItem]))
                     }
                 }
             }
@@ -508,13 +543,28 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     itemGroupIndexById[groupId] = itemGroups.count
                     
                     var title = ""
+                    var headerItem: EntityKeyboardGroupHeaderItem?
                     inner: for (id, info, _) in view.collectionInfos {
                         if id == groupId, let info = info as? StickerPackCollectionInfo {
                             title = info.title
+                            
+                            if let thumbnail = info.thumbnail {
+                                let type: EntityKeyboardGroupHeaderItem.ThumbnailType
+                                if item.file.isAnimatedSticker {
+                                    type = .lottie
+                                } else if item.file.isVideoEmoji || item.file.isVideoSticker {
+                                    type = .video
+                                } else {
+                                    type = .still
+                                }
+                                
+                                headerItem = .packThumbnail(resource: MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource), immediateThumbnailData: info.immediateThumbnailData, dimensions: thumbnail.dimensions.cgSize, type: type)
+                            }
+                            
                             break inner
                         }
                     }
-                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: true, items: [resultItem]))
+                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: true, headerItem: headerItem, items: [resultItem]))
                 }
             }
             
@@ -542,8 +592,22 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         itemGroupIndexById[groupId] = itemGroups.count
                         
                         let subtitle: String = strings.StickerPack_StickerCount(Int32(featuredStickerPack.info.count))
+                        var headerItem: EntityKeyboardGroupHeaderItem?
                         
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: featuredStickerPack.info.title, subtitle: subtitle, actionButtonTitle: strings.Stickers_Install, isPremiumLocked: isPremiumLocked, isFeatured: true, displayPremiumBadges: false, items: [resultItem]))
+                        if let thumbnail = featuredStickerPack.info.thumbnail {
+                            let type: EntityKeyboardGroupHeaderItem.ThumbnailType
+                            if item.file.isAnimatedSticker {
+                                type = .lottie
+                            } else if item.file.isVideoEmoji || item.file.isVideoSticker {
+                                type = .video
+                            } else {
+                                type = .still
+                            }
+                            
+                            headerItem = .packThumbnail(resource: MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), resource: thumbnail.resource), immediateThumbnailData: featuredStickerPack.info.immediateThumbnailData, dimensions: thumbnail.dimensions.cgSize, type: type)
+                        }
+                        
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: featuredStickerPack.info.title, subtitle: subtitle, actionButtonTitle: strings.Stickers_Install, isPremiumLocked: isPremiumLocked, isFeatured: true, displayPremiumBadges: false, headerItem: headerItem, items: [resultItem]))
                     }
                 }
             }
@@ -576,6 +640,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         hasClear: hasClear,
                         isExpandable: false,
                         displayPremiumBadges: group.displayPremiumBadges,
+                        headerItem: group.headerItem,
                         items: group.items
                     )
                 },
@@ -1436,25 +1501,27 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             }
         }
         
-        let hasRecentGifs = context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
-        |> map { savedGifs -> Bool in
-            return !savedGifs.isEmpty
-        }
-        
-        self.hasRecentGifsDisposable = (hasRecentGifs
-        |> deliverOnMainQueue).start(next: { [weak self] hasRecentGifs in
-            guard let strongSelf = self else {
-                return
+        if self.currentInputData.gifs != nil {
+            let hasRecentGifs = context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
+            |> map { savedGifs -> Bool in
+                return !savedGifs.isEmpty
             }
             
-            if let gifMode = strongSelf.gifMode {
-                if !hasRecentGifs, case .recent = gifMode {
-                    strongSelf.gifMode = .trending
+            self.hasRecentGifsDisposable = (hasRecentGifs
+            |> deliverOnMainQueue).start(next: { [weak self] hasRecentGifs in
+                guard let strongSelf = self else {
+                    return
                 }
-            } else {
-                strongSelf.gifMode = hasRecentGifs ? .recent : .trending
-            }
-        })
+                
+                if let gifMode = strongSelf.gifMode {
+                    if !hasRecentGifs, case .recent = gifMode {
+                        strongSelf.gifMode = .trending
+                    }
+                } else {
+                    strongSelf.gifMode = hasRecentGifs ? .recent : .trending
+                }
+            })
+        }
     }
     
     deinit {

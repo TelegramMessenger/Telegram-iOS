@@ -24,6 +24,7 @@ import StickerPeekUI
 import UndoUI
 import AudioToolbox
 import SolidRoundedButtonComponent
+import EmojiTextAttachmentView
 
 private let premiumBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
 private let featuredBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeAdd"), color: .white)
@@ -1359,6 +1360,7 @@ public final class EmojiPagerContentComponent: Component {
         public let hasClear: Bool
         public let isExpandable: Bool
         public let displayPremiumBadges: Bool
+        public let headerItem: EntityKeyboardGroupHeaderItem?
         public let items: [Item]
         
         public init(
@@ -1373,6 +1375,7 @@ public final class EmojiPagerContentComponent: Component {
             hasClear: Bool,
             isExpandable: Bool,
             displayPremiumBadges: Bool,
+            headerItem: EntityKeyboardGroupHeaderItem?,
             items: [Item]
         ) {
             self.supergroupId = supergroupId
@@ -1386,6 +1389,7 @@ public final class EmojiPagerContentComponent: Component {
             self.hasClear = hasClear
             self.isExpandable = isExpandable
             self.displayPremiumBadges = displayPremiumBadges
+            self.headerItem = headerItem
             self.items = items
         }
         
@@ -1424,6 +1428,9 @@ public final class EmojiPagerContentComponent: Component {
                 return false
             }
             if lhs.displayPremiumBadges != rhs.displayPremiumBadges {
+                return false
+            }
+            if lhs.headerItem != rhs.headerItem {
                 return false
             }
             if lhs.items != rhs.items {
@@ -1592,9 +1599,6 @@ public final class EmojiPagerContentComponent: Component {
                 
                 self.itemsPerRow = max(minItemsPerRow, Int((itemHorizontalSpace + minSpacing) / (self.nativeItemSize + minSpacing)))
                 
-                //self.itemsPerRow * x + minSpacing * (x - 1) = itemHorizontalSpace
-                //self.itemsPerRow * x + minSpacing * (self.itemsPerRow - 1) = itemHorizontalSpace
-                //x = (itemHorizontalSpace - minSpacing * (self.itemsPerRow - 1)) / self.itemsPerRow
                 let proposedItemSize = floor((itemHorizontalSpace - minSpacing * (CGFloat(self.itemsPerRow) - 1.0)) / CGFloat(self.itemsPerRow))
                 
                 self.visibleItemSize = proposedItemSize < self.nativeItemSize ? proposedItemSize : self.nativeItemSize
@@ -1862,57 +1866,76 @@ public final class EmojiPagerContentComponent: Component {
                             return
                         }
                         
-                        strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: { size, writer in
-                            let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
-                            
-                            let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
-                                guard let result = result else {
-                                    return
-                                }
-                                
-                                if file.isVideoEmoji || file.isVideoSticker {
-                                    cacheVideoAnimation(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
-                                } else if file.isAnimatedSticker {
-                                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
-                                        writer.finish()
-                                        return
-                                    }
-                                    cacheLottieAnimation(data: data, width: Int(size.width), height: Int(size.height), writer: writer)
-                                } else {
-                                    cacheStillSticker(path: result, width: Int(size.width), height: Int(size.height), writer: writer)
-                                }
-                            })
-                            
-                            let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: stickerPackFileReference(file), resource: file.resource).start()
-                            
-                            return ActionDisposable {
-                                dataDisposable.dispose()
-                                fetchDisposable.dispose()
-                            }
-                        })
+                        strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, file: file, keyframeOnly: pixelSize.width >= 120.0))
                     }
                     
                     if attemptSynchronousLoad {
                         if !renderer.loadFirstFrameSynchronously(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize) {
                             self.updateDisplayPlaceholder(displayPlaceholder: true)
-                        }
-                        
-                        loadAnimation()
-                    } else {
-                        let _ = renderer.loadFirstFrame(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, completion: { [weak self] success in
-                            loadAnimation()
                             
-                            if !success {
-                                guard let strongSelf = self else {
+                            self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, file: file, keyframeOnly: true), completion: { [weak self] success, isFinal in
+                                if !isFinal {
+                                    if !success {
+                                        Queue.mainQueue().async {
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            
+                                            strongSelf.updateDisplayPlaceholder(displayPlaceholder: true)
+                                        }
+                                    }
                                     return
                                 }
                                 
-                                strongSelf.updateDisplayPlaceholder(displayPlaceholder: true)
+                                Queue.mainQueue().async {
+                                    loadAnimation()
+                                    
+                                    if !success {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        
+                                        strongSelf.updateDisplayPlaceholder(displayPlaceholder: true)
+                                    } else {
+                                        //self?.updateDisplayPlaceholder(displayPlaceholder: false)
+                                    }
+                                }
+                            })
+                        } else {
+                            loadAnimation()
+                        }
+                    } else {
+                        self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, file: file, keyframeOnly: true), completion: { [weak self] success, isFinal in
+                            if !isFinal {
+                                if !success {
+                                    Queue.mainQueue().async {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        
+                                        strongSelf.updateDisplayPlaceholder(displayPlaceholder: true)
+                                    }
+                                }
+                                return
+                            }
+                            
+                            Queue.mainQueue().async {
+                                loadAnimation()
+                                
+                                if !success {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    strongSelf.updateDisplayPlaceholder(displayPlaceholder: true)
+                                } else {
+                                    //self?.updateDisplayPlaceholder(displayPlaceholder: false)
+                                }
                             }
                         })
                     }
                 } else if let staticEmoji = staticEmoji {
-                    let image = generateImage(self.size, opaque: false, scale: min(UIScreenScale, 3.0), rotatedContext: { size, context in
+                    let image = generateImage(pointSize, opaque: false, scale: min(UIScreenScale, 3.0), rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         
                         let preScaleFactor: CGFloat = 1.0
