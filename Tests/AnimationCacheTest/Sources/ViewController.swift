@@ -2,9 +2,10 @@ import Foundation
 import UIKit
 
 import Display
-import RLottieBinding
 import AnimationCache
 import SwiftSignalKit
+import VideoAnimationCache
+import LottieAnimationCache
 
 public final class ViewController: UIViewController {
     private var imageView: UIImageView?
@@ -14,6 +15,7 @@ public final class ViewController: UIViewController {
     private var animationCacheItem: AnimationCacheItem?
     
     //private let playbackSize = CGSize(width: 512, height: 512)
+    //private let playbackSize = CGSize(width: 256, height: 256)
     private let playbackSize = CGSize(width: 48.0, height: 48.0)
     //private let playbackSize = CGSize(width: 16, height: 16)
     
@@ -52,26 +54,19 @@ public final class ViewController: UIViewController {
             return basePath + "/\(Int64.random(in: 0 ... Int64.max))"
         })
         
-        let path = Bundle.main.path(forResource: "Test2", ofType: "json")!
-        let data = try! Data(contentsOf: URL(fileURLWithPath: path))
+        let path = Bundle.main.path(forResource: "sticker", ofType: "webm")!
         
         let scaledSize = CGSize(width: self.playbackSize.width * 2.0, height: self.playbackSize.height * 2.0)
-        let _ = (self.cache!.get(sourceId: "Item\(Int64.random(in: 0 ... Int64.max))", size: scaledSize, fetch: { size, writer in
-            writer.queue.async {
-                let lottieInstance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: "")!
-                
-                for i in 0 ..< min(600, Int(lottieInstance.frameCount)) {
-                    //for _ in 0 ..< 10 {
-                    writer.add(with: { surface in
-                        let _ = i
-                        lottieInstance.renderFrame(with: Int32(i), into: surface.argb, width: Int32(surface.width), height: Int32(surface.height), bytesPerRow: Int32(surface.bytesPerRow))
-                    
-                        return 1.0 / 60.0
-                    }, proposedWidth: Int(scaledSize.width), proposedHeight: Int(scaledSize.height), insertKeyframe: false)
-                    //}
+        let _ = (self.cache!.get(sourceId: "Item\(Int64.random(in: 0 ... Int64.max))", size: scaledSize, fetch: { options in
+            options.writer.queue.async {
+                if path.hasSuffix(".webm") {
+                    cacheVideoAnimation(path: path, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, firstFrameOnly: options.firstFrameOnly)
+                } else {
+                    let data = try! Data(contentsOf: URL(fileURLWithPath: path))
+                    cacheLottieAnimation(data: data, width: Int(options.size.width), height: Int(options.size.height), keyframeOnly: false, writer: options.writer, firstFrameOnly: options.firstFrameOnly)
                 }
                 
-                writer.finish()
+                options.writer.finish()
             }
             
             return EmptyDisposable
@@ -107,12 +102,12 @@ public final class ViewController: UIViewController {
                 
                 self.fpsCount += 1
                 
-                /*DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0 / 60.0, execute: { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0 / 30.0, execute: { [weak self] in
                     self?.updateImage()
-                })*/
-                DispatchQueue.main.async {
+                })
+                /*DispatchQueue.main.async {
                     self.updateImage()
-                }
+                }*/
             default:
                 break
             }

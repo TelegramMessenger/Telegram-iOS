@@ -246,7 +246,7 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
     private var currentSurface: ImageARGB?
     private var currentYUVASurface: ImageYUVA420?
     private var currentFrameFloat: FloatCoefficientsYUVA420?
-    private var previousFrameFloat: FloatCoefficientsYUVA420?
+    private var previousFrameCoefficients: DctCoefficientsYUVA420?
     private var deltaFrameFloat: FloatCoefficientsYUVA420?
     private var previousYUVASurface: ImageYUVA420?
     private var currentDctData: DctData?
@@ -281,42 +281,47 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
     }
     
     func add(with drawingBlock: (AnimationCacheItemDrawingSurface) -> Double?, proposedWidth: Int, proposedHeight: Int, insertKeyframe: Bool) {
-        let width = roundUp(proposedWidth, multiple: 16)
-        let height = roundUp(proposedHeight, multiple: 16)
-        
-        let surface: ImageARGB
-        if let current = self.currentSurface {
-            if current.argbPlane.width == width && current.argbPlane.height == height {
-                surface = current
-            } else {
-                self.isFailed = true
-                return
-            }
-        } else {
-            surface = ImageARGB(width: width, height: height, rowAlignment: 32)
-            self.currentSurface = surface
-        }
-        
-        let duration = surface.argbPlane.data.withUnsafeMutableBytes { bytes -> Double? in
-            return drawingBlock(AnimationCacheItemDrawingSurface(
-                argb: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self),
-                width: width,
-                height: height,
-                bytesPerRow: surface.argbPlane.bytesPerRow,
-                length: bytes.count
-            ))
-        }
-        
-        guard let duration = duration else {
-            return
-        }
-        
         do {
-            try addInternal(with: { yuvaSurface in
-                surface.toYUVA420(target: yuvaSurface)
+            try self.lock.throwingLocked {
+                let width = roundUp(proposedWidth, multiple: 16)
+                let height = roundUp(proposedHeight, multiple: 16)
                 
-                return duration
-            }, width: width, height: height, insertKeyframe: insertKeyframe)
+                let surface: ImageARGB
+                if let current = self.currentSurface {
+                    if current.argbPlane.width == width && current.argbPlane.height == height {
+                        surface = current
+                        surface.argbPlane.data.withUnsafeMutableBytes { bytes -> Void in
+                            memset(bytes.baseAddress!, 0, bytes.count)
+                        }
+                    } else {
+                        self.isFailed = true
+                        return
+                    }
+                } else {
+                    surface = ImageARGB(width: width, height: height, rowAlignment: 32)
+                    self.currentSurface = surface
+                }
+                
+                let duration = surface.argbPlane.data.withUnsafeMutableBytes { bytes -> Double? in
+                    return drawingBlock(AnimationCacheItemDrawingSurface(
+                        argb: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self),
+                        width: width,
+                        height: height,
+                        bytesPerRow: surface.argbPlane.bytesPerRow,
+                        length: bytes.count
+                    ))
+                }
+                
+                guard let duration = duration else {
+                    return
+                }
+                
+                try addInternal(with: { yuvaSurface in
+                    surface.toYUVA420(target: yuvaSurface)
+                    
+                    return duration
+                }, width: width, height: height, insertKeyframe: insertKeyframe)
+            }
         } catch {
         }
     }
@@ -326,9 +331,11 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
         let height = roundUp(proposedHeight, multiple: 16)
         
         do {
-            try addInternal(with: { yuvaSurface in
-                return drawingBlock(yuvaSurface)
-            }, width: width, height: height, insertKeyframe: insertKeyframe)
+            try self.lock.throwingLocked {
+                try addInternal(with: { yuvaSurface in
+                    return drawingBlock(yuvaSurface)
+                }, width: width, height: height, insertKeyframe: insertKeyframe)
+            }
         } catch {
         }
     }
@@ -342,202 +349,194 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
             throw WriteError.generic
         }
         
-        try self.lock.throwingLocked {
-            guard !self.isFailed, !self.isFinished, let file = self.file, let compressedWriter = self.compressedWriter else {
-                throw WriteError.generic
-            }
-            
-            var isFirstFrame = false
-            
-            let yuvaSurface: ImageYUVA420
-            if let current = self.currentYUVASurface {
-                if current.yPlane.width == width && current.yPlane.height == height {
-                    yuvaSurface = current
-                } else {
-                    self.isFailed = true
-                    throw WriteError.generic
-                }
+        guard !self.isFailed, !self.isFinished, let file = self.file, let compressedWriter = self.compressedWriter else {
+            throw WriteError.generic
+        }
+        
+        var isFirstFrame = false
+        
+        let yuvaSurface: ImageYUVA420
+        if let current = self.currentYUVASurface {
+            if current.yPlane.width == width && current.yPlane.height == height {
+                yuvaSurface = current
             } else {
-                isFirstFrame = true
-                
-                yuvaSurface = ImageYUVA420(width: width, height: height, rowAlignment: nil)
-                self.currentYUVASurface = yuvaSurface
-            }
-            
-            let currentFrameFloat: FloatCoefficientsYUVA420
-            if let current = self.currentFrameFloat {
-                if current.yPlane.width == width && current.yPlane.height == height {
-                    currentFrameFloat = current
-                } else {
-                    self.isFailed = true
-                    throw WriteError.generic
-                }
-            } else {
-                currentFrameFloat = FloatCoefficientsYUVA420(width: width, height: height)
-                self.currentFrameFloat = currentFrameFloat
-            }
-            
-            let previousFrameFloat: FloatCoefficientsYUVA420
-            if let current = self.previousFrameFloat {
-                if current.yPlane.width == width && current.yPlane.height == height {
-                    previousFrameFloat = current
-                } else {
-                    self.isFailed = true
-                    throw WriteError.generic
-                }
-            } else {
-                previousFrameFloat = FloatCoefficientsYUVA420(width: width, height: height)
-                self.previousFrameFloat = previousFrameFloat
-            }
-            
-            let deltaFrameFloat: FloatCoefficientsYUVA420
-            if let current = self.deltaFrameFloat {
-                if current.yPlane.width == width && current.yPlane.height == height {
-                    deltaFrameFloat = current
-                } else {
-                    self.isFailed = true
-                    throw WriteError.generic
-                }
-            } else {
-                deltaFrameFloat = FloatCoefficientsYUVA420(width: width, height: height)
-                self.deltaFrameFloat = deltaFrameFloat
-            }
-            
-            let dctData: DctData
-            if let current = self.currentDctData {
-                dctData = current
-            } else {
-                dctData = DctData(generatingTablesAtQualityLuma: self.dctQualityLuma, chroma: self.dctQualityChroma, delta: self.dctQualityDelta)
-                self.currentDctData = dctData
-            }
-            
-            let duration = drawingBlock(yuvaSurface)
-            
-            guard let duration = duration else {
-                return
-            }
-            
-            let dctCoefficients: DctCoefficientsYUVA420
-            if let current = self.currentDctCoefficients {
-                if current.yPlane.width == width && current.yPlane.height == height {
-                    dctCoefficients = current
-                } else {
-                    self.isFailed = true
-                    throw WriteError.generic
-                }
-            } else {
-                dctCoefficients = DctCoefficientsYUVA420(width: width, height: height)
-                self.currentDctCoefficients = dctCoefficients
-            }
-            
-            let differenceCoefficients: DctCoefficientsYUVA420
-            if let current = self.differenceCoefficients {
-                if current.yPlane.width == width && current.yPlane.height == height {
-                    differenceCoefficients = current
-                } else {
-                    self.isFailed = true
-                    throw WriteError.generic
-                }
-            } else {
-                differenceCoefficients = DctCoefficientsYUVA420(width: width, height: height)
-                self.differenceCoefficients = differenceCoefficients
-            }
-            
-            #if DEBUG && false
-            var insertKeyframe = insertKeyframe
-            insertKeyframe = true
-            #endif
-            
-            let isKeyframe: Bool
-            if !isFirstFrame && !insertKeyframe {
-                isKeyframe = false
-                
-                yuvaSurface.toCoefficients(target: currentFrameFloat)
-                
-                currentFrameFloat.copy(into: deltaFrameFloat)
-                
-                deltaFrameFloat.subtract(other: previousFrameFloat)
-                
-                deltaFrameFloat.toDctCoefficients(target: differenceCoefficients)
-                
-                differenceCoefficients.dct(dctData: dctData, target: dctCoefficients)
-                
-                dctCoefficients.idct(dctData: dctData, target: differenceCoefficients)
-                
-                differenceCoefficients.toFloatCoefficients(target: currentFrameFloat)
-                currentFrameFloat.subtract(other: previousFrameFloat)
-                currentFrameFloat.clamp()
-                currentFrameFloat.copy(into: previousFrameFloat)
-            } else {
-                isKeyframe = true
-                
-                yuvaSurface.dct(dctData: dctData, target: dctCoefficients)
-                
-                let previousYUVASurface: ImageYUVA420
-                if let current = self.previousYUVASurface {
-                    previousYUVASurface = current
-                } else {
-                    previousYUVASurface = ImageYUVA420(width: dctCoefficients.yPlane.width, height: dctCoefficients.yPlane.height, rowAlignment: nil)
-                    self.previousYUVASurface = previousYUVASurface
-                }
-                dctCoefficients.idct(dctData: dctData, target: previousYUVASurface)
-                previousYUVASurface.toCoefficients(target: previousFrameFloat)
-            }
-            
-            if isFirstFrame {
-                file.write(5 as UInt32)
-                
-                file.write(UInt32(dctCoefficients.yPlane.width))
-                file.write(UInt32(dctCoefficients.yPlane.height))
-                
-                let lumaDctTable = dctData.lumaTable.serializedData()
-                file.write(UInt32(lumaDctTable.count))
-                let _ = file.write(lumaDctTable)
-                
-                let chromaDctTable = dctData.chromaTable.serializedData()
-                file.write(UInt32(chromaDctTable.count))
-                let _ = file.write(chromaDctTable)
-                
-                let deltaDctTable = dctData.deltaTable.serializedData()
-                file.write(UInt32(deltaDctTable.count))
-                let _ = file.write(deltaDctTable)
-            
-                self.contentLengthOffset = Int(file.position())
-                file.write(0 as UInt32)
-            }
-            
-            do {
-                let frameLength = dctCoefficients.yPlane.data.count + dctCoefficients.uPlane.data.count + dctCoefficients.vPlane.data.count + dctCoefficients.aPlane.data.count
-                try compressedWriter.writeUInt32(UInt32(frameLength))
-                
-                try compressedWriter.writeUInt32(isKeyframe ? 1 : 0)
-                
-                for i in 0 ..< 4 {
-                    let dctPlane: DctCoefficientPlane
-                    switch i {
-                    case 0:
-                        dctPlane = dctCoefficients.yPlane
-                    case 1:
-                        dctPlane = dctCoefficients.uPlane
-                    case 2:
-                        dctPlane = dctCoefficients.vPlane
-                    case 3:
-                        dctPlane = dctCoefficients.aPlane
-                    default:
-                        preconditionFailure()
-                    }
-                    
-                    try compressedWriter.writeUInt32(UInt32(dctPlane.data.count))
-                    try dctPlane.data.withUnsafeBytes { bytes in
-                        try compressedWriter.write(bytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: bytes.count)
-                    }
-                }
-                
-                self.frames.append(FrameMetadata(duration: duration))
-            } catch {
                 self.isFailed = true
                 throw WriteError.generic
             }
+        } else {
+            isFirstFrame = true
+            
+            yuvaSurface = ImageYUVA420(width: width, height: height, rowAlignment: nil)
+            self.currentYUVASurface = yuvaSurface
+        }
+        
+        let currentFrameFloat: FloatCoefficientsYUVA420
+        if let current = self.currentFrameFloat {
+            if current.yPlane.width == width && current.yPlane.height == height {
+                currentFrameFloat = current
+            } else {
+                self.isFailed = true
+                throw WriteError.generic
+            }
+        } else {
+            currentFrameFloat = FloatCoefficientsYUVA420(width: width, height: height)
+            self.currentFrameFloat = currentFrameFloat
+        }
+        
+        let previousFrameCoefficients: DctCoefficientsYUVA420
+        if let current = self.previousFrameCoefficients {
+            if current.yPlane.width == width && current.yPlane.height == height {
+                previousFrameCoefficients = current
+            } else {
+                self.isFailed = true
+                throw WriteError.generic
+            }
+        } else {
+            previousFrameCoefficients = DctCoefficientsYUVA420(width: width, height: height)
+            self.previousFrameCoefficients = previousFrameCoefficients
+        }
+        
+        let deltaFrameFloat: FloatCoefficientsYUVA420
+        if let current = self.deltaFrameFloat {
+            if current.yPlane.width == width && current.yPlane.height == height {
+                deltaFrameFloat = current
+            } else {
+                self.isFailed = true
+                throw WriteError.generic
+            }
+        } else {
+            deltaFrameFloat = FloatCoefficientsYUVA420(width: width, height: height)
+            self.deltaFrameFloat = deltaFrameFloat
+        }
+        
+        let dctData: DctData
+        if let current = self.currentDctData {
+            dctData = current
+        } else {
+            dctData = DctData(generatingTablesAtQualityLuma: self.dctQualityLuma, chroma: self.dctQualityChroma, delta: self.dctQualityDelta)
+            self.currentDctData = dctData
+        }
+        
+        let duration = drawingBlock(yuvaSurface)
+        
+        guard let duration = duration else {
+            return
+        }
+        
+        let dctCoefficients: DctCoefficientsYUVA420
+        if let current = self.currentDctCoefficients {
+            if current.yPlane.width == width && current.yPlane.height == height {
+                dctCoefficients = current
+            } else {
+                self.isFailed = true
+                throw WriteError.generic
+            }
+        } else {
+            dctCoefficients = DctCoefficientsYUVA420(width: width, height: height)
+            self.currentDctCoefficients = dctCoefficients
+        }
+        
+        let differenceCoefficients: DctCoefficientsYUVA420
+        if let current = self.differenceCoefficients {
+            if current.yPlane.width == width && current.yPlane.height == height {
+                differenceCoefficients = current
+            } else {
+                self.isFailed = true
+                throw WriteError.generic
+            }
+        } else {
+            differenceCoefficients = DctCoefficientsYUVA420(width: width, height: height)
+            self.differenceCoefficients = differenceCoefficients
+        }
+        
+        #if DEBUG && false
+        var insertKeyframe = insertKeyframe
+        insertKeyframe = true
+        #endif
+        
+        let previousYUVASurface: ImageYUVA420
+        if let current = self.previousYUVASurface {
+            previousYUVASurface = current
+        } else {
+            previousYUVASurface = ImageYUVA420(width: dctCoefficients.yPlane.width, height: dctCoefficients.yPlane.height, rowAlignment: nil)
+            self.previousYUVASurface = previousYUVASurface
+        }
+        
+        let isKeyframe: Bool
+        if !isFirstFrame && !insertKeyframe {
+            isKeyframe = false
+            
+            //previous + delta = current
+            //delta = current - previous
+            yuvaSurface.toCoefficients(target: differenceCoefficients)
+            differenceCoefficients.subtract(other: previousFrameCoefficients)
+            differenceCoefficients.dct4x4(dctData: dctData, target: dctCoefficients)
+            
+            //previous + delta = current
+            dctCoefficients.idct4x4(dctData: dctData, target: differenceCoefficients)
+            previousFrameCoefficients.add(other: differenceCoefficients)
+        } else {
+            isKeyframe = true
+            
+            yuvaSurface.dct8x8(dctData: dctData, target: dctCoefficients)
+            
+            dctCoefficients.idct8x8(dctData: dctData, target: yuvaSurface)
+            yuvaSurface.toCoefficients(target: previousFrameCoefficients)
+        }
+        
+        if isFirstFrame {
+            file.write(6 as UInt32)
+            
+            file.write(UInt32(dctCoefficients.yPlane.width))
+            file.write(UInt32(dctCoefficients.yPlane.height))
+            
+            let lumaDctTable = dctData.lumaTable.serializedData()
+            file.write(UInt32(lumaDctTable.count))
+            let _ = file.write(lumaDctTable)
+            
+            let chromaDctTable = dctData.chromaTable.serializedData()
+            file.write(UInt32(chromaDctTable.count))
+            let _ = file.write(chromaDctTable)
+            
+            let deltaDctTable = dctData.deltaTable.serializedData()
+            file.write(UInt32(deltaDctTable.count))
+            let _ = file.write(deltaDctTable)
+        
+            self.contentLengthOffset = Int(file.position())
+            file.write(0 as UInt32)
+        }
+        
+        do {
+            let frameLength = dctCoefficients.yPlane.data.count + dctCoefficients.uPlane.data.count + dctCoefficients.vPlane.data.count + dctCoefficients.aPlane.data.count
+            try compressedWriter.writeUInt32(UInt32(frameLength))
+            
+            try compressedWriter.writeUInt32(isKeyframe ? 1 : 0)
+            
+            for i in 0 ..< 4 {
+                let dctPlane: DctCoefficientPlane
+                switch i {
+                case 0:
+                    dctPlane = dctCoefficients.yPlane
+                case 1:
+                    dctPlane = dctCoefficients.uPlane
+                case 2:
+                    dctPlane = dctCoefficients.vPlane
+                case 3:
+                    dctPlane = dctCoefficients.aPlane
+                default:
+                    preconditionFailure()
+                }
+                
+                try compressedWriter.writeUInt32(UInt32(dctPlane.data.count))
+                try dctPlane.data.withUnsafeBytes { bytes in
+                    try compressedWriter.write(bytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), count: bytes.count)
+                }
+            }
+            
+            self.frames.append(FrameMetadata(duration: duration))
+        } catch {
+            self.isFailed = true
+            throw WriteError.generic
         }
     }
     
@@ -607,23 +606,16 @@ private final class AnimationCacheItemAccessor {
     }
     
     final class CurrentFrame {
-        enum FrameType {
-            case key
-            case delta
-        }
-        
         let index: Int
-        let type: FrameType
         var remainingDuration: Double
         let duration: Double
-        let dctCoefficients: DctCoefficientsYUVA420
+        let yuva: ImageYUVA420
         
-        init(index: Int, type: FrameType, duration: Double, dctCoefficients: DctCoefficientsYUVA420) {
+        init(index: Int, duration: Double, yuva: ImageYUVA420) {
             self.index = index
-            self.type = type
             self.duration = duration
             self.remainingDuration = duration
-            self.dctCoefficients = dctCoefficients
+            self.yuva = yuva
         }
     }
     
@@ -642,6 +634,7 @@ private final class AnimationCacheItemAccessor {
     private var currentFrame: CurrentFrame?
     
     private var currentYUVASurface: ImageYUVA420?
+    private var currentCoefficients: DctCoefficientsYUVA420?
     private let currentDctData: DctData
     private var sharedDctCoefficients: DctCoefficientsYUVA420?
     private var deltaCoefficients: DctCoefficientsYUVA420?
@@ -696,7 +689,7 @@ private final class AnimationCacheItemAccessor {
             let frameType = Int(try compressedDataReader.readUInt32())
             
             let dctCoefficients: DctCoefficientsYUVA420
-            if let sharedDctCoefficients = self.sharedDctCoefficients, sharedDctCoefficients.yPlane.width == self.width, sharedDctCoefficients.yPlane.height == self.height {
+            if let sharedDctCoefficients = self.sharedDctCoefficients, sharedDctCoefficients.yPlane.width == self.width, sharedDctCoefficients.yPlane.height == self.height, !"".isEmpty {
                 dctCoefficients = sharedDctCoefficients
             } else {
                 dctCoefficients = DctCoefficientsYUVA420(width: self.width, height: self.height)
@@ -738,7 +731,48 @@ private final class AnimationCacheItemAccessor {
                 frameOffset += plane.data.count
             }
             
-            self.currentFrame = CurrentFrame(index: index, type: frameType == 1 ? .key : .delta, duration: self.durationMapping[index], dctCoefficients: dctCoefficients)
+            let yuvaSurface: ImageYUVA420
+            if let currentYUVASurface = self.currentYUVASurface {
+                yuvaSurface = currentYUVASurface
+            } else {
+                yuvaSurface = ImageYUVA420(width: dctCoefficients.yPlane.width, height: dctCoefficients.yPlane.height, rowAlignment: nil)
+            }
+            
+            let currentCoefficients: DctCoefficientsYUVA420
+            if let current = self.currentCoefficients {
+                currentCoefficients = current
+            } else {
+                currentCoefficients = DctCoefficientsYUVA420(width: yuvaSurface.yPlane.width, height: yuvaSurface.yPlane.height)
+                self.currentCoefficients = currentCoefficients
+            }
+            
+            let deltaCoefficients: DctCoefficientsYUVA420
+            if let current = self.deltaCoefficients {
+                deltaCoefficients = current
+            } else {
+                deltaCoefficients = DctCoefficientsYUVA420(width: yuvaSurface.yPlane.width, height: yuvaSurface.yPlane.height)
+                self.deltaCoefficients = deltaCoefficients
+            }
+            
+            switch frameType {
+            case 1:
+                dctCoefficients.idct8x8(dctData: self.currentDctData, target: yuvaSurface)
+                yuvaSurface.toCoefficients(target: currentCoefficients)
+            default:
+                dctCoefficients.idct4x4(dctData: self.currentDctData, target: deltaCoefficients)
+                currentCoefficients.add(other: deltaCoefficients)
+                
+                if !"".isEmpty {
+                    let deltaFloatCoefficients = FloatCoefficientsYUVA420(width: yuvaSurface.yPlane.width, height: yuvaSurface.yPlane.height)
+                    deltaCoefficients.toFloatCoefficients(target: deltaFloatCoefficients)
+                    deltaFloatCoefficients.add(constant: 128.0)
+                    deltaFloatCoefficients.toYUVA420(target: yuvaSurface)
+                } else {
+                    currentCoefficients.toYUVA420(target: yuvaSurface)
+                }
+            }
+            
+            self.currentFrame = CurrentFrame(index: index, duration: self.durationMapping[index], yuva: yuvaSurface)
         } catch {
             self.currentFrame = nil
             self.compressedDataReader = nil
@@ -773,75 +807,38 @@ private final class AnimationCacheItemAccessor {
             return nil
         }
         
-        let yuvaSurface: ImageYUVA420
         switch requestedFormat {
         case .rgba:
-            if let currentYUVASurface = self.currentYUVASurface {
-                yuvaSurface = currentYUVASurface
-            } else {
-                yuvaSurface = ImageYUVA420(width: currentFrame.dctCoefficients.yPlane.width, height: currentFrame.dctCoefficients.yPlane.height, rowAlignment: nil)
-            }
-        case let .yuva(preferredRowAlignment):
-            yuvaSurface = ImageYUVA420(width: currentFrame.dctCoefficients.yPlane.width, height: currentFrame.dctCoefficients.yPlane.height, rowAlignment: preferredRowAlignment)
-        }
-        
-        switch currentFrame.type {
-        case .key:
-            currentFrame.dctCoefficients.idct(dctData: self.currentDctData, target: yuvaSurface)
-        case .delta:
-            let deltaCoefficients: DctCoefficientsYUVA420
-            if let current = self.deltaCoefficients {
-                deltaCoefficients = current
-            } else {
-                deltaCoefficients = DctCoefficientsYUVA420(width: yuvaSurface.yPlane.width, height: yuvaSurface.yPlane.height)
-                self.deltaCoefficients = deltaCoefficients
-            }
-            
-            currentFrame.dctCoefficients.idct(dctData: self.currentDctData, target: deltaCoefficients)
-            
-            if !"".isEmpty {
-                let deltaFloatCoefficients = FloatCoefficientsYUVA420(width: yuvaSurface.yPlane.width, height: yuvaSurface.yPlane.height)
-                deltaCoefficients.toFloatCoefficients(target: deltaFloatCoefficients)
-                deltaFloatCoefficients.add(constant: 128.0)
-                deltaFloatCoefficients.toYUVA420(target: yuvaSurface)
-            } else {
-                yuvaSurface.subtract(other: deltaCoefficients)
-            }
-        }
-        
-        switch requestedFormat {
-        case .rgba:
-            let currentSurface = ImageARGB(width: yuvaSurface.yPlane.width, height: yuvaSurface.yPlane.height, rowAlignment: 32)
-            yuvaSurface.toARGB(target: currentSurface)
-            self.currentYUVASurface = yuvaSurface
+            let currentSurface = ImageARGB(width: currentFrame.yuva.yPlane.width, height: currentFrame.yuva.yPlane.height, rowAlignment: 32)
+            currentFrame.yuva.toARGB(target: currentSurface)
             
             return AnimationCacheItemFrame(format: .rgba(data: currentSurface.argbPlane.data, width: currentSurface.argbPlane.width, height: currentSurface.argbPlane.height, bytesPerRow: currentSurface.argbPlane.bytesPerRow), duration: currentFrame.duration)
         case .yuva:
             return AnimationCacheItemFrame(
                 format: .yuva(
                     y: AnimationCacheItemFrame.Plane(
-                        data: yuvaSurface.yPlane.data,
-                        width: yuvaSurface.yPlane.width,
-                        height: yuvaSurface.yPlane.height,
-                        bytesPerRow: yuvaSurface.yPlane.bytesPerRow
+                        data: currentFrame.yuva.yPlane.data,
+                        width: currentFrame.yuva.yPlane.width,
+                        height: currentFrame.yuva.yPlane.height,
+                        bytesPerRow: currentFrame.yuva.yPlane.bytesPerRow
                     ),
                     u: AnimationCacheItemFrame.Plane(
-                        data: yuvaSurface.uPlane.data,
-                        width: yuvaSurface.uPlane.width,
-                        height: yuvaSurface.uPlane.height,
-                        bytesPerRow: yuvaSurface.uPlane.bytesPerRow
+                        data: currentFrame.yuva.uPlane.data,
+                        width: currentFrame.yuva.uPlane.width,
+                        height: currentFrame.yuva.uPlane.height,
+                        bytesPerRow: currentFrame.yuva.uPlane.bytesPerRow
                     ),
                     v: AnimationCacheItemFrame.Plane(
-                        data: yuvaSurface.vPlane.data,
-                        width: yuvaSurface.vPlane.width,
-                        height: yuvaSurface.vPlane.height,
-                        bytesPerRow: yuvaSurface.vPlane.bytesPerRow
+                        data: currentFrame.yuva.vPlane.data,
+                        width: currentFrame.yuva.vPlane.width,
+                        height: currentFrame.yuva.vPlane.height,
+                        bytesPerRow: currentFrame.yuva.vPlane.bytesPerRow
                     ),
                     a: AnimationCacheItemFrame.Plane(
-                        data: yuvaSurface.aPlane.data,
-                        width: yuvaSurface.aPlane.width,
-                        height: yuvaSurface.aPlane.height,
-                        bytesPerRow: yuvaSurface.aPlane.bytesPerRow
+                        data: currentFrame.yuva.aPlane.data,
+                        width: currentFrame.yuva.aPlane.width,
+                        height: currentFrame.yuva.aPlane.height,
+                        bytesPerRow: currentFrame.yuva.aPlane.bytesPerRow
                     )
                 ),
                 duration: currentFrame.duration
@@ -1125,7 +1122,7 @@ private func loadItem(path: String) throws -> AnimationCacheItem {
     }
     let formatVersion = readUInt32(data: compressedData, offset: offset)
     offset += 4
-    if formatVersion != 5 {
+    if formatVersion != 6 {
         throw LoadItemError.dataError
     }
     

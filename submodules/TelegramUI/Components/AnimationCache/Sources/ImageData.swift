@@ -66,6 +66,14 @@ extension ImagePlane {
             }
         }
     }
+    
+    func add(other: DctCoefficientPlane) {
+        self.data.withUnsafeMutableBytes { bytes in
+            other.data.withUnsafeBytes { otherBytes in
+                addArraysUInt8Int16(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), otherBytes.baseAddress!.assumingMemoryBound(to: Int16.self), bytes.baseAddress!.assumingMemoryBound(to: Int8.self), Int32(bytes.count))
+            }
+        }
+    }
 }
 
 final class ImageARGB {
@@ -126,7 +134,15 @@ final class DctCoefficientPlane: CustomStringConvertible {
     func subtract(other: DctCoefficientPlane) {
         self.data.withUnsafeMutableBytes { bytes in
             other.data.withUnsafeBytes { otherBytes in
-                subtractArraysInt16(otherBytes.baseAddress!.assumingMemoryBound(to: Int16.self), bytes.baseAddress!.assumingMemoryBound(to: Int16.self), bytes.baseAddress!.assumingMemoryBound(to: Int16.self), Int32(bytes.count / 2))
+                subtractArraysInt16(bytes.baseAddress!.assumingMemoryBound(to: Int16.self), otherBytes.baseAddress!.assumingMemoryBound(to: Int16.self), bytes.baseAddress!.assumingMemoryBound(to: Int16.self), Int32(bytes.count / 2))
+            }
+        }
+    }
+    
+    func add(other: DctCoefficientPlane) {
+        self.data.withUnsafeMutableBytes { bytes in
+            other.data.withUnsafeBytes { otherBytes in
+                addArraysInt16(bytes.baseAddress!.assumingMemoryBound(to: Int16.self), otherBytes.baseAddress!.assumingMemoryBound(to: Int16.self), bytes.baseAddress!.assumingMemoryBound(to: Int16.self), Int32(bytes.count / 2))
             }
         }
     }
@@ -137,6 +153,14 @@ extension DctCoefficientPlane {
         self.data.withUnsafeBytes { bytes in
             target.data.withUnsafeMutableBytes { otherBytes in
                 vDSP_vflt16(bytes.baseAddress!.assumingMemoryBound(to: Int16.self), 1, otherBytes.baseAddress!.assumingMemoryBound(to: Float32.self), 1, vDSP_Length(bytes.count / 2))
+            }
+        }
+    }
+    
+    func toUInt8(target: ImagePlane) {
+        self.data.withUnsafeBytes { bytes in
+            target.data.withUnsafeMutableBytes { otherBytes in
+                convertInt16toUInt8(bytes.baseAddress!.assumingMemoryBound(to: UInt16.self), otherBytes.baseAddress!.assumingMemoryBound(to: UInt8.self), Int32(bytes.count / 2))
             }
         }
     }
@@ -469,7 +493,42 @@ extension ImageYUVA420 {
         }
     }
     
-    func dct(dctData: DctData, target: DctCoefficientsYUVA420) {
+    func toCoefficients(target: DctCoefficientsYUVA420) {
+        precondition(self.yPlane.width == target.yPlane.width && self.yPlane.height == target.yPlane.height)
+        
+        for i in 0 ..< 4 {
+            let sourcePlane: ImagePlane
+            let targetPlane: DctCoefficientPlane
+            switch i {
+            case 0:
+                sourcePlane = self.yPlane
+                targetPlane = target.yPlane
+            case 1:
+                sourcePlane = self.uPlane
+                targetPlane = target.uPlane
+            case 2:
+                sourcePlane = self.vPlane
+                targetPlane = target.vPlane
+            case 3:
+                sourcePlane = self.aPlane
+                targetPlane = target.aPlane
+            default:
+                preconditionFailure()
+            }
+            
+            sourcePlane.data.withUnsafeBytes { sourceBytes in
+                let sourcePixels = sourceBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                
+                targetPlane.data.withUnsafeMutableBytes { bytes in
+                    let coefficients = bytes.baseAddress!.assumingMemoryBound(to: Int16.self)
+                    
+                    convertUInt8toInt16(sourcePixels, coefficients, Int32(sourceBytes.count))
+                }
+            }
+        }
+    }
+    
+    func dct8x8(dctData: DctData, target: DctCoefficientsYUVA420) {
         precondition(self.yPlane.width == target.yPlane.width && self.yPlane.height == target.yPlane.height)
         
         for i in 0 ..< 4 {
@@ -510,22 +569,23 @@ extension ImageYUVA420 {
         }
     }
     
-    func dct(dctData: DctData) -> DctCoefficientsYUVA420 {
-        let results = DctCoefficientsYUVA420(width: self.yPlane.width, height: self.yPlane.height)
-        self.dct(dctData: dctData, target: results)
-        return results
-    }
-    
     func subtract(other: DctCoefficientsYUVA420) {
         self.yPlane.subtract(other: other.yPlane)
         self.uPlane.subtract(other: other.uPlane)
         self.vPlane.subtract(other: other.vPlane)
         self.aPlane.subtract(other: other.aPlane)
     }
+    
+    func add(other: DctCoefficientsYUVA420) {
+        self.yPlane.add(other: other.yPlane)
+        self.uPlane.add(other: other.uPlane)
+        self.vPlane.add(other: other.vPlane)
+        self.aPlane.add(other: other.aPlane)
+    }
 }
 
 extension DctCoefficientsYUVA420 {
-    func idct(dctData: DctData, target: ImageYUVA420) {
+    func idct8x8(dctData: DctData, target: ImageYUVA420) {
         precondition(self.yPlane.width == target.yPlane.width && self.yPlane.height == target.yPlane.height)
         
         for i in 0 ..< 4 {
@@ -566,13 +626,7 @@ extension DctCoefficientsYUVA420 {
         }
     }
     
-    func idct(dctData: DctData, rowAlignment: Int?) -> ImageYUVA420 {
-        let resultImage = ImageYUVA420(width: self.yPlane.width, height: self.yPlane.height, rowAlignment: rowAlignment)
-        self.idct(dctData: dctData, target: resultImage)
-        return resultImage
-    }
-    
-    func dct(dctData: DctData, target: DctCoefficientsYUVA420) {
+    func dct4x4(dctData: DctData, target: DctCoefficientsYUVA420) {
         precondition(self.yPlane.width == target.yPlane.width && self.yPlane.height == target.yPlane.height)
         
         for i in 0 ..< 4 {
@@ -609,7 +663,7 @@ extension DctCoefficientsYUVA420 {
         }
     }
     
-    func idct(dctData: DctData, target: DctCoefficientsYUVA420) {
+    func idct4x4(dctData: DctData, target: DctCoefficientsYUVA420) {
         precondition(self.yPlane.width == target.yPlane.width && self.yPlane.height == target.yPlane.height)
         
         for i in 0 ..< 4 {
@@ -653,10 +707,26 @@ extension DctCoefficientsYUVA420 {
         self.aPlane.subtract(other: other.aPlane)
     }
     
+    func add(other: DctCoefficientsYUVA420) {
+        self.yPlane.add(other: other.yPlane)
+        self.uPlane.add(other: other.uPlane)
+        self.vPlane.add(other: other.vPlane)
+        self.aPlane.add(other: other.aPlane)
+    }
+    
     func toFloatCoefficients(target: FloatCoefficientsYUVA420) {
         self.yPlane.toFloatCoefficients(target: target.yPlane)
         self.uPlane.toFloatCoefficients(target: target.uPlane)
         self.vPlane.toFloatCoefficients(target: target.vPlane)
         self.aPlane.toFloatCoefficients(target: target.aPlane)
+    }
+    
+    func toYUVA420(target: ImageYUVA420) {
+        assert(self.yPlane.width == target.yPlane.width && self.yPlane.height == target.yPlane.height)
+        
+        self.yPlane.toUInt8(target: target.yPlane)
+        self.uPlane.toUInt8(target: target.uPlane)
+        self.vPlane.toUInt8(target: target.vPlane)
+        self.aPlane.toUInt8(target: target.aPlane)
     }
 }

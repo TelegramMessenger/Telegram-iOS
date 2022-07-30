@@ -117,11 +117,60 @@ void scaleImagePlane(uint8_t *outPlane, int outWidth, int outHeight, int outByte
     vImageScale_Planar8(&src, &dst, nil, kvImageDoNotTile);
 }
 
-void subtractArraysInt16(int16_t const *a, int16_t const *b, uint16_t *dest, int length) {
+void convertUInt8toInt16(uint8_t const *source, int16_t *dest, int length) {
+    for (int i = 0; i < length; i += 8) {
+        uint8x8_t lhs8 = vld1_u8(&source[i]);
+        int16x8_t lhs = vreinterpretq_s16_u16(vmovl_u8(lhs8));
+        
+        vst1q_s16(&dest[i], lhs);
+    }
+    if (length % 8 != 0) {
+        for (int i = length - (length % 8); i < length; i++) {
+            dest[i] = (int16_t)source[i];
+        }
+    }
+}
+
+void convertInt16toUInt8(int16_t const *source, uint8_t *dest, int length) {
+    for (int i = 0; i < length; i += 8) {
+        int16x8_t lhs16 = vld1q_s16(&source[i]);
+        int8x8_t lhs = vqmovun_s16(lhs16);
+        
+        vst1_u8(&dest[i], lhs);
+    }
+    if (length % 8 != 0) {
+        for (int i = length - (length % 8); i < length; i++) {
+            int16_t result = source[i];
+            if (result < 0) {
+                result = 0;
+            }
+            if (result > 255) {
+                result = 255;
+            }
+            dest[i] = (int8_t)result;
+        }
+    }
+}
+
+void subtractArraysInt16(int16_t const *a, int16_t const *b, int16_t *dest, int length) {
     for (int i = 0; i < length; i += 8) {
         int16x8_t lhs = vld1q_s16((int16_t *)&a[i]);
         int16x8_t rhs = vld1q_s16((int16_t *)&b[i]);
         int16x8_t result = vsubq_s16(lhs, rhs);
+        vst1q_s16((int16_t *)&dest[i], result);
+    }
+    if (length % 8 != 0) {
+        for (int i = length - (length % 8); i < length; i++) {
+            dest[i] = a[i] - b[i];
+        }
+    }
+}
+
+void addArraysInt16(int16_t const *a, int16_t const *b, int16_t *dest, int length) {
+    for (int i = 0; i < length; i += 8) {
+        int16x8_t lhs = vld1q_s16((int16_t *)&a[i]);
+        int16x8_t rhs = vld1q_s16((int16_t *)&b[i]);
+        int16x8_t result = vaddq_s16(lhs, rhs);
         vst1q_s16((int16_t *)&dest[i], result);
     }
     if (length % 8 != 0) {
@@ -154,4 +203,42 @@ void subtractArraysUInt8Int16(uint8_t const *a, int16_t const *b, uint8_t *dest,
             dest[i] = (int8_t)result;
         }
     }
+}
+
+void addArraysUInt8Int16(uint8_t const *a, int16_t const *b, uint8_t *dest, int length) {
+#if false
+    for (int i = 0; i < length; i++) {
+        int16_t result = ((int16_t)a[i]) + b[i];
+        if (result < 0) {
+            result = 0;
+        }
+        if (result > 255) {
+            result = 255;
+        }
+        dest[i] = (int8_t)result;
+    }
+#else
+    for (int i = 0; i < length; i += 8) {
+        uint8x8_t lhs8 = vld1_u8(&a[i]);
+        int16x8_t lhs = vreinterpretq_s16_u16(vmovl_u8(lhs8));
+        
+        int16x8_t rhs = vld1q_s16((int16_t *)&b[i]);
+        int16x8_t result = vaddq_s16(lhs, rhs);
+        
+        uint8x8_t result8 = vqmovun_s16(result);
+        vst1_u8(&dest[i], result8);
+    }
+    if (length % 8 != 0) {
+        for (int i = length - (length % 8); i < length; i++) {
+            int16_t result = ((int16_t)a[i]) + b[i];
+            if (result < 0) {
+                result = 0;
+            }
+            if (result > 255) {
+                result = 255;
+            }
+            dest[i] = (int8_t)result;
+        }
+    }
+#endif
 }

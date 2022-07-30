@@ -752,8 +752,8 @@ inline void vpx_idct4x4_16_add_neon(const int16x8_t &top64, const int16x8_t &bot
     vst1_s16(dest, vget_low_s16(a[1]));
 }
 
-static int dct4x4QuantDC = 60;
-static int dct4x4QuantAC = 60;
+static int dct4x4QuantDC = 58;
+static int dct4x4QuantAC = 58;
 
 void performForward4x4Dct(int16_t const *normalizedCoefficients, int16_t *coefficients, int width, int height, DCTELEM *divisors) {
     DCTELEM block[4 * 4];
@@ -804,7 +804,6 @@ void performForward4x4Dct(int16_t const *normalizedCoefficients, int16_t *coeffi
 }
 
 void performInverse4x4Dct(int16_t const * coefficients, int16_t *normalizedCoefficients, int width, int height, DctAuxiliaryData *auxiliaryData, IFAST_MULT_TYPE *ifmtbl) {
-    //DCTELEM coefficientBlock[4 * 4];
     DCTELEM resultBlock[4 * 4];
     
     for (int y = 0; y < height; y += 4) {
@@ -830,11 +829,16 @@ void performInverse4x4Dct(int16_t const * coefficients, int16_t *normalizedCoeff
             int16x8_t top64 = vreinterpretq_s16_u16(qtop16);
             int16x8_t bottom64 = vreinterpretq_s16_u16(qbottom16);
             
-            /*for (int blockY = 0; blockY < 4; blockY++) {
+            /*DCTELEM coefficientBlock[4 * 4];
+            
+            for (int blockY = 0; blockY < 4; blockY++) {
                 for (int blockX = 0; blockX < 4; blockX++) {
                     coefficientBlock[zigZag4x4Inv[blockY * 4 + blockX]] = coefficients[(y + blockY) * width + (x + blockX)];
                 }
-            }*/
+            }
+            
+            top64 = vreinterpretq_s16_u64(vld1q_u64((uint64_t *)&coefficientBlock[0]));
+            bottom64 = vreinterpretq_s16_u64(vld1q_u64((uint64_t *)&coefficientBlock[8]));*/
             
             vpx_idct4x4_16_add_neon(top64, bottom64, resultBlock, dct4x4QuantAC);
             
@@ -848,11 +852,11 @@ void performInverse4x4Dct(int16_t const * coefficients, int16_t *normalizedCoeff
             vst1_u32((uint32_t *)&normalizedCoefficients[(y + 2) * width + x], c);
             vst1_u32((uint32_t *)&normalizedCoefficients[(y + 3) * width + x], d);
             
-            for (int blockY = 0; blockY < 4; blockY++) {
+            /*for (int blockY = 0; blockY < 4; blockY++) {
                 for (int blockX = 0; blockX < 4; blockX++) {
-                    //normalizedCoefficients[(y + blockY) * width + (x + blockX)] = resultBlock[blockY * 4 + blockX];
+                    normalizedCoefficients[(y + blockY) * width + (x + blockX)] = resultBlock[blockY * 4 + blockX];
                 }
-            }
+            }*/
         }
     }
 }

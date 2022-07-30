@@ -45,7 +45,7 @@ public func cacheVideoAnimation(path: String, width: Int, height: Int, writer: A
                             }
                         }
                         return frameDuration
-                    }, proposedWidth: frame.width, proposedHeight: frame.height, insertKeyframe: true)
+                    }, proposedWidth: frame.width, proposedHeight: frame.height, insertKeyframe: false)
                     
                     if firstFrameOnly {
                         break
