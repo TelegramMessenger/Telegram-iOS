@@ -2424,9 +2424,29 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     strongSelf.composePressed()
                 }
             }),
+            KeyShortcut(title: strings.KeyCommand_LockWithPasscode, input: "L", modifiers: [.command], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.context.sharedContext.appLockContext.lock()
+                }
+            }),
             KeyShortcut(title: strings.KeyCommand_Find, input: "\t", modifiers: [], action: toggleSearch),
             KeyShortcut(input: UIKeyCommand.inputEscape, modifiers: [], action: toggleSearch)
         ]
+        
+        let openTab: (Int) -> Void = { [weak self] index in
+            if let strongSelf = self {
+                let filters = strongSelf.chatListDisplayNode.containerNode.availableFilters
+                if index > filters.count - 1 {
+                    return
+                }
+                switch filters[index] {
+                    case .all:
+                        strongSelf.selectTab(id: .all)
+                    case let .filter(filter):
+                        strongSelf.selectTab(id: .filter(filter.id))
+                }
+            }
+        }
         
         let openChat: (Int) -> Void = { [weak self] index in
             if let strongSelf = self {
@@ -2438,13 +2458,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
-        let chatShortcuts: [KeyShortcut] = (0 ... 9).map { index in
+        let folderShortcuts: [KeyShortcut] = (0 ... 9).map { index in
             return KeyShortcut(input: "\(index)", modifiers: [.command], action: {
+                if index == 0 {
+                    openChat(0)
+                } else {
+                    openTab(index - 1)
+                }
+            })
+        }
+        
+        let chatShortcuts: [KeyShortcut] = (0 ... 9).map { index in
+            return KeyShortcut(input: "\(index)", modifiers: [.command, .alternate], action: {
                 openChat(index)
             })
         }
         
-        return inputShortcuts + chatShortcuts
+        return inputShortcuts + folderShortcuts + chatShortcuts
     }
     
     override public func toolbarActionSelected(action: ToolbarActionOption) {

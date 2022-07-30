@@ -329,7 +329,7 @@ public struct GalleryConfiguration {
     }
 }
 
-public class GalleryController: ViewController, StandalonePresentableController {
+public class GalleryController: ViewController, StandalonePresentableController, KeyShortcutResponder {
     public static let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), enableBackgroundBlur: false, separatorColor: UIColor(white: 0.0, alpha: 0.8), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     public static let lightNavigationTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007aff), disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), enableBackgroundBlur: false, separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     
@@ -1383,5 +1383,68 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 itemNode.updatePlaybackRate(playbackRate)
             }
         }
+    }
+    
+    public var keyShortcuts: [KeyShortcut] {
+        var keyShortcuts: [KeyShortcut] = []
+        keyShortcuts.append(
+            KeyShortcut(
+                title: "",
+                input: UIKeyCommand.inputUpArrow,
+                modifiers: [.command],
+                action: { [weak self] in
+                    self?.dismiss(forceAway: false)
+                }
+            )
+        )
+        keyShortcuts.append(
+            KeyShortcut(
+                title: "",
+                input: "W",
+                modifiers: [.command],
+                action: { [weak self] in
+                    self?.dismiss(forceAway: false)
+                }
+            )
+        )
+        keyShortcuts.append(
+            KeyShortcut(
+                title: self.galleryNode.areControlsHidden ? self.presentationData.strings.KeyCommand_ExitFullscreen : self.presentationData.strings.KeyCommand_EnterFullscreen,
+                input: "F",
+                modifiers: [.control, .command],
+                action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.galleryNode.setControlsHidden(!strongSelf.galleryNode.areControlsHidden, animated: true)
+                    }
+                }
+            )
+        )
+        if self.galleryNode.pager.items.count > 1 {
+            if self.galleryNode.pager.canGoToPreviousItem() {
+                keyShortcuts.append(
+                    KeyShortcut(
+                        input: UIKeyCommand.inputLeftArrow,
+                        modifiers: [],
+                        action: { [weak self] in
+                            self?.galleryNode.pager.goToPreviousItem()
+                        }
+                    )
+                )
+            }
+            if self.galleryNode.pager.canGoToNextItem() {
+                keyShortcuts.append(
+                    KeyShortcut(
+                        input: UIKeyCommand.inputRightArrow,
+                        modifiers: [],
+                        action: { [weak self] in
+                            self?.galleryNode.pager.goToNextItem()
+                        }
+                    )
+                )
+            }
+        }
+        let itemNodeShortcuts = self.galleryNode.pager.centralItemNode()?.keyShortcuts ?? []
+        keyShortcuts.append(contentsOf: itemNodeShortcuts)
+        return keyShortcuts
     }
 }

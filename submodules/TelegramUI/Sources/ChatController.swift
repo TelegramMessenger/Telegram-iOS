@@ -15841,6 +15841,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 }),
+                KeyShortcut(input: "U", modifiers: [.command], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.underline), inputMode)
+                        }
+                    }
+                }),
+                KeyShortcut(input: "X", modifiers: [.command, .shift], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.strikethrough), inputMode)
+                        }
+                    }
+                }),
+                KeyShortcut(input: "P", modifiers: [.command, .shift], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.spoiler), inputMode)
+                        }
+                    }
+                }),
                 KeyShortcut(input: "K", modifiers: [.command], action: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.interfaceInteraction?.openLinkEditing()
@@ -15912,11 +15933,107 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             inputShortcuts = []
         }
         
+        inputShortcuts.append(
+            KeyShortcut(
+                input: "W",
+                modifiers: [.command],
+                action: { [weak self] in
+                    self?.dismiss(animated: true, completion: nil)
+                }
+            )
+        )
+        
+        if canReplyInChat(self.presentationInterfaceState) {
+            inputShortcuts.append(
+                KeyShortcut(
+                    input: UIKeyCommand.inputUpArrow,
+                    modifiers: [.alternate, .command],
+                    action: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId {
+                            if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(before: replyMessageId) {
+                                strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
+                                    var updatedState = state.updatedInterfaceState({ state in
+                                        return state.withUpdatedReplyMessageId(message.id)
+                                    })
+                                    if updatedState.inputMode == .none {
+                                        updatedState = updatedState.updatedInputMode({ _ in .text })
+                                    }
+                                    return updatedState
+                                })
+                                
+                                strongSelf.navigateToMessage(messageLocation: .id(message.id, nil), animated: true)
+                            }
+                        } else {
+                            strongSelf.scrollToEndOfHistory()
+                            Queue.mainQueue().after(0.1, {
+                                let lastMessage = strongSelf.chatDisplayNode.historyNode.latestMessageInCurrentHistoryView()
+                                strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
+                                    var updatedState = state.updatedInterfaceState({ state in
+                                        return state.withUpdatedReplyMessageId(lastMessage?.id)
+                                    })
+                                    if updatedState.inputMode == .none {
+                                        updatedState = updatedState.updatedInputMode({ _ in .text })
+                                    }
+                                    return updatedState
+                                })
+                                
+                                if let lastMessage = lastMessage {
+                                    strongSelf.navigateToMessage(messageLocation: .id(lastMessage.id, nil), animated: true)
+                                }
+                            })
+                        }
+                    }
+                )
+            )
+            
+            inputShortcuts.append(
+                KeyShortcut(
+                    input: UIKeyCommand.inputDownArrow,
+                    modifiers: [.alternate, .command],
+                    action: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                     
+                        if let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId {
+                            let lastMessage = strongSelf.chatDisplayNode.historyNode.latestMessageInCurrentHistoryView()
+                            var updatedReplyMessageId: MessageId?
+                            if replyMessageId == lastMessage?.id {
+                                updatedReplyMessageId = nil
+                            } else if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(after: replyMessageId) {
+                                updatedReplyMessageId = message.id
+                            }
+                            
+                            strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
+                                var updatedState = state.updatedInterfaceState({ state in
+                                    return state.withUpdatedReplyMessageId(updatedReplyMessageId)
+                                })
+                                if updatedState.inputMode == .none {
+                                    updatedState = updatedState.updatedInputMode({ _ in .text })
+                                } else if updatedReplyMessageId == nil {
+                                    updatedState = updatedState.updatedInputMode({ _ in .none })
+                                }
+                                return updatedState
+                            })
+                            
+                            if let updatedReplyMessageId = updatedReplyMessageId {
+                                strongSelf.navigateToMessage(messageLocation: .id(updatedReplyMessageId, nil), animated: true)
+                            }
+                        }
+                    }
+                )
+            )
+        }
+        
         var canEdit = false
         if self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.length == 0 && self.presentationInterfaceState.interfaceState.editMessage == nil {
             canEdit = true
         }
-        
+                
         if canEdit, let message = self.chatDisplayNode.historyNode.firstMessageForEditInCurrentHistoryView() {
             inputShortcuts.append(KeyShortcut(input: UIKeyCommand.inputUpArrow, action: { [weak self] in
                 if let strongSelf = self {

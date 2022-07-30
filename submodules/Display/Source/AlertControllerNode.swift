@@ -83,6 +83,18 @@ final class AlertControllerNode: ASDisplayNode {
         self.rightDimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimmingNodeTapGesture(_:))))
     }
     
+    func performHighlightedAction() {
+        self.contentNode.performHighlightedAction()
+    }
+    
+    func decreaseHighlightedIndex() {
+        self.contentNode.decreaseHighlightedIndex()
+    }
+    
+    func increaseHighlightedIndex() {
+        self.contentNode.increaseHighlightedIndex()
+    }
+    
     func updateTheme(_ theme: AlertControllerTheme) {
         if let effectView = self.effectNode.view as? UIVisualEffectView {
             effectView.effect = UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark)

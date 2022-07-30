@@ -1054,7 +1054,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         
-        super.init(pointerStyle: .default)
+        super.init(pointerStyle: .insetRectangle(-8.0, 2.0))
         
         self.isAccessibilityElement = true
         self.accessibilityTraits = .button

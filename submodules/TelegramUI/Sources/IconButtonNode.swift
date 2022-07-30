@@ -61,7 +61,7 @@ final class IconButtonNode: HighlightTrackingButtonNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         
-        super.init(pointerStyle: .circle)
+        super.init(pointerStyle: .circle(nil))
         
         self.addSubnode(self.iconNode)
         

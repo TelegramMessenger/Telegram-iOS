@@ -775,6 +775,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var scrubbingFrames = false
     private var scrubbingFrameDisposable: Disposable?
     
+    private var isPlaying = false
     private let isPlayingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let isInteractingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let controlsVisiblePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
@@ -1066,6 +1067,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             self.footerContentNode.scrubberView = scrubberView
             
+            self.isPlaying = false
             self.isPlayingPromise.set(false)
             
             if item.hideControls {
@@ -1346,6 +1348,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     }
                                 } else if strongSelf.actionAtEnd == .stop {
                                     strongSelf.isPlayingPromise.set(false)
+                                    strongSelf.isPlaying = false
                                     if strongSelf.isCentral == true {
                                         strongSelf.updateControlsVisibility(true)
                                     }
@@ -1358,8 +1361,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     if !disablePlayerControls && strongSelf.isCentral == true && isPlaying {
                         strongSelf.isPlayingPromise.set(true)
+                        strongSelf.isPlaying = true
                     } else if !isPlaying {
                         strongSelf.isPlayingPromise.set(false)
+                        strongSelf.isPlaying = false
                     }
                     
                     var fetching = false
@@ -1471,6 +1476,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                                 
                         if strongSelf.actionAtEnd == .stop && strongSelf.isCentral == true {
                             strongSelf.isPlayingPromise.set(false)
+                            strongSelf.isPlaying = false
                             strongSelf.updateControlsVisibility(true)
                         }
                     }
@@ -1591,6 +1597,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 } else {
                     self.isPlayingPromise.set(false)
+                    self.isPlaying = false
                     
                     self.dismissOnOrientationChange = false
                     if videoNode.ownsContentNode {
@@ -2709,6 +2716,78 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
 
         self.playbackRatePromise.set(self.playbackRate ?? 1.0)
+    }
+    
+    override var keyShortcuts: [KeyShortcut] {
+        let strings = self.presentationData.strings
+        
+        var keyShortcuts: [KeyShortcut] = []
+        keyShortcuts.append(
+            KeyShortcut(
+                title: self.isPlaying ? strings.KeyCommand_Pause : strings.KeyCommand_Play,
+                input: " ",
+                modifiers: [],
+                action: { [weak self] in
+                    self?.footerContentNode.playbackControl?()
+                }
+            )
+        )
+        
+        keyShortcuts.append(
+            KeyShortcut(
+                title: strings.KeyCommand_SeekBackward,
+                input: UIKeyCommand.inputLeftArrow,
+                modifiers: [.shift],
+                action: { [weak self] in
+                    self?.footerContentNode.seekBackward?(5)
+                }
+            )
+        )
+        keyShortcuts.append(
+            KeyShortcut(
+                title: strings.KeyCommand_SeekForward,
+                input: UIKeyCommand.inputRightArrow,
+                modifiers: [.shift],
+                action: { [weak self] in
+                    self?.footerContentNode.seekForward?(5)
+                }
+            )
+        )
+        
+        keyShortcuts.append(
+            KeyShortcut(
+                title: strings.KeyCommand_Share,
+                input: "S",
+                modifiers: [.command],
+                action: { [weak self] in
+                    self?.footerContentNode.actionButtonPressed()
+                }
+            )
+        )
+        if self.hasPictureInPicture {
+            keyShortcuts.append(
+                KeyShortcut(
+                    title: strings.KeyCommand_SwitchToPIP,
+                    input: "P",
+                    modifiers: [.command],
+                    action: { [weak self] in
+                        self?.pictureInPictureButtonPressed()
+                    }
+                )
+            )
+        }
+        if self.canDelete() {
+            keyShortcuts.append(
+                KeyShortcut(
+                    input: "\u{8}",
+                    modifiers: [],
+                    action: { [weak self] in
+                        self?.footerContentNode.deleteButtonPressed()
+                    }
+                )
+            )
+        }
+        return keyShortcuts
     }
 }
 

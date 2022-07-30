@@ -71,7 +71,7 @@ public final class AlertControllerTheme: Equatable {
     }
 }
 
-open class AlertController: ViewController, StandalonePresentableController {
+open class AlertController: ViewController, StandalonePresentableController, KeyShortcutResponder {
     private var controllerNode: AlertControllerNode {
         return self.displayNode as! AlertControllerNode
     }
@@ -154,5 +154,45 @@ open class AlertController: ViewController, StandalonePresentableController {
         self.controllerNode.animateOut { [weak self] in
             self?.dismiss()
         }
+    }
+    
+    public var keyShortcuts: [KeyShortcut] {
+        return [
+            KeyShortcut(
+                input: UIKeyCommand.inputEscape,
+                modifiers: [],
+                action: { [weak self] in
+                    self?.dismissAnimated()
+                }
+            ),
+            KeyShortcut(
+                input: "W",
+                modifiers: [.command],
+                action: { [weak self] in
+                    self?.dismissAnimated()
+                }
+            ),
+            KeyShortcut(
+                input: "\r",
+                modifiers: [],
+                action: { [weak self] in
+                    self?.controllerNode.performHighlightedAction()
+                }
+            ),
+            KeyShortcut(
+                input: UIKeyCommand.inputUpArrow,
+                modifiers: [],
+                action: { [weak self] in
+                    self?.controllerNode.decreaseHighlightedIndex()
+                }
+            ),
+            KeyShortcut(
+                input: UIKeyCommand.inputDownArrow,
+                modifiers: [],
+                action: { [weak self] in
+                    self?.controllerNode.increaseHighlightedIndex()
+                }
+            )
+        ]
     }
 }

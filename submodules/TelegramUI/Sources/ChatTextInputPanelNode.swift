@@ -51,7 +51,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
         
         self.width = AccessoryItemIconButtonNode.calculateWidth(item: item, image: image, text: text, strings: strings)
         
-        super.init()
+        super.init(pointerStyle: .circle(30.0))
         
         self.isAccessibilityElement = true
         self.accessibilityTraits = [.button]
@@ -754,7 +754,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.sendAsAvatarContainerNode.animateScale = false
         self.sendAsAvatarNode = AvatarNode(font: avatarPlaceholderFont(size: 16.0))
         
-        self.attachmentButton = HighlightableButtonNode(pointerStyle: .circle)
+        self.attachmentButton = HighlightableButtonNode(pointerStyle: .circle(36.0))
         self.attachmentButton.accessibilityLabel = presentationInterfaceState.strings.VoiceOver_AttachMedia
         self.attachmentButton.accessibilityTraits = [.button]
         self.attachmentButton.isAccessibilityElement = true

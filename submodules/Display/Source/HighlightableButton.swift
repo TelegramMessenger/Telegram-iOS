@@ -32,7 +32,7 @@ open class HighlightTrackingButtonNode: ASButtonNode {
     public var highligthedChanged: (Bool) -> Void = { _ in }
     
     private let pointerStyle: PointerStyle?
-    private var pointerInteraction: PointerInteraction?
+    public var pointerInteraction: PointerInteraction?
     
     public init(pointerStyle: PointerStyle? = nil) {
         self.pointerStyle = pointerStyle

@@ -7942,3 +7942,13 @@ Sorry for the inconvenience.";
 
 "StickerPacks.DeleteEmojiPacksConfirmation_1" = "Delete 1 Emoji Pack";
 "StickerPacks.DeleteEmojiPacksConfirmation_any" = "Delete %@ Emoji Packs";
+
+"KeyCommand.LockWithPasscode" = "Lock with Passcode";
+"KeyCommand.Play" = "Play Video";
+"KeyCommand.Pause" = "Pause Video";
+"KeyCommand.SeekBackward" = "Seek Backward";
+"KeyCommand.SeekForward" = "Seek Forward";
+"KeyCommand.Share" = "Share";
+"KeyCommand.SwitchToPIP" = "Switch to Picture-in-Picture";
+"KeyCommand.EnterFullscreen" = "Enter Fullscreen";
+"KeyCommand.ExitFullscreen" = "Exit Fullscreen";

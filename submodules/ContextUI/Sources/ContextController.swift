@@ -2205,6 +2205,18 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         return self.dismissNode.view
     }
+    
+    fileprivate func performHighlightedAction() {
+        self.presentationNode?.highlightGestureFinished(performAction: true)
+    }
+    
+    fileprivate func decreaseHighlightedIndex() {
+        self.presentationNode?.decreaseHighlightedIndex()
+    }
+    
+    fileprivate func increaseHighlightedIndex() {
+        self.presentationNode?.increaseHighlightedIndex()
+    }
 }
 
 public final class ContextControllerLocationViewInfo {
@@ -2350,7 +2362,7 @@ public protocol ContextControllerItemsContent: AnyObject {
     ) -> ContextControllerItemsNode
 }
 
-public final class ContextController: ViewController, StandalonePresentableController, ContextControllerProtocol {
+public final class ContextController: ViewController, StandalonePresentableController, ContextControllerProtocol, KeyShortcutResponder {
     public struct Items {
         public enum Content {
             case list([ContextMenuItem])
@@ -2643,5 +2655,45 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
         self.controllerNode.addRelativeContentOffset(offset, transition: transition)
+    }
+    
+    public var keyShortcuts: [KeyShortcut] {
+        return [
+            KeyShortcut(
+                input: UIKeyCommand.inputEscape,
+                modifiers: [],
+                action: { [weak self] in
+                    self?.dismissWithoutContent()
+                }
+            ),
+            KeyShortcut(
+                input: "W",
+                modifiers: [.command],
+                action: { [weak self] in
+                    self?.dismissWithoutContent()
+                }
+            ),
+            KeyShortcut(
+                input: "\r",
+                modifiers: [],
+                action: { [weak self] in
+                    self?.controllerNode.performHighlightedAction()
+                }
+            ),
+            KeyShortcut(
+                input: UIKeyCommand.inputUpArrow,
+                modifiers: [],
+                action: { [weak self] in
+                    self?.controllerNode.decreaseHighlightedIndex()
+                }
+            ),
+            KeyShortcut(
+                input: UIKeyCommand.inputDownArrow,
+                modifiers: [],
+                action: { [weak self] in
+                    self?.controllerNode.increaseHighlightedIndex()
+                }
+            )
+        ]
     }
 }

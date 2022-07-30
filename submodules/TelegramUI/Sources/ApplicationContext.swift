@@ -226,6 +226,11 @@ final class AuthorizedApplicationContext {
                             }
                         }
                         strongSelf.mainWindow.forEachViewController(f)
+                        if let globalOverlayController = strongSelf.rootController.globalOverlayControllers.last {
+                            if !f(globalOverlayController) {
+                                return
+                            }
+                        }
                     })
                 }
             }

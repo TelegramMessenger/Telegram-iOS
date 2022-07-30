@@ -1325,8 +1325,9 @@ public final class SparseItemGrid: ASDisplayNode {
         }
     }
 
-    public init(theme: PresentationTheme) {
+    public init(theme: PresentationTheme, initialZoomLevel: ZoomLevel? = nil) {
         self.theme = theme
+        self.initialZoomLevel = initialZoomLevel
 
         self.scrollingArea = SparseItemGridScrollingArea()
 

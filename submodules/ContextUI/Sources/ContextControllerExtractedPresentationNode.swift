@@ -315,6 +315,14 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         }
     }
     
+    func decreaseHighlightedIndex() {
+        self.actionsStackNode.decreaseHighlightedIndex()
+    }
+    
+    func increaseHighlightedIndex() {
+        self.actionsStackNode.increaseHighlightedIndex()
+    }
+    
     func replaceItems(items: ContextController.Items, animated: Bool) {
         self.actionsStackNode.replace(item: makeContextControllerActionsStackItem(items: items), animated: animated)
     }

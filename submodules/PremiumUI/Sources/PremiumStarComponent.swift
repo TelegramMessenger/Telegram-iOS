@@ -197,11 +197,18 @@ class PremiumStarComponent: Component {
             
             self.previousInteractionTimestamp = CACurrentMediaTime()
             
+            let keys = [
+                "rotate",
+                "tapRotate"
+            ]
             if #available(iOS 11.0, *) {
-                node.removeAnimation(forKey: "rotate", blendOutDuration: 0.1)
-                node.removeAnimation(forKey: "tapRotate", blendOutDuration: 0.1)
+                for key in keys {
+                    node.removeAnimation(forKey: key, blendOutDuration: 0.1)
+                }
             } else {
-                node.removeAllAnimations()
+                for key in keys {
+                    node.removeAnimation(forKey: key)
+                }
             }
             
             switch gesture.state {
@@ -337,6 +344,7 @@ class PremiumStarComponent: Component {
         }
         
         private func onReady() {
+            self.setupScaleAnimation()
             self.setupGradientAnimation()
             self.setupShineAnimation()
             
@@ -353,6 +361,22 @@ class PremiumStarComponent: Component {
                 }
             }, queue: Queue.mainQueue())
             self.timer?.start()
+        }
+        
+        private func setupScaleAnimation() {
+            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
+                return
+            }
+            
+            let animation = CABasicAnimation(keyPath: "scale")
+            animation.duration = 2.0
+            animation.fromValue = NSValue(scnVector3: SCNVector3(x: 0.1, y: 0.1, z: 0.1))
+            animation.toValue = NSValue(scnVector3: SCNVector3(x: 0.115, y: 0.115, z: 0.115))
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            animation.autoreverses = true
+            animation.repeatCount = .infinity
+            
+            node.addAnimation(animation, forKey: "scale")
         }
         
         private func setupGradientAnimation() {

@@ -192,6 +192,7 @@ class ChatImageGalleryItem: GalleryItem {
 final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
     private var message: Message?
+    private let presentationData: PresentationData
     
     private let imageNode: TransformImageNode
     private var recognizedContentNode: RecognizedContentContainer?
@@ -220,6 +221,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
+        self.presentationData = presentationData
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
@@ -797,6 +799,60 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         super.adjustForPreviewing()
         
         self.recognitionOverlayContentNode.isHidden = true
+    }
+    
+    private func canDelete() -> Bool {
+        guard let message = self.message else {
+            return false
+        }
+
+        var canDelete = false
+        if let peer = message.peers[message.id.peerId] {
+            if peer is TelegramUser || peer is TelegramSecretChat {
+                canDelete = true
+            } else if let _ = peer as? TelegramGroup {
+                canDelete = true
+            } else if let channel = peer as? TelegramChannel {
+                if message.flags.contains(.Incoming) {
+                    canDelete = channel.hasPermission(.deleteAllMessages)
+                } else {
+                    canDelete = true
+                }
+            } else {
+                canDelete = false
+            }
+        } else {
+            canDelete = false
+        }
+        return canDelete
+    }
+    
+    override var keyShortcuts: [KeyShortcut] {
+        let strings = self.presentationData.strings
+        
+        var keyShortcuts: [KeyShortcut] = []
+        keyShortcuts.append(
+            KeyShortcut(
+                title: strings.KeyCommand_Share,
+                input: "S",
+                modifiers: [.command],
+                action: { [weak self] in
+                    self?.footerContentNode.actionButtonPressed()
+                }
+            )
+        )
+        if self.canDelete() {
+            keyShortcuts.append(
+                KeyShortcut(
+                    input: "\u{8}",
+                    modifiers: [],
+                    action: { [weak self] in
+                        self?.footerContentNode.deleteButtonPressed()
+                    }
+                )
+            )
+        }
+        return keyShortcuts
     }
 }
 

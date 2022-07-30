@@ -7780,7 +7780,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
 }
 
-public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
+public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortcutResponder {
     private let context: AccountContext
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let peerId: PeerId
@@ -8277,6 +8277,37 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         
         let controller = ContextController(account: primary.0.account, presentationData: self.presentationData, source: .extracted(SettingsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+    }
+    
+    public var keyShortcuts: [KeyShortcut] {
+        if self.isSettings {
+            return [
+                KeyShortcut(
+                    input: "0",
+                    modifiers: [.command],
+                    action: { [weak self] in
+                        self?.controllerNode.openSettings(section: .savedMessages)
+                    }
+                )
+            ]
+        } else {
+            return [
+                KeyShortcut(
+                    input: "W",
+                    modifiers: [.command],
+                    action: { [weak self] in
+                        self?.dismiss(animated: true, completion: nil)
+                    }
+                ),
+                KeyShortcut(
+                    input: UIKeyCommand.inputEscape,
+                    modifiers: [],
+                    action: { [weak self] in
+                        self?.dismiss(animated: true, completion: nil)
+                    }
+                )
+            ]
+        }
     }
 }
 

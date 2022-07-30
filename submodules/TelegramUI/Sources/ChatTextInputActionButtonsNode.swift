@@ -31,7 +31,8 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         }
     }
     
-    var micButtonPointerInteraction: PointerInteraction?
+    private var micButtonPointerInteraction: PointerInteraction?
+    private var sendButtonPointerInteraction: PointerInteraction?
     
     private var validLayout: CGSize?
     
@@ -50,9 +51,9 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
         self.backgroundNode.clipsToBounds = true
         self.backdropNode = ChatMessageBubbleBackdrop()
-        self.sendButton = HighlightTrackingButtonNode(pointerStyle: .lift)
+        self.sendButton = HighlightTrackingButtonNode(pointerStyle: nil)
         
-        self.expandMediaInputButton = HighlightableButtonNode(pointerStyle: .default)
+        self.expandMediaInputButton = HighlightableButtonNode(pointerStyle: .circle(36.0))
         
         super.init()
         
@@ -107,7 +108,8 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
             }
         }
         
-        self.micButtonPointerInteraction = PointerInteraction(view: self.micButton, style: .circle)
+        self.micButtonPointerInteraction = PointerInteraction(view: self.micButton, style: .circle(36.0))
+        self.sendButtonPointerInteraction = PointerInteraction(view: self.sendButton.view, customInteractionView: self.backgroundNode.view, style: .lift)
     }
     
     func updateTheme(theme: PresentationTheme, wallpaper: TelegramWallpaper) {

@@ -50,12 +50,12 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     }
     
     init(theme: PresentationTheme) {
-        self.upButton = HighlightableButtonNode(pointerStyle: .default)
+        self.upButton = HighlightableButtonNode(pointerStyle: .circle(36.0))
         self.upButton.isEnabled = false
-        self.downButton = HighlightableButtonNode(pointerStyle: .default)
+        self.downButton = HighlightableButtonNode(pointerStyle: .circle(36.0))
         self.downButton.isEnabled = false
         self.calendarButton = HighlightableButtonNode()
-        self.membersButton = HighlightableButtonNode(pointerStyle: .default)
+        self.membersButton = HighlightableButtonNode(pointerStyle: .circle(36.0))
         self.measureResultsLabel = TextNode()
         self.measureResultsLabel.displaysAsynchronously = false
         self.resultsButton = HighlightableButtonNode(pointerStyle: .default)

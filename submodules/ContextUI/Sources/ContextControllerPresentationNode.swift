@@ -31,5 +31,8 @@ protocol ContextControllerPresentationNode: ASDisplayNode {
     func highlightGestureMoved(location: CGPoint, hover: Bool)
     func highlightGestureFinished(performAction: Bool)
     
+    func decreaseHighlightedIndex()
+    func increaseHighlightedIndex()
+    
     func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition)
 }
