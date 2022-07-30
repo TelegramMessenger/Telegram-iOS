@@ -271,7 +271,7 @@ public final class EntityKeyboardComponent: Component {
                         isReorderable: false,
                         content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                             context: component.emojiContent.context,
-                            file: emoji.file,
+                            item: .file(file: emoji.file),
                             isFeatured: false,
                             isPremiumLocked: false,
                             animationCache: component.emojiContent.animationCache,
@@ -365,7 +365,7 @@ public final class EntityKeyboardComponent: Component {
                                     isReorderable: !itemGroup.isFeatured,
                                     content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                                         context: stickerContent.context,
-                                        file: file,
+                                        item: itemGroup.headerItem ?? .file(file: file),
                                         isFeatured: itemGroup.isFeatured,
                                         isPremiumLocked: itemGroup.isPremiumLocked,
                                         animationCache: stickerContent.animationCache,
@@ -468,7 +468,7 @@ public final class EntityKeyboardComponent: Component {
                                 isReorderable: !itemGroup.isFeatured,
                                 content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                                     context: component.emojiContent.context,
-                                    file: file,
+                                    item: itemGroup.headerItem ?? .file(file: file),
                                     isFeatured: itemGroup.isFeatured,
                                     isPremiumLocked: itemGroup.isPremiumLocked,
                                     animationCache: component.emojiContent.animationCache,

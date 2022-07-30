@@ -48,6 +48,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1090087980] = { return SecretApi144.MessageEntity.parse_messageEntityStrike($0) }
     dict[34469328] = { return SecretApi144.MessageEntity.parse_messageEntityBlockquote($0) }
     dict[Int32(bitPattern: 0xc8cf05f8 as UInt32)] = { return SecretApi144.MessageEntity.parse_messageEntityCustomEmoji($0) }
+    dict[Int32(bitPattern: 0x32ca960f as UInt32)] = { return SecretApi144.MessageEntity.parse_messageEntitySpoiler($0) }
     dict[144661578] = { return SecretApi144.DecryptedMessageMedia.parse_decryptedMessageMediaEmpty($0) }
     dict[893913689] = { return SecretApi144.DecryptedMessageMedia.parse_decryptedMessageMediaGeoPoint($0) }
     dict[1485441687] = { return SecretApi144.DecryptedMessageMedia.parse_decryptedMessageMediaContact($0) }
@@ -886,6 +887,7 @@ public struct SecretApi144 {
         case messageEntityStrike(offset: Int32, length: Int32)
         case messageEntityBlockquote(offset: Int32, length: Int32)
         case messageEntityCustomEmoji(offset: Int32, length: Int32, documentId: Int64)
+        case messageEntitySpoiler(offset: Int32, length: Int32)
         
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -996,6 +998,13 @@ public struct SecretApi144 {
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
                     serializeInt64(documentId, buffer: buffer, boxed: false)
+                    break
+                case .messageEntitySpoiler(let offset, let length):
+                    if boxed {
+                        buffer.appendInt32(Int32(bitPattern: 0x32ca960f as UInt32))
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -1218,6 +1227,20 @@ public struct SecretApi144 {
                     return nil
                 }
             }
+        fileprivate static func parse_messageEntitySpoiler(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return SecretApi144.MessageEntity.messageEntitySpoiler(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
     }
 
     public enum DecryptedMessageMedia {

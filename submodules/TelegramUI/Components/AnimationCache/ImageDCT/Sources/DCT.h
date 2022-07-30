@@ -11,7 +11,13 @@ namespace dct {
 class DCTInternal;
 
 struct DCTTable {
-    static DCTTable generate(int quality, bool isChroma);
+    enum class Type {
+        Luma,
+        Chroma,
+        Delta
+    };
+    
+    static DCTTable generate(int quality, Type type);
     static DCTTable initializeEmpty();
     
     std::vector<int16_t> table;
@@ -24,6 +30,8 @@ public:
 
     void forward(uint8_t const *pixels, int16_t *coefficients, int width, int height, int bytesPerRow);
     void inverse(int16_t const *coefficients, uint8_t *pixels, int width, int height, int coefficientsPerRow, int bytesPerRow);
+    void forward4x4(int16_t const *normalizedCoefficients, int16_t *coefficients, int width, int height);
+    void inverse4x4(int16_t const *coefficients, int16_t *normalizedCoefficients, int width, int height);
 
 private:
     DCTInternal *_internal;

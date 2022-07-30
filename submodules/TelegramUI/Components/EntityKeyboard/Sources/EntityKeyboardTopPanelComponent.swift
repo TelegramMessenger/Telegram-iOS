@@ -12,12 +12,67 @@ import MultiAnimationRenderer
 import AccountContext
 import MultilineTextComponent
 import LottieAnimationComponent
+import MurMurHash32
+
+public enum EntityKeyboardGroupHeaderItem: Equatable {
+    public enum ThumbnailType {
+        case still
+        case lottie
+        case video
+    }
+    
+    case file(file: TelegramMediaFile)
+    case packThumbnail(resource: MediaResourceReference, immediateThumbnailData: Data?, dimensions: CGSize, type: ThumbnailType)
+}
+
+private func fileFromItem(_ item: EntityKeyboardGroupHeaderItem) -> TelegramMediaFile {
+    let file: TelegramMediaFile
+    switch item {
+    case let .file(fileValue):
+        file = fileValue
+    case let .packThumbnail(resource, immediateThumbnailData, _, type):
+        let mimeType: String
+        let attributes: [TelegramMediaFileAttribute]
+        
+        switch type {
+        case .still:
+            mimeType = "image/webp"
+            attributes = [.FileName(fileName: "image.webp")]
+        case .lottie:
+            mimeType = "application/x-tgsticker"
+            attributes = [
+                .FileName(fileName: "sticker.tgs"),
+                .Sticker(displayText: "", packReference: nil, maskData: nil)
+            ]
+        case .video:
+            mimeType = "video/webm"
+            attributes = [
+                .FileName(fileName: "sticker.webm"),
+                .Sticker(displayText: "", packReference: nil, maskData: nil)
+            ]
+        }
+        
+        file = TelegramMediaFile(
+            fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: Int64(murMurHashString32(resource.resource.id.stringRepresentation))),
+            partialReference: nil,
+            resource: resource.resource as! TelegramMediaResource,
+            previewRepresentations: [],
+            videoThumbnails: [],
+            immediateThumbnailData: immediateThumbnailData,
+            mimeType: mimeType,
+            size: nil,
+            attributes: attributes
+        )
+    }
+    
+    return file
+}
 
 final class EntityKeyboardAnimationTopPanelComponent: Component {
     typealias EnvironmentType = EntityKeyboardTopPanelItemEnvironment
     
     let context: AccountContext
-    let file: TelegramMediaFile
+    let item: EntityKeyboardGroupHeaderItem
     let isFeatured: Bool
     let isPremiumLocked: Bool
     let animationCache: AnimationCache
@@ -28,7 +83,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
     
     init(
         context: AccountContext,
-        file: TelegramMediaFile,
+        item: EntityKeyboardGroupHeaderItem,
         isFeatured: Bool,
         isPremiumLocked: Bool,
         animationCache: AnimationCache,
@@ -38,7 +93,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
         pressed: @escaping () -> Void
     ) {
         self.context = context
-        self.file = file
+        self.item = item
         self.isFeatured = isFeatured
         self.isPremiumLocked = isPremiumLocked
         self.animationCache = animationCache
@@ -52,7 +107,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.file.fileId != rhs.file.fileId {
+        if lhs.item != rhs.item {
             return false
         }
         if lhs.isFeatured != rhs.isFeatured {
@@ -104,19 +159,27 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
             
             let itemEnvironment = environment[EntityKeyboardTopPanelItemEnvironment.self].value
             
-            let dimensions = component.file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+            let dimensions: CGSize
+            switch component.item {
+            case let .file(file):
+                dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+            case let .packThumbnail(_, _, dimensionsValue, _):
+                dimensions = dimensionsValue
+            }
             let displaySize = dimensions.aspectFitted(CGSize(width: 44.0, height: 44.0))
             
             if self.itemLayer == nil {
+                let file = fileFromItem(component.item)
+                
                 let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
                     item: EmojiPagerContentComponent.Item(
-                        file: component.file,
+                        file: file,
                         staticEmoji: nil,
                         subgroupId: nil
                     ),
                     context: component.context,
                     attemptSynchronousLoad: false,
-                    file: component.file,
+                    file: file,
                     staticEmoji: nil,
                     cache: component.animationCache,
                     renderer: component.animationRenderer,
@@ -204,7 +267,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                 if self.placeholderView == nil, let component = self.component {
                     let placeholderView = EmojiPagerContentComponent.View.ItemPlaceholderView(
                         context: component.context,
-                        file: component.file,
+                        file: fileFromItem(component.item),
                         shimmerView: nil,
                         color: component.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08),
                         size: CGSize(width: 28.0, height: 28.0)
