@@ -473,8 +473,8 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
             differenceCoefficients.dct4x4(dctData: dctData, target: dctCoefficients)
             
             //previous + delta = current
-            dctCoefficients.idct4x4(dctData: dctData, target: differenceCoefficients)
-            previousFrameCoefficients.add(other: differenceCoefficients)
+            dctCoefficients.idct4x4Add(dctData: dctData, target: previousFrameCoefficients)
+            //previousFrameCoefficients.add(other: differenceCoefficients)
         } else {
             isKeyframe = true
             
@@ -746,30 +746,23 @@ private final class AnimationCacheItemAccessor {
                 self.currentCoefficients = currentCoefficients
             }
             
-            let deltaCoefficients: DctCoefficientsYUVA420
+            /*let deltaCoefficients: DctCoefficientsYUVA420
             if let current = self.deltaCoefficients {
                 deltaCoefficients = current
             } else {
                 deltaCoefficients = DctCoefficientsYUVA420(width: yuvaSurface.yPlane.width, height: yuvaSurface.yPlane.height)
                 self.deltaCoefficients = deltaCoefficients
-            }
+            }*/
             
             switch frameType {
             case 1:
                 dctCoefficients.idct8x8(dctData: self.currentDctData, target: yuvaSurface)
                 yuvaSurface.toCoefficients(target: currentCoefficients)
             default:
-                dctCoefficients.idct4x4(dctData: self.currentDctData, target: deltaCoefficients)
-                currentCoefficients.add(other: deltaCoefficients)
+                dctCoefficients.idct4x4Add(dctData: self.currentDctData, target: currentCoefficients)
+                //currentCoefficients.add(other: deltaCoefficients)
                 
-                if !"".isEmpty {
-                    let deltaFloatCoefficients = FloatCoefficientsYUVA420(width: yuvaSurface.yPlane.width, height: yuvaSurface.yPlane.height)
-                    deltaCoefficients.toFloatCoefficients(target: deltaFloatCoefficients)
-                    deltaFloatCoefficients.add(constant: 128.0)
-                    deltaFloatCoefficients.toYUVA420(target: yuvaSurface)
-                } else {
-                    currentCoefficients.toYUVA420(target: yuvaSurface)
-                }
+                currentCoefficients.toYUVA420(target: yuvaSurface)
             }
             
             self.currentFrame = CurrentFrame(index: index, duration: self.durationMapping[index], yuva: yuvaSurface)

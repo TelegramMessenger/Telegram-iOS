@@ -663,7 +663,7 @@ extension DctCoefficientsYUVA420 {
         }
     }
     
-    func idct4x4(dctData: DctData, target: DctCoefficientsYUVA420) {
+    func idct4x4Add(dctData: DctData, target: DctCoefficientsYUVA420) {
         precondition(self.yPlane.width == target.yPlane.width && self.yPlane.height == target.yPlane.height)
         
         for i in 0 ..< 4 {
@@ -694,7 +694,7 @@ extension DctCoefficientsYUVA420 {
                     
                     //memcpy(coefficients, sourceCoefficients, sourceBytes.count)
                     
-                    dctData.deltaDct.inverse4x4(sourceCoefficients, normalizedCoefficients: coefficients, width: sourcePlane.width, height: sourcePlane.height)
+                    dctData.deltaDct.inverse4x4Add(sourceCoefficients, normalizedCoefficients: coefficients, width: sourcePlane.width, height: sourcePlane.height)
                 }
             }
         }

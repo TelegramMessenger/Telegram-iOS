@@ -461,7 +461,7 @@ final class CustomEmojiContainerView: UIView {
             let itemSize: CGFloat = floor(24.0 * fontSize / 17.0)
             let size = CGSize(width: itemSize, height: itemSize)
             
-            view.frame = CGRect(origin: CGPoint(x: floor(rect.midX - size.width / 2.0), y: floor(rect.midY - size.height / 2.0)), size: size)
+            view.frame = CGRect(origin: CGPoint(x: floor(rect.midX - size.width / 2.0), y: floor(rect.midY - size.height / 2.0) + 1.0), size: size)
             
             validKeys.insert(key)
         }

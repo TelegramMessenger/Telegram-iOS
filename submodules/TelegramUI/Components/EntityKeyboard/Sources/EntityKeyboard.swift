@@ -271,7 +271,7 @@ public final class EntityKeyboardComponent: Component {
                         isReorderable: false,
                         content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                             context: component.emojiContent.context,
-                            item: .file(file: emoji.file),
+                            item: EntityKeyboardAnimationData(file: emoji.file),
                             isFeatured: false,
                             isPremiumLocked: false,
                             animationCache: component.emojiContent.animationCache,
@@ -359,13 +359,13 @@ public final class EntityKeyboardComponent: Component {
                         }
                     } else {
                         if !itemGroup.items.isEmpty {
-                            if let file = itemGroup.items[0].file {
+                            if let animationData = itemGroup.items[0].animationData {
                                 topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
                                     id: itemGroup.supergroupId,
                                     isReorderable: !itemGroup.isFeatured,
                                     content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                                         context: stickerContent.context,
-                                        item: itemGroup.headerItem ?? .file(file: file),
+                                        item: itemGroup.headerItem ?? animationData,
                                         isFeatured: itemGroup.isFeatured,
                                         isPremiumLocked: itemGroup.isPremiumLocked,
                                         animationCache: stickerContent.animationCache,
@@ -462,13 +462,13 @@ public final class EntityKeyboardComponent: Component {
                             ))
                         }
                     } else {
-                        if let file = itemGroup.items[0].file {
+                        if let animationData = itemGroup.items[0].animationData {
                             topEmojiItems.append(EntityKeyboardTopPanelComponent.Item(
                                 id: itemGroup.supergroupId,
                                 isReorderable: !itemGroup.isFeatured,
                                 content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
                                     context: component.emojiContent.context,
-                                    item: itemGroup.headerItem ?? .file(file: file),
+                                    item: itemGroup.headerItem ?? animationData,
                                     isFeatured: itemGroup.isFeatured,
                                     isPremiumLocked: itemGroup.isPremiumLocked,
                                     animationCache: component.emojiContent.animationCache,

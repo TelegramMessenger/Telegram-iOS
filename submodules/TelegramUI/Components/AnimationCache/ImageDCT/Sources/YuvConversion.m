@@ -118,14 +118,17 @@ void scaleImagePlane(uint8_t *outPlane, int outWidth, int outHeight, int outByte
 }
 
 void convertUInt8toInt16(uint8_t const *source, int16_t *dest, int length) {
-    for (int i = 0; i < length; i += 8) {
-        uint8x8_t lhs8 = vld1_u8(&source[i]);
-        int16x8_t lhs = vreinterpretq_s16_u16(vmovl_u8(lhs8));
-        
-        vst1q_s16(&dest[i], lhs);
+    for (int i = 0; i < length; i += 8 * 4) {
+        #pragma unroll
+        for (int j = 0; j < 4; j++) {
+            uint8x8_t lhs8 = vld1_u8(&source[i + j * 8]);
+            int16x8_t lhs = vreinterpretq_s16_u16(vmovl_u8(lhs8));
+            
+            vst1q_s16(&dest[i + j * 8], lhs);
+        }
     }
-    if (length % 8 != 0) {
-        for (int i = length - (length % 8); i < length; i++) {
+    if (length % (8 * 4) != 0) {
+        for (int i = length - (length % (8 * 4)); i < length; i++) {
             dest[i] = (int16_t)source[i];
         }
     }
@@ -167,14 +170,17 @@ void subtractArraysInt16(int16_t const *a, int16_t const *b, int16_t *dest, int 
 }
 
 void addArraysInt16(int16_t const *a, int16_t const *b, int16_t *dest, int length) {
-    for (int i = 0; i < length; i += 8) {
-        int16x8_t lhs = vld1q_s16((int16_t *)&a[i]);
-        int16x8_t rhs = vld1q_s16((int16_t *)&b[i]);
-        int16x8_t result = vaddq_s16(lhs, rhs);
-        vst1q_s16((int16_t *)&dest[i], result);
+    for (int i = 0; i < length; i += 8 * 4) {
+        #pragma unroll
+        for (int j = 0; j < 4; j++) {
+            int16x8_t lhs = vld1q_s16((int16_t *)&a[i + j * 8]);
+            int16x8_t rhs = vld1q_s16((int16_t *)&b[i + j * 8]);
+            int16x8_t result = vaddq_s16(lhs, rhs);
+            vst1q_s16((int16_t *)&dest[i + j * 8], result);
+        }
     }
-    if (length % 8 != 0) {
-        for (int i = length - (length % 8); i < length; i++) {
+    if (length % (8 * 4) != 0) {
+        for (int i = length - (length % (8 * 4)); i < length; i++) {
             dest[i] = a[i] - b[i];
         }
     }

@@ -242,7 +242,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
         
         for index in 0 ..< items.count {
             let item = items[index]
-            let itemId = EmojiPagerContentComponent.View.ItemLayer.Key(groupId: 0, fileId: item.file.fileId, staticEmoji: nil)
+            let itemId = EmojiPagerContentComponent.View.ItemLayer.Key(groupId: 0, itemId: .file(item.file.fileId), staticEmoji: nil)
             validIds.insert(itemId)
             
             let itemDimensions = item.file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
@@ -259,10 +259,10 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 itemTransition = .immediate
                                 
                 itemLayer = EmojiPagerContentComponent.View.ItemLayer(
-                    item: EmojiPagerContentComponent.Item(file: item.file, staticEmoji: nil, subgroupId: nil),
+                    item: EmojiPagerContentComponent.Item(animationData: EntityKeyboardAnimationData(file: item.file), itemFile: item.file, staticEmoji: nil, subgroupId: nil),
                     context: context,
                     attemptSynchronousLoad: attemptSynchronousLoads,
-                    file: item.file,
+                    animationData: EntityKeyboardAnimationData(file: item.file),
                     staticEmoji: nil,
                     cache: animationCache,
                     renderer: animationRenderer,
@@ -281,7 +281,8 @@ final class StickerPackEmojisItemNode: GridItemNode {
                                 } else {
                                     placeholderView = EmojiPagerContentComponent.View.ItemPlaceholderView(
                                         context: context,
-                                        file: item.file,
+                                        dimensions: item.file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0),
+                                        immediateThumbnailData: item.file.immediateThumbnailData,
                                         shimmerView: strongSelf.shimmerHostView,
                                         color: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.08),
                                         size: itemNativeFitSize

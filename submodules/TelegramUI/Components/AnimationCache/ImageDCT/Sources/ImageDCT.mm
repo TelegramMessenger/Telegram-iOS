@@ -82,8 +82,8 @@
     _dct->forward4x4(normalizedCoefficients, coefficients, (int)width, (int)height);
 }
 
-- (void)inverse4x4:(int16_t const * _Nonnull)coefficients normalizedCoefficients:(int16_t * _Nonnull)normalizedCoefficients width:(NSInteger)width height:(NSInteger)height {
-    _dct->inverse4x4(coefficients, normalizedCoefficients, (int)width, (int)height);
+- (void)inverse4x4Add:(int16_t const * _Nonnull)coefficients normalizedCoefficients:(int16_t * _Nonnull)normalizedCoefficients width:(NSInteger)width height:(NSInteger)height {
+    _dct->inverse4x4Add(coefficients, normalizedCoefficients, (int)width, (int)height);
 }
 
 @end

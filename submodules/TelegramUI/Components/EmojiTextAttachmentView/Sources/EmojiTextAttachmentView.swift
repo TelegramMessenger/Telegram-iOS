@@ -16,29 +16,48 @@ import MultiAnimationRenderer
 import ShimmerEffect
 import TextFormat
 
-public func animationCacheFetchFile(context: AccountContext, file: TelegramMediaFile, keyframeOnly: Bool) -> (AnimationCacheFetchOptions) -> Disposable {
+public enum AnimationCacheAnimationType {
+    case still
+    case lottie
+    case video
+}
+
+public extension AnimationCacheAnimationType {
+    init(file: TelegramMediaFile) {
+        if file.isVideoSticker || file.isVideoEmoji {
+            self = .video
+        } else if file.isAnimatedSticker {
+            self = .lottie
+        } else {
+            self = .still
+        }
+    }
+}
+
+public func animationCacheFetchFile(context: AccountContext, resource: MediaResourceReference, type: AnimationCacheAnimationType, keyframeOnly: Bool) -> (AnimationCacheFetchOptions) -> Disposable {
     return { options in
-        let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
+        let source = AnimatedStickerResourceSource(account: context.account, resource: resource.resource, fitzModifier: nil, isVideo: false)
         
         let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
             guard let result = result else {
                 return
             }
             
-            if file.isVideoEmoji || file.isVideoSticker {
+            switch type {
+            case .video:
                 cacheVideoAnimation(path: result, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, firstFrameOnly: options.firstFrameOnly)
-            } else if file.isAnimatedSticker {
+            case .lottie:
                 guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
                     options.writer.finish()
                     return
                 }
                 cacheLottieAnimation(data: data, width: Int(options.size.width), height: Int(options.size.height), keyframeOnly: keyframeOnly, writer: options.writer, firstFrameOnly: options.firstFrameOnly)
-            } else {
+            case .still:
                 cacheStillSticker(path: result, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer)
             }
         })
         
-        let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: stickerPackFileReference(file), resource: file.resource).start()
+        let fetchDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: resource).start()
         
         return ActionDisposable {
             dataDisposable.dispose()
@@ -165,7 +184,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         } else {
             let pointSize = self.pointSize
             let placeholderColor = self.placeholderColor
-            self.loadDisposable = self.renderer.loadFirstFrame(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: self.context, file: file, keyframeOnly: true), completion: { [weak self] result, isFinal in
+            self.loadDisposable = self.renderer.loadFirstFrame(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: self.context, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true), completion: { [weak self] result, isFinal in
                 if !result {
                     if !isFinal {
                         return
@@ -204,7 +223,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         if file.isAnimatedSticker || file.isVideoEmoji {
             let keyframeOnly = self.pixelSize.width >= 120.0
             
-            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: context, file: file, keyframeOnly: keyframeOnly))
+            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: context, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: keyframeOnly))
         } else {
             self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: { options in
                 let dataDisposable = context.account.postbox.mediaBox.resourceData(file.resource).start(next: { result in

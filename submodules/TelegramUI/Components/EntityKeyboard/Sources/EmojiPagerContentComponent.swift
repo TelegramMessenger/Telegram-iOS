@@ -30,6 +30,77 @@ private let premiumBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bund
 private let featuredBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeAdd"), color: .white)
 private let lockedBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeLock"), color: .white)
 
+public final class EntityKeyboardAnimationData: Equatable {
+    public enum Id: Hashable {
+        case file(MediaId)
+        case stickerPackThumbnail(ItemCollectionId)
+    }
+    
+    public enum ItemType {
+        case still
+        case lottie
+        case video
+        
+        var animationCacheAnimationType: AnimationCacheAnimationType {
+            switch self {
+            case .still:
+                return .still
+            case .lottie:
+                return .lottie
+            case .video:
+                return .video
+            }
+        }
+    }
+    
+    public let id: Id
+    public let type: ItemType
+    public let resource: MediaResourceReference
+    public let dimensions: CGSize
+    public let immediateThumbnailData: Data?
+    
+    public init(id: Id, type: ItemType, resource: MediaResourceReference, dimensions: CGSize, immediateThumbnailData: Data?) {
+        self.id = id
+        self.type = type
+        self.resource = resource
+        self.dimensions = dimensions
+        self.immediateThumbnailData = immediateThumbnailData
+    }
+    
+    public convenience init(file: TelegramMediaFile) {
+        let type: ItemType
+        if file.isVideoSticker || file.isVideoEmoji {
+            type = .video
+        } else if file.isAnimatedSticker {
+            type = .lottie
+        } else {
+            type = .still
+        }
+        self.init(id: .file(file.fileId), type: type, resource: .standalone(resource: file.resource), dimensions: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), immediateThumbnailData: file.immediateThumbnailData)
+    }
+    
+    public static func ==(lhs: EntityKeyboardAnimationData, rhs: EntityKeyboardAnimationData) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        
+        if lhs.resource.resource.id != rhs.resource.resource.id {
+            return false
+        }
+        if lhs.dimensions != rhs.dimensions {
+            return false
+        }
+        if lhs.type != rhs.type {
+            return false
+        }
+        if lhs.immediateThumbnailData != rhs.immediateThumbnailData {
+            return false
+        }
+        
+        return true
+    }
+}
+
 private final class PassthroughLayer: CALayer {
     var mirrorLayer: CALayer?
     
@@ -1039,7 +1110,7 @@ private final class GroupEmbeddedView: UIScrollView, UIScrollViewDelegate, Pager
         if let itemRange = itemLayout.visibleItems(for: self.bounds) {
             for index in itemRange.lowerBound ..< itemRange.upperBound {
                 let item = items[index]
-                let itemId = EmojiPagerContentComponent.View.ItemLayer.Key(groupId: AnyHashable(0), fileId: item.file?.fileId, staticEmoji: item.staticEmoji)
+                let itemId = EmojiPagerContentComponent.View.ItemLayer.Key(groupId: AnyHashable(0), itemId: item.animationData?.id, staticEmoji: item.staticEmoji)
                 validIds.insert(itemId)
                 
                 let itemLayer: EmojiPagerContentComponent.View.ItemLayer
@@ -1050,7 +1121,7 @@ private final class GroupEmbeddedView: UIScrollView, UIScrollViewDelegate, Pager
                         item: item,
                         context: context,
                         attemptSynchronousLoad: attemptSynchronousLoad,
-                        file: item.file,
+                        animationData: item.animationData,
                         staticEmoji: item.staticEmoji,
                         cache: cache,
                         renderer: renderer,
@@ -1316,16 +1387,19 @@ public final class EmojiPagerContentComponent: Component {
     }
     
     public final class Item: Equatable {
-        public let file: TelegramMediaFile?
+        public let animationData: EntityKeyboardAnimationData?
+        public let itemFile: TelegramMediaFile?
         public let staticEmoji: String?
         public let subgroupId: Int32?
         
         public init(
-            file: TelegramMediaFile?,
+            animationData: EntityKeyboardAnimationData?,
+            itemFile: TelegramMediaFile?,
             staticEmoji: String?,
             subgroupId: Int32?
         ) {
-            self.file = file
+            self.animationData = animationData
+            self.itemFile = itemFile
             self.staticEmoji = staticEmoji
             self.subgroupId = subgroupId
         }
@@ -1334,7 +1408,10 @@ public final class EmojiPagerContentComponent: Component {
             if lhs === rhs {
                 return true
             }
-            if lhs.file?.fileId != rhs.file?.fileId {
+            if lhs.animationData?.resource.resource.id != rhs.animationData?.resource.resource.id {
+                return false
+            }
+            if lhs.itemFile?.fileId != rhs.itemFile?.fileId {
                 return false
             }
             if lhs.staticEmoji != rhs.staticEmoji {
@@ -1360,7 +1437,7 @@ public final class EmojiPagerContentComponent: Component {
         public let hasClear: Bool
         public let isExpandable: Bool
         public let displayPremiumBadges: Bool
-        public let headerItem: EntityKeyboardGroupHeaderItem?
+        public let headerItem: EntityKeyboardAnimationData?
         public let items: [Item]
         
         public init(
@@ -1375,7 +1452,7 @@ public final class EmojiPagerContentComponent: Component {
             hasClear: Bool,
             isExpandable: Bool,
             displayPremiumBadges: Bool,
-            headerItem: EntityKeyboardGroupHeaderItem?,
+            headerItem: EntityKeyboardAnimationData?,
             items: [Item]
         ) {
             self.supergroupId = supergroupId
@@ -1739,7 +1816,8 @@ public final class EmojiPagerContentComponent: Component {
             
             public init(
                 context: AccountContext,
-                file: TelegramMediaFile,
+                dimensions: CGSize?,
+                immediateThumbnailData: Data?,
                 shimmerView: PortalSourceView?,
                 color: UIColor,
                 size: CGSize
@@ -1760,7 +1838,7 @@ public final class EmojiPagerContentComponent: Component {
                 
                 let useDirectContent = self.placeholderView == nil
                 Queue.concurrentDefaultQueue().async { [weak self] in
-                    if let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: size, scale: min(2.0, UIScreenScale), imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: useDirectContent ? color : .black) {
+                    if let image = generateStickerPlaceholderImage(data: immediateThumbnailData, size: size, scale: min(2.0, UIScreenScale), imageSize: dimensions ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: useDirectContent ? color : .black) {
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
                                 return
@@ -1791,16 +1869,16 @@ public final class EmojiPagerContentComponent: Component {
         public final class ItemLayer: MultiAnimationRenderTarget {
             public struct Key: Hashable {
                 var groupId: AnyHashable
-                var fileId: MediaId?
+                var itemId: EntityKeyboardAnimationData.Id?
                 var staticEmoji: String?
                 
                 public init(
                     groupId: AnyHashable,
-                    fileId: MediaId?,
+                    itemId: EntityKeyboardAnimationData.Id?,
                     staticEmoji: String?
                 ) {
                     self.groupId = groupId
-                    self.fileId = fileId
+                    self.itemId = itemId
                     self.staticEmoji = staticEmoji
                 }
             }
@@ -1813,7 +1891,7 @@ public final class EmojiPagerContentComponent: Component {
             
             let item: Item
             
-            private let file: TelegramMediaFile?
+            private let animationData: EntityKeyboardAnimationData?
             private let staticEmoji: String?
             private let placeholderColor: UIColor
             private let size: CGSize
@@ -1839,7 +1917,7 @@ public final class EmojiPagerContentComponent: Component {
                 item: Item,
                 context: AccountContext,
                 attemptSynchronousLoad: Bool,
-                file: TelegramMediaFile?,
+                animationData: EntityKeyboardAnimationData?,
                 staticEmoji: String?,
                 cache: AnimationCache,
                 renderer: MultiAnimationRenderer,
@@ -1849,7 +1927,7 @@ public final class EmojiPagerContentComponent: Component {
                 onUpdateDisplayPlaceholder: @escaping (Bool, Double) -> Void
             ) {
                 self.item = item
-                self.file = file
+                self.animationData = animationData
                 self.staticEmoji = staticEmoji
                 self.placeholderColor = placeholderColor
                 self.onUpdateDisplayPlaceholder = onUpdateDisplayPlaceholder
@@ -1860,20 +1938,20 @@ public final class EmojiPagerContentComponent: Component {
                 
                 super.init()
                 
-                if let file = file {
+                if let animationData = animationData {
                     let loadAnimation: () -> Void = { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
                         
-                        strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, file: file, keyframeOnly: pixelSize.width >= 120.0))
+                        strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: pixelSize.width >= 120.0))
                     }
                     
                     if attemptSynchronousLoad {
-                        if !renderer.loadFirstFrameSynchronously(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize) {
+                        if !renderer.loadFirstFrameSynchronously(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize) {
                             self.updateDisplayPlaceholder(displayPlaceholder: true)
                             
-                            self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, file: file, keyframeOnly: true), completion: { [weak self] success, isFinal in
+                            self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true), completion: { [weak self] success, isFinal in
                                 if !isFinal {
                                     if !success {
                                         Queue.mainQueue().async {
@@ -1905,7 +1983,7 @@ public final class EmojiPagerContentComponent: Component {
                             loadAnimation()
                         }
                     } else {
-                        self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: file.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, file: file, keyframeOnly: true), completion: { [weak self] success, isFinal in
+                        self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true), completion: { [weak self] success, isFinal in
                             if !isFinal {
                                 if !success {
                                     Queue.mainQueue().async {
@@ -1961,7 +2039,7 @@ public final class EmojiPagerContentComponent: Component {
                 
                 self.item = layer.item
                 
-                self.file = layer.file
+                self.animationData = layer.animationData
                 self.staticEmoji = layer.staticEmoji
                 self.placeholderColor = layer.placeholderColor
                 self.size = layer.size
@@ -2255,7 +2333,7 @@ public final class EmojiPagerContentComponent: Component {
                 guard let strongSelf = self, let component = strongSelf.component else {
                     return nil
                 }
-                guard let item = strongSelf.item(atPoint: point), let itemLayer = strongSelf.visibleItemLayers[item.1], let file = item.0.file else {
+                guard let item = strongSelf.item(atPoint: point), let itemLayer = strongSelf.visibleItemLayers[item.1], let file = item.0.itemFile else {
                     return nil
                 }
                 if itemLayer.displayPlaceholder {
@@ -3369,15 +3447,11 @@ public final class EmojiPagerContentComponent: Component {
                             }
                         }
                         
-                        let itemId = ItemLayer.Key(groupId: itemGroup.groupId, fileId: item.file?.fileId, staticEmoji: item.staticEmoji)
+                        let itemId = ItemLayer.Key(groupId: itemGroup.groupId, itemId: item.animationData?.id, staticEmoji: item.staticEmoji)
                         validIds.insert(itemId)
                         
-                        let itemDimensions: CGSize
-                        if let file = item.file {
-                            itemDimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
-                        } else {
-                            itemDimensions = CGSize(width: 512.0, height: 512.0)
-                        }
+                        let itemDimensions: CGSize = item.animationData?.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                        
                         let itemNativeFitSize = itemDimensions.aspectFitted(CGSize(width: itemLayout.nativeItemSize, height: itemLayout.nativeItemSize))
                         let itemVisibleFitSize = itemDimensions.aspectFitted(CGSize(width: itemLayout.visibleItemSize, height: itemLayout.visibleItemSize))
                         let itemPlaybackSize = itemDimensions.aspectFitted(CGSize(width: itemLayout.playbackItemSize, height: itemLayout.playbackItemSize))
@@ -3398,7 +3472,7 @@ public final class EmojiPagerContentComponent: Component {
                                 item: item,
                                 context: component.context,
                                 attemptSynchronousLoad: attemptSynchronousLoads,
-                                file: item.file,
+                                animationData: item.animationData,
                                 staticEmoji: item.staticEmoji,
                                 cache: component.animationCache,
                                 renderer: component.animationRenderer,
@@ -3409,7 +3483,7 @@ public final class EmojiPagerContentComponent: Component {
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    if displayPlaceholder, let file = item.file {
+                                    if displayPlaceholder, let animationData = item.animationData {
                                         if let itemLayer = strongSelf.visibleItemLayers[itemId] {
                                             let placeholderView: ItemPlaceholderView
                                             if let current = strongSelf.visibleItemPlaceholderViews[itemId] {
@@ -3417,7 +3491,8 @@ public final class EmojiPagerContentComponent: Component {
                                             } else {
                                                 placeholderView = ItemPlaceholderView(
                                                     context: component.context,
-                                                    file: file,
+                                                    dimensions: animationData.dimensions,
+                                                    immediateThumbnailData: animationData.immediateThumbnailData,
                                                     shimmerView: strongSelf.shimmerHostView,
                                                     color: placeholderColor,
                                                     size: itemNativeFitSize
@@ -3482,7 +3557,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemTransition.setPosition(layer: itemLayer, position: itemPosition)
                         
                         var badge: ItemLayer.Badge?
-                        if itemGroup.displayPremiumBadges, let file = item.file, file.isPremiumSticker {
+                        if itemGroup.displayPremiumBadges, let file = item.itemFile, file.isPremiumSticker {
                             badge = .premium
                         }
                         itemLayer.update(transition: transition, size: itemFrame.size, badge: badge, blurredBadgeColor: UIColor(white: 0.0, alpha: 0.1), blurredBadgeBackgroundColor: keyboardChildEnvironment.theme.list.plainBackgroundColor)
@@ -3798,10 +3873,10 @@ public final class EmojiPagerContentComponent: Component {
                         for itemIndex in 0 ..< itemGroup.items.count {
                             let item = itemGroup.items[itemIndex]
                             let itemKey: ItemLayer.Key
-                            if let file = item.file {
-                                itemKey = ItemLayer.Key(groupId: itemGroup.groupId, fileId: file.fileId, staticEmoji: nil)
+                            if let animationData = item.animationData {
+                                itemKey = ItemLayer.Key(groupId: itemGroup.groupId, itemId: animationData.id, staticEmoji: nil)
                             } else if let staticEmoji = item.staticEmoji {
-                                itemKey = ItemLayer.Key(groupId: itemGroup.groupId, fileId: nil, staticEmoji: staticEmoji)
+                                itemKey = ItemLayer.Key(groupId: itemGroup.groupId, itemId: nil, staticEmoji: staticEmoji)
                             } else {
                                 continue
                             }
@@ -3971,10 +4046,10 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         for j in 0 ..< component.itemGroups[i].items.count {
                             let itemKey: ItemLayer.Key
-                            if let file = component.itemGroups[i].items[j].file {
-                                itemKey = ItemLayer.Key(groupId: component.itemGroups[i].groupId, fileId: file.fileId, staticEmoji: nil)
+                            if let animationData = component.itemGroups[i].items[j].animationData {
+                                itemKey = ItemLayer.Key(groupId: component.itemGroups[i].groupId, itemId: animationData.id, staticEmoji: nil)
                             } else if let staticEmoji = component.itemGroups[i].items[j].staticEmoji {
-                                itemKey = ItemLayer.Key(groupId: component.itemGroups[i].groupId, fileId: nil, staticEmoji: staticEmoji)
+                                itemKey = ItemLayer.Key(groupId: component.itemGroups[i].groupId, itemId: nil, staticEmoji: staticEmoji)
                             } else {
                                 continue
                             }
@@ -4013,10 +4088,10 @@ public final class EmojiPagerContentComponent: Component {
                     for itemIndex in 0 ..< itemGroup.items.count {
                         let item = itemGroup.items[itemIndex]
                         let itemKey: ItemLayer.Key
-                        if let file = item.file {
-                            itemKey = ItemLayer.Key(groupId: itemGroup.groupId, fileId: file.fileId, staticEmoji: nil)
+                        if let animationData = item.animationData {
+                            itemKey = ItemLayer.Key(groupId: itemGroup.groupId, itemId: animationData.id, staticEmoji: nil)
                         } else if let staticEmoji = item.staticEmoji {
-                            itemKey = ItemLayer.Key(groupId: itemGroup.groupId, fileId: nil, staticEmoji: staticEmoji)
+                            itemKey = ItemLayer.Key(groupId: itemGroup.groupId, itemId: nil, staticEmoji: staticEmoji)
                         } else {
                             continue
                         }

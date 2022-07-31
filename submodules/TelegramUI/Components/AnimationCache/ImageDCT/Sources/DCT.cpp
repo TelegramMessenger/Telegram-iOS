@@ -727,7 +727,7 @@ static inline void transpose_idct4x4_16_bd8(int16x8_t *const a) {
     idct4x4_16_kernel_bd8(a);
 }
 
-inline void vpx_idct4x4_16_add_neon(const int16x8_t &top64, const int16x8_t &bottom64, int16_t *dest, int16_t multiplier) {
+inline void vpx_idct4x4_16_add_neon(const int16x8_t &top64, const int16x8_t &bottom64, const int16x4_t &current0, const int16x4_t &current1, const int16x4_t &current2, const int16x4_t &current3, int16_t multiplier, int16_t *dest, int destRowIncrement) {
     int16x8_t a[2];
     
     assert(!((intptr_t)dest % sizeof(uint32_t)));
@@ -745,11 +745,19 @@ inline void vpx_idct4x4_16_add_neon(const int16x8_t &top64, const int16x8_t &bot
     a[0] = vrshrq_n_s16(a[0], 4);
     a[1] = vrshrq_n_s16(a[1], 4);
     
-    vst1q_s16(dest, a[0]);
-    dest += 2 * 4;
-    vst1_s16(dest, vget_high_s16(a[1]));
-    dest += 4;
-    vst1_s16(dest, vget_low_s16(a[1]));
+    a[0] = vaddq_s16(a[0], vcombine_s16(current0, current1));
+    a[1] = vaddq_s16(a[1], vcombine_s16(current3, current2));
+    
+    vst1_s16(dest + destRowIncrement * 0, vget_low_s16(a[0]));
+    vst1_s16(dest + destRowIncrement * 1, vget_high_s16(a[0]));
+    vst1_s16(dest + destRowIncrement * 2, vget_high_s16(a[1]));
+    vst1_s16(dest + destRowIncrement * 3, vget_low_s16(a[1]));
+    
+    //vst1q_s16(dest, a[0]);
+    //dest += 2 * 4;
+    //vst1_s16(dest, vget_high_s16(a[1]));
+    //dest += 4;
+    //vst1_s16(dest, vget_low_s16(a[1]));
 }
 
 static int dct4x4QuantDC = 58;
@@ -803,11 +811,14 @@ void performForward4x4Dct(int16_t const *normalizedCoefficients, int16_t *coeffi
     }
 }
 
-void performInverse4x4Dct(int16_t const * coefficients, int16_t *normalizedCoefficients, int width, int height, DctAuxiliaryData *auxiliaryData, IFAST_MULT_TYPE *ifmtbl) {
-    DCTELEM resultBlock[4 * 4];
-    
+void performInverse4x4DctAdd(int16_t const *coefficients, int16_t *normalizedCoefficients, int width, int height, DctAuxiliaryData *auxiliaryData, IFAST_MULT_TYPE *ifmtbl) {
     for (int y = 0; y < height; y += 4) {
         for (int x = 0; x < width; x += 4) {
+            int16x4_t current0 = vld1_s16(&normalizedCoefficients[(y + 0) * width + x]);
+            int16x4_t current1 = vld1_s16(&normalizedCoefficients[(y + 1) * width + x]);
+            int16x4_t current2 = vld1_s16(&normalizedCoefficients[(y + 2) * width + x]);
+            int16x4_t current3 = vld1_s16(&normalizedCoefficients[(y + 3) * width + x]);
+            
             uint32x2_t sa = vld1_u32((uint32_t *)&coefficients[(y + 0) * width + x]);
             uint32x2_t sb = vld1_u32((uint32_t *)&coefficients[(y + 1) * width + x]);
             uint32x2_t sc = vld1_u32((uint32_t *)&coefficients[(y + 2) * width + x]);
@@ -829,34 +840,7 @@ void performInverse4x4Dct(int16_t const * coefficients, int16_t *normalizedCoeff
             int16x8_t top64 = vreinterpretq_s16_u16(qtop16);
             int16x8_t bottom64 = vreinterpretq_s16_u16(qbottom16);
             
-            /*DCTELEM coefficientBlock[4 * 4];
-            
-            for (int blockY = 0; blockY < 4; blockY++) {
-                for (int blockX = 0; blockX < 4; blockX++) {
-                    coefficientBlock[zigZag4x4Inv[blockY * 4 + blockX]] = coefficients[(y + blockY) * width + (x + blockX)];
-                }
-            }
-            
-            top64 = vreinterpretq_s16_u64(vld1q_u64((uint64_t *)&coefficientBlock[0]));
-            bottom64 = vreinterpretq_s16_u64(vld1q_u64((uint64_t *)&coefficientBlock[8]));*/
-            
-            vpx_idct4x4_16_add_neon(top64, bottom64, resultBlock, dct4x4QuantAC);
-            
-            uint32x2_t a = vld1_u32((uint32_t *)&resultBlock[4 * 0]);
-            uint32x2_t b = vld1_u32((uint32_t *)&resultBlock[4 * 1]);
-            uint32x2_t c = vld1_u32((uint32_t *)&resultBlock[4 * 2]);
-            uint32x2_t d = vld1_u32((uint32_t *)&resultBlock[4 * 3]);
-            
-            vst1_u32((uint32_t *)&normalizedCoefficients[(y + 0) * width + x], a);
-            vst1_u32((uint32_t *)&normalizedCoefficients[(y + 1) * width + x], b);
-            vst1_u32((uint32_t *)&normalizedCoefficients[(y + 2) * width + x], c);
-            vst1_u32((uint32_t *)&normalizedCoefficients[(y + 3) * width + x], d);
-            
-            /*for (int blockY = 0; blockY < 4; blockY++) {
-                for (int blockX = 0; blockX < 4; blockX++) {
-                    normalizedCoefficients[(y + blockY) * width + (x + blockX)] = resultBlock[blockY * 4 + blockX];
-                }
-            }*/
+            vpx_idct4x4_16_add_neon(top64, bottom64, current0, current1, current2, current3, dct4x4QuantAC, normalizedCoefficients + y * width + x, width);
         }
     }
 }
@@ -932,8 +916,8 @@ void DCT::forward4x4(int16_t const *normalizedCoefficients, int16_t *coefficient
     performForward4x4Dct(normalizedCoefficients, coefficients, width, height, (DCTELEM *)_internal->forwardDctData.data());
 }
 
-void DCT::inverse4x4(int16_t const *coefficients, int16_t *normalizedCoefficients, int width, int height) {
-    performInverse4x4Dct(coefficients, normalizedCoefficients, width, height, _internal->auxiliaryData, (IFAST_MULT_TYPE *)_internal->inverseDctData.data());
+void DCT::inverse4x4Add(int16_t const *coefficients, int16_t *normalizedCoefficients, int width, int height) {
+    performInverse4x4DctAdd(coefficients, normalizedCoefficients, width, height, _internal->auxiliaryData, (IFAST_MULT_TYPE *)_internal->inverseDctData.data());
 }
 
 }
