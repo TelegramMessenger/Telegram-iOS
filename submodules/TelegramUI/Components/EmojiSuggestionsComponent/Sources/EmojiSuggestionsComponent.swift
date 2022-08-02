@@ -39,6 +39,8 @@ public final class EmojiSuggestionsComponent: Component {
         |> map { view, featuredEmojiPacks, hasPremium -> [TelegramMediaFile] in
             var result: [TelegramMediaFile] = []
             
+            let normalizedQuery = query.basicEmoji.0
+            
             var existingIds = Set<MediaId>()
             for entry in view.entries {
                 guard let item = entry.item as? StickerPackItem else {
@@ -47,7 +49,7 @@ public final class EmojiSuggestionsComponent: Component {
                 for attribute in item.file.attributes {
                     switch attribute {
                     case let .CustomEmoji(_, alt, _):
-                        if alt == query {
+                        if alt == query || (!normalizedQuery.isEmpty && alt == normalizedQuery) {
                             if !item.file.isPremiumEmoji || hasPremium {
                                 if !existingIds.contains(item.file.fileId) {
                                     existingIds.insert(item.file.fileId)
@@ -66,7 +68,7 @@ public final class EmojiSuggestionsComponent: Component {
                     for attribute in item.file.attributes {
                         switch attribute {
                         case let .CustomEmoji(_, alt, _):
-                            if alt == query {
+                            if alt == query || (!normalizedQuery.isEmpty && alt == normalizedQuery) {
                                 if !item.file.isPremiumEmoji || hasPremium {
                                     if !existingIds.contains(item.file.fileId) {
                                         existingIds.insert(item.file.fileId)

@@ -2506,6 +2506,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                                     self.currentEmojiSuggestion = suggestionContext
                                 }
                                 suggestionContext.localPosition = trackingPosition
+                                suggestionContext.position = emojiSuggestionPosition
                                 self.dismissedEmojiSuggestionPosition = nil
                                 
                                 if beginRequest {
@@ -2627,7 +2628,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 containerSize: CGSize(width: self.bounds.width - sideInset * 2.0, height: 100.0)
             )
             
-            let viewFrame = CGRect(origin: CGPoint(x: max(sideInset, floor(globalPosition.x - viewSize.width / 2.0)), y: globalPosition.y - 2.0 - viewSize.height), size: viewSize)
+            let viewFrame = CGRect(origin: CGPoint(x: min(self.bounds.width - sideInset - viewSize.width, max(sideInset, floor(globalPosition.x - viewSize.width / 2.0))), y: globalPosition.y - 2.0 - viewSize.height), size: viewSize)
             currentEmojiSuggestionView.frame = viewFrame
             if let componentView = currentEmojiSuggestionView.componentView as? EmojiSuggestionsComponent.View {
                 componentView.adjustBackground(relativePositionX: floor(globalPosition.x - viewFrame.minX))
