@@ -280,19 +280,12 @@ public extension TelegramEngine {
         }
         
         public func fetchAlbumCover(file: FileMediaReference?, title: String, performer: String) -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> {
-            let datacenterId: Int
-            if let resource = file?.media.resource as? CloudDocumentMediaResource {
-                datacenterId = resource.datacenterId
-            } else {
-                datacenterId = self.account.network.datacenterId
-            }
-            
-            let resource = AlbumCoverResource(datacenterId: datacenterId, file: file, title: title, performer: performer)
-            
             let signal = currentWebDocumentsHostDatacenterId(postbox: self.account.postbox, isTestingEnvironment: self.account.testingEnvironment)
             |> castError(EngineMediaResource.Fetch.Error.self)
             |> take(1)
             |> mapToSignal { datacenterId -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> in
+                let resource = AlbumCoverResource(datacenterId: Int(datacenterId), file: file, title: title, performer: performer)
+                
                 return multipartFetch(postbox: self.account.postbox, network: self.account.network, mediaReferenceRevalidationContext: self.account.mediaReferenceRevalidationContext, resource: resource, datacenterId: Int(datacenterId), size: nil, intervals: .single([(0 ..< Int64.max, .default)]), parameters: MediaResourceFetchParameters(
                     tag: nil,
                     info: TelegramCloudMediaResourceFetchInfo(
