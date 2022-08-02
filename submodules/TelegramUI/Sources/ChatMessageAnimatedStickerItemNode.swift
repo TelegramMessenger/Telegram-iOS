@@ -479,7 +479,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let item = strongSelf.item {
-                        if let _ = strongSelf.emojiFile {
+                        if let file = strongSelf.emojiFile, !file.isCustomEmoji {
                             item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
                         }
                     }
@@ -681,7 +681,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if isPlaying, let animationNode = self.animationNode as? AnimatedStickerNode {
             var alreadySeen = true
-            if isEmoji {
+            if isEmoji && self.emojiString == nil {
                 if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
                     alreadySeen = false
                 }
@@ -703,7 +703,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             if !alreadySeen {
                 item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
-                if let file = file, file.isPremiumSticker {
+                if let file = file, file.isCustomEmoji {
+                    self.playAdditionalEmojiAnimation(index: 1)
+                } else if let file = file, file.isPremiumSticker {
                     Queue.mainQueue().after(0.1) {
                         self.playPremiumStickerAnimation()
                     }
