@@ -7955,3 +7955,5 @@ Sorry for the inconvenience.";
 "KeyCommand.SwitchToPIP" = "Switch to Picture-in-Picture";
 "KeyCommand.EnterFullscreen" = "Enter Fullscreen";
 "KeyCommand.ExitFullscreen" = "Exit Fullscreen";
+
+"StickerPacksSettings.SuggestAnimatedEmoji" = "Suggest Animated Emoji";

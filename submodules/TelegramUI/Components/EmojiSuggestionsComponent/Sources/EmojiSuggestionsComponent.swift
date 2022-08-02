@@ -11,6 +11,7 @@ import Postbox
 import TelegramPresentationData
 import EmojiTextAttachmentView
 import TextFormat
+import TelegramUIPreferences
 
 public final class EmojiSuggestionsComponent: Component {
     public typealias EnvironmentType = Empty
@@ -33,10 +34,20 @@ public final class EmojiSuggestionsComponent: Component {
         return combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
             context.account.viewTracker.featuredEmojiPacks(),
-            hasPremium
+            hasPremium,
+            context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings])
         )
         |> take(1)
-        |> map { view, featuredEmojiPacks, hasPremium -> [TelegramMediaFile] in
+        |> map { view, featuredEmojiPacks, hasPremium, sharedData -> [TelegramMediaFile] in
+            var stickerSettings = StickerSettings.defaultSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
+               stickerSettings = value
+            }
+            
+            if !stickerSettings.suggestAnimatedEmoji {
+                return []
+            }
+            
             var result: [TelegramMediaFile] = []
             
             let normalizedQuery = query.basicEmoji.0
@@ -160,6 +171,7 @@ public final class EmojiSuggestionsComponent: Component {
         
         private let blurView: BlurredBackgroundView
         private let backgroundLayer: SimpleShapeLayer
+        private let shadowLayer: SimpleLayer
         private let scrollView: UIScrollView
         
         private var component: EmojiSuggestionsComponent?
@@ -170,16 +182,18 @@ public final class EmojiSuggestionsComponent: Component {
         
         override init(frame: CGRect) {
             self.blurView = BlurredBackgroundView(color: .clear, enableBlur: true)
-            self.blurView.layer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
+            /*self.blurView.layer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
             self.blurView.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
             self.blurView.layer.shadowRadius = 15.0
-            self.blurView.layer.shadowOpacity = 0.15
+            self.blurView.layer.shadowOpacity = 0.15*/
+            
+            self.shadowLayer = SimpleLayer()
+            self.shadowLayer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
+            self.shadowLayer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+            self.shadowLayer.shadowRadius = 15.0
+            self.shadowLayer.shadowOpacity = 0.15
             
             self.backgroundLayer = SimpleShapeLayer()
-            /*self.backgroundLayer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
-            self.backgroundLayer.shadowOffset = CGSize(width: 0.0, height: 2.0)
-            self.backgroundLayer.shadowRadius = 15.0
-            self.backgroundLayer.shadowOpacity = 0.15*/
             
             self.blurView.layer.mask = self.backgroundLayer
             
@@ -206,8 +220,9 @@ public final class EmojiSuggestionsComponent: Component {
             self.scrollView.delegate = self
             self.scrollView.clipsToBounds = true
             
+            self.layer.addSublayer(self.shadowLayer)
             self.addSubview(self.blurView)
-            self.layer.addSublayer(self.backgroundLayer)
+            //self.layer.addSublayer(self.backgroundLayer)
             self.addSubview(self.scrollView)
             
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
@@ -327,11 +342,13 @@ public final class EmojiSuggestionsComponent: Component {
             path.addArc(tangent1End: CGPoint(x: size.width, y: 0.0), tangent2End: CGPoint(x: size.width - radius, y: 0.0), radius: radius)
             path.addLine(to: CGPoint(x: radius, y: 0.0))
             
+            self.shadowLayer.shadowPath = path
+            self.shadowLayer.frame = CGRect(origin: CGPoint(), size: size)
             self.blurView.frame = CGRect(origin: CGPoint(), size: size)
             self.blurView.update(size: size, transition: .immediate)
             self.backgroundLayer.frame = CGRect(origin: CGPoint(), size: size)
             self.backgroundLayer.path = path
-            self.backgroundLayer.shadowPath = path
+            //self.blurView.shadowPath = path
         }
         
         func update(component: EmojiSuggestionsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -340,7 +357,7 @@ public final class EmojiSuggestionsComponent: Component {
             if self.component?.theme !== component.theme {
                 //self.backgroundLayer.fillColor = component.theme.list.plainBackgroundColor.cgColor
                 self.backgroundLayer.fillColor = UIColor.black.cgColor
-                self.blurView.updateColor(color: component.theme.list.plainBackgroundColor.withMultipliedAlpha(0.6), transition: .immediate)
+                self.blurView.updateColor(color: component.theme.list.plainBackgroundColor.withMultipliedAlpha(0.88), transition: .immediate)
             }
             var resetScrollingPosition = false
             if self.component?.files != component.files {
