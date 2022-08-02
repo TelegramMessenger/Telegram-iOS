@@ -54,11 +54,21 @@ public extension Api {
 }
 public extension Api {
     enum InputWebFileLocation: TypeConstructorDescription {
+        case inputWebFileAudioAlbumThumbLocation(flags: Int32, document: Api.InputDocument?, title: String?, performer: String?)
         case inputWebFileGeoPointLocation(geoPoint: Api.InputGeoPoint, accessHash: Int64, w: Int32, h: Int32, zoom: Int32, scale: Int32)
         case inputWebFileLocation(url: String, accessHash: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .inputWebFileAudioAlbumThumbLocation(let flags, let document, let title, let performer):
+                    if boxed {
+                        buffer.appendInt32(-193992412)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(performer!, buffer: buffer, boxed: false)}
+                    break
                 case .inputWebFileGeoPointLocation(let geoPoint, let accessHash, let w, let h, let zoom, let scale):
                     if boxed {
                         buffer.appendInt32(-1625153079)
@@ -82,6 +92,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .inputWebFileAudioAlbumThumbLocation(let flags, let document, let title, let performer):
+                return ("inputWebFileAudioAlbumThumbLocation", [("flags", String(describing: flags)), ("document", String(describing: document)), ("title", String(describing: title)), ("performer", String(describing: performer))])
                 case .inputWebFileGeoPointLocation(let geoPoint, let accessHash, let w, let h, let zoom, let scale):
                 return ("inputWebFileGeoPointLocation", [("geoPoint", String(describing: geoPoint)), ("accessHash", String(describing: accessHash)), ("w", String(describing: w)), ("h", String(describing: h)), ("zoom", String(describing: zoom)), ("scale", String(describing: scale))])
                 case .inputWebFileLocation(let url, let accessHash):
@@ -89,6 +101,28 @@ public extension Api {
     }
     }
     
+        public static func parse_inputWebFileAudioAlbumThumbLocation(_ reader: BufferReader) -> InputWebFileLocation? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.InputDocument?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.InputDocument
+            } }
+            var _3: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputWebFileLocation.inputWebFileAudioAlbumThumbLocation(flags: _1!, document: _2, title: _3, performer: _4)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_inputWebFileGeoPointLocation(_ reader: BufferReader) -> InputWebFileLocation? {
             var _1: Api.InputGeoPoint?
             if let signature = reader.readInt32() {

@@ -158,6 +158,7 @@ public final class EmojiSuggestionsComponent: Component {
             }
         }
         
+        private let blurView: BlurredBackgroundView
         private let backgroundLayer: SimpleShapeLayer
         private let scrollView: UIScrollView
         
@@ -168,11 +169,19 @@ public final class EmojiSuggestionsComponent: Component {
         private var visibleLayers: [MediaId: InlineStickerItemLayer] = [:]
         
         override init(frame: CGRect) {
+            self.blurView = BlurredBackgroundView(color: .clear, enableBlur: true)
+            self.blurView.layer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
+            self.blurView.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+            self.blurView.layer.shadowRadius = 15.0
+            self.blurView.layer.shadowOpacity = 0.15
+            
             self.backgroundLayer = SimpleShapeLayer()
-            self.backgroundLayer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
+            /*self.backgroundLayer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
             self.backgroundLayer.shadowOffset = CGSize(width: 0.0, height: 2.0)
             self.backgroundLayer.shadowRadius = 15.0
-            self.backgroundLayer.shadowOpacity = 0.15
+            self.backgroundLayer.shadowOpacity = 0.15*/
+            
+            self.blurView.layer.mask = self.backgroundLayer
             
             self.scrollView = UIScrollView()
             
@@ -197,6 +206,7 @@ public final class EmojiSuggestionsComponent: Component {
             self.scrollView.delegate = self
             self.scrollView.clipsToBounds = true
             
+            self.addSubview(self.blurView)
             self.layer.addSublayer(self.backgroundLayer)
             self.addSubview(self.scrollView)
             
@@ -317,6 +327,8 @@ public final class EmojiSuggestionsComponent: Component {
             path.addArc(tangent1End: CGPoint(x: size.width, y: 0.0), tangent2End: CGPoint(x: size.width - radius, y: 0.0), radius: radius)
             path.addLine(to: CGPoint(x: radius, y: 0.0))
             
+            self.blurView.frame = CGRect(origin: CGPoint(), size: size)
+            self.blurView.update(size: size, transition: .immediate)
             self.backgroundLayer.frame = CGRect(origin: CGPoint(), size: size)
             self.backgroundLayer.path = path
             self.backgroundLayer.shadowPath = path
@@ -326,7 +338,9 @@ public final class EmojiSuggestionsComponent: Component {
             let height: CGFloat = 54.0
             
             if self.component?.theme !== component.theme {
-                self.backgroundLayer.fillColor = component.theme.list.plainBackgroundColor.cgColor
+                //self.backgroundLayer.fillColor = component.theme.list.plainBackgroundColor.cgColor
+                self.backgroundLayer.fillColor = UIColor.black.cgColor
+                self.blurView.updateColor(color: component.theme.list.plainBackgroundColor.withMultipliedAlpha(0.6), transition: .immediate)
             }
             var resetScrollingPosition = false
             if self.component?.files != component.files {

@@ -363,6 +363,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1770371538] = { return Api.InputWallPaper.parse_inputWallPaperNoFile($0) }
     dict[1913199744] = { return Api.InputWallPaper.parse_inputWallPaperSlug($0) }
     dict[-1678949555] = { return Api.InputWebDocument.parse_inputWebDocument($0) }
+    dict[-193992412] = { return Api.InputWebFileLocation.parse_inputWebFileAudioAlbumThumbLocation($0) }
     dict[-1625153079] = { return Api.InputWebFileLocation.parse_inputWebFileGeoPointLocation($0) }
     dict[-1036396922] = { return Api.InputWebFileLocation.parse_inputWebFileLocation($0) }
     dict[1048946971] = { return Api.Invoice.parse_invoice($0) }
