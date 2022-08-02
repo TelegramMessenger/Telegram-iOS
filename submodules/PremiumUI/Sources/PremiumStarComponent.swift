@@ -90,6 +90,7 @@ class PremiumStarComponent: Component {
             self.sceneView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
             self.sceneView.isUserInteractionEnabled = false
             self.sceneView.preferredFramesPerSecond = 60
+            self.sceneView.isJitteringEnabled = true
             
             super.init(frame: frame)
             
@@ -367,7 +368,7 @@ class PremiumStarComponent: Component {
             guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
                 return
             }
-            
+
             let animation = CABasicAnimation(keyPath: "scale")
             animation.duration = 2.0
             animation.fromValue = NSValue(scnVector3: SCNVector3(x: 0.1, y: 0.1, z: 0.1))
@@ -375,7 +376,7 @@ class PremiumStarComponent: Component {
             animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             animation.autoreverses = true
             animation.repeatCount = .infinity
-            
+
             node.addAnimation(animation, forKey: "scale")
         }
         
@@ -432,23 +433,32 @@ class PremiumStarComponent: Component {
             self.previousInteractionTimestamp = currentTime
             self.delayTapsTill = currentTime + 0.85
             
-            if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particles = scene.rootNode.childNode(withName: "particles", recursively: false) {
-                if let particleSystem = particles.particleSystems?.first {
-                    particleSystem.particleColorVariation = SCNVector4(0.15, 0.2, 0.15, 0.3)
-                    particleSystem.speedFactor = 2.0
-                    particleSystem.particleVelocity = 2.2
-                    particleSystem.birthRate = 4.0
-                    particleSystem.particleLifeSpan = 2.0
+            if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particlesLeft = scene.rootNode.childNode(withName: "particles_left", recursively: false), let particlesRight = scene.rootNode.childNode(withName: "particles_right", recursively: false) {
+                if let leftParticleSystem = particlesLeft.particleSystems?.first, let rightParticleSystem = particlesRight.particleSystems?.first {
+                    leftParticleSystem.speedFactor = 1.3
+                    leftParticleSystem.particleVelocity = 2.4
+                    leftParticleSystem.birthRate = 24.0
+                    leftParticleSystem.particleLifeSpan = 4.0
+                    
+                    rightParticleSystem.speedFactor = 1.3
+                    rightParticleSystem.particleVelocity = 2.4
+                    rightParticleSystem.birthRate = 24.0
+                    rightParticleSystem.particleLifeSpan = 4.0
                     
                     node.physicsField?.isActive = true
                     Queue.mainQueue().after(1.0) {
                         node.physicsField?.isActive = false
-                        particles.particleSystems?.first?.birthRate = 1.2
-                        particleSystem.particleVelocity = 1.0
-                        particleSystem.particleLifeSpan = 4.0
                         
-                        let animation = POPBasicAnimation()
-                        animation.property = (POPAnimatableProperty.property(withName: "speedFactor", initializer: { property in
+                        leftParticleSystem.birthRate = 9.0
+                        leftParticleSystem.particleVelocity = 1.2
+                        leftParticleSystem.particleLifeSpan = 3.0
+                        
+                        rightParticleSystem.birthRate = 9.0
+                        rightParticleSystem.particleVelocity = 1.2
+                        rightParticleSystem.particleLifeSpan = 3.0
+                        
+                        let leftAnimation = POPBasicAnimation()
+                        leftAnimation.property = (POPAnimatableProperty.property(withName: "speedFactor", initializer: { property in
                             property?.readBlock = { particleSystem, values in
                                 values?.pointee = (particleSystem as! SCNParticleSystem).speedFactor
                             }
@@ -457,11 +467,27 @@ class PremiumStarComponent: Component {
                             }
                             property?.threshold = 0.01
                         }) as! POPAnimatableProperty)
-                        animation.fromValue = 2.0 as NSNumber
-                        animation.toValue = 1.0 as NSNumber
-                        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-                        animation.duration = 0.5
-                        particleSystem.pop_add(animation, forKey: "speedFactor")
+                        leftAnimation.fromValue = 1.2 as NSNumber
+                        leftAnimation.toValue = 0.85 as NSNumber
+                        leftAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+                        leftAnimation.duration = 0.5
+                        leftParticleSystem.pop_add(leftAnimation, forKey: "speedFactor")
+                        
+                        let rightAnimation = POPBasicAnimation()
+                        rightAnimation.property = (POPAnimatableProperty.property(withName: "speedFactor", initializer: { property in
+                            property?.readBlock = { particleSystem, values in
+                                values?.pointee = (particleSystem as! SCNParticleSystem).speedFactor
+                            }
+                            property?.writeBlock = { particleSystem, values in
+                                (particleSystem as! SCNParticleSystem).speedFactor = values!.pointee
+                            }
+                            property?.threshold = 0.01
+                        }) as! POPAnimatableProperty)
+                        rightAnimation.fromValue = 1.2 as NSNumber
+                        rightAnimation.toValue = 0.85 as NSNumber
+                        rightAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+                        rightAnimation.duration = 0.5
+                        rightParticleSystem.pop_add(rightAnimation, forKey: "speedFactor")
                     }
                 }
             }
