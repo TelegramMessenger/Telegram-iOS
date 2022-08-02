@@ -218,7 +218,8 @@ private final class ItemAnimationContext {
         }
     }
     
-    static let queue = Queue(name: "ItemAnimationContext", qos: .default)
+    static let queue0 = Queue(name: "ItemAnimationContext-0", qos: .default)
+    static let queue1 = Queue(name: "ItemAnimationContext-1", qos: .default)
     
     private let cache: AnimationCache
     private let stateUpdated: () -> Void
@@ -667,17 +668,60 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
         
         if !tasks.isEmpty {
-            ItemAnimationContext.queue.async {
-                var completions: [() -> Void] = []
-                for task in tasks {
-                    let complete = task.task()
-                    completions.append(complete)
+            if tasks.count > 2 {
+                let tasks0 = Array(tasks.prefix(tasks.count / 2))
+                let tasks1 = Array(tasks.suffix(tasks.count - tasks0.count))
+                
+                var tasks0Completions: [() -> Void]?
+                var tasks1Completions: [() -> Void]?
+                
+                let complete: (Int, [() -> Void]) -> Void = { index, completions in
+                    Queue.mainQueue().async {
+                        if index == 0 {
+                            tasks0Completions = completions
+                        } else if index == 1 {
+                            tasks1Completions = completions
+                        }
+                        if let tasks0Completions = tasks0Completions, let tasks1Completions = tasks1Completions {
+                            for completion in tasks0Completions {
+                                completion()
+                            }
+                            for completion in tasks1Completions {
+                                completion()
+                            }
+                        }
+                    }
                 }
                 
-                if !completions.isEmpty {
-                    Queue.mainQueue().async {
-                        for completion in completions {
-                            completion()
+                ItemAnimationContext.queue0.async {
+                    var completions: [() -> Void] = []
+                    for task in tasks0 {
+                        let complete = task.task()
+                        completions.append(complete)
+                    }
+                    complete(0, completions)
+                }
+                ItemAnimationContext.queue1.async {
+                    var completions: [() -> Void] = []
+                    for task in tasks1 {
+                        let complete = task.task()
+                        completions.append(complete)
+                    }
+                    complete(1, completions)
+                }
+            } else {
+                ItemAnimationContext.queue0.async {
+                    var completions: [() -> Void] = []
+                    for task in tasks {
+                        let complete = task.task()
+                        completions.append(complete)
+                    }
+                    
+                    if !completions.isEmpty {
+                        Queue.mainQueue().async {
+                            for completion in completions {
+                                completion()
+                            }
                         }
                     }
                 }

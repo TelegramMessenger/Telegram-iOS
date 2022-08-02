@@ -362,7 +362,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
-        let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
+        let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers]
         
         struct PeerSpecificPackData: Equatable {
             var info: StickerPackCollectionInfo
@@ -440,7 +440,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     recentStickers = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudSavedStickers {
                     savedStickers = orderedView
-                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudPremiumStickers {
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudAllPremiumStickers {
                     cloudPremiumStickers = orderedView
                 }
             }
