@@ -49,7 +49,7 @@ func fetchResource(account: Account, resource: MediaResource, intervals: Signal<
     } else if let cloudResource = resource as? TelegramMultipartFetchableResource {
         return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
         |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, datacenterId: cloudResource.datacenterId, size: resource.size == 0 ? nil : resource.size, intervals: intervals, parameters: parameters))
-    } else if let webFileResource = resource as? WebFileReferenceMediaResource {
+    } else if let webFileResource = resource as? MediaResourceWithWebFileReference {
         return currentWebDocumentsHostDatacenterId(postbox: account.postbox, isTestingEnvironment: account.testingEnvironment)
         |> castError(MediaResourceDataFetchError.self)
         |> mapToSignal { datacenterId -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in

@@ -12,14 +12,16 @@ public enum EmojiStickerSuggestionMode: Int32 {
 public struct StickerSettings: Codable, Equatable {
     public var emojiStickerSuggestionMode: EmojiStickerSuggestionMode
     public var loopAnimatedStickers: Bool
+    public var suggestAnimatedEmoji: Bool
     
     public static var defaultSettings: StickerSettings {
-        return StickerSettings(emojiStickerSuggestionMode: .all, loopAnimatedStickers: true)
+        return StickerSettings(emojiStickerSuggestionMode: .all, loopAnimatedStickers: true, suggestAnimatedEmoji: true)
     }
     
-    init(emojiStickerSuggestionMode: EmojiStickerSuggestionMode, loopAnimatedStickers: Bool) {
+    init(emojiStickerSuggestionMode: EmojiStickerSuggestionMode, loopAnimatedStickers: Bool, suggestAnimatedEmoji: Bool) {
         self.emojiStickerSuggestionMode = emojiStickerSuggestionMode
         self.loopAnimatedStickers = loopAnimatedStickers
+        self.suggestAnimatedEmoji = suggestAnimatedEmoji
     }
     
     public init(from decoder: Decoder) throws {
@@ -27,6 +29,7 @@ public struct StickerSettings: Codable, Equatable {
 
         self.emojiStickerSuggestionMode = EmojiStickerSuggestionMode(rawValue: try container.decode(Int32.self, forKey: "emojiStickerSuggestionMode"))!
         self.loopAnimatedStickers = try container.decodeIfPresent(Bool.self, forKey: "loopAnimatedStickers") ?? true
+        self.suggestAnimatedEmoji = try container.decodeIfPresent(Bool.self, forKey: "suggestAnimatedEmoji") ?? true
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -34,18 +37,23 @@ public struct StickerSettings: Codable, Equatable {
 
         try container.encode(self.emojiStickerSuggestionMode.rawValue, forKey: "emojiStickerSuggestionMode")
         try container.encode(self.loopAnimatedStickers, forKey: "loopAnimatedStickers")
+        try container.encode(self.suggestAnimatedEmoji, forKey: "suggestAnimatedEmoji")
     }
     
     public static func ==(lhs: StickerSettings, rhs: StickerSettings) -> Bool {
-        return lhs.emojiStickerSuggestionMode == rhs.emojiStickerSuggestionMode && lhs.loopAnimatedStickers == rhs.loopAnimatedStickers
+        return lhs.emojiStickerSuggestionMode == rhs.emojiStickerSuggestionMode && lhs.loopAnimatedStickers == rhs.loopAnimatedStickers && lhs.suggestAnimatedEmoji == rhs.suggestAnimatedEmoji
     }
     
     public func withUpdatedEmojiStickerSuggestionMode(_ emojiStickerSuggestionMode: EmojiStickerSuggestionMode) -> StickerSettings {
-        return StickerSettings(emojiStickerSuggestionMode: emojiStickerSuggestionMode, loopAnimatedStickers: self.loopAnimatedStickers)
+        return StickerSettings(emojiStickerSuggestionMode: emojiStickerSuggestionMode, loopAnimatedStickers: self.loopAnimatedStickers, suggestAnimatedEmoji: self.suggestAnimatedEmoji)
     }
     
     public func withUpdatedLoopAnimatedStickers(_ loopAnimatedStickers: Bool) -> StickerSettings {
-        return StickerSettings(emojiStickerSuggestionMode: self.emojiStickerSuggestionMode, loopAnimatedStickers: loopAnimatedStickers)
+        return StickerSettings(emojiStickerSuggestionMode: self.emojiStickerSuggestionMode, loopAnimatedStickers: loopAnimatedStickers, suggestAnimatedEmoji: self.suggestAnimatedEmoji)
+    }
+    
+    public func withUpdatedSuggestAnimatedEmoji(_ suggestAnimatedEmoji: Bool) -> StickerSettings {
+        return StickerSettings(emojiStickerSuggestionMode: self.emojiStickerSuggestionMode, loopAnimatedStickers: self.loopAnimatedStickers, suggestAnimatedEmoji: suggestAnimatedEmoji)
     }
 }
 
