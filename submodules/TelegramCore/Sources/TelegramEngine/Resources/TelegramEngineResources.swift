@@ -289,41 +289,48 @@ public extension TelegramEngine {
             
             let resource = AlbumCoverResource(datacenterId: datacenterId, file: file, title: title, performer: performer)
             
-            return bufferedFetch(multipartFetch(postbox: self.account.postbox, network: self.account.network, mediaReferenceRevalidationContext: self.account.mediaReferenceRevalidationContext, resource: resource, datacenterId: datacenterId, size: nil, intervals: .single([(0 ..< Int64.max, .default)]), parameters: MediaResourceFetchParameters(
-                tag: nil,
-                info: TelegramCloudMediaResourceFetchInfo(
-                    reference: MediaResourceReference.standalone(resource: resource),
-                    preferBackgroundReferenceRevalidation: false,
-                    continueInBackground: false
-                ),
-                isRandomAccessAllowed: true
-            ))
-            |> map { result -> EngineMediaResource.Fetch.Result in
-                switch result {
-                case let .dataPart(resourceOffset, data, range, complete):
-                    return .dataPart(resourceOffset: resourceOffset, data: data, range: range, complete: complete)
-                case let .resourceSizeUpdated(size):
-                    return .resourceSizeUpdated(size)
-                case let .progressUpdated(value):
-                    return .progressUpdated(value)
-                case let .replaceHeader(data, range):
-                    return .replaceHeader(data: data, range: range)
-                case let .moveLocalFile(path):
-                    return .moveLocalFile(path: path)
-                case let .moveTempFile(file):
-                    return .moveTempFile(file: file)
-                case let .copyLocalItem(item):
-                    return .copyLocalItem(item)
-                case .reset:
-                    return .reset
+            let signal = currentWebDocumentsHostDatacenterId(postbox: self.account.postbox, isTestingEnvironment: self.account.testingEnvironment)
+            |> castError(EngineMediaResource.Fetch.Error.self)
+            |> take(1)
+            |> mapToSignal { datacenterId -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> in
+                return multipartFetch(postbox: self.account.postbox, network: self.account.network, mediaReferenceRevalidationContext: self.account.mediaReferenceRevalidationContext, resource: resource, datacenterId: Int(datacenterId), size: nil, intervals: .single([(0 ..< Int64.max, .default)]), parameters: MediaResourceFetchParameters(
+                    tag: nil,
+                    info: TelegramCloudMediaResourceFetchInfo(
+                        reference: MediaResourceReference.standalone(resource: resource),
+                        preferBackgroundReferenceRevalidation: false,
+                        continueInBackground: false
+                    ),
+                    isRandomAccessAllowed: true
+                ))
+                |> map { result -> EngineMediaResource.Fetch.Result in
+                    switch result {
+                    case let .dataPart(resourceOffset, data, range, complete):
+                        return .dataPart(resourceOffset: resourceOffset, data: data, range: range, complete: complete)
+                    case let .resourceSizeUpdated(size):
+                        return .resourceSizeUpdated(size)
+                    case let .progressUpdated(value):
+                        return .progressUpdated(value)
+                    case let .replaceHeader(data, range):
+                        return .replaceHeader(data: data, range: range)
+                    case let .moveLocalFile(path):
+                        return .moveLocalFile(path: path)
+                    case let .moveTempFile(file):
+                        return .moveTempFile(file: file)
+                    case let .copyLocalItem(item):
+                        return .copyLocalItem(item)
+                    case .reset:
+                        return .reset
+                    }
+                }
+                |> mapError { error -> EngineMediaResource.Fetch.Error in
+                    switch error {
+                    case .generic:
+                        return .generic
+                    }
                 }
             }
-            |> mapError { error -> EngineMediaResource.Fetch.Error in
-                switch error {
-                case .generic:
-                    return .generic
-                }
-            })
+            
+            return bufferedFetch(signal)
         }
 
         public func cancelAllFetches(id: String) {
