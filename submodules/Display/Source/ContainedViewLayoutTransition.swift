@@ -3,6 +3,12 @@ import UIKit
 import AsyncDisplayKit
 import ObjCRuntimeUtils
 
+extension CGRect {
+    var center: CGPoint {
+        return CGPoint(x: self.midX, y: self.midY)
+    }
+}
+
 public enum ContainedViewLayoutTransitionCurve: Equatable, Hashable {
     case linear
     case easeInOut

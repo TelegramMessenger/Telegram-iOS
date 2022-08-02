@@ -12,6 +12,12 @@ import PhotoResources
 import UIKitRuntimeUtils
 import RangeSet
 
+private extension CGRect {
+    var center: CGPoint {
+        return CGPoint(x: self.midX, y: self.midY)
+    }
+}
+
 public enum NativeVideoContentId: Hashable {
     case message(UInt32, MediaId)
     case instantPage(MediaId, MediaId)

@@ -20,8 +20,8 @@ private enum EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
 }
 
 private func backgroundCenterImage(_ theme: PresentationTheme) -> UIImage? {
-    return generateImage(CGSize(width: 8.0, height: 16.0), rotatedContext: { size, context in
-        /*context.clear(CGRect(origin: CGPoint(), size: size))
+    return generateImage(CGSize(width: 30.0, height: 55.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
         context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
         context.setFillColor(theme.list.plainBackgroundColor.cgColor)
         let lineWidth = UIScreenPixel
@@ -37,17 +37,8 @@ private func backgroundCenterImage(_ theme: PresentationTheme) -> UIImage? {
         context.translateBy(x: -460.5, y: -lineWidth / 2.0 - 364.0 + 27.0)
         context.move(to: CGPoint(x: 0.0, y: lineWidth / 2.0))
         context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
-        context.strokePath()*/
-        
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
-        context.setFillColor(theme.list.plainBackgroundColor.cgColor)
-        let lineWidth = UIScreenPixel
-        context.setLineWidth(lineWidth)
-        
-        context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.height, height: size.height)))
-        context.stroke(CGRect(origin: CGPoint(x: -lineWidth / 2.0, y: lineWidth / 2.0), size: CGSize(width: size.height + lineWidth, height: size.height - lineWidth)))
-    })?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
+        context.strokePath()
+    })
 }
 
 private func backgroundLeftImage(_ theme: PresentationTheme) -> UIImage? {
@@ -201,10 +192,8 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
                 inner: for (range, type, _) in textInputStateContextQueryRangeAndType(textInputState) {
                     if type == [.emojiSearch] {
                         var range = range
-                        if textInputState.inputText.attributedSubstring(from: range).string.hasPrefix(":") {
-                            range.location -= 1
-                            range.length += 1
-                        }
+                        range.location -= 1
+                        range.length += 1
                         hashtagQueryRange = range
                         break inner
                     }
@@ -278,7 +267,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
         self.presentationInterfaceState = interfaceState
         
         let sideInsets: CGFloat = 10.0 + leftInset
-        let contentWidth = min(size.width - sideInsets - sideInsets, max(24.0, CGFloat(self.currentEntries?.count ?? 0) * 45.0 + 5.0))
+        let contentWidth = min(size.width - sideInsets - sideInsets, max(24.0, CGFloat(self.currentEntries?.count ?? 0) * 45.0))
         
         var contentLeftInset: CGFloat = 40.0
         var leftOffset: CGFloat = 0.0
@@ -290,7 +279,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
         
         let backgroundFrame = CGRect(origin: CGPoint(x: sideInsets + leftOffset, y: size.height - 55.0 + 4.0), size: CGSize(width: contentWidth, height: 55.0))
         let backgroundLeftFrame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: contentLeftInset, height: backgroundFrame.size.height - 10.0 + UIScreenPixel))
-        let backgroundCenterFrame = CGRect(origin: CGPoint(x: backgroundLeftFrame.maxX, y: backgroundFrame.minY), size: CGSize(width: 30.0, height: backgroundFrame.size.height - 10.0 + UIScreenPixel))
+        let backgroundCenterFrame = CGRect(origin: CGPoint(x: backgroundLeftFrame.maxX, y: backgroundFrame.minY), size: CGSize(width: 30.0, height: 55.0))
         let backgroundRightFrame = CGRect(origin: CGPoint(x: backgroundCenterFrame.maxX, y: backgroundFrame.minY), size: CGSize(width: max(0.0, backgroundFrame.minX + backgroundFrame.size.width - backgroundCenterFrame.maxX), height: backgroundFrame.size.height - 10.0 + UIScreenPixel))
         transition.updateFrame(node: self.backgroundLeftNode, frame: backgroundLeftFrame)
         transition.updateFrame(node: self.backgroundNode, frame: backgroundCenterFrame)

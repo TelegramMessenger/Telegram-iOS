@@ -54,8 +54,8 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 }
                 
                 controller.purposefulAction = params.purposefulAction
-                if params.activateInput {
-                    controller.activateInput()
+                if let activateInput = params.activateInput {
+                    controller.activateInput(type: activateInput)
                 }
                 if params.changeColors {
                     controller.presentThemeSelection()
@@ -138,8 +138,8 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 }
             }
         }
-        if params.activateInput {
-            controller.activateInput()
+        if let activateInput = params.activateInput {
+            controller.activateInput(type: activateInput)
         }
         if params.changeColors {
             Queue.mainQueue().after(0.1) {

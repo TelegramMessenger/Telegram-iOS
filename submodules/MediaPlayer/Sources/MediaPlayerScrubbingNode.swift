@@ -838,10 +838,10 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((bounds.size.height - node.lineHeight) / 2.0)), size: CGSize(width: bounds.size.width, height: node.lineHeight))
                 let foregroundContentFrame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
             
-                node.backgroundNode.position = backgroundFrame.center
+                node.backgroundNode.position = CGPoint(x: backgroundFrame.midX, y: backgroundFrame.midY)
                 node.backgroundNode.bounds = CGRect(origin: CGPoint(), size: backgroundFrame.size)
                 
-                node.foregroundContentNode.position = foregroundContentFrame.center
+                node.foregroundContentNode.position = CGPoint(x: foregroundContentFrame.midX, y: foregroundContentFrame.midY)
                 node.foregroundContentNode.bounds = CGRect(origin: CGPoint(), size: foregroundContentFrame.size)
                 
                 node.bufferingNode.frame = backgroundFrame

@@ -27,6 +27,8 @@ import EditableChatTextNode
 import EmojiTextAttachmentView
 import LottieAnimationComponent
 import ComponentFlow
+import EmojiSuggestionsComponent
+import AudioToolbox
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -417,6 +419,47 @@ enum ChatTextInputPanelPasteData {
     case sticker(UIImage, Bool)
 }
 
+final class ChatTextViewForOverlayContent: UIView, ChatInputPanelViewForOverlayContent {
+    let ignoreHit: (UIView, CGPoint) -> Bool
+    let dismissSuggestions: () -> Void
+    
+    init(ignoreHit: @escaping (UIView, CGPoint) -> Bool, dismissSuggestions: @escaping () -> Void) {
+        self.ignoreHit = ignoreHit
+        self.dismissSuggestions = dismissSuggestions
+        
+        super.init(frame: CGRect())
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    func maybeDismissContent(point: CGPoint) {
+        for subview in self.subviews.reversed() {
+            if let _ = subview.hitTest(self.convert(point, to: subview), with: nil) {
+                return
+            }
+        }
+        
+        self.dismissSuggestions()
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        for subview in self.subviews.reversed() {
+            if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
+                return result
+            }
+        }
+        
+        if event == nil || self.ignoreHit(self, point) {
+            return nil
+        }
+        
+        self.dismissSuggestions()
+        return nil
+    }
+}
+
 final class CustomEmojiContainerView: UIView {
     private let emojiViewProvider: (ChatTextInputTextCustomEmojiAttribute) -> UIView?
     
@@ -706,8 +749,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
+    private let presentationContext: ChatPresentationContext?
+    
     init(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
+        self.presentationContext = presentationContext
 
         var hasSpoilers = true
         if presentationInterfaceState.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
@@ -769,6 +815,29 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.counterTextNode.textAlignment = .center
         
         super.init()
+        
+        self.viewForOverlayContent = ChatTextViewForOverlayContent(
+            ignoreHit: { [weak self] view, point in
+                guard let strongSelf = self else {
+                    return false
+                }
+                if strongSelf.view.hitTest(view.convert(point, to: strongSelf.view), with: nil) != nil {
+                    return true
+                }
+                if view.convert(point, to: strongSelf.view).y > strongSelf.view.bounds.maxY {
+                    return true
+                }
+                return false
+            },
+            dismissSuggestions: { [weak self] in
+                guard let strongSelf = self, let currentEmojiSuggestion = strongSelf.currentEmojiSuggestion, let textInputNode = strongSelf.textInputNode else {
+                    return
+                }
+                
+                strongSelf.dismissedEmojiSuggestionPosition = currentEmojiSuggestion.position
+                strongSelf.updateInputField(textInputFrame: textInputNode.frame, transition: .immediate)
+            }
+        )
         
         self.context = context
         
@@ -1942,6 +2011,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let textFieldFrame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - textInputViewInternalInsets.bottom))
             let shouldUpdateLayout = textFieldFrame.size != textInputNode.frame.size
             transition.updateFrame(node: textInputNode, frame: textFieldFrame)
+            self.updateInputField(textInputFrame: textFieldFrame, transition: Transition(transition))
             if shouldUpdateLayout {
                 textInputNode.layout()
             }
@@ -2370,6 +2440,220 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
+    private struct EmojiSuggestionPosition: Equatable {
+        var range: NSRange
+        var value: String
+    }
+    
+    private final class CurrentEmojiSuggestion {
+        var localPosition: CGPoint
+        var position: EmojiSuggestionPosition
+        let disposable: MetaDisposable
+        var value: [TelegramMediaFile]?
+        
+        init(localPosition: CGPoint, position: EmojiSuggestionPosition, disposable: MetaDisposable, value: [TelegramMediaFile]?) {
+            self.localPosition = localPosition
+            self.position = position
+            self.disposable = disposable
+            self.value = value
+        }
+    }
+    
+    private var currentEmojiSuggestion: CurrentEmojiSuggestion?
+    private var currentEmojiSuggestionView: ComponentHostView<Empty>?
+    
+    private var dismissedEmojiSuggestionPosition: EmojiSuggestionPosition?
+    
+    private func updateInputField(textInputFrame: CGRect, transition: Transition) {
+        guard let textInputNode = self.textInputNode, let context = self.context else {
+            return
+        }
+        
+        var hasTracking = false
+        var hasTrackingView = false
+        if textInputNode.selectedRange.length == 0 && textInputNode.selectedRange.location > 0 {
+            let selectedSubstring = textInputNode.textView.attributedText.attributedSubstring(from: NSRange(location: 0, length: textInputNode.selectedRange.location))
+            if let lastCharacter = selectedSubstring.string.last, String(lastCharacter).isSingleEmoji {
+                let queryLength = (String(lastCharacter) as NSString).length
+                if selectedSubstring.attribute(ChatTextInputAttributes.customEmoji, at: selectedSubstring.length - queryLength, effectiveRange: nil) == nil {
+                    let beginning = textInputNode.textView.beginningOfDocument
+                    
+                    let characterRange = NSRange(location: selectedSubstring.length - queryLength, length: queryLength)
+                    
+                    let start = textInputNode.textView.position(from: beginning, offset: selectedSubstring.length - queryLength)
+                    let end = textInputNode.textView.position(from: beginning, offset: selectedSubstring.length)
+                    
+                    if let start = start, let end = end, let textRange = textInputNode.textView.textRange(from: start, to: end) {
+                        let selectionRects = textInputNode.textView.selectionRects(for: textRange)
+                        let emojiSuggestionPosition = EmojiSuggestionPosition(range: characterRange, value: String(lastCharacter))
+                        
+                        hasTracking = true
+                        
+                        if let trackingRect = selectionRects.first?.rect {
+                            let trackingPosition = CGPoint(x: trackingRect.midX, y: trackingRect.minY)
+                            
+                            if self.dismissedEmojiSuggestionPosition == emojiSuggestionPosition {
+                            } else {
+                                hasTrackingView = true
+                                
+                                var beginRequest = false
+                                let suggestionContext: CurrentEmojiSuggestion
+                                if let current = self.currentEmojiSuggestion, current.position.value == emojiSuggestionPosition.value {
+                                    suggestionContext = current
+                                } else {
+                                    beginRequest = true
+                                    suggestionContext = CurrentEmojiSuggestion(localPosition: trackingPosition, position: emojiSuggestionPosition, disposable: MetaDisposable(), value: nil)
+                                    self.currentEmojiSuggestion = suggestionContext
+                                }
+                                suggestionContext.localPosition = trackingPosition
+                                suggestionContext.position = emojiSuggestionPosition
+                                self.dismissedEmojiSuggestionPosition = nil
+                                
+                                if beginRequest {
+                                    suggestionContext.disposable.set((EmojiSuggestionsComponent.suggestionData(context: context, isSavedMessages: self.presentationInterfaceState?.chatLocation.peerId == self.context?.account.peerId, query: String(lastCharacter))
+                                    |> deliverOnMainQueue).start(next: { [weak self, weak suggestionContext] result in
+                                        guard let strongSelf = self, let suggestionContext = suggestionContext, strongSelf.currentEmojiSuggestion === suggestionContext else {
+                                            return
+                                        }
+                                        
+                                        suggestionContext.value = result
+                                        
+                                        if let textInputNode = strongSelf.textInputNode {
+                                            strongSelf.updateInputField(textInputFrame: textInputNode.frame, transition: .immediate)
+                                        }
+                                    }))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        if !hasTracking {
+            self.dismissedEmojiSuggestionPosition = nil
+        }
+        
+        if let currentEmojiSuggestion = self.currentEmojiSuggestion, let value = currentEmojiSuggestion.value, value.isEmpty {
+            hasTrackingView = false
+        }
+        if !textInputNode.textView.isFirstResponder {
+            hasTrackingView = false
+        }
+        
+        if !hasTrackingView {
+            if let currentEmojiSuggestion = self.currentEmojiSuggestion {
+                self.currentEmojiSuggestion = nil
+                currentEmojiSuggestion.disposable.dispose()
+            }
+            
+            if let currentEmojiSuggestionView = self.currentEmojiSuggestionView {
+                self.currentEmojiSuggestionView = nil
+                
+                currentEmojiSuggestionView.alpha = 0.0
+                currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, completion: { [weak currentEmojiSuggestionView] _ in
+                    currentEmojiSuggestionView?.removeFromSuperview()
+                })
+            }
+        }
+        
+        if let context = self.context, let theme = self.theme, let viewForOverlayContent = self.viewForOverlayContent, let presentationContext = self.presentationContext, let currentEmojiSuggestion = self.currentEmojiSuggestion, let value = currentEmojiSuggestion.value {
+            let currentEmojiSuggestionView: ComponentHostView<Empty>
+            if let current = self.currentEmojiSuggestionView {
+                currentEmojiSuggestionView = current
+            } else {
+                currentEmojiSuggestionView = ComponentHostView<Empty>()
+                self.currentEmojiSuggestionView = currentEmojiSuggestionView
+                viewForOverlayContent.addSubview(currentEmojiSuggestionView)
+                
+                currentEmojiSuggestionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            }
+            
+            let globalPosition = textInputNode.textView.convert(currentEmojiSuggestion.localPosition, to: self.view)
+            
+            let sideInset: CGFloat = 16.0
+            
+            let viewSize = currentEmojiSuggestionView.update(
+                transition: .immediate,
+                component: AnyComponent(EmojiSuggestionsComponent(
+                    context: context,
+                    theme: theme,
+                    animationCache: presentationContext.animationCache,
+                    animationRenderer: presentationContext.animationRenderer,
+                    files: value,
+                    action: { [weak self] file in
+                        guard let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction, let currentEmojiSuggestion = strongSelf.currentEmojiSuggestion else {
+                            return
+                        }
+                        
+                        AudioServicesPlaySystemSound(0x450)
+                        
+                        interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
+                            let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
+                            
+                            var text: String?
+                            var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                            loop: for attribute in file.attributes {
+                                switch attribute {
+                                case let .CustomEmoji(_, displayText, packReference):
+                                    text = displayText
+                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: file.fileId.id, file: file)
+                                    break loop
+                                default:
+                                    break
+                                }
+                            }
+                            
+                            if let emojiAttribute = emojiAttribute, let text = text {
+                                let replacementText = NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute])
+                                
+                                let range = currentEmojiSuggestion.position.range
+                                let previousText = inputText.attributedSubstring(from: range)
+                                inputText.replaceCharacters(in: range, with: replacementText)
+                                
+                                var replacedUpperBound = range.lowerBound
+                                while true {
+                                    if inputText.attributedSubstring(from: NSRange(location: 0, length: replacedUpperBound)).string.hasSuffix(previousText.string) {
+                                        let replaceRange = NSRange(location: replacedUpperBound - previousText.length, length: previousText.length)
+                                        if replaceRange.location < 0 {
+                                            break
+                                        }
+                                        if inputText.attributedSubstring(from: replaceRange).string != previousText.string {
+                                            break
+                                        }
+                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: emojiAttribute.stickerPack, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
+                                        replacedUpperBound = replaceRange.lowerBound
+                                    } else {
+                                        break
+                                    }
+                                }
+                                
+                                let selectionPosition = range.lowerBound + (replacementText.string as NSString).length
+                                
+                                return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
+                            }
+                            
+                            return (textInputState, inputMode)
+                        }
+                        
+                        if let textInputNode = strongSelf.textInputNode {
+                            strongSelf.dismissedEmojiSuggestionPosition = currentEmojiSuggestion.position
+                            strongSelf.updateInputField(textInputFrame: textInputNode.frame, transition: .immediate)
+                        }
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: self.bounds.width - sideInset * 2.0, height: 100.0)
+            )
+            
+            let viewFrame = CGRect(origin: CGPoint(x: min(self.bounds.width - sideInset - viewSize.width, max(sideInset, floor(globalPosition.x - viewSize.width / 2.0))), y: globalPosition.y - 2.0 - viewSize.height), size: viewSize)
+            currentEmojiSuggestionView.frame = viewFrame
+            if let componentView = currentEmojiSuggestionView.componentView as? EmojiSuggestionsComponent.View {
+                componentView.adjustBackground(relativePositionX: floor(globalPosition.x - viewFrame.minX))
+            }
+        }
+    }
+    
     private func updateCounterTextNode(transition: ContainedViewLayoutTransition) {
         if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
             let textCount = Int32(textInputNode.textView.text.count)
@@ -2580,6 +2864,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
             if !self.bounds.size.height.isEqual(to: panelHeight) {
                 self.updateHeight(animated)
+            } else {
+                if let textInputNode = self.textInputNode {
+                    self.updateInputField(textInputFrame: textInputNode.frame, transition: .immediate)
+                }
             }
         }
     }
@@ -2644,6 +2932,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
             
             self.updateSpoilersRevealed()
+            
+            self.updateInputField(textInputFrame: textInputNode.frame, transition: .immediate)
         }
     }
     
@@ -2671,6 +2961,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
         self.storedInputLanguage = editableTextNode.textInputMode.primaryLanguage
         self.inputMenu.deactivate()
+        self.dismissedEmojiSuggestionPosition = nil
         
         if let presentationInterfaceState = self.presentationInterfaceState {
             if let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil, presentationInterfaceState.keyboardButtonsMessage != nil {
@@ -3128,6 +3419,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 return result
             }
         }
+        
+        if self.bounds.contains(point), let textInputNode = self.textInputNode, let currentEmojiSuggestion = self.currentEmojiSuggestion, let currentEmojiSuggestionView = self.currentEmojiSuggestionView {
+            if let result = currentEmojiSuggestionView.hitTest(self.view.convert(point, to: currentEmojiSuggestionView), with: event) {
+                return result
+            }
+            self.dismissedEmojiSuggestionPosition = currentEmojiSuggestion.position
+            self.updateInputField(textInputFrame: textInputNode.frame, transition: .immediate)
+        }
+        
         let result = super.hitTest(point, with: event)
         return result
     }

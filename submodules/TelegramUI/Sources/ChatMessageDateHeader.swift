@@ -628,14 +628,16 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                 videoNode.isUserInteractionEnabled = false
                 videoNode.isHidden = true
                 videoNode.playbackCompleted = { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.videoLoopCount += 1
-                        if strongSelf.videoLoopCount == maxVideoLoopCount {
-                            if let videoNode = strongSelf.videoNode {
-                                strongSelf.videoNode = nil
-                                videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
-                                    videoNode?.removeFromSupernode()
-                                })
+                    Queue.mainQueue().async {
+                        if let strongSelf = self {
+                            strongSelf.videoLoopCount += 1
+                            if strongSelf.videoLoopCount == maxVideoLoopCount {
+                                if let videoNode = strongSelf.videoNode {
+                                    strongSelf.videoNode = nil
+                                    videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
+                                        videoNode?.removeFromSupernode()
+                                    })
+                                }
                             }
                         }
                     }

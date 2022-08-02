@@ -100,6 +100,12 @@ private final class ExpansionPanRecognizer: UIGestureRecognizer, UIGestureRecogn
             if let scrollView = traceScrollView(view: view, point: point).0 ?? hitView.flatMap(traceScrollViewUp) {
                 if scrollView is ListViewScroller || scrollView is GridNodeScrollerView || scrollView.asyncdisplaykit_node is ASScrollNode {
                     found = false
+                } else if let textView = scrollView as? UITextView {
+                    if textView.contentSize.height <= textView.bounds.height {
+                        found = true
+                    } else {
+                        found = false
+                    }
                 } else {
                     found = true
                 }
@@ -206,7 +212,7 @@ private final class ExpansionPanRecognizer: UIGestureRecognizer, UIGestureRecogn
     }
 }
 
-public final class ChatInputPanelContainer: SparseNode, UIScrollViewDelegate {
+public final class ChatInputPanelContainer: SparseNode {
     public var expansionUpdated: ((ContainedViewLayoutTransition) -> Void)?
     
     private var expansionRecognizer: ExpansionPanRecognizer?

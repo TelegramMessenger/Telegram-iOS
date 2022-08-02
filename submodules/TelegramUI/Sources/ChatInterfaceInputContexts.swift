@@ -115,14 +115,14 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
                 return [(NSRange(location: 0, length: inputString.length - (string.count - trimmedString.count)), [.emoji], nil)]
             }
         } else {
-            let activeString = inputText.attributedSubstring(from: NSRange(location: 0, length: inputState.selectionRange.upperBound))
+            /*let activeString = inputText.attributedSubstring(from: NSRange(location: 0, length: inputState.selectionRange.upperBound))
             if let lastCharacter = activeString.string.last, String(lastCharacter).isSingleEmoji {
                 let matchLength = (String(lastCharacter) as NSString).length
                 
                 if activeString.attribute(ChatTextInputAttributes.customEmoji, at: activeString.length - matchLength, effectiveRange: nil) == nil {
                     return [(NSRange(location: inputState.selectionRange.upperBound - matchLength, length: matchLength), [.emojiSearch], nil)]
                 }
-            }
+            }*/
         }
         
         var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag, .emojiSearch])

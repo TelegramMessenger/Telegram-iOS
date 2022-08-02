@@ -5749,8 +5749,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             
             actionSheet.setItemGroups([
                 ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: title),
-                    ActionSheetButtonItem(title: text, color: .destructive, action: {
+                    ActionSheetTextItem(title: text),
+                    ActionSheetButtonItem(title: title, color: .destructive, action: {
                         dismissAction()
                         self?.deletePeerChat(peer: peer._asPeer(), globally: true)
                     }),
@@ -7077,7 +7077,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         subject: .message(id: .id(index.id), highlight: false, timecode: nil),
                         botStart: nil,
                         updateTextInputState: nil,
-                        activateInput: false,
                         keepStack: .never,
                         useExisting: true,
                         purposefulAction: nil,

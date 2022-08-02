@@ -90,7 +90,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     
     private var isDisplayingPlaceholder: Bool = false
     
-    private var file: TelegramMediaFile?
+    public private(set) var file: TelegramMediaFile?
     private var infoDisposable: Disposable?
     private var disposable: Disposable?
     private var fetchDisposable: Disposable?
@@ -186,10 +186,6 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             let placeholderColor = self.placeholderColor
             self.loadDisposable = self.renderer.loadFirstFrame(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: self.context, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true), completion: { [weak self] result, isFinal in
                 if !result {
-                    if !isFinal {
-                        return
-                    }
-                    
                     MultiAnimationRendererImpl.firstFrameQueue.async {
                         let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: pointSize, scale: min(2.0, UIScreenScale), imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor)
                         
@@ -201,7 +197,10 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                                 strongSelf.contents = image.cgImage
                                 strongSelf.isDisplayingPlaceholder = true
                             }
-                            strongSelf.loadAnimation()
+                            
+                            if isFinal {
+                                strongSelf.loadAnimation()
+                            }
                         }
                     }
                 } else {
