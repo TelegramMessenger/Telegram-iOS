@@ -133,21 +133,29 @@ public final class BotCheckoutController: ViewController {
             self?.present(c, in: .window(.root), with: a)
         }, dismissAnimated: { [weak self] in
             self?.dismiss()
-        }, completed: self.completed)
+        }, completed: { [weak self] currencyValue, receiptMessageId in
+            self?.complete(currencyValue: currencyValue, receiptMessageId: receiptMessageId)
+        })
         
         displayNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         displayNode.pending = { [weak self] in
-            self?.pending()
+            self?.setPending()
         }
         displayNode.failed = { [weak self] in
-            self?.failed()
+            self?.fail()
         }
         
         self.displayNode = displayNode
         super.displayNodeDidLoad()
         self._ready.set(displayNode.ready)
+    }
+    
+    override public func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        self.cancel()
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -167,8 +175,40 @@ public final class BotCheckoutController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, additionalInsets: UIEdgeInsets())
     }
     
-    @objc private func cancelPressed() {
+    private var didCancel = false
+    private func cancel() {
+        guard !self.didCancel && !self.didFail && !self.didComplete else {
+            return
+        }
         self.cancelled()
+    }
+    
+    private var didFail = false
+    private func fail() {
+        guard !self.didCancel && !self.didFail && !self.didComplete else {
+            return
+        }
+        self.failed()
+    }
+    
+    private var didComplete = false
+    private func complete(currencyValue: String, receiptMessageId: EngineMessage.Id?) {
+        guard !self.didCancel && !self.didFail && !self.didComplete else {
+            return
+        }
+        self.completed(currencyValue, receiptMessageId)
+    }
+    
+    private var isPending = false
+    private func setPending() {
+        guard !self.isPending && !self.didCancel && !self.didFail && !self.didComplete else {
+            return
+        }
+        self.pending()
+    }
+    
+    @objc private func cancelPressed() {
+        self.cancel()
         self.dismiss()
     }
 }

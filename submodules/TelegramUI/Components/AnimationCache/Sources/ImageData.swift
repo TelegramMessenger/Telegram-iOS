@@ -62,7 +62,7 @@ extension ImagePlane {
     func subtract(other: DctCoefficientPlane) {
         self.data.withUnsafeMutableBytes { bytes in
             other.data.withUnsafeBytes { otherBytes in
-                subtractArraysUInt8Int16(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), otherBytes.baseAddress!.assumingMemoryBound(to: Int16.self), bytes.baseAddress!.assumingMemoryBound(to: Int8.self), Int32(bytes.count))
+                subtractArraysUInt8Int16(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), otherBytes.baseAddress!.assumingMemoryBound(to: Int16.self), bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), Int32(bytes.count))
             }
         }
     }
@@ -70,7 +70,7 @@ extension ImagePlane {
     func add(other: DctCoefficientPlane) {
         self.data.withUnsafeMutableBytes { bytes in
             other.data.withUnsafeBytes { otherBytes in
-                addArraysUInt8Int16(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), otherBytes.baseAddress!.assumingMemoryBound(to: Int16.self), bytes.baseAddress!.assumingMemoryBound(to: Int8.self), Int32(bytes.count))
+                addArraysUInt8Int16(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), otherBytes.baseAddress!.assumingMemoryBound(to: Int16.self), bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), Int32(bytes.count))
             }
         }
     }
@@ -160,7 +160,7 @@ extension DctCoefficientPlane {
     func toUInt8(target: ImagePlane) {
         self.data.withUnsafeBytes { bytes in
             target.data.withUnsafeMutableBytes { otherBytes in
-                convertInt16toUInt8(bytes.baseAddress!.assumingMemoryBound(to: UInt16.self), otherBytes.baseAddress!.assumingMemoryBound(to: UInt8.self), Int32(bytes.count / 2))
+                convertInt16toUInt8(bytes.baseAddress!.assumingMemoryBound(to: Int16.self), otherBytes.baseAddress!.assumingMemoryBound(to: UInt8.self), Int32(bytes.count / 2))
             }
         }
     }

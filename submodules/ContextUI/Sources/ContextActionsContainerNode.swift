@@ -444,7 +444,8 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.updateHighlight(animated: true)
+            strongSelf.isButtonHighlighted = highlighted
+            strongSelf.updateHighlight(animated: false)
         }
         
         self.buttonNode.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
@@ -545,6 +546,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             self.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.placeholderNode.layer.animateAlpha(from: self.placeholderNode.alpha, to: 1.0, duration: 0.2)
         }
+        self.textNode.visibilityRect = CGRect.infinite
         
         var contentHeight = textLayout.size.height
         if contentHeight.isZero {
@@ -593,7 +595,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     }
     
     func updateHighlight(animated: Bool) {
-        if self.buttonNode.isHighlighted || self.isHighlighted {
+        if self.isButtonHighlighted || self.isHighlighted {
             self.highlightBackgroundNode.alpha = 1.0
         } else {
             if animated {
@@ -606,8 +608,8 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         }
     }
     
-    
-    var isHighlighted = false
+    private var isButtonHighlighted = false
+    private var isHighlighted = false
     func setHighlighted(_ highlighted: Bool) {
         guard self.isHighlighted != highlighted else {
             return

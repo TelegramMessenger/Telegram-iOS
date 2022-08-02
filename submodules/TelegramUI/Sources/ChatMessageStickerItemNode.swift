@@ -260,7 +260,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         }
         
         if self.telegramFile == nil && item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
-            self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text))
+            self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text, outline: false))
         }
     }
     
@@ -363,7 +363,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var isEmoji = false
             if item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
                 let attributedText = NSAttributedString(string: item.message.text, font: item.presentationData.messageEmojiFont, textColor: .black)
-                textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 180.0, height: 90.0), alignment: .natural))
+                textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width, height: 90.0), alignment: .natural))
                 
                 imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: textLayoutAndApply!.0.size.height)
                 isEmoji = true

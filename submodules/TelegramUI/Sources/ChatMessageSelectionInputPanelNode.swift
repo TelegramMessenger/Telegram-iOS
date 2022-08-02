@@ -138,7 +138,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
         if let actions = self.actions, actions.isCopyProtected {
             self.interfaceInteraction?.displayCopyProtectionTip(self.forwardButton, false)
-        } else {
+        } else if !self.forwardButton.isImplicitlyDisabled {
             self.interfaceInteraction?.forwardSelectedMessages()
         }
     }
@@ -149,7 +149,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
         if let actions = self.actions, actions.isCopyProtected {
             self.interfaceInteraction?.displayCopyProtectionTip(self.shareButton, true)
-        } else {
+        } else if !self.shareButton.isImplicitlyDisabled {
             self.interfaceInteraction?.shareSelectedMessages()
         }
     }

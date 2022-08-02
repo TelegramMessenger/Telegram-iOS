@@ -135,7 +135,7 @@ func chatHistoryEntriesForView(
         }
         
         if presentationData.largeEmoji, message.media.isEmpty {
-            if stickersEnabled && message.text.count == 1, let entities = message.textEntitiesAttribute?.entities, entities.count == 1, case let .CustomEmoji(_, fileId) = entities[0].type, let file = message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile, !file.isVideoEmoji {
+            if stickersEnabled && messageIsElligibleForLargeCustomEmoji(message) {
                 contentTypeHint = .animatedEmoji
             } else if stickersEnabled && message.text.count == 1, let _ = associatedData.animatedEmojiStickers[message.text.basicEmoji.0], (message.textEntitiesAttribute?.entities.isEmpty ?? true) {
                 contentTypeHint = .animatedEmoji
