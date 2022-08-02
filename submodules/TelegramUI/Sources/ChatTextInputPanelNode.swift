@@ -182,7 +182,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                 
                 let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - width) / 2.0), y: floor((size.height - width) / 2.0) - bottomInset), size: CGSize(width: width, height: width))
                 
-                var colorKeys: [String] = ["__allcolors__"]
+                let colorKeys: [String] = ["__allcolors__"]
                 let animationName: String
                 var animationMode: LottieAnimationComponent.AnimationItem.Mode = .still(position: .end)
                 
@@ -216,14 +216,6 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                             break
                     }
                     
-                    let emojiColorKeys = [
-                        "Ellipse 33.Ellipse 33.Stroke 1",
-                        "Ellipse 34.Ellipse 34.Stroke 1",
-                        "Oval.Oval.Fill 1",
-                        "Oval 2.Oval.Fill 1",
-                        "Path 85.Path 85.Stroke 1"
-                    ]
-
                     if let inputMode = inputMode {
                         switch inputMode {
                             case .keyboard:
@@ -251,7 +243,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                                     } else if case .emoji = previousInputMode {
                                         animationName = "input_anim_smileToSticker"
                                         animationMode = .animating(loop: false)
-                                        colorKeys = emojiColorKeys
+//                                        colorKeys = emojiColorKeys
                                     } else {
                                         animationName = "input_anim_keyToSticker"
                                     }
@@ -266,7 +258,7 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                                     } else if case .stickers = previousInputMode {
                                         animationName = "input_anim_stickerToSmile"
                                         animationMode = .animating(loop: false)
-                                        colorKeys = emojiColorKeys
+//                                        colorKeys = emojiColorKeys
                                     } else {
                                         animationName = "input_anim_keyToSmile"
                                     }

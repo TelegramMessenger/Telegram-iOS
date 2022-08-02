@@ -812,6 +812,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         
             var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
             var imageVerticalInset: CGFloat = 0.0
+            var imageTopPadding: CGFloat = 0.0
             var imageBottomPadding: CGFloat = 0.0
             var imageHorizontalOffset: CGFloat = 0.0
             if !(telegramFile?.videoThumbnails.isEmpty ?? true) {
@@ -943,8 +944,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     imageSize = thumbnailSize.cgSize.aspectFitted(displaySize)
                 }
             } else if let _ = emojiString {
-                imageVerticalInset = 4.0
-                imageBottomPadding = 24.0
+                imageVerticalInset = 0.0
+                imageTopPadding = 12.0
+                imageBottomPadding = 20.0
 
                 let baseWidth = params.width
                 var tmpWidth = layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
@@ -986,7 +988,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var innerImageSize = imageSize
             imageSize = CGSize(width: imageSize.width + imageInset * 2.0, height: imageSize.height + imageInset * 2.0)
-            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset - imageHorizontalOffset)), y: imageVerticalInset), size: CGSize(width: imageSize.width, height: imageSize.height))
+            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset - imageHorizontalOffset)), y: imageVerticalInset + imageTopPadding), size: CGSize(width: imageSize.width, height: imageSize.height))
             if isEmoji {
                 innerImageSize = imageSize
             }
@@ -1136,7 +1138,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             let contentHeight: CGFloat
             if let _ = emojiString {
-                contentHeight = imageSize.height + imageVerticalInset * 2.0 + imageBottomPadding
+                contentHeight = imageSize.height + imageVerticalInset * 2.0 + imageTopPadding + imageBottomPadding
             } else {
                 contentHeight = max(imageSize.height + imageVerticalInset * 2.0, layoutConstants.image.minDimensions.height)
             }
