@@ -1524,6 +1524,7 @@ public final class EmojiPagerContentComponent: Component {
     
     public let id: AnyHashable
     public let context: AccountContext
+    public let avatarPeer: EnginePeer?
     public let animationCache: AnimationCache
     public let animationRenderer: MultiAnimationRenderer
     public let inputInteractionHolder: InputInteractionHolder
@@ -1533,6 +1534,7 @@ public final class EmojiPagerContentComponent: Component {
     public init(
         id: AnyHashable,
         context: AccountContext,
+        avatarPeer: EnginePeer?,
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
         inputInteractionHolder: InputInteractionHolder,
@@ -1541,6 +1543,7 @@ public final class EmojiPagerContentComponent: Component {
     ) {
         self.id = id
         self.context = context
+        self.avatarPeer = avatarPeer
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.inputInteractionHolder = inputInteractionHolder
@@ -1556,6 +1559,9 @@ public final class EmojiPagerContentComponent: Component {
             return false
         }
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.avatarPeer != rhs.avatarPeer {
             return false
         }
         if lhs.animationCache !== rhs.animationCache {

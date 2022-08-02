@@ -10,6 +10,7 @@ import BlurredBackgroundComponent
 import BundleIconComponent
 import AudioToolbox
 import SwiftSignalKit
+import LocalizedPeerData
 
 public final class EntityKeyboardChildEnvironment: Equatable {
     public let theme: PresentationTheme
@@ -333,29 +334,47 @@ public final class EntityKeyboardComponent: Component {
                 
                 for itemGroup in stickerContent.itemGroups {
                     if let id = itemGroup.supergroupId.base as? String {
-                        let iconMapping: [String: EntityKeyboardIconTopPanelComponent.Icon] = [
-                            "saved": .saved,
-                            "recent": .recent,
-                            "premium": .premium
-                        ]
-                        let titleMapping: [String: String] = [
-                            "saved": component.strings.Stickers_Favorites,
-                            "recent": component.strings.Stickers_Recent,
-                            "premium": component.strings.EmojiInput_PanelTitlePremium
-                        ]
-                        if let icon = iconMapping[id], let title = titleMapping[id] {
-                            topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
-                                id: itemGroup.supergroupId,
-                                isReorderable: false,
-                                content: AnyComponent(EntityKeyboardIconTopPanelComponent(
-                                    icon: icon,
-                                    theme: component.theme,
-                                    title: title,
-                                    pressed: { [weak self] in
-                                        self?.scrollToItemGroup(contentId: "stickers", groupId: itemGroup.supergroupId, subgroupId: nil)
-                                    }
+                        if id == "peerSpecific" {
+                            if let avatarPeer = stickerContent.avatarPeer {
+                                topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
+                                    id: itemGroup.supergroupId,
+                                    isReorderable: false,
+                                    content: AnyComponent(EntityKeyboardAvatarTopPanelComponent(
+                                        context: stickerContent.context,
+                                        peer: avatarPeer,
+                                        theme: component.theme,
+                                        title: avatarPeer.compactDisplayTitle,
+                                        pressed: { [weak self] in
+                                            self?.scrollToItemGroup(contentId: "stickers", groupId: itemGroup.supergroupId, subgroupId: nil)
+                                        }
+                                    ))
                                 ))
-                            ))
+                            }
+                        } else {
+                            let iconMapping: [String: EntityKeyboardIconTopPanelComponent.Icon] = [
+                                "saved": .saved,
+                                "recent": .recent,
+                                "premium": .premium
+                            ]
+                            let titleMapping: [String: String] = [
+                                "saved": component.strings.Stickers_Favorites,
+                                "recent": component.strings.Stickers_Recent,
+                                "premium": component.strings.EmojiInput_PanelTitlePremium
+                            ]
+                            if let icon = iconMapping[id], let title = titleMapping[id] {
+                                topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
+                                    id: itemGroup.supergroupId,
+                                    isReorderable: false,
+                                    content: AnyComponent(EntityKeyboardIconTopPanelComponent(
+                                        icon: icon,
+                                        theme: component.theme,
+                                        title: title,
+                                        pressed: { [weak self] in
+                                            self?.scrollToItemGroup(contentId: "stickers", groupId: itemGroup.supergroupId, subgroupId: nil)
+                                        }
+                                    ))
+                                ))
+                            }
                         }
                     } else {
                         if !itemGroup.items.isEmpty {

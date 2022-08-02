@@ -86,16 +86,24 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
-    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool, areCustomEmojiEnabled: Bool) -> Signal<EmojiPagerContentComponent, NoError> {
-        let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-        |> map { peer -> Bool in
-            guard case let .user(user) = peer else {
-                return false
+    static func hasPremium(context: AccountContext, chatPeerId: EnginePeer.Id?, premiumIfSavedMessages: Bool) -> Signal<Bool, NoError> {
+        let hasPremium: Signal<Bool, NoError>
+        if premiumIfSavedMessages, let chatPeerId = chatPeerId, chatPeerId == context.account.peerId {
+            hasPremium = .single(true)
+        } else {
+            hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> map { peer -> Bool in
+                guard case let .user(user) = peer else {
+                    return false
+                }
+                return user.isPremium
             }
-            return user.isPremium
+            |> distinctUntilChanged
         }
-        |> distinctUntilChanged
-        
+        return hasPremium
+    }
+    
+    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool, areCustomEmojiEnabled: Bool, chatPeerId: EnginePeer.Id?) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
@@ -103,7 +111,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         let emojiItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.LocalRecentEmoji], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
-            hasPremium,
+            ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true),
             context.account.viewTracker.featuredEmojiPacks()
         )
         |> map { view, hasPremium, featuredEmojiPacks -> EmojiPagerContentComponent in
@@ -305,6 +313,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             return EmojiPagerContentComponent(
                 id: "emoji",
                 context: context,
+                avatarPeer: nil,
                 animationCache: animationCache,
                 animationRenderer: animationRenderer,
                 inputInteractionHolder: EmojiPagerContentComponent.InputInteractionHolder(),
@@ -340,15 +349,6 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
-        let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-        |> map { peer -> Bool in
-            guard case let .user(user) = peer else {
-                return false
-            }
-            return user.isPremium
-        }
-        |> distinctUntilChanged
-        
         let animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
             return TempBox.shared.tempFile(fileName: "file").path
         })
@@ -359,21 +359,64 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             animationRenderer = MultiAnimationRendererImpl()
         //}
         
-        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, areCustomEmojiEnabled: areCustomEmojiEnabled)
+        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudPremiumStickers]
+        
+        struct PeerSpecificPackData: Equatable {
+            var info: StickerPackCollectionInfo
+            var items: [StickerPackItem]
+            var peer: EnginePeer
+            
+            static func ==(lhs: PeerSpecificPackData, rhs: PeerSpecificPackData) -> Bool {
+                if lhs.info.id != rhs.info.id {
+                    return false
+                }
+                if lhs.items != rhs.items {
+                    return false
+                }
+                if lhs.peer != rhs.peer {
+                    return false
+                }
+                
+                return true
+            }
+        }
+        
+        let peerSpecificPack: Signal<PeerSpecificPackData?, NoError>
+        if let chatPeerId = chatPeerId {
+            peerSpecificPack = combineLatest(
+                context.engine.peers.peerSpecificStickerPack(peerId: chatPeerId),
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: chatPeerId))
+            )
+            |> map { packData, peer -> PeerSpecificPackData? in
+                guard let peer = peer else {
+                    return nil
+                }
+                
+                guard let (info, items) = packData.packInfo else {
+                    return nil
+                }
+                
+                return PeerSpecificPackData(info: info, items: items.compactMap { $0 as? StickerPackItem }, peer: peer)
+            }
+            |> distinctUntilChanged
+        } else {
+            peerSpecificPack = .single(nil)
+        }
         
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
         let stickerItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: stickerOrderedItemListCollectionIds, namespaces: stickerNamespaces, aroundIndex: nil, count: 10000000),
-            hasPremium,
+            ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false),
             context.account.viewTracker.featuredStickerPacks(),
             context.engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.featuredStickersConfiguration, id: ValueBoxKey(length: 0))),
-            ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager)
+            ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager),
+            peerSpecificPack
         )
-        |> map { view, hasPremium, featuredStickerPacks, featuredStickersConfiguration, dismissedTrendingStickerPacks -> EmojiPagerContentComponent in
+        |> map { view, hasPremium, featuredStickerPacks, featuredStickersConfiguration, dismissedTrendingStickerPacks, peerSpecificPack -> EmojiPagerContentComponent in
             struct ItemGroup {
                 var supergroupId: AnyHashable
                 var id: AnyHashable
@@ -548,6 +591,37 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             }
             
+            var avatarPeer: EnginePeer?
+            if let peerSpecificPack = peerSpecificPack {
+                avatarPeer = peerSpecificPack.peer
+                
+                var processedIds = Set<MediaId>()
+                for item in peerSpecificPack.items {
+                    if isPremiumDisabled && item.file.isPremiumSticker {
+                        continue
+                    }
+                    if processedIds.contains(item.file.fileId) {
+                        continue
+                    }
+                    processedIds.insert(item.file.fileId)
+                    
+                    let resultItem = EmojiPagerContentComponent.Item(
+                        animationData: EntityKeyboardAnimationData(file: item.file),
+                        itemFile: item.file,
+                        staticEmoji: nil,
+                        subgroupId: nil
+                    )
+                    
+                    let groupId = "peerSpecific"
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    } else {
+                        itemGroupIndexById[groupId] = itemGroups.count
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: peerSpecificPack.peer.compactDisplayTitle, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, headerItem: nil, items: [resultItem]))
+                    }
+                }
+            }
+            
             for entry in view.entries {
                 guard let item = entry.item as? StickerPackItem else {
                     continue
@@ -651,6 +725,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             return EmojiPagerContentComponent(
                 id: "stickers",
                 context: context,
+                avatarPeer: avatarPeer,
                 animationCache: animationCache,
                 animationRenderer: animationRenderer,
                 inputInteractionHolder: EmojiPagerContentComponent.InputInteractionHolder(),
@@ -1075,18 +1150,10 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         self.externalTopPanelContainerImpl = PagerExternalTopPanelContainer()
         
-        let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-        |> map { peer -> Bool in
-            guard case let .user(user) = peer else {
-                return false
-            }
-            return user.isPremium
-        }
-        |> distinctUntilChanged
-        
+        var premiumToastCounter = 0
         self.emojiInputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { [weak self, weak interfaceInteraction, weak controllerInteraction] _, item, _, _, _ in
-                let _ = (hasPremium |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
+                let _ = (ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true) |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
                     guard let strongSelf = self,  let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
                         return
                     }
@@ -1114,23 +1181,48 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                             }
                                                         
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiInput_PremiumEmojiToast_Text, undoText: presentationData.strings.EmojiInput_PremiumEmojiToast_Action, customAction: { [weak controllerInteraction] in
+                            
+                            premiumToastCounter += 1
+                            let suggestSavedMessages = premiumToastCounter % 2 == 0
+                            let text: String
+                            let actionTitle: String
+                            if suggestSavedMessages {
+                                text = presentationData.strings.EmojiInput_PremiumEmojiToast_TryText
+                                actionTitle = presentationData.strings.EmojiInput_PremiumEmojiToast_TryAction
+                            } else {
+                                text = presentationData.strings.EmojiInput_PremiumEmojiToast_Text
+                                actionTitle = presentationData.strings.EmojiInput_PremiumEmojiToast_Action
+                            }
+                            
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: text, undoText: actionTitle, customAction: { [weak controllerInteraction] in
                                 guard let controllerInteraction = controllerInteraction else {
                                     return
                                 }
                                 
-                                var replaceImpl: ((ViewController) -> Void)?
-                                let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {
-                                    let controller = PremiumIntroScreen(context: context, source: .animatedEmoji)
-                                    replaceImpl?(controller)
-                                })
-                                replaceImpl = { [weak controller] c in
-                                    controller?.replace(with: c)
+                                if suggestSavedMessages, let navigationController = controllerInteraction.navigationController() {
+                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                                        navigationController: navigationController,
+                                        chatController: nil,
+                                        context: context,
+                                        chatLocation: .peer(id: context.account.peerId),
+                                        subject: nil,
+                                        updateTextInputState: nil,
+                                        activateInput: .entityInput,
+                                        keepStack: .always,
+                                        completion: { _ in
+                                        })
+                                    )
+                                } else {
+                                    var replaceImpl: ((ViewController) -> Void)?
+                                    let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {
+                                        let controller = PremiumIntroScreen(context: context, source: .animatedEmoji)
+                                        replaceImpl?(controller)
+                                    })
+                                    replaceImpl = { [weak controller] c in
+                                        controller?.replace(with: c)
+                                    }
+                                    controllerInteraction.navigationController()?.pushViewController(controller)
                                 }
-                                controllerInteraction.navigationController()?.pushViewController(controller)
-                                
-                                /*let controller = PremiumIntroScreen(context: context, source: .stickers)
-                                controllerInteraction.navigationController()?.pushViewController(controller)*/
                             }), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
                             strongSelf.currentUndoOverlayController = controller
                             controllerInteraction.presentController(controller, nil)
@@ -1247,7 +1339,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         self.stickerInputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { [weak controllerInteraction, weak interfaceInteraction] groupId, item, view, rect, layer in
-                let _ = (hasPremium |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
+                let _ = (ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false) |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
                     guard let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
                         return
                     }
@@ -1401,6 +1493,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                         let _ = ApplicationSpecificNotice.setDismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager, values: stickerPackIds).start()
                     })
+                } else if groupId == AnyHashable("peerSpecific") {
                 }
             },
             pushController: { [weak controllerInteraction] controller in
@@ -2060,19 +2153,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         
         let inputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { [weak self] _, item, _, _, _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                let hasPremium = strongSelf.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId))
-                |> map { peer -> Bool in
-                    guard case let .user(user) = peer else {
-                        return false
-                    }
-                    return user.isPremium
-                }
-                |> distinctUntilChanged
-                
-                let _ = (hasPremium |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
+                let _ = (ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: nil, premiumIfSavedMessages: false) |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
                     guard let strongSelf = self else {
                         return
                     }
@@ -2168,7 +2249,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, areCustomEmojiEnabled: areCustomEmojiEnabled).start(next: { value in
+        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })
@@ -2183,7 +2264,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                     gifs: nil,
                     availableGifSearchEmojies: []
                 ),
-                updatedInputData: ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, areCustomEmojiEnabled: areCustomEmojiEnabled) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
+                updatedInputData: ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
                     return ChatEntityKeyboardInputNode.InputData(
                         emoji: emojiComponent,
                         stickers: nil,

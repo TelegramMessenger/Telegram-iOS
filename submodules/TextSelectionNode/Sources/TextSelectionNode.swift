@@ -6,6 +6,12 @@ import Display
 import TelegramPresentationData
 import TextFormat
 
+private extension CGRect {
+    var center: CGPoint {
+        return CGPoint(x: self.midX, y: self.midY)
+    }
+}
+
 private func findScrollView(view: UIView?) -> UIScrollView? {
     if let view = view {
         if let view = view as? UIScrollView {

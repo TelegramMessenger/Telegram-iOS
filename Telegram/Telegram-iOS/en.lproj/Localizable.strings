@@ -7940,6 +7940,9 @@ Sorry for the inconvenience.";
 "EmojiInput.PremiumEmojiToast.Text" = "Subscribe to Telegram Premium to unlock premium emoji.";
 "EmojiInput.PremiumEmojiToast.Action" = "More";
 
+"EmojiInput.PremiumEmojiToast.TryText" = "Try sending these emojis in **Saved Messages** for free to test.";
+"EmojiInput.PremiumEmojiToast.TryAction" = "Open";
+
 "StickerPacks.DeleteEmojiPacksConfirmation_1" = "Delete 1 Emoji Pack";
 "StickerPacks.DeleteEmojiPacksConfirmation_any" = "Delete %@ Emoji Packs";
 

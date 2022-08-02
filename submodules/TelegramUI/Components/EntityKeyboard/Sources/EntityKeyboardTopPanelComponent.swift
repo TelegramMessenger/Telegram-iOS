@@ -12,7 +12,7 @@ import MultiAnimationRenderer
 import AccountContext
 import MultilineTextComponent
 import LottieAnimationComponent
-import MurMurHash32
+import AvatarNode
 
 final class EntityKeyboardAnimationTopPanelComponent: Component {
     typealias EnvironmentType = EntityKeyboardTopPanelItemEnvironment
@@ -371,6 +371,137 @@ final class EntityKeyboardIconTopPanelComponent: Component {
             let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) / 2.0), y: floor((nativeIconSize.height - iconSize.height) / 2.0)), size: iconSize)
             
             transition.setFrame(view: self.iconView, frame: iconFrame)
+            
+            if itemEnvironment.isExpanded {
+                let titleView: ComponentView<Empty>
+                if let current = self.titleView {
+                    titleView = current
+                } else {
+                    titleView = ComponentView<Empty>()
+                    self.titleView = titleView
+                }
+                let titleSize = titleView.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: component.title, font: Font.regular(10.0), textColor: component.theme.chat.inputPanel.primaryTextColor)),
+                        insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 62.0, height: 100.0)
+                )
+                if let view = titleView.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        self.addSubview(view)
+                    }
+                    view.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: availableSize.height - titleSize.height - 1.0), size: titleSize)
+                    transition.setAlpha(view: view, alpha: 1.0)
+                }
+            } else if let titleView = self.titleView {
+                self.titleView = nil
+                if let view = titleView.view {
+                    if !transition.animation.isImmediate {
+                        view.alpha = 0.0
+                        view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, completion: { [weak view] _ in
+                            view?.removeFromSuperview()
+                        })
+                    } else {
+                        view.removeFromSuperview()
+                    }
+                }
+            }
+            
+            return availableSize
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+final class EntityKeyboardAvatarTopPanelComponent: Component {
+    typealias EnvironmentType = EntityKeyboardTopPanelItemEnvironment
+    
+    let context: AccountContext
+    let peer: EnginePeer
+    let theme: PresentationTheme
+    let title: String
+    let pressed: () -> Void
+    
+    init(
+        context: AccountContext,
+        peer: EnginePeer,
+        theme: PresentationTheme,
+        title: String,
+        pressed: @escaping () -> Void
+    ) {
+        self.context = context
+        self.peer = peer
+        self.theme = theme
+        self.title = title
+        self.pressed = pressed
+    }
+    
+    static func ==(lhs: EntityKeyboardAvatarTopPanelComponent, rhs: EntityKeyboardAvatarTopPanelComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        
+        return true
+    }
+    
+    final class View: UIView {
+        let avatarNode: AvatarNode
+        var component: EntityKeyboardAvatarTopPanelComponent?
+        var titleView: ComponentView<Empty>?
+        
+        override init(frame: CGRect) {
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 14.0))
+            
+            super.init(frame: frame)
+            
+            self.addSubnode(self.avatarNode)
+            
+            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+            if case .ended = recognizer.state {
+                self.component?.pressed()
+            }
+        }
+        
+        func update(component: EntityKeyboardAvatarTopPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            let itemEnvironment = environment[EntityKeyboardTopPanelItemEnvironment.self].value
+            
+            self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: component.peer)
+            self.component = component
+            
+            let nativeIconSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 44.0, height: 44.0) : CGSize(width: 24.0, height: 24.0)
+            let boundingIconSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 38.0, height: 38.0) : CGSize(width: 24.0, height: 24.0)
+            let iconSize = boundingIconSize
+            
+            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) / 2.0), y: floor((nativeIconSize.height - iconSize.height) / 2.0)), size: iconSize)
+            
+            transition.containedViewLayoutTransition.updateFrame(node: self.avatarNode, frame: iconFrame)
             
             if itemEnvironment.isExpanded {
                 let titleView: ComponentView<Empty>

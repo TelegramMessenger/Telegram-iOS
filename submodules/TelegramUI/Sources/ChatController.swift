@@ -401,7 +401,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private var willAppear = false
     private var didAppear = false
-    private var scheduledActivateInput = false
+    private var scheduledActivateInput: ChatControllerActivateInput?
     
     private var raiseToListen: RaiseToListenManager?
     private var voicePlaylistDidEndTimestamp: Double = 0.0
@@ -7168,7 +7168,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.chatDisplayNode.openStickers()
+            strongSelf.chatDisplayNode.openStickers(beginWithEmoji: false)
             strongSelf.mediaRecordingModeTooltipController?.dismissImmediately()
         }, editMessage: { [weak self] in
             if let strongSelf = self, let editMessage = strongSelf.presentationInterfaceState.interfaceState.editMessage {
@@ -7192,7 +7192,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let value = value as? ChatTextInputTextCustomEmojiAttribute {
                         if let file = value.file {
                             inlineStickers[file.fileId] = file
-                            if file.isPremiumEmoji && !strongSelf.presentationInterfaceState.isPremium {
+                            if file.isPremiumEmoji && !strongSelf.presentationInterfaceState.isPremium && strongSelf.chatLocation.peerId != strongSelf.context.account.peerId {
                                 if firstLockedPremiumEmoji == nil {
                                     firstLockedPremiumEmoji = file
                                 }
@@ -9252,11 +9252,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        if self.scheduledActivateInput {
-            self.scheduledActivateInput = false
+        if let scheduledActivateInput = scheduledActivateInput, case .text = scheduledActivateInput {
+            self.scheduledActivateInput = nil
             
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                return state.updatedInputMode({ _ in .text })
+                return state.updatedInputMode({ _ in
+                    switch scheduledActivateInput {
+                    case .text:
+                        return .text
+                    case .entityInput:
+                        return .media(mode: .other, expanded: nil, focused: false)
+                    }
+                })
             })
         }
         
@@ -9691,12 +9698,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }))
         }
         
-        if self.scheduledActivateInput {
-            self.scheduledActivateInput = false
+        if let scheduledActivateInput = self.scheduledActivateInput {
+            self.scheduledActivateInput = nil
             
-            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                return state.updatedInputMode({ _ in .text })
-            })
+            switch scheduledActivateInput {
+            case .text:
+                self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                    return state.updatedInputMode({ _ in
+                        return .text
+                    })
+                })
+            case .entityInput:
+                self.chatDisplayNode.openStickers(beginWithEmoji: true)
+            }
         }
 
         if let snapshotState = self.storedAnimateFromSnapshotState {
@@ -14118,7 +14132,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     subject = nil
                 }
                 
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, subject: subject, activateInput: result.isEmpty, keepStack: .always))
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, subject: subject, activateInput: result.isEmpty ? .text : nil, keepStack: .always))
                 subscriber.putCompletion()
             }, error: { _ in
                 let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -16098,13 +16112,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func activateInput() {
+    func activateInput(type: ChatControllerActivateInput) {
         if self.didAppear {
-            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                return state.updatedInputMode({ _ in .text })
-            })
+            switch type {
+            case .text:
+                self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                    return state.updatedInputMode({ _ in
+                        switch type {
+                        case .text:
+                            return .text
+                        case .entityInput:
+                            return .media(mode: .other, expanded: nil, focused: false)
+                        }
+                    })
+                })
+            case .entityInput:
+                self.chatDisplayNode.openStickers(beginWithEmoji: true)
+            }
         } else {
-            self.scheduledActivateInput = true
+            self.scheduledActivateInput = type
         }
     }
     

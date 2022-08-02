@@ -7,6 +7,12 @@ import UIKitRuntimeUtils
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 
+private extension CGRect {
+    var center: CGPoint {
+        return CGPoint(x: self.midX, y: self.midY)
+    }
+}
+
 private let separatorHeight: CGFloat = 1.0 / UIScreen.main.scale
 private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: UIColor, tintColor: UIColor, horizontal: Bool, imageMode: Bool, centered: Bool = false) -> (UIImage, CGFloat) {
     let font = horizontal ? Font.regular(13.0) : Font.medium(10.0)

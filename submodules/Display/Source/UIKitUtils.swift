@@ -591,10 +591,6 @@ public extension CGRect {
     var bottomRight: CGPoint {
         return CGPoint(x: self.maxX, y: self.maxY)
     }
-    
-    var center: CGPoint {
-        return CGPoint(x: self.midX, y: self.midY)
-    }
 }
 
 public extension CGPoint {

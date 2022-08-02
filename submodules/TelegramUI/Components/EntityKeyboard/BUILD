@@ -28,7 +28,6 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieAnimationCache:LottieAnimationCache",
         "//submodules/TelegramUI/Components/VideoAnimationCache:VideoAnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
-        "//submodules/TelegramUI/Components/MultiVideoRenderer:MultiVideoRenderer",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
         "//submodules/SoftwareVideo:SoftwareVideo",
         "//submodules/ShimmerEffect:ShimmerEffect",
@@ -42,7 +41,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
         "//submodules/Components/SolidRoundedButtonComponent:SolidRoundedButtonComponent",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
-        "//submodules/MurMurHash32:MurMurHash32",
+        "//submodules/LocalizedPeerData:LocalizedPeerData",
     ],
     visibility = [
         "//visibility:public",
