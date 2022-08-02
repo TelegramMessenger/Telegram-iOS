@@ -2509,7 +2509,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                                 self.dismissedEmojiSuggestionPosition = nil
                                 
                                 if beginRequest {
-                                    suggestionContext.disposable.set((EmojiSuggestionsComponent.suggestionData(context: context, query: String(lastCharacter))
+                                    suggestionContext.disposable.set((EmojiSuggestionsComponent.suggestionData(context: context, isSavedMessages: self.presentationInterfaceState?.chatLocation.peerId == self.context?.account.peerId, query: String(lastCharacter))
                                     |> deliverOnMainQueue).start(next: { [weak self, weak suggestionContext] result in
                                         guard let strongSelf = self, let suggestionContext = suggestionContext, strongSelf.currentEmojiSuggestion === suggestionContext else {
                                             return
