@@ -1906,15 +1906,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     return .optionalAction({
                         item.controllerInteraction.displayDiceTooltip(dice)
                     })
-                } else if let _ = self.emojiFile {
-//                    if let emojiFile = self.emojiFile, emojiFile.isCustomEmoji {
-//                        return .optionalAction({
-//                            let _ = item.controllerInteraction.openMessage(item.message, .default)
-//                        })
-//                    } else
+                } else if let emojiFile = self.emojiFile {
                     if let animationNode = self.animationNode as? AnimatedStickerNode, let _ = recognizer {
                         var shouldPlay = false
-                        if !animationNode.isPlaying {
+                        if !animationNode.isPlaying && !emojiFile.isCustomEmoji {
                             shouldPlay = true
                         }
                         
@@ -2036,6 +2031,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                             self.playAdditionalEmojiAnimation(index: index)
                                         }
                                     }
+                                } else if emojiFile.isCustomEmoji {
+                                    let _ = item.controllerInteraction.openMessage(item.message, .default)
                                 }
                                 
                                 if shouldPlay {
