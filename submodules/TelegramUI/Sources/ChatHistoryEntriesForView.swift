@@ -139,8 +139,8 @@ func chatHistoryEntriesForView(
                 contentTypeHint = .animatedEmoji
             } else if stickersEnabled && message.text.count == 1, let _ = associatedData.animatedEmojiStickers[message.text.basicEmoji.0], (message.textEntitiesAttribute?.entities.isEmpty ?? true) {
                 contentTypeHint = .animatedEmoji
-            } else if message.text.count < 10 && messageIsElligibleForLargeEmoji(message) {
-                contentTypeHint = .largeEmoji
+            } else if messageIsElligibleForLargeEmoji(message) {
+                contentTypeHint = .animatedEmoji
             }
         }
     
@@ -218,10 +218,12 @@ func chatHistoryEntriesForView(
                     
                     var contentTypeHint: ChatMessageEntryContentType = .generic
                     if presentationData.largeEmoji, topMessage.media.isEmpty {
-                        if stickersEnabled && topMessage.text.count == 1, let _ = associatedData.animatedEmojiStickers[topMessage.text.basicEmoji.0] {
+                        if stickersEnabled && messageIsElligibleForLargeCustomEmoji(topMessage) {
                             contentTypeHint = .animatedEmoji
-                        } else if topMessage.text.count < 10 && messageIsElligibleForLargeEmoji(topMessage) {
-                            contentTypeHint = .largeEmoji
+                        } else if stickersEnabled && topMessage.text.count == 1, let _ = associatedData.animatedEmojiStickers[topMessage.text.basicEmoji.0] {
+                            contentTypeHint = .animatedEmoji
+                        } else if messageIsElligibleForLargeEmoji(topMessage) {
+                            contentTypeHint = .animatedEmoji
                         }
                     }
                     

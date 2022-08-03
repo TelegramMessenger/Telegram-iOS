@@ -492,7 +492,10 @@ class PremiumStarComponent: Component {
                 }
             }
         
-            let from = node.presentation.eulerAngles
+            var from = node.presentation.eulerAngles
+            if abs(from.y - .pi * 2.0) < 0.001 {
+                from.y = 0.0
+            }
             node.removeAnimation(forKey: "tapRotate")
             
             var toValue: Float = smallAngle ? 0.0 : .pi * 2.0
@@ -505,9 +508,9 @@ class PremiumStarComponent: Component {
             let to = SCNVector3(x: 0.0, y: toValue, z: 0.0)
             let distance = rad2deg(to.y - from.y)
             
-            guard !distance.isZero else {
-                return
-            }
+//            guard !distance.isZero else {
+//                return
+//            }
             
             let springAnimation = CASpringAnimation(keyPath: "eulerAngles")
             springAnimation.fromValue = NSValue(scnVector3: from)
@@ -517,7 +520,11 @@ class PremiumStarComponent: Component {
             springAnimation.damping = 5.8
             springAnimation.duration = springAnimation.settlingDuration * 0.75
             springAnimation.initialVelocity = velocity.flatMap { abs($0 / CGFloat(distance)) } ?? 1.7
-            
+            springAnimation.completion = { [weak node] finished in
+                if finished {
+                    node?.eulerAngles = SCNVector3(x: 0.0, y: 0.0, z: 0.0)
+                }
+            }
             node.addAnimation(springAnimation, forKey: "rotate")
         }
         
