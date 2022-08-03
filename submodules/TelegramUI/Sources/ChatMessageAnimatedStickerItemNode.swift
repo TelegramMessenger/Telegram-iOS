@@ -543,17 +543,23 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var emojiFile: TelegramMediaFile?
             var emojiString: String?
-            if messageIsElligibleForLargeCustomEmoji(item.message) || (item.message.text.count > 1 && messageIsElligibleForLargeEmoji(item.message)) {
+            if messageIsElligibleForLargeCustomEmoji(item.message) || messageIsElligibleForLargeEmoji(item.message) {
                 emojiString = item.message.text
             }
             
-            if emojiFile == nil && emojiString == nil {
+            if emojiFile == nil {
                 emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
             }
-            if emojiFile == nil && emojiString == nil {
+            if emojiFile == nil {
                 emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
             }
             
+            if item.message.text.count == 1 && emojiFile != nil {
+                emojiString = nil
+            } else if emojiString != nil {
+                emojiFile = nil
+            }
+                        
             if self.emojiString != emojiString {
                 self.emojiString = emojiString
             } else if self.emojiFile?.id != emojiFile?.id {
@@ -953,7 +959,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             } else if let _ = emojiString {
                 imageVerticalInset = 0.0
-                imageTopPadding = 12.0
+                imageTopPadding = 16.0
                 imageBottomPadding = 20.0
 
                 let baseWidth = params.width
