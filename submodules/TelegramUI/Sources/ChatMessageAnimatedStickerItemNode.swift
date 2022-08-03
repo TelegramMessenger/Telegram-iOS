@@ -543,12 +543,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var emojiFile: TelegramMediaFile?
             var emojiString: String?
-            if let _ = item.message.textEntitiesAttribute?.entities {
-                if messageIsElligibleForLargeCustomEmoji(item.message) {
-                    emojiString = item.message.text
-                }
+            if messageIsElligibleForLargeCustomEmoji(item.message) || (item.message.text.count > 1 && messageIsElligibleForLargeEmoji(item.message)) {
+                emojiString = item.message.text
             }
-            
             
             if emojiFile == nil && emojiString == nil {
                 emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
@@ -970,9 +967,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     deliveryFailedInset += 24.0
                 }
                 
+                if item.message.forwardInfo != nil || item.message.attributes.first(where: { $0 is ReplyMessageAttribute }) != nil {
+                    tmpWidth -= 60.0
+                }
+                
                 tmpWidth -= deliveryFailedInset
                 
-                let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
+                let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset) - 70.0
                 
                 let font = Font.regular(fontSizeForEmojiString(item.message.text))
                 let attributedText = stringWithAppliedEntities(item.message.text, entities: item.message.textEntitiesAttribute?.entities ?? [], baseColor: .black, linkColor: .black, baseFont: font, linkFont: font, boldFont: font, italicFont: font, boldItalicFont: font, fixedFont: font, blockQuoteFont: font, message: item.message)
