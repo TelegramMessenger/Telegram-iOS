@@ -1646,14 +1646,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         guard let item = self.item,  !self.enqueuedAdditionalAnimations.isEmpty else {
             return
         }
-        
-        guard let file = self.emojiFile else {
-            return
-        }
-        
+                
         var emojiFile = self.emojiFile
         if emojiFile == nil {
             emojiFile = item.message.associatedMedia.first?.value as? TelegramMediaFile
+        }
+        
+        guard let file = emojiFile else {
+            return
         }
         
         let enqueuedAnimations = self.enqueuedAdditionalAnimations
