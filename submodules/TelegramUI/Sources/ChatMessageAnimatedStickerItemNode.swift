@@ -1643,8 +1643,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     private func commitEnqueuedAnimations() {
-        guard let item = self.item, let file = self.emojiFile, !self.enqueuedAdditionalAnimations.isEmpty else {
+        guard let item = self.item,  !self.enqueuedAdditionalAnimations.isEmpty else {
             return
+        }
+        
+        guard let file = self.emojiFile else {
+            return
+        }
+        
+        var emojiFile = self.emojiFile
+        if emojiFile == nil {
+            emojiFile = item.message.associatedMedia.first?.value as? TelegramMediaFile
         }
         
         let enqueuedAnimations = self.enqueuedAdditionalAnimations
@@ -2630,7 +2639,7 @@ private func fontSizeForEmojiString(_ string: String) -> CGFloat {
     
     var maxLineLength = 0
     for line in lines {
-        maxLineLength = max(maxLineLength, line.count)
+        maxLineLength = max(maxLineLength, line.replacingOccurrences(of: " ", with: "").count)
     }
     
     let linesCount = lines.count
