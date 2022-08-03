@@ -50,7 +50,7 @@ final class StickerPackPreviewGridItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPackPreviewGridItemNode()
-        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isEmpty: self.isEmpty)
+        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty)
         return node
     }
     
@@ -59,7 +59,7 @@ final class StickerPackPreviewGridItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isEmpty: self.isEmpty)
+        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty)
     }
 }
 
@@ -68,6 +68,7 @@ private let textFont = Font.regular(20.0)
 final class StickerPackPreviewGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem?)?
     private var isLocked: Bool?
+    private var isPremium: Bool?
     private var isEmpty: Bool?
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
@@ -167,14 +168,14 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     }
     
     private var setupTimestamp: Double?
-    func setup(account: Account, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isLocked: Bool, isEmpty: Bool) {
+    func setup(account: Account, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isLocked: Bool, isPremium: Bool, isEmpty: Bool) {
         self.interaction = interaction
         self.theme = theme
         
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem || self.isLocked != isLocked || self.isEmpty != isEmpty {
+        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem || self.isLocked != isLocked || self.isPremium != isPremium || self.isEmpty != isEmpty {
             self.isLocked = isLocked
             
-            if isLocked {
+            if isLocked || isPremium {
                 let lockBackground: UIVisualEffectView
                 let lockIconNode: ASImageNode
                 if let currentBackground = self.lockBackground, let currentIcon = self.lockIconNode {
