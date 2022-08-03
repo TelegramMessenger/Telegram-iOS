@@ -175,7 +175,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem || self.isLocked != isLocked || self.isPremium != isPremium || self.isEmpty != isEmpty {
             self.isLocked = isLocked
             
-            if isLocked || isPremium {
+            if isLocked {
                 let lockBackground: UIVisualEffectView
                 let lockIconNode: ASImageNode
                 if let currentBackground = self.lockBackground, let currentIcon = self.lockIconNode {

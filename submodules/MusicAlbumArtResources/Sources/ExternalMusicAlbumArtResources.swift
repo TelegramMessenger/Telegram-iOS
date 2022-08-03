@@ -59,7 +59,7 @@ public class ExternalMusicAlbumArtResource: Equatable {
 }
 
 public func fetchExternalMusicAlbumArtResource(engine: TelegramEngine, file: FileMediaReference?, resource: ExternalMusicAlbumArtResource) -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> {
-    return engine.resources.fetchAlbumCover(file: file, title: resource.title, performer: resource.performer)
+    return engine.resources.fetchAlbumCover(file: file, title: resource.title, performer: resource.performer, isThumbnail: resource.isThumbnail)
     
     /*return Signal { subscriber in
         if resource.performer.isEmpty || resource.performer.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) == "unknown artist" || resource.title.isEmpty {
