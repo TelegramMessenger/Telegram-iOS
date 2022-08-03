@@ -1,5 +1,9 @@
 import Foundation
 
+public enum AtomicLockError: Error {
+    case isLocked
+}
+
 public final class Atomic<T> {
     private var lock: pthread_mutex_t
     private var value: T
@@ -21,6 +25,16 @@ public final class Atomic<T> {
         pthread_mutex_unlock(&self.lock)
         
         return result
+    }
+    
+    public func tryWith<R>(_ f: (T) -> R) throws -> R {
+        if pthread_mutex_trylock(&self.lock) == 0 {
+            let result = f(self.value)
+            pthread_mutex_unlock(&self.lock)
+            return result
+        } else {
+            throw AtomicLockError.isLocked
+        }
     }
     
     public func modify(_ f: (T) -> T) -> T {

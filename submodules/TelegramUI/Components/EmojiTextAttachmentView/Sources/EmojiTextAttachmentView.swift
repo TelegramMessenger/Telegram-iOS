@@ -184,13 +184,14 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         } else {
             let pointSize = self.pointSize
             let placeholderColor = self.placeholderColor
+            let isThumbnailCancelled = Atomic<Bool>(value: false)
             self.loadDisposable = self.renderer.loadFirstFrame(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: self.context, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true), completion: { [weak self] result, isFinal in
                 if !result {
                     MultiAnimationRendererImpl.firstFrameQueue.async {
                         let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: pointSize, scale: min(2.0, UIScreenScale), imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor)
                         
                         DispatchQueue.main.async {
-                            guard let strongSelf = self else {
+                            guard let strongSelf = self, !isThumbnailCancelled.with({ $0 }) else {
                                 return
                             }
                             if let image = image {
@@ -207,6 +208,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                     guard let strongSelf = self else {
                         return
                     }
+                    let _ = isThumbnailCancelled.swap(true)
                     strongSelf.loadAnimation()
                 }
             })

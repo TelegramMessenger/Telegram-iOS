@@ -739,12 +739,14 @@ final class AlbumCoverResource: TelegramMediaResource, MediaResourceWithWebFileR
     let file: FileMediaReference?
     let title: String
     let performer: String
+    let isThumbnail: Bool
     
-    init(datacenterId: Int, file: FileMediaReference?, title: String, performer: String) {
+    init(datacenterId: Int, file: FileMediaReference?, title: String, performer: String, isThumbnail: Bool) {
         self.datacenterId = datacenterId
         self.file = file
         self.title = title
         self.performer = performer
+        self.isThumbnail = isThumbnail
     }
     
     init(decoder: PostboxDecoder) {
@@ -761,17 +763,21 @@ final class AlbumCoverResource: TelegramMediaResource, MediaResourceWithWebFileR
             document = .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))
             flags |= 1 << 0
         }
-        if !self.title.isEmpty {
+        var requestTitle: String?
+        var requestPerformer: String?
+        if !self.title.isEmpty || !self.performer.isEmpty {
+            requestTitle = self.title
+            requestPerformer = self.performer
             flags |= 1 << 1
         }
-        if !self.performer.isEmpty {
-            flags |= 1 << 1
+        if self.isThumbnail {
+            flags |= 1 << 2
         }
         return .inputWebFileAudioAlbumThumbLocation(
             flags: flags,
             document: document,
-            title: self.title.isEmpty ? nil : self.title,
-            performer: self.performer.isEmpty ? nil : self.performer
+            title: requestTitle,
+            performer: requestPerformer
         )
     }
 }
