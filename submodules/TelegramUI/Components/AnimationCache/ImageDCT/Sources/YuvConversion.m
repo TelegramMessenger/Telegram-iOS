@@ -118,6 +118,11 @@ void scaleImagePlane(uint8_t *outPlane, int outWidth, int outHeight, int outByte
 }
 
 void convertUInt8toInt16(uint8_t const *source, int16_t *dest, int length) {
+#if DEBUG
+    assert(!((intptr_t)source % sizeof(uint64_t)));
+    assert(!((intptr_t)dest % sizeof(uint64_t)));
+#endif
+    
     for (int i = 0; i < length; i += 8 * 4) {
         #pragma unroll
         for (int j = 0; j < 4; j++) {

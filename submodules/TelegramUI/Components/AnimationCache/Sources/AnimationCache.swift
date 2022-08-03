@@ -1436,11 +1436,10 @@ public final class AnimationCacheImpl: AnimationCache {
                         
                         let _ = generateFirstFrameFromItem(currentQueue: queue, itemPath: itemFirstFramePath, animationItemPath: itemPath, allocateTempFile: allocateTempFile)
                         
-                        guard let item = try? loadItem(path: itemPath) else {
-                            return
-                        }
-                        
                         for f in itemContext.subscribers.copyItems() {
+                            guard let item = try? loadItem(path: itemPath) else {
+                                continue
+                            }
                             f(AnimationCacheItemResult(item: item, isFinal: true))
                         }
                     }
