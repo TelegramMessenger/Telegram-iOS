@@ -78,9 +78,11 @@ open class MultiAnimationRenderTarget: SimpleLayer {
 
 private final class LoadFrameGroupTask {
     let task: () -> () -> Void
+    let queueAffinity: Int
     
-    init(task: @escaping () -> () -> Void) {
+    init(task: @escaping () -> () -> Void, queueAffinity: Int) {
         self.task = task
+        self.queueAffinity = queueAffinity
     }
 }
 
@@ -222,11 +224,12 @@ private final class ItemAnimationContext {
     static let queue1 = Queue(name: "ItemAnimationContext-1", qos: .default)
     
     private let cache: AnimationCache
+    let queueAffinity: Int
     private let stateUpdated: () -> Void
     
     private var disposable: Disposable?
     private var displayLink: ConstantDisplayLinkAnimator?
-    private var item: AnimationCacheItem?
+    private var item: Atomic<AnimationCacheItem>?
     
     private var currentFrame: Frame?
     private var isLoadingFrame: Bool = false
@@ -241,8 +244,9 @@ private final class ItemAnimationContext {
     
     let targets = Bag<Weak<MultiAnimationRenderTarget>>()
     
-    init(cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable, stateUpdated: @escaping () -> Void) {
+    init(cache: AnimationCache, queueAffinity: Int, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable, stateUpdated: @escaping () -> Void) {
         self.cache = cache
+        self.queueAffinity = queueAffinity
         self.stateUpdated = stateUpdated
         
         self.disposable = cache.get(sourceId: itemId, size: size, fetch: fetch).start(next: { [weak self] result in
@@ -250,7 +254,9 @@ private final class ItemAnimationContext {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.item = result.item
+                if let item = result.item {
+                    strongSelf.item = Atomic(value: item)
+                }
                 strongSelf.updateIsPlaying()
             }
         })
@@ -330,9 +336,14 @@ private final class ItemAnimationContext {
             
             return LoadFrameGroupTask(task: { [weak self] in
                 let currentFrame: Frame?
-                if let frame = item.advance(advance: frameAdvance, requestedFormat: .rgba) {
-                    currentFrame = Frame(frame: frame)
-                } else {
+                do {
+                    if let frame = try item.tryWith({ $0.advance(advance: frameAdvance, requestedFormat: .rgba) }) {
+                        currentFrame = Frame(frame: frame)
+                    } else {
+                        currentFrame = nil
+                    }
+                } catch {
+                    assertionFailure()
                     currentFrame = nil
                 }
                 
@@ -356,7 +367,7 @@ private final class ItemAnimationContext {
                         }
                     }
                 }
-            })
+            }, queueAffinity: self.queueAffinity)
         }
         
         if let _ = self.currentFrame {
@@ -383,6 +394,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
         
         private var itemContexts: [ItemKey: ItemAnimationContext] = [:]
+        private var nextQueueAffinity: Int = 0
         
         private(set) var isPlaying: Bool = false {
             didSet {
@@ -403,7 +415,9 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             if let current = self.itemContexts[itemKey] {
                 itemContext = current
             } else {
-                itemContext = ItemAnimationContext(cache: cache, itemId: itemId, size: size, fetch: fetch, stateUpdated: { [weak self] in
+                let queueAffinity = self.nextQueueAffinity
+                self.nextQueueAffinity += 1
+                itemContext = ItemAnimationContext(cache: cache, queueAffinity: queueAffinity, itemId: itemId, size: size, fetch: fetch, stateUpdated: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
@@ -668,59 +682,40 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
         
         if !tasks.isEmpty {
-            if tasks.count > 2 {
-                let tasks0 = Array(tasks.prefix(tasks.count / 2))
-                let tasks1 = Array(tasks.suffix(tasks.count - tasks0.count))
-                
-                var tasks0Completions: [() -> Void]?
-                var tasks1Completions: [() -> Void]?
-                
-                let complete: (Int, [() -> Void]) -> Void = { index, completions in
-                    Queue.mainQueue().async {
-                        if index == 0 {
-                            tasks0Completions = completions
-                        } else if index == 1 {
-                            tasks1Completions = completions
-                        }
-                        if let tasks0Completions = tasks0Completions, let tasks1Completions = tasks1Completions {
-                            for completion in tasks0Completions {
-                                completion()
-                            }
-                            for completion in tasks1Completions {
-                                completion()
-                            }
-                        }
-                    }
-                }
-                
-                ItemAnimationContext.queue0.async {
+            let tasks0 = tasks.filter { $0.queueAffinity % 2 == 0 }
+            let tasks1 = tasks.filter { $0.queueAffinity % 2 == 1 }
+            let allTasks = [tasks0, tasks1]
+            
+            let taskCompletions = Atomic<[Int: [() -> Void]]>(value: [:])
+            let queues: [Queue] = [ItemAnimationContext.queue0, ItemAnimationContext.queue1]
+            
+            for i in 0 ..< 2 {
+                let partTasks = allTasks[i]
+                let id = i
+                queues[i].async {
                     var completions: [() -> Void] = []
-                    for task in tasks0 {
-                        let complete = task.task()
-                        completions.append(complete)
-                    }
-                    complete(0, completions)
-                }
-                ItemAnimationContext.queue1.async {
-                    var completions: [() -> Void] = []
-                    for task in tasks1 {
-                        let complete = task.task()
-                        completions.append(complete)
-                    }
-                    complete(1, completions)
-                }
-            } else {
-                ItemAnimationContext.queue0.async {
-                    var completions: [() -> Void] = []
-                    for task in tasks {
+                    for task in partTasks {
                         let complete = task.task()
                         completions.append(complete)
                     }
                     
-                    if !completions.isEmpty {
+                    var complete = false
+                    let _ = taskCompletions.modify { current in
+                        var current = current
+                        current[id] = completions
+                        if current.count == 2 {
+                            complete = true
+                        }
+                        return current
+                    }
+                    
+                    if complete {
                         Queue.mainQueue().async {
-                            for completion in completions {
-                                completion()
+                            let allCompletions = taskCompletions.with { $0 }
+                            for (_, fs) in allCompletions {
+                                for f in fs {
+                                    f()
+                                }
                             }
                         }
                     }

@@ -283,7 +283,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 itemGroupIndexById[groupId] = itemGroups.count
                                 
                                 var headerItem: EntityKeyboardAnimationData?
-                                if let thumbnail = featuredEmojiPack.info.thumbnail {
+                                if let thumbnailFileId = featuredEmojiPack.info.thumbnailFileId, let file = featuredEmojiPack.topItems.first(where: { $0.file.fileId.id == thumbnailFileId }) {
+                                    headerItem = EntityKeyboardAnimationData(file: file.file)
+                                } else if let thumbnail = featuredEmojiPack.info.thumbnail {
                                     let info = featuredEmojiPack.info
                                     let type: EntityKeyboardAnimationData.ItemType
                                     if item.file.isAnimatedSticker {
@@ -323,6 +325,23 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         hasClear = true
                     }
                     
+                    var headerItem = group.headerItem
+                    
+                    if let groupId = group.id.base as? ItemCollectionId {
+                        outer: for (id, info, _) in view.collectionInfos {
+                            if id == groupId, let info = info as? StickerPackCollectionInfo {
+                                if let thumbnailFileId = info.thumbnailFileId {
+                                    for item in group.items {
+                                        if let itemFile = item.itemFile, itemFile.fileId.id == thumbnailFileId {
+                                            headerItem = EntityKeyboardAnimationData(file: itemFile)
+                                            break outer
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
                     return EmojiPagerContentComponent.ItemGroup(
                         supergroupId: group.supergroupId,
                         groupId: group.id,
@@ -335,7 +354,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         hasClear: hasClear,
                         isExpandable: group.isExpandable,
                         displayPremiumBadges: false,
-                        headerItem: group.headerItem,
+                        headerItem: headerItem,
                         items: group.items
                     )
                 },
@@ -697,7 +716,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         let subtitle: String = strings.StickerPack_StickerCount(Int32(featuredStickerPack.info.count))
                         var headerItem: EntityKeyboardAnimationData?
                         
-                        if let thumbnail = featuredStickerPack.info.thumbnail {
+                        if let thumbnailFileId = featuredStickerPack.info.thumbnailFileId, let file = featuredStickerPack.topItems.first(where: { $0.file.fileId.id == thumbnailFileId }) {
+                            headerItem = EntityKeyboardAnimationData(file: file.file)
+                        } else if let thumbnail = featuredStickerPack.info.thumbnail {
                             let info = featuredStickerPack.info
                             let type: EntityKeyboardAnimationData.ItemType
                             if item.file.isAnimatedSticker {
