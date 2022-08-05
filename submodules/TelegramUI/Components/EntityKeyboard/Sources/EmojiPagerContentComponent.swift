@@ -1619,6 +1619,7 @@ public final class EmojiPagerContentComponent: Component {
             var width: CGFloat
             var headerInsets: UIEdgeInsets
             var itemInsets: UIEdgeInsets
+            var curveNearBounds: Bool
             var itemGroupLayouts: [ItemGroupLayout]
             var itemDefaultHeaderHeight: CGFloat
             var itemFeaturedHeaderHeight: CGFloat
@@ -1641,6 +1642,8 @@ public final class EmojiPagerContentComponent: Component {
                 
                 self.premiumButtonInset = 6.0
                 self.premiumButtonHeight = 50.0
+                
+                self.curveNearBounds = containerInsets.bottom <= 9.0
                 
                 let minItemsPerRow: Int
                 let minSpacing: CGFloat
@@ -2258,6 +2261,7 @@ public final class EmojiPagerContentComponent: Component {
         private var vibrancyEffectView: UIVisualEffectView?
         private let mirrorContentScrollView: UIView
         private let scrollView: ContentScrollView
+        private var scrollGradientLayer: SimpleGradientLayer?
         private let boundsChangeTrackerLayer = SimpleLayer()
         private var effectiveVisibleSize: CGSize = CGSize()
         
@@ -3562,6 +3566,29 @@ public final class EmojiPagerContentComponent: Component {
                         let itemPosition = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
                         itemTransition.setPosition(layer: itemLayer, position: itemPosition)
                         
+                        if itemLayout.curveNearBounds {
+                            let fractionLength: CGFloat = itemFrame.height
+                            let rotationX: CGFloat = 1.0 - max(0.0, min(1.0, (effectiveVisibleBounds.maxY + 4.0 + itemFrame.height / 2.0 - itemPosition.y) / fractionLength))
+                            if rotationX.isZero {
+                                itemTransition.setTransform(layer: itemLayer, transform: CATransform3DIdentity)
+                            } else {
+                                var transform = CATransform3DIdentity
+                                
+                                let centralOffset = itemFrame.midX - effectiveVisibleBounds.width / 2.0
+                                transform = CATransform3DTranslate(transform, centralOffset * 2.0, 0.0, 0.0)
+                                
+                                var projectionMatrix = CATransform3DIdentity
+                                projectionMatrix.m34 = -1.0 / 500.0
+                                transform = CATransform3DConcat(projectionMatrix, transform)
+                                
+                                transform = CATransform3DTranslate(transform, -centralOffset * 2.0, 0.0, 0.0)
+                                
+                                transform = CATransform3DTranslate(transform, 0.0, -rotationX * itemFrame.height * 0.5, 0.0)
+                                transform = CATransform3DRotate(transform, CGFloat.pi * 0.5 * rotationX, 1.0, 0.0, 0.0)
+                                itemTransition.setTransform(layer: itemLayer, transform: transform)
+                            }
+                        }
+                        
                         var badge: ItemLayer.Badge?
                         if itemGroup.displayPremiumBadges, let file = item.itemFile, file.isPremiumSticker {
                             badge = .premium
@@ -3762,6 +3789,44 @@ public final class EmojiPagerContentComponent: Component {
             
             if removedPlaceholerViews {
                 self.updateShimmerIfNeeded()
+            }
+            
+            if itemLayout.curveNearBounds {
+                let scrollGradientLayer: SimpleGradientLayer
+                if let current = self.scrollGradientLayer {
+                    scrollGradientLayer = current
+                } else {
+                    scrollGradientLayer = SimpleGradientLayer()
+                    self.scrollGradientLayer = scrollGradientLayer
+                    
+                    var locations: [NSNumber] = []
+                    var colors: [CGColor] = []
+                    let numStops = 6
+                    for i in 0 ..< numStops {
+                        let step = CGFloat(i) / CGFloat(numStops - 1)
+                        locations.append(step as NSNumber)
+                        colors.append(keyboardChildEnvironment.theme.list.plainBackgroundColor.withAlphaComponent(step * step).cgColor)
+                    }
+                    
+                    scrollGradientLayer.locations = locations
+                    scrollGradientLayer.colors = colors
+                    scrollGradientLayer.type = .axial
+                    
+                    self.layer.addSublayer(scrollGradientLayer)
+                }
+                
+                let gradientHeight: CGFloat = 20.0
+                transition.setFrame(layer: scrollGradientLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveVisibleBounds.height - gradientHeight), size: CGSize(width: effectiveVisibleBounds.width, height: gradientHeight)))
+                //let fractionLength: CGFloat = 20.0
+                //transition.setAlpha(layer: scrollGradientLayer, alpha: max(0.0, min(1.0, (itemLayout.contentSize.height - effectiveVisibleBounds.maxY) / fractionLength)))
+                                    
+                scrollGradientLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
+                scrollGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
+            } else {
+                if let scrollGradientLayer = self.scrollGradientLayer {
+                    self.scrollGradientLayer = nil
+                    scrollGradientLayer.removeFromSuperlayer()
+                }
             }
             
             if let topVisibleGroupId = topVisibleGroupId {

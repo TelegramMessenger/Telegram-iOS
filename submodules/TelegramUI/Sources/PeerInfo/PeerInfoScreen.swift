@@ -69,6 +69,9 @@ import CreateExternalMediaStreamScreen
 import PaymentMethodUI
 import PremiumUI
 import InstantPageCache
+import EmojiStatusSelectionComponent
+import AnimationCache
+import MultiAnimationRenderer
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -3024,6 +3027,30 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         return nil
                     }
                 }))
+            }
+            
+            self.headerNode.displayPremiumIntro = { [weak self] sourceView, white in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+                    return TempBox.shared.tempFile(fileName: "file").path
+                })
+                let animationRenderer = MultiAnimationRendererImpl()
+                strongSelf.controller?.present(EmojiStatusSelectionController(
+                    context: strongSelf.context,
+                    sourceView: sourceView,
+                    emojiContent: ChatEntityKeyboardInputNode.emojiInputData(
+                        context: strongSelf.context,
+                        animationCache: animationCache,
+                        animationRenderer: animationRenderer,
+                        isStandalone: false,
+                        areUnicodeEmojiEnabled: false,
+                        areCustomEmojiEnabled: true,
+                        chatPeerId: strongSelf.context.account.peerId
+                    )
+                ), in: .window(.root))
             }
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)

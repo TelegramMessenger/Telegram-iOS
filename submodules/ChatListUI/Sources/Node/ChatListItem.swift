@@ -25,6 +25,8 @@ import UniversalMediaPlayer
 import GalleryUI
 import HierarchyTrackingLayer
 import TextNodeWithEntities
+import ComponentFlow
+import EmojiStatusComponent
 
 public enum ChatListItemContent {
     public final class DraftState: Equatable {
@@ -458,6 +460,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let pinnedIconNode: ASImageNode
     var secretIconNode: ASImageNode?
     var credibilityIconNode: ASImageNode?
+    var credibilityIconView: ComponentHostView<Empty>?
     let mutedIconNode: ASImageNode
     
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
@@ -1069,6 +1072,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentPinnedIconImage: UIImage?
             var currentMutedIconImage: UIImage?
             var currentCredibilityIconImage: UIImage?
+            var currentCredibilityIconContent: EmojiStatusComponent.Content?
             var currentSecretIconImage: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
@@ -1515,12 +1519,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let peer = messages.last?.author {
                             if peer.isScam {
                                 currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                                currentCredibilityIconContent = .scam(color: item.presentationData.theme.chat.message.incoming.scamColor)
                             } else if peer.isFake {
                                 currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                                currentCredibilityIconContent = .fake(color: item.presentationData.theme.chat.message.incoming.scamColor)
                             } else if peer.isVerified {
                                 currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                                currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                 currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                                
+                                if "".isEmpty {
+                                    currentCredibilityIconContent = .emojiStatus(status: PeerEmojiStatus(fileId: 5431449001532594346), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                                } else {
+                                    currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
+                                }
                             }
                         }
                     default:
@@ -1529,12 +1542,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
                     if peer.isScam {
                         currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                        currentCredibilityIconContent = .scam(color: item.presentationData.theme.chat.message.incoming.scamColor)
                     } else if peer.isFake {
                         currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                        currentCredibilityIconContent = .fake(color: item.presentationData.theme.chat.message.incoming.scamColor)
                     } else if peer.isVerified {
                         currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                        currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                         currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                        
+                        if "".isEmpty {
+                            currentCredibilityIconContent = .emojiStatus(status: PeerEmojiStatus(fileId: 5431449001532594346), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                        } else {
+                            currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
+                        }
                     }
                 }
             }
@@ -2030,6 +2052,35 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleLayout.size.width + 3.0 + titleOffset
+                    
+                    if let currentCredibilityIconContent = currentCredibilityIconContent {
+                        let credibilityIconView: ComponentHostView<Empty>
+                        if let current = strongSelf.credibilityIconView {
+                            credibilityIconView = current
+                        } else {
+                            credibilityIconView = ComponentHostView<Empty>()
+                            strongSelf.credibilityIconView = credibilityIconView
+                            strongSelf.contextContainer.view.addSubview(credibilityIconView)
+                        }
+                        let iconSize = credibilityIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(EmojiStatusComponent(
+                                context: item.context,
+                                animationCache: item.interaction.animationCache,
+                                animationRenderer: item.interaction.animationRenderer,
+                                content: currentCredibilityIconContent,
+                                action: nil,
+                                longTapAction: nil
+                            )),
+                            environment: {},
+                            containerSize: CGSize(width: 20.0, height: 20.0)
+                        )
+                        transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0) - UIScreenPixel), size: iconSize))
+                    } else if let credibilityIconView = strongSelf.credibilityIconView {
+                        strongSelf.credibilityIconView = nil
+                        credibilityIconView.removeFromSuperview()
+                    }
+                    
                     if let currentCredibilityIconImage = currentCredibilityIconImage {
                         let iconNode: ASImageNode
                         if let current = strongSelf.credibilityIconNode {
@@ -2041,6 +2092,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             iconNode.displayWithoutProcessing = true
                             strongSelf.contextContainer.addSubnode(iconNode)
                             strongSelf.credibilityIconNode = iconNode
+                            iconNode.isHidden = true
                         }
                         iconNode.image = currentCredibilityIconImage
                         transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: floorToScreenPixels(titleFrame.midY - currentCredibilityIconImage.size.height / 2.0) - UIScreenPixel), size: currentCredibilityIconImage.size))

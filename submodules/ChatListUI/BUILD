@@ -74,6 +74,7 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
     ],
     visibility = [
         "//visibility:public",

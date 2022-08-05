@@ -190,7 +190,9 @@ UIView<UIKitPortalViewProtocol> * _Nullable makePortalView() {
         view.matchesPosition = true;
         view.matchesTransform = true;
         view.matchesAlpha = false;
-        view.allowsHitTesting = false;
+        if (@available(iOS 13.0, *)) {
+            view.allowsHitTesting = false;
+        }
         
         return view;
     } else {

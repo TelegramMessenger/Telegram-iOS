@@ -103,7 +103,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         return hasPremium
     }
     
-    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool, areCustomEmojiEnabled: Bool, chatPeerId: EnginePeer.Id?) -> Signal<EmojiPagerContentComponent, NoError> {
+    static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool, areUnicodeEmojiEnabled: Bool, areCustomEmojiEnabled: Bool, chatPeerId: EnginePeer.Id?) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
@@ -178,21 +178,23 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             }
             
-            for (subgroupId, list) in staticEmojiMapping {
-                let groupId: AnyHashable = "static"
-                for emojiString in list {
-                    let resultItem = EmojiPagerContentComponent.Item(
-                        animationData: nil,
-                        itemFile: nil,
-                        staticEmoji: emojiString,
-                        subgroupId: subgroupId.rawValue
-                    )
-                    
-                    if let groupIndex = itemGroupIndexById[groupId] {
-                        itemGroups[groupIndex].items.append(resultItem)
-                    } else {
-                        itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
+            if areUnicodeEmojiEnabled {
+                for (subgroupId, list) in staticEmojiMapping {
+                    let groupId: AnyHashable = "static"
+                    for emojiString in list {
+                        let resultItem = EmojiPagerContentComponent.Item(
+                            animationData: nil,
+                            itemFile: nil,
+                            staticEmoji: emojiString,
+                            subgroupId: subgroupId.rawValue
+                        )
+                        
+                        if let groupIndex = itemGroupIndexById[groupId] {
+                            itemGroups[groupIndex].items.append(resultItem)
+                        } else {
+                            itemGroupIndexById[groupId] = itemGroups.count
+                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
+                        }
                     }
                 }
             }
@@ -378,7 +380,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             animationRenderer = MultiAnimationRendererImpl()
         //}
         
-        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId)
+        let emojiItems = emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers]
@@ -1759,6 +1761,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 theme: interfaceState.theme,
                 strings: interfaceState.strings,
                 containerInsets: UIEdgeInsets(top: 0.0, left: leftInset, bottom: bottomInset, right: rightInset),
+                topPanelInsets: UIEdgeInsets(),
                 emojiContent: self.currentInputData.emoji,
                 stickerContent: stickerContent,
                 gifContent: gifContent?.component,
@@ -1822,6 +1825,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 },
                 deviceMetrics: deviceMetrics,
                 hiddenInputHeight: hiddenInputHeight,
+                displayBottomPanel: true,
                 isExpanded: isExpanded
             )),
             environment: {},
@@ -2270,7 +2274,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil).start(next: { value in
+        let _ = ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })
@@ -2285,7 +2289,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                     gifs: nil,
                     availableGifSearchEmojies: []
                 ),
-                updatedInputData: ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
+                updatedInputData: ChatEntityKeyboardInputNode.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
                     return ChatEntityKeyboardInputNode.InputData(
                         emoji: emojiComponent,
                         stickers: nil,

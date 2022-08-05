@@ -256,17 +256,20 @@ final class EntityKeyboardIconTopPanelComponent: Component {
     
     let icon: Icon
     let theme: PresentationTheme
+    let useAccentColor: Bool
     let title: String
     let pressed: () -> Void
     
     init(
         icon: Icon,
         theme: PresentationTheme,
+        useAccentColor: Bool,
         title: String,
         pressed: @escaping () -> Void
     ) {
         self.icon = icon
         self.theme = theme
+        self.useAccentColor = useAccentColor
         self.title = title
         self.pressed = pressed
     }
@@ -276,6 +279,9 @@ final class EntityKeyboardIconTopPanelComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.useAccentColor != rhs.useAccentColor {
             return false
         }
         if lhs.title != rhs.title {
@@ -352,7 +358,16 @@ final class EntityKeyboardIconTopPanelComponent: Component {
                 
             self.component = component
             
-            let color = itemEnvironment.isHighlighted ? component.theme.chat.inputMediaPanel.panelHighlightedIconColor : component.theme.chat.inputMediaPanel.panelIconColor
+            let color: UIColor
+            if itemEnvironment.isHighlighted {
+                if component.useAccentColor {
+                    color = component.theme.list.itemAccentColor
+                } else {
+                    color = component.theme.chat.inputMediaPanel.panelHighlightedIconColor
+                }
+            } else {
+                color = component.theme.chat.inputMediaPanel.panelIconColor
+            }
             
             if self.iconView.tintColor != color {
                 if !transition.animation.isImmediate {

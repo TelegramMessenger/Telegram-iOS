@@ -53,5 +53,23 @@ public extension TelegramEngine {
         public func removeAccountPhoto(reference: TelegramMediaImageReference?) -> Signal<Void, NoError> {
             return _internal_removeAccountPhoto(network: self.account.network, reference: reference)
         }
+        
+        public func setEmojiStatus(file: TelegramMediaFile?) -> Signal<Never, NoError> {
+            let peerId = self.account.peerId
+            return self.account.postbox.transaction { transaction -> Void in
+                if let file = file {
+                    transaction.storeMediaIfNotPresent(media: file)
+                }
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    guard let current = current as? CachedUserData else {
+                        return current
+                    }
+                    return current.withUpdatedEmojiStatus(file.flatMap { file -> PeerEmojiStatus in
+                        return PeerEmojiStatus(fileId: file.fileId.id)
+                    })
+                })
+            }
+            |> ignoreValues
+        }
     }
 }
