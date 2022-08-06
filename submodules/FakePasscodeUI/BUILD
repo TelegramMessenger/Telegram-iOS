@@ -21,7 +21,6 @@ swift_library(
         "//submodules/PasscodeUI:PasscodeUI",
         "//submodules/PasscodeInputFieldNode:PasscodeInputFieldNode",
         "//submodules/AvatarNode:AvatarNode",
-        "//submodules/LocalMediaResources:LocalMediaResources",
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
         "//submodules/AccountUtils:AccountUtils",
         "//submodules/ContactsPeerItem:ContactsPeerItem",
