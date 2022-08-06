@@ -130,7 +130,7 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
         }))
     }, sessionsToHide: {
         let _ = (accountActionsDataPromise.get() |> take(1)).start(next: { data in
-            pushControllerImpl?(sessionsSelectionController(context: context, title: presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, selected: data.settings.sessionsToHide, updated: { sessionsToHide in
+            pushControllerImpl?(sessionsSelectionController(context: context, title: presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, selector: data.settings.sessionsToHide, updated: { sessionsToHide in
                 updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
                     settings.withUpdatedSessionsToHide(sessionsToHide)
                 }
@@ -138,7 +138,7 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
         })
     }, sessionsToTerminate: { showWarning in
         let _ = (accountActionsDataPromise.get() |> take(1)).start(next: { data in
-            pushControllerImpl?(sessionsSelectionController(context: context, title: presentationData.strings.FakePasscodes_AccountActions_SessionsToTerminate, selected: data.settings.sessionsToTerminate, updated: { sessionsToTerminate in
+            pushControllerImpl?(sessionsSelectionController(context: context, title: presentationData.strings.FakePasscodes_AccountActions_SessionsToTerminate, selector: data.settings.sessionsToTerminate, updated: { sessionsToTerminate in
                 updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
                     settings.withUpdatedSessionsToTerminate(sessionsToTerminate)
                 }
@@ -206,13 +206,13 @@ private func updateAccountActionSettings(context: AccountContext, uuid: UUID, _ 
     })
 }
 
-private func sessionToHideLabel(_ presentationData: PresentationData, _ settings: FakePasscodeSessionsToHideSettings) -> String {
-    let sessionsCount = "\(settings.sessions.count)"
+private func sessionToHideLabel(_ presentationData: PresentationData, _ selector: SessionSelector) -> String {
+    let sessionsCount = "\(selector.sessions.count)"
 
-    switch settings.mode {
+    switch selector.mode {
     case .selected:
         return sessionsCount
     case .excluded:
-        return settings.sessions.count == 0 ? presentationData.strings.FakePasscodes_AccountActions_All : presentationData.strings.FakePasscodes_AccountActions_AllExceptCount(sessionsCount).string
+        return selector.sessions.count == 0 ? presentationData.strings.FakePasscodes_AccountActions_All : presentationData.strings.FakePasscodes_AccountActions_AllExceptCount(sessionsCount).string
     }
 }
