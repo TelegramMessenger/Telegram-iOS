@@ -42,17 +42,21 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
     public let chatsToRemove: [PeerWithRemoveOptions]
     public let logOut: Bool
     public let sessionsToHide: FakePasscodeSessionsToHideSettings
+    public let sessionsToTerminate: FakePasscodeSessionsToHideSettings
+    public let sessionsToTerminateSkipWarning: Bool
 
     public static func defaultSettings(peerId: PeerId, recordId: AccountRecordId) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: peerId, recordId: recordId, chatsToRemove: [], logOut: false, sessionsToHide: FakePasscodeSessionsToHideSettings.defaultSettings())
+        return FakePasscodeAccountActionsSettings(peerId: peerId, recordId: recordId, chatsToRemove: [], logOut: false, sessionsToHide: FakePasscodeSessionsToHideSettings.defaultSettings(), sessionsToTerminate: FakePasscodeSessionsToHideSettings.defaultSettings(), sessionsToTerminateSkipWarning: false)
     }
 
-    public init(peerId: PeerId, recordId: AccountRecordId, chatsToRemove: [PeerWithRemoveOptions], logOut: Bool, sessionsToHide: FakePasscodeSessionsToHideSettings) {
+    public init(peerId: PeerId, recordId: AccountRecordId, chatsToRemove: [PeerWithRemoveOptions], logOut: Bool, sessionsToHide: FakePasscodeSessionsToHideSettings, sessionsToTerminate: FakePasscodeSessionsToHideSettings, sessionsToTerminateSkipWarning: Bool) {
         self.peerId = peerId
         self.recordId = recordId
         self.chatsToRemove = chatsToRemove
         self.logOut = logOut
         self.sessionsToHide = sessionsToHide
+        self.sessionsToTerminate = sessionsToTerminate
+        self.sessionsToTerminateSkipWarning = sessionsToTerminateSkipWarning
     }
 
     public init(from decoder: Decoder) throws {
@@ -63,6 +67,8 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
         self.chatsToRemove = try container.decodeIfPresent([PeerWithRemoveOptions].self, forKey: "ctr") ?? []
         self.logOut = (try container.decodeIfPresent(Int32.self, forKey: "lo") ?? 0) != 0
         self.sessionsToHide = try container.decodeIfPresent(FakePasscodeSessionsToHideSettings.self, forKey: "sth") ?? FakePasscodeSessionsToHideSettings.defaultSettings()
+        self.sessionsToTerminate = try container.decodeIfPresent(FakePasscodeSessionsToHideSettings.self, forKey: "stt") ?? FakePasscodeSessionsToHideSettings.defaultSettings()
+        self.sessionsToTerminateSkipWarning = (try container.decodeIfPresent(Int32.self, forKey: "sttw") ?? 0) != 0
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -73,18 +79,28 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
         try container.encode(self.chatsToRemove, forKey: "ctr")
         try container.encode((self.logOut ? 1 : 0) as Int32, forKey: "lo")
         try container.encode(self.sessionsToHide, forKey: "sth")
+        try container.encode(self.sessionsToTerminate, forKey: "stt")
+        try container.encode((self.sessionsToTerminateSkipWarning ? 1 : 0) as Int32, forKey: "sttw")
     }
 
     public func withUpdatedLogOut(_ logOut: Bool) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: logOut, sessionsToHide: self.sessionsToHide)
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: logOut, sessionsToHide: self.sessionsToHide, sessionsToTerminate: self.sessionsToTerminate, sessionsToTerminateSkipWarning: self.sessionsToTerminateSkipWarning)
     }
 
     public func withUpdatedChatsToRemove(_ chatsToRemove: [PeerWithRemoveOptions]) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: chatsToRemove, logOut: self.logOut, sessionsToHide: self.sessionsToHide)
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: chatsToRemove, logOut: self.logOut, sessionsToHide: self.sessionsToHide, sessionsToTerminate: self.sessionsToTerminate, sessionsToTerminateSkipWarning: self.sessionsToTerminateSkipWarning)
     }
 
     public func withUpdatedSessionsToHide(_ sessionsToHide: FakePasscodeSessionsToHideSettings) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: self.logOut, sessionsToHide: sessionsToHide)
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: self.logOut, sessionsToHide: sessionsToHide, sessionsToTerminate: self.sessionsToTerminate, sessionsToTerminateSkipWarning: self.sessionsToTerminateSkipWarning)
+    }
+
+    public func withUpdatedSessionsToTerminate(_ sessionsToTerminate: FakePasscodeSessionsToHideSettings) -> FakePasscodeAccountActionsSettings {
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: self.logOut, sessionsToHide: self.sessionsToHide, sessionsToTerminate: sessionsToTerminate, sessionsToTerminateSkipWarning: self.sessionsToTerminateSkipWarning)
+    }
+
+    public func withDisabledSessionsToTerminateWarning() -> FakePasscodeAccountActionsSettings {
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: self.logOut, sessionsToHide: self.sessionsToHide, sessionsToTerminate: sessionsToTerminate, sessionsToTerminateSkipWarning: true)
     }
 
     public func performActions(context: AccountContext, updateSettings: @escaping (FakePasscodeAccountActionsSettings) -> Void) {
@@ -130,6 +146,24 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
         let updatedChatsToRemove = chatsToRemove.filter({ !($0.peerId.namespace == Namespaces.Peer.SecretChat && $0.removalType == .delete) })
         if updatedChatsToRemove != chatsToRemove {
             updateSettings(self.withUpdatedChatsToRemove(updatedChatsToRemove))
+        }
+
+        let activeSessionsContext = context.engine.privacy.activeSessions()
+        activeSessionsContext.loadMore();
+        if sessionsToTerminate.mode == .selected {
+            for sessionId in sessionsToTerminate.sessions {
+                let _ = activeSessionsContext.remove(hash: sessionId).start()
+            }
+        } else if sessionsToTerminate.mode == .excluded {
+            let _ = (activeSessionsContext.state |> take(1)).start(next: { context in
+                for s in context.sessions {
+                    if !(s.hash == 0 || sessionsToTerminate.sessions.contains(s.hash)) {
+                        let _ = activeSessionsContext.remove(hash: s.hash).start()
+                    }
+                }
+            })
+        } else {
+            assertionFailure("Unsupported SessionSelectionMode \(sessionsToTerminate.mode)")
         }
 
         if logOut {
