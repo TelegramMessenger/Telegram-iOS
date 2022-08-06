@@ -126,6 +126,9 @@ private func sessionsSelectionControllerEntries(presentationData: PresentationDa
     if !sessionsState.sessions.isEmpty {
         entries.append(.activeSessionHeader(presentationData.strings.AccountActions_SessionsToHide_ActiveSessions))
         for (index, session) in sessionsState.sessions.enumerated() {
+            if session.hash == 0 {
+                continue
+            }
             entries.append(.activeSession(index, presentationData.strings, presentationData.dateTimeFormat, session, selector.sessions.contains(where: { $0 == session.hash })))
         }
     }
