@@ -627,6 +627,7 @@ extension DctCoefficientsYUVA420 {
     }
     
     func dct4x4(dctData: DctData, target: DctCoefficientsYUVA420) {
+        #if arch(arm64)
         precondition(self.yPlane.width == target.yPlane.width && self.yPlane.height == target.yPlane.height)
         
         for i in 0 ..< 4 {
@@ -655,15 +656,15 @@ extension DctCoefficientsYUVA420 {
                 targetPlane.data.withUnsafeMutableBytes { bytes in
                     let coefficients = bytes.baseAddress!.assumingMemoryBound(to: Int16.self)
                     
-                    //memcpy(coefficients, sourceCoefficients, sourceBytes.count)
-                    
                     dctData.deltaDct.forward4x4(sourceCoefficients, coefficients: coefficients, width: sourcePlane.width, height: sourcePlane.height)
                 }
             }
         }
+        #endif
     }
     
     func idct4x4Add(dctData: DctData, target: DctCoefficientsYUVA420) {
+        #if arch(arm64)
         precondition(self.yPlane.width == target.yPlane.width && self.yPlane.height == target.yPlane.height)
         
         for i in 0 ..< 4 {
@@ -698,6 +699,7 @@ extension DctCoefficientsYUVA420 {
                 }
             }
         }
+        #endif
     }
     
     func subtract(other: DctCoefficientsYUVA420) {
