@@ -102,39 +102,41 @@ private final class WarpView: UIView {
         for i in 0 ..< self.warpViews.count {
             let itemHeight = warpHeight / CGFloat(self.warpViews.count)
             let itemFraction = CGFloat(i + 1) / CGFloat(self.warpViews.count)
+            let _ = itemHeight
             
             let da = CGFloat.pi * 0.5 / CGFloat(self.warpViews.count)
             let alpha = CGFloat.pi * 0.5 - itemFraction * CGFloat.pi * 0.5
             let endPoint = CGPoint(x: cos(alpha), y: sin(alpha))
             let prevAngle = alpha + da
             let prevPt = CGPoint(x: cos(prevAngle), y: sin(prevAngle))
-            let prevVector = CGPoint(x: endPoint.x - prevPt.x, y: endPoint.y - prevPt.y)
             var angle: CGFloat
-            angle = -atan2(prevVector.y, prevVector.x)
+            angle = -atan2(endPoint.y - prevPt.y, endPoint.x - prevPt.x)
             
             let itemLengthVector = CGPoint(x: endPoint.x - prevPt.x, y: endPoint.y - prevPt.y)
-            let itemLength = sqrt(itemLengthVector.x * itemLengthVector.x + itemLengthVector.y * itemLengthVector.y) * warpHeight * 0.5 * 0.5
+            let itemLength = sqrt(itemLengthVector.x * itemLengthVector.x + itemLengthVector.y * itemLengthVector.y) * warpHeight * 0.5
+            let _ = itemLength
             
             var transform: CATransform3D
             transform = CATransform3DIdentity
-            transform.m34 = 1.0 / 300.0
+            transform.m34 = 1.0 / 240.0
             
-            transform = CATransform3DTranslate(transform, 0.0, prevPt.x * warpHeight * 0.5, (1.0 - prevPt.y) * warpHeight * 0.5)
+            transform = CATransform3DTranslate(transform, 0.0, prevPt.x * allItemsHeight, (1.0 - prevPt.y) * allItemsHeight)
             transform = CATransform3DRotate(transform, angle, 1.0, 0.0, 0.0)
             
             //self.warpViews[i].backgroundColor = UIColor(red: 0.0, green: 0.0, blue: CGFloat(i) / CGFloat(self.warpViews.count - 1), alpha: 1.0)
-            self.warpViews[i].backgroundColor = theme.list.plainBackgroundColor
+            //self.warpViews[i].backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+            //self.warpViews[i].backgroundColor = theme.list.plainBackgroundColor
             
-            let positionY = size.height - allItemsHeight + /*warpHeight * cos(alpha)*/ CGFloat(i) * itemLength * 2.0
+            let positionY = size.height - allItemsHeight + 4.0 + /*warpHeight * cos(alpha)*/ CGFloat(i) * itemLength
             let rect = CGRect(origin: CGPoint(x: 0.0, y: positionY), size: CGSize(width: size.width, height: itemLength))
-            transition.setPosition(view: self.warpViews[i], position: CGPoint(x: rect.midX, y: size.height - allItemsHeight))
-            transition.setBounds(view: self.warpViews[i], bounds: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: itemHeight)))
+            transition.setPosition(view: self.warpViews[i], position: CGPoint(x: rect.midX, y: size.height - allItemsHeight + 4.0))
+            transition.setBounds(view: self.warpViews[i], bounds: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: itemLength)))
             transition.setTransform(view: self.warpViews[i], transform: transform)
             self.warpViews[i].update(containerSize: size, rect: rect, transition: transition)
         }
         
         self.overlayView.backgroundColor = theme.list.plainBackgroundColor
-        transition.setFrame(view: self.overlayView, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - allItemsHeight), size: CGSize(width: size.width, height: allItemsHeight)))
+        transition.setFrame(view: self.overlayView, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - allItemsHeight + 4.0), size: CGSize(width: size.width, height: allItemsHeight)))
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -4007,7 +4009,7 @@ public final class EmojiPagerContentComponent: Component {
                     self.layer.addSublayer(scrollGradientLayer)
                 }
                 
-                let gradientHeight: CGFloat = 18.0
+                let gradientHeight: CGFloat = 6.0
                 transition.setFrame(layer: scrollGradientLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveVisibleBounds.height - gradientHeight), size: CGSize(width: effectiveVisibleBounds.width, height: gradientHeight)))
                 //let fractionLength: CGFloat = 20.0
                 //transition.setAlpha(layer: scrollGradientLayer, alpha: max(0.0, min(1.0, (itemLayout.contentSize.height - effectiveVisibleBounds.maxY) / fractionLength)))
