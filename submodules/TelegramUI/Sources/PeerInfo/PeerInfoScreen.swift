@@ -446,6 +446,7 @@ private enum PeerInfoSettingsSection {
     case addAccount
     case logout
     case rememberPassword
+    case emojiStatus
 }
 
 private final class PeerInfoInteraction {
@@ -615,13 +616,29 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         setPhotoTitle = presentationData.strings.Settings_SetProfilePhotoOrVideo
         displaySetPhoto = true
     }
+    
+    //TODO:localize
+    let setStatusTitle: String = "Set Emoji Status"
+    let displaySetStatus: Bool
+    if let peer = data.peer as? TelegramUser, peer.isPremium {
+        displaySetStatus = true
+    } else {
+        displaySetStatus = false
+    }
+    
+    if displaySetStatus {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: setStatusTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+            interaction.openSettings(.emojiStatus)
+        }))
+    }
+    
     if displaySetPhoto {
-        items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
             interaction.openSettings(.avatar)
         }))
     }
     if let peer = data.peer, (peer.addressName ?? "").isEmpty {
-        items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
             interaction.openSettings(.username)
         }))
     }
@@ -3046,6 +3063,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         animationCache: animationCache,
                         animationRenderer: animationRenderer,
                         isStandalone: false,
+                        isReactionSelection: true,
                         areUnicodeEmojiEnabled: false,
                         areCustomEmojiEnabled: true,
                         chatPeerId: strongSelf.context.account.peerId
@@ -6395,6 +6413,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).start()
                 }
                 push(controller)
+            case .emojiStatus:
+                self.headerNode.invokeDisplayPremiumIntro()
         }
     }
     

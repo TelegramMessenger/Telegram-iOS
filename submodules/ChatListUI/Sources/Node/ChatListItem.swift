@@ -1517,7 +1517,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     switch item.content {
                     case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _):
                         if let peer = messages.last?.author {
-                            if peer.isScam {
+                            if case let .user(user) = peer, let emojiStatus = user.emojiStatus {
+                                currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                                currentCredibilityIconContent = .emojiStatus(status: emojiStatus, placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                            } else if peer.isScam {
                                 currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                                 currentCredibilityIconContent = .scam(color: item.presentationData.theme.chat.message.incoming.scamColor)
                             } else if peer.isFake {
@@ -1528,19 +1531,17 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                 currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
-                                
-                                if "".isEmpty {
-                                    currentCredibilityIconContent = .emojiStatus(status: PeerEmojiStatus(fileId: 5431449001532594346), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
-                                } else {
-                                    currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
-                                }
+                                currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                             }
                         }
                     default:
                         break
                     }
                 } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
-                    if peer.isScam {
+                    if case let .user(user) = peer, let emojiStatus = user.emojiStatus {
+                        currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                        currentCredibilityIconContent = .emojiStatus(status: emojiStatus, placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                    } else if peer.isScam {
                         currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                         currentCredibilityIconContent = .scam(color: item.presentationData.theme.chat.message.incoming.scamColor)
                     } else if peer.isFake {
@@ -1551,12 +1552,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                         currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
-                        
-                        if "".isEmpty {
-                            currentCredibilityIconContent = .emojiStatus(status: PeerEmojiStatus(fileId: 5431449001532594346), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
-                        } else {
-                            currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
-                        }
+                        currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                     }
                 }
             }
@@ -2356,7 +2352,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleFrame.size.width + 3.0 + titleOffset
             
-            if let credibilityIconNode = self.credibilityIconNode {
+            if let credibilityIconView = self.credibilityIconView {
+                transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: credibilityIconView.frame.origin.y), size: credibilityIconView.bounds.size))
+                nextTitleIconOrigin += credibilityIconView.bounds.size.width + 5.0
+            } else if let credibilityIconNode = self.credibilityIconNode {
                 transition.updateFrame(node: credibilityIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: credibilityIconNode.frame.origin.y), size: credibilityIconNode.bounds.size))
                 nextTitleIconOrigin += credibilityIconNode.bounds.size.width + 5.0
             }
