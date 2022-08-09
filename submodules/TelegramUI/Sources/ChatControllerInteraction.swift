@@ -12,6 +12,7 @@ import ContextUI
 import ChatInterfaceState
 import UndoUI
 import TelegramPresentationData
+import ChatPresentationInterfaceState
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
@@ -130,6 +131,7 @@ public final class ChatControllerInteraction {
     let commitEmojiInteraction: (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void
     let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
     let openJoinLink: (String) -> Void
+    let openWebView: (String, String, Bool, Bool) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -229,6 +231,7 @@ public final class ChatControllerInteraction {
         commitEmojiInteraction: @escaping (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void,
         openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
         openJoinLink: @escaping (String) -> Void,
+        openWebView: @escaping (String, String, Bool, Bool) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -314,6 +317,7 @@ public final class ChatControllerInteraction {
         self.commitEmojiInteraction = commitEmojiInteraction
         self.openLargeEmojiInfo = openLargeEmojiInfo
         self.openJoinLink = openJoinLink
+        self.openWebView = openWebView
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         
@@ -373,6 +377,7 @@ public final class ChatControllerInteraction {
         }, commitEmojiInteraction: { _, _, _, _ in  
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
+        }, openWebView: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

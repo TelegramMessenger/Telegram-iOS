@@ -184,7 +184,7 @@ public final class AvatarNode: ASDisplayNode {
     
     public var font: UIFont {
         didSet {
-            if oldValue !== font {
+            if oldValue.pointSize != font.pointSize {
                 if let parameters = self.parameters {
                     self.parameters = AvatarNodeParameters(theme: parameters.theme, accountPeerId: parameters.accountPeerId, peerId: parameters.peerId, letters: parameters.letters, font: self.font, icon: parameters.icon, explicitColorIndex: parameters.explicitColorIndex, hasImage: parameters.hasImage, clipStyle: parameters.clipStyle)
                 }

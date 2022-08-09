@@ -25,6 +25,10 @@ import TooltipUI
 import TelegramCallsUI
 import StickerResources
 import PasswordSetupUI
+import FetchManagerImpl
+import ComponentFlow
+import LottieAnimationComponent
+import ProgressIndicatorComponent
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -150,6 +154,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private let tabContainerNode: ChatListFilterTabContainerNode
     private var tabContainerData: ([ChatListFilterTabEntry], Bool)?
+    
+    private var hasDownloads: Bool = false
+    private var activeDownloadsDisposable: Disposable?
+    private var clearUnseenDownloadsTimer: SwiftSignalKit.Timer?
     
     private var didSetupTabs = false
     
@@ -462,11 +470,274 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
         
         if !previewing {
-            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, activate: { [weak self] in
+            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, compactPlaceholder: self.presentationData.strings.DialogList_SearchLabelCompact, activate: { [weak self] in
                 self?.activateSearch()
             })
             self.searchContentNode?.updateExpansionProgress(0.0)
             self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+            
+            enum State: Equatable {
+                case empty(hasDownloads: Bool)
+                case downloading(progress: Double)
+                case hasUnseen
+            }
+            
+            let entriesWithFetchStatuses = Signal<[(entry: FetchManagerEntrySummary, progress: Double)], NoError> { subscriber in
+                let queue = Queue()
+                final class StateHolder {
+                    final class EntryContext {
+                        var entry: FetchManagerEntrySummary
+                        var isRemoved: Bool = false
+                        var statusDisposable: Disposable?
+                        var status: MediaResourceStatus?
+                        
+                        init(entry: FetchManagerEntrySummary) {
+                            self.entry = entry
+                        }
+                        
+                        deinit {
+                            self.statusDisposable?.dispose()
+                        }
+                    }
+                    
+                    let queue: Queue
+                    
+                    var entryContexts: [FetchManagerLocationEntryId: EntryContext] = [:]
+                    
+                    let state = Promise<[(entry: FetchManagerEntrySummary, progress: Double)]>()
+                    
+                    init(queue: Queue) {
+                        self.queue = queue
+                    }
+                    
+                    func update(engine: TelegramEngine, entries: [FetchManagerEntrySummary]) {
+                        if entries.isEmpty {
+                            self.entryContexts.removeAll()
+                        } else {
+                            for entry in entries {
+                                let context: EntryContext
+                                if let current = self.entryContexts[entry.id] {
+                                    context = current
+                                } else {
+                                    context = EntryContext(entry: entry)
+                                    self.entryContexts[entry.id] = context
+                                }
+                                
+                                context.entry = entry
+                                
+                                if context.isRemoved {
+                                    context.isRemoved = false
+                                    context.status = nil
+                                    context.statusDisposable?.dispose()
+                                    context.statusDisposable = nil
+                                }
+                            }
+                            
+                            for (_, context) in self.entryContexts {
+                                if !entries.contains(where: { $0.id == context.entry.id }) {
+                                    context.isRemoved = true
+                                }
+                                
+                                if context.statusDisposable == nil {
+                                    context.statusDisposable = (engine.account.postbox.mediaBox.resourceStatus(context.entry.resourceReference.resource)
+                                    |> deliverOn(self.queue)).start(next: { [weak self, weak context] status in
+                                        guard let strongSelf = self, let context = context else {
+                                            return
+                                        }
+                                        if context.status != status {
+                                            context.status = status
+                                            strongSelf.notifyUpdatedIfReady()
+                                        }
+                                    })
+                                }
+                            }
+                        }
+                        
+                        self.notifyUpdatedIfReady()
+                    }
+                    
+                    func notifyUpdatedIfReady() {
+                        var result: [(entry: FetchManagerEntrySummary, progress: Double)] = []
+                        loop: for (_, context) in self.entryContexts {
+                            guard let status = context.status else {
+                                return
+                            }
+                            let progress: Double
+                            switch status {
+                            case .Local:
+                                progress = 1.0
+                            case .Remote:
+                                if context.isRemoved {
+                                    continue loop
+                                }
+                                progress = 0.0
+                            case let .Paused(value):
+                                progress = Double(value)
+                            case let .Fetching(_, value):
+                                progress = Double(value)
+                            }
+                            result.append((context.entry, progress))
+                        }
+                        self.state.set(.single(result))
+                    }
+                }
+                let holder = QueueLocalObject<StateHolder>(queue: queue, generate: {
+                    return StateHolder(queue: queue)
+                })
+                let entriesDisposable = ((context.fetchManager as! FetchManagerImpl).entriesSummary).start(next: { entries in
+                    holder.with { holder in
+                        holder.update(engine: context.engine, entries: entries)
+                    }
+                })
+                let holderStateDisposable = MetaDisposable()
+                holder.with { holder in
+                    holderStateDisposable.set(holder.state.get().start(next: { state in
+                        subscriber.putNext(state)
+                    }))
+                }
+                
+                return ActionDisposable {
+                    entriesDisposable.dispose()
+                    holderStateDisposable.dispose()
+                }
+            }
+            
+            let displayRecentDownloads = context.account.postbox.tailChatListView(groupId: .root, filterPredicate: nil, count: 11, summaryComponents: ChatListEntrySummaryComponents(components: [:]))
+            |> map { view -> Bool in
+                return view.0.entries.count >= 10
+            }
+            |> distinctUntilChanged
+            
+            let stateSignal: Signal<State, NoError> = (combineLatest(queue: .mainQueue(), entriesWithFetchStatuses, recentDownloadItems(postbox: context.account.postbox), displayRecentDownloads)
+            |> map { entries, recentDownloadItems, displayRecentDownloads -> State in
+                if !entries.isEmpty && displayRecentDownloads {
+                    var totalBytes = 0.0
+                    var totalProgressInBytes = 0.0
+                    for (entry, progress) in entries {
+                        var size = 1024 * 1024 * 1024
+                        if let sizeValue = entry.resourceReference.resource.size {
+                            size = sizeValue
+                        }
+                        totalBytes += Double(size)
+                        totalProgressInBytes += Double(size) * progress
+                    }
+                    let totalProgress: Double
+                    if totalBytes.isZero {
+                        totalProgress = 0.0
+                    } else {
+                        totalProgress = totalProgressInBytes / totalBytes
+                    }
+                    return .downloading(progress: totalProgress)
+                } else {
+                    for item in recentDownloadItems {
+                        if !item.isSeen {
+                            return .hasUnseen
+                        }
+                    }
+                    return .empty(hasDownloads: !recentDownloadItems.isEmpty)
+                }
+            }
+            |> mapToSignal { value -> Signal<State, NoError> in
+                return .single(value) |> delay(0.1, queue: .mainQueue())
+            }
+            |> distinctUntilChanged
+            |> deliverOnMainQueue)
+            
+            self.activeDownloadsDisposable = stateSignal.start(next: { [weak self] state in
+                guard let strongSelf = self else {
+                    return
+                }
+                let animation: LottieAnimationComponent.Animation?
+                let progressValue: Double?
+                switch state {
+                case let .downloading(progress):
+                    strongSelf.hasDownloads = true
+                    
+                    animation = LottieAnimationComponent.Animation(
+                        name: "anim_search_downloading",
+                        colors: [
+                            "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        ],
+                        loop: true
+                    )
+                    progressValue = progress
+                    
+                    strongSelf.clearUnseenDownloadsTimer?.invalidate()
+                    strongSelf.clearUnseenDownloadsTimer = nil
+                case .hasUnseen:
+                    strongSelf.hasDownloads = true
+                    
+                    animation = LottieAnimationComponent.Animation(
+                        name: "anim_search_downloaded",
+                        colors: [
+                            "Fill 2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Mask1.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Mask2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Arrow3.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Fill.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.rootController.navigationSearchBar.inputFillColor.blitOver(strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, alpha: 1.0),
+                        ],
+                        loop: false
+                    )
+                    progressValue = 1.0
+                    
+                    if strongSelf.clearUnseenDownloadsTimer == nil {
+                        let timeout: Double
+                        #if DEBUG
+                        timeout = 10.0
+                        #else
+                        timeout = 1.0 * 60.0
+                        #endif
+                        strongSelf.clearUnseenDownloadsTimer = SwiftSignalKit.Timer(timeout: timeout, repeat: false, completion: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.clearUnseenDownloadsTimer = nil
+                            let _ = markAllRecentDownloadItemsAsSeen(postbox: strongSelf.context.account.postbox).start()
+                        }, queue: .mainQueue())
+                        strongSelf.clearUnseenDownloadsTimer?.start()
+                    }
+                case let .empty(hasDownloadsValue):
+                    strongSelf.hasDownloads = hasDownloadsValue
+                    
+                    animation = nil
+                    progressValue = nil
+                    
+                    strongSelf.clearUnseenDownloadsTimer?.invalidate()
+                    strongSelf.clearUnseenDownloadsTimer = nil
+                }
+                
+                if let animation = animation, let progressValue = progressValue {
+                    let contentComponent = AnyComponent(ZStack<Empty>([
+                        AnyComponentWithIdentity(id: 0, component: AnyComponent(LottieAnimationComponent(
+                            animation: animation,
+                            size: CGSize(width: 24.0, height: 24.0)
+                        ))),
+                        AnyComponentWithIdentity(id: 1, component: AnyComponent(ProgressIndicatorComponent(
+                            diameter: 16.0,
+                            backgroundColor: .clear,
+                            foregroundColor: strongSelf.presentationData.theme.list.itemAccentColor,
+                            value: progressValue
+                        )))
+                    ]))
+                    
+                    strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: AnyComponent(Button(
+                        content: contentComponent,
+                        action: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.activateSearch(filter: .downloads, query: nil)
+                        }
+                    )))
+                } else {
+                    strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: nil)
+                }
+            })
         }
         
         if enableDebugActions {
@@ -514,6 +785,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.stateDisposable.dispose()
         self.filterDisposable.dispose()
         self.featuredFiltersDisposable.dispose()
+        self.activeDownloadsDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -534,7 +806,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.navigationItem.backBarButtonItem = backBarButtonItem
         }
         
-        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel)
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, compactPlaceholder: self.presentationData.strings.DialogList_SearchLabelCompact)
         let editing = self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing
         let editItem: UIBarButtonItem
         if editing {
@@ -623,7 +895,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         scrollToEndIfExists = true
                     }
 
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput && !peer.isDeleted, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, chatListFilter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id, completion: { [weak self] controller in
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), activateInput: activateInput && !peer.isDeleted, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, chatListFilter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id, completion: { [weak self] controller in
                         self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                         if let promoInfo = promoInfo {
                             switch promoInfo {
@@ -702,7 +974,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                                 scrollToEndIfExists = true
                             }
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil), purposefulAction: {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: actualPeerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil), purposefulAction: {
                                 if deactivateOnAction {
                                     self?.deactivateSearch(animated: false)
                                 }
@@ -733,7 +1005,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             scrollToEndIfExists = true
                         }
                         if let navigationController = strongSelf.navigationController as? NavigationController {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), purposefulAction: { [weak self] in
                                 self?.deactivateSearch(animated: false)
                             }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
                             strongSelf.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
@@ -853,7 +1125,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId._asGroup(), chatListController: strongSelf) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             case let .peer(_, peer, _, _, _, _, _, _, _, promoInfo, _, _, _):
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
@@ -874,7 +1146,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 if case let .search(messageId) = source, let id = messageId {
                     subject = .message(id: .id(id), highlight: false, timecode: nil)
                 }
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.id), subject: subject, botStart: nil, mode: .standard(previewing: true))
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.id), subject: subject, botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
                 contextContentSource = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
             }
@@ -1105,6 +1377,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         })
                     })))
                 }
+                
+                /*if let id = id {
+                    items.append(.action(ContextMenuActionItem(text: "View as Feed", icon: { _ in
+                        return nil
+                    }, action: { c, f in
+                        c.dismiss(completion: {
+                            guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController else {
+                                return
+                            }
+                            
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .feed(id: id), subject: nil, purposefulAction: {
+                            }, scrollToEndIfExists: false, options: []))
+                        })
+                    })))
+                }*/
                 
                 let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatListHeaderBarContextExtractedContentSource(controller: strongSelf, sourceNode: sourceNode, keepInPlace: keepInPlace)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
                 strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
@@ -1814,7 +2101,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 if let searchContentNode = strongSelf.searchContentNode {                    
-                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, initialFilter: filter, navigationController: strongSelf.navigationController as? NavigationController) {
+                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, hasDownloads: strongSelf.hasDownloads, initialFilter: filter, navigationController: strongSelf.navigationController as? NavigationController) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
                         if displaySearchFilters {
                             strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: false)
@@ -1823,7 +2110,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         }
                         
-                        activate()
+                        activate(filter != .downloads)
                         
                         if let searchContentNode = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
                             searchContentNode.search(filter: filter, query: query)
@@ -1832,6 +2119,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if !tabsIsEmpty {
                             Queue.mainQueue().after(0.01) {
                                 filterContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 38.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                                filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 
                                 strongSelf.tabContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -64.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                             }

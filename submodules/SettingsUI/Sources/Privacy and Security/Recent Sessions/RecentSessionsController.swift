@@ -799,7 +799,13 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     
     let enableQRLogin = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> map { view -> Bool in
-        PostufgramConstants.enableQRLogin
+        guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
+            return false
+        }
+        guard let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR else {
+            return false
+        }
+        return true
     }
     |> distinctUntilChanged
     

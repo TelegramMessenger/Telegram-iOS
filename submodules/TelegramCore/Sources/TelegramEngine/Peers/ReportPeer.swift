@@ -83,6 +83,8 @@ public enum ReportReason: Equatable {
     case childAbuse
     case copyright
     case irrelevantLocation
+    case illegalDrugs
+    case personalDetails
     case custom
 }
 
@@ -103,6 +105,10 @@ private extension ReportReason {
                 return .inputReportReasonCopyright
             case .irrelevantLocation:
                 return .inputReportReasonGeoIrrelevant
+            case .illegalDrugs:
+                return .inputReportReasonIllegalDrugs
+            case .personalDetails:
+                return .inputReportReasonPersonalDetails
             case .custom:
                 return .inputReportReasonOther
         }

@@ -193,7 +193,9 @@ private func profileSearchableItems(context: AccountContext, canAddAccount: Bool
             return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone ?? ""
         }
         |> deliverOnMainQueue).start(next: { phoneNumber in
-            present(.push, ChangePhoneNumberIntroController(context: context, phoneNumber: formatPhoneNumber(phoneNumber)))
+            present(.push, PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber), proceedAction: {
+                present(.push, ChangePhoneNumberController(context: context))
+            }))
         })
     }))
     items.append(SettingsSearchableItem(id: .profile(3), title: strings.Settings_Username, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Username), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
@@ -321,7 +323,7 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
     
     func filteredGlobalSound(_ sound: PeerMessageSound) -> PeerMessageSound {
         if case .default = sound {
-            return .bundledModern(id: 0)
+            return defaultCloudPeerNotificationSound
         } else {
             return sound
         }
@@ -834,7 +836,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         allItems.append(contentsOf: profileItems)
         
         let savedMessages = SettingsSearchableItem(id: .savedMessages(0), title: strings.Settings_SavedMessages, alternate: synonyms(strings.SettingsSearch_Synonyms_SavedMessages), icon: .savedMessages, breadcrumbs: [], present: { context, _, present in
-            present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(context.account.peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)))
+            present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: context.account.peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)))
         })
         allItems.append(savedMessages)
         
@@ -885,7 +887,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
             let _ = (context.engine.peers.supportPeerId()
             |> deliverOnMainQueue).start(next: { peerId in
                 if let peerId = peerId {
-                    present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)))
+                    present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)))
                 }
             })
         })
@@ -895,7 +897,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
             
             let _ = (cachedFaqInstantPage(context: context)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
-                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peer, navigation in
+                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
                 }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { controller, arguments in
                     present(.push, controller)
                 }, dismissInput: {}, contentContext: nil)

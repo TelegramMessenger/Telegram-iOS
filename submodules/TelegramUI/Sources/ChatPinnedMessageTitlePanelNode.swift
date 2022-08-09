@@ -17,6 +17,7 @@ import ContextUI
 import RadialStatusNode
 import InvisibleInkDustNode
 import TextFormat
+import ChatPresentationInterfaceState
 
 private enum PinnedMessageAnimation {
     case slideToTop
@@ -54,6 +55,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let textNode: TextNode
     private var spoilerTextNode: TextNode?
     private var dustNode: InvisibleInkDustNode?
+    private let actionButton: HighlightableButtonNode
+    private let actionButtonTitleNode: ImmediateTextNode
+    private let actionButtonBackgroundNode: ASImageNode
     
     private let imageNode: TransformImageNode
     private let imageNodeContainer: ASDisplayNode
@@ -91,6 +95,14 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.closeButton = HighlightableButtonNode()
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
+        
+        self.actionButton = HighlightableButtonNode()
+        self.actionButton.isHidden = true
+        self.actionButtonTitleNode = ImmediateTextNode()
+        self.actionButtonTitleNode.isHidden = true
+        self.actionButtonBackgroundNode = ASImageNode()
+        self.actionButtonBackgroundNode.isHidden = true
+        self.actionButtonBackgroundNode.displaysAsynchronously = false
         
         self.listButton = HighlightableButtonNode()
         self.listButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
@@ -152,8 +164,21 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
         }
         
+        self.actionButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.actionButton.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.actionButton.alpha = 0.4
+                } else {
+                    strongSelf.actionButton.alpha = 1.0
+                    strongSelf.actionButton.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
         self.listButton.addTarget(self, action: #selector(self.listPressed), forControlEvents: [.touchUpInside])
+        self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: [.touchUpInside])
         
         self.addSubnode(self.contextContainer)
         
@@ -167,6 +192,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.imageNodeContainer.addSubnode(self.imageNode)
         self.contentContainer.addSubnode(self.imageNodeContainer)
         
+        self.actionButton.addSubnode(self.actionButtonBackgroundNode)
+        self.actionButton.addSubnode(self.actionButtonTitleNode)
+        self.buttonsContainer.addSubnode(self.actionButton)
         self.buttonsContainer.addSubnode(self.closeButton)
         self.buttonsContainer.addSubnode(self.listButton)
         self.contextContainer.addSubnode(self.buttonsContainer)
@@ -206,6 +234,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(interfaceState.theme), for: [])
             self.listButton.setImage(PresentationResourcesChat.chatInputPanelPinnedListIconImage(interfaceState.theme), for: [])
             self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
+            
+            self.actionButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 14.0 * 2.0, color: interfaceState.theme.list.itemCheckColors.fillColor, strokeColor: nil, strokeWidth: nil, backgroundColor: nil)
         }
         
         if self.statusDisposable == nil, let interfaceInteraction = self.interfaceInteraction, let statuses = interfaceInteraction.statuses {
@@ -258,6 +288,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         self.contextContainer.isGestureEnabled = !isReplyThread
         
+        var actionTitle: String?
         var messageUpdated = false
         var messageUpdatedAnimation: PinnedMessageAnimation?
         if let currentMessage = self.currentMessage, let pinnedMessage = interfaceState.pinnedMessage {
@@ -275,38 +306,147 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             messageUpdated = true
         }
         
-        if messageUpdated || themeUpdated {
-            let previousMessageWasNil = self.currentMessage == nil
-            self.currentMessage = interfaceState.pinnedMessage
-            
-            if let currentMessage = self.currentMessage, let currentLayout = self.currentLayout {
-                self.dustNode?.update(revealed: false, animated: false)
-                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
-            }
-        }
-        
-        if isReplyThread {
-            self.closeButton.isHidden = true
-            self.listButton.isHidden = true
-        } else if let currentMessage = self.currentMessage {
-            if currentMessage.totalCount > 1 {
-                self.listButton.isHidden = false
-                self.closeButton.isHidden = true
-            } else {
-                self.listButton.isHidden = true
-                self.closeButton.isHidden = false
+        if let message = interfaceState.pinnedMessage {
+            for attribute in message.message.attributes {
+                if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), attribute.rows.count == 1, attribute.rows[0].buttons.count == 1 {
+                    actionTitle = attribute.rows[0].buttons[0].title
+                }
             }
         } else {
-            self.listButton.isHidden = false
-            self.closeButton.isHidden = true
+            actionTitle = nil
+        }
+        
+        var displayCloseButton = false
+        var displayListButton = false
+        
+        if isReplyThread || actionTitle != nil {
+            displayCloseButton = false
+            displayListButton = false
+        } else if let message = interfaceState.pinnedMessage {
+            if message.totalCount > 1 {
+                displayCloseButton = false
+                displayListButton = true
+            } else {
+                displayCloseButton = true
+                displayListButton = false
+            }
+        } else {
+            displayCloseButton = false
+            displayListButton = true
+        }
+        
+        if displayCloseButton != !self.closeButton.isHidden {
+            if transition.isAnimated {
+                if displayCloseButton {
+                    self.closeButton.isHidden = false
+                    self.closeButton.layer.removeAllAnimations()
+                    
+                    self.closeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.closeButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                } else {
+                    self.closeButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] completed in
+                        guard let strongSelf = self, completed else {
+                            return
+                        }
+                        strongSelf.closeButton.isHidden = true
+                        strongSelf.closeButton.layer.removeAllAnimations()
+                    })
+                    self.closeButton.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                }
+            } else {
+                self.closeButton.isHidden = !displayCloseButton
+                self.closeButton.layer.removeAllAnimations()
+            }
+        }
+        if displayListButton != !self.listButton.isHidden {
+            if transition.isAnimated {
+                if displayListButton {
+                    self.listButton.isHidden = false
+                    self.listButton.layer.removeAllAnimations()
+                    
+                    self.listButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.listButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                } else {
+                    self.listButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] completed in
+                        guard let strongSelf = self, completed else {
+                            return
+                        }
+                        strongSelf.listButton.isHidden = true
+                        strongSelf.listButton.layer.removeAllAnimations()
+                    })
+                    self.listButton.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                }
+            } else {
+                self.listButton.isHidden = !displayListButton
+                self.listButton.layer.removeAllAnimations()
+            }
         }
         
         let rightInset: CGFloat = 18.0 + rightInset
+        
+        var tapButtonRightInset: CGFloat = rightInset
         
         let buttonsContainerSize = CGSize(width: 16.0, height: panelHeight)
         self.buttonsContainer.frame = CGRect(origin: CGPoint(x: width - buttonsContainerSize.width - rightInset, y: 0.0), size: buttonsContainerSize)
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
+        
+        if let actionTitle = actionTitle {
+            var actionButtonTransition = transition
+            var animateButtonIn = false
+            if self.actionButton.isHidden {
+                actionButtonTransition = .immediate
+                animateButtonIn = true
+            } else if transition.isAnimated, messageUpdated, actionTitle != self.actionButtonTitleNode.attributedText?.string {
+                if let buttonSnapshot = self.actionButton.view.snapshotView(afterScreenUpdates: false) {
+                    animateButtonIn = true
+                    buttonSnapshot.frame = self.actionButton.frame
+                    self.actionButton.view.superview?.insertSubview(buttonSnapshot, belowSubview: self.actionButton.view)
+                    
+                    buttonSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonSnapshot] _ in
+                        buttonSnapshot?.removeFromSuperview()
+                    })
+                    buttonSnapshot.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2)
+                }
+            }
+            
+            self.actionButton.isHidden = false
+            self.actionButtonBackgroundNode.isHidden = false
+            self.actionButtonTitleNode.isHidden = false
+            
+            self.actionButtonTitleNode.attributedText = NSAttributedString(string: actionTitle, font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor:  interfaceState.theme.list.itemCheckColors.foregroundColor)
+            
+            let actionButtonTitleSize = self.actionButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
+            let actionButtonSize = CGSize(width: max(actionButtonTitleSize.width + 20.0, 40.0), height: 28.0)
+            let actionButtonFrame = CGRect(origin: CGPoint(x: buttonsContainerSize.width + 11.0 - actionButtonSize.width, y: floor((panelHeight - actionButtonSize.height) / 2.0)), size: actionButtonSize)
+            actionButtonTransition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
+            actionButtonTransition.updateFrame(node: self.actionButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: actionButtonFrame.size))
+            actionButtonTransition.updateFrame(node: self.actionButtonTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((actionButtonFrame.width - actionButtonTitleSize.width) / 2.0), y: floorToScreenPixels((actionButtonFrame.height - actionButtonTitleSize.height) / 2.0)), size: actionButtonTitleSize))
+            
+            tapButtonRightInset = 18.0 + actionButtonFrame.width
+            
+            if animateButtonIn {
+                self.actionButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                self.actionButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+            }
+        } else if !self.actionButton.isHidden {
+            self.actionButton.isHidden = true
+            self.actionButtonBackgroundNode.isHidden = true
+            self.actionButtonTitleNode.isHidden = true
+            
+            if transition.isAnimated {
+                if let buttonSnapshot = self.actionButton.view.snapshotView(afterScreenUpdates: false) {
+                    buttonSnapshot.frame = self.actionButton.frame
+                    self.actionButton.view.superview?.insertSubview(buttonSnapshot, belowSubview: self.actionButton.view)
+                    
+                    buttonSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonSnapshot] _ in
+                        buttonSnapshot?.removeFromSuperview()
+                    })
+                    buttonSnapshot.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2)
+                }
+            }
+        }
+        
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: buttonsContainerSize.width - closeButtonSize.width + 1.0, y: 19.0), size: closeButtonSize))
         
         let listButtonSize = self.listButton.measure(CGSize(width: 100.0, height: 100.0))
@@ -317,18 +457,32 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(), size: indicatorSize))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
-        self.tapButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: width - rightInset - closeButtonSize.width - 4.0, height: panelHeight))
+        self.tapButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: width - tapButtonRightInset, height: panelHeight))
         
         self.clippingContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         self.contentContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         
-        if self.currentLayout?.0 != width || self.currentLayout?.1 != leftInset || self.currentLayout?.2 != rightInset {
+        if self.currentLayout?.0 != width || self.currentLayout?.1 != leftInset || self.currentLayout?.2 != rightInset || messageUpdated || themeUpdated {
+            self.currentLayout = (width, leftInset, rightInset)
+            
+            let previousMessageWasNil = self.currentMessage == nil
+            self.currentMessage = interfaceState.pinnedMessage
+            
+            if let currentMessage = self.currentMessage, let currentLayout = self.currentLayout {
+                self.dustNode?.update(revealed: false, animated: false)
+                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
+            }
+        }
+        
+        self.currentLayout = (width, leftInset, rightInset)
+        
+        /*if self.currentLayout?.0 != width || self.currentLayout?.1 != leftInset || self.currentLayout?.2 != rightInset || messageUpdated {
             self.currentLayout = (width, leftInset, rightInset)
             
             if let currentMessage = self.currentMessage {
                 self.enqueueTransition(width: width, panelHeight: panelHeight, leftInset: leftInset, rightInset: rightInset, transition: .immediate, animation: .none, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: interfaceState.accountPeerId, firstTime: true, isReplyThread: isReplyThread)
             }
-        }
+        }*/
         
         return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
     }
@@ -376,12 +530,17 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             targetQueue = self.queue
         }
         
+        let contentLeftInset: CGFloat = leftInset + 10.0
+        var textLineInset: CGFloat = 10.0
+        var rightInset: CGFloat = 14.0 + rightInset
+        
+        let textRightInset: CGFloat = 0.0
+        
+        if !self.actionButton.isHidden {
+            rightInset += self.actionButton.bounds.width - 14.0
+        }
+        
         targetQueue.async { [weak self] in
-            let contentLeftInset: CGFloat = leftInset + 10.0
-            var textLineInset: CGFloat = 10.0
-            let rightInset: CGFloat = 18.0 + rightInset
-            let textRightInset: CGFloat = 0.0
-            
             var updatedMediaReference: AnyMediaReference?
             var imageDimensions: CGSize?
             
@@ -426,6 +585,13 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     titleString = ""
                 }
                 titleStrings = [.text(0, NSAttributedString(string: titleString, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor))]
+            } else {
+                for media in message.media {
+                    if let media = media as? TelegramMediaInvoice {
+                        titleStrings = [.text(0, NSAttributedString(string: media.title, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor))]
+                        break
+                    }
+                }
             }
             
             var applyImage: (() -> Void)?
@@ -457,7 +623,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         } else if fileReference.media.isVideo {
                             updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                         } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                            updateImageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
+                            updateImageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                         }
                     }
                 } else {
@@ -607,6 +773,65 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     @objc func listPressed() {
         if let interfaceInteraction = self.interfaceInteraction, let message = self.currentMessage {
             interfaceInteraction.openPinnedList(message.message.id)
+        }
+    }
+    
+    @objc private func actionButtonPressed() {
+        if let interfaceInteraction = self.interfaceInteraction, let controller = interfaceInteraction.chatController() as? ChatControllerImpl, let controllerInteraction = controller.controllerInteraction, let message = self.currentMessage?.message {
+            for attribute in message.attributes {
+                if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), attribute.rows.count == 1, attribute.rows[0].buttons.count == 1 {
+                    let button = attribute.rows[0].buttons[0]
+                    switch button.action {
+                    case .text:
+                        controllerInteraction.sendMessage(button.title)
+                    case let .url(url):
+                        controllerInteraction.openUrl(url, true, nil, nil)
+                    case .requestMap:
+                        controllerInteraction.shareCurrentLocation()
+                    case .requestPhone:
+                        controllerInteraction.shareAccountContact()
+                    case .openWebApp:
+                        controllerInteraction.requestMessageActionCallback(message.id, nil, true, false)
+                    case let .callback(requiresPassword, data):
+                        controllerInteraction.requestMessageActionCallback(message.id, data, false, requiresPassword)
+                    case let .switchInline(samePeer, query):
+                        var botPeer: Peer?
+                        
+                        var found = false
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? InlineBotMessageAttribute {
+                                if let peerId = attribute.peerId {
+                                    botPeer = message.peers[peerId]
+                                    found = true
+                                }
+                            }
+                        }
+                        if !found {
+                            botPeer = message.author
+                        }
+                        
+                        var peerId: PeerId?
+                        if samePeer {
+                            peerId = message.id.peerId
+                        }
+                        if let botPeer = botPeer, let addressName = botPeer.addressName {
+                            controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)")
+                        }
+                    case .payment:
+                        controllerInteraction.openCheckoutOrReceipt(message.id)
+                    case let .urlAuth(url, buttonId):
+                        controllerInteraction.requestMessageActionUrlAuth(url, .message(id: message.id, buttonId: buttonId))
+                    case .setupPoll:
+                        break
+                    case let .openUserProfile(peerId):
+                        controllerInteraction.openPeer(peerId, .info, nil, nil)
+                    case let .openWebView(url, simple):
+                        controllerInteraction.openWebView(button.title, url, simple, false)
+                    }
+                    
+                    break
+                }
+            }
         }
     }
 }

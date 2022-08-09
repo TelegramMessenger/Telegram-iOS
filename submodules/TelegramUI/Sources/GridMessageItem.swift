@@ -250,7 +250,7 @@ final class GridMessageItemNode: GridItemNode {
                                     statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true, animateRotation: true)
                                 case .Local:
                                     statusState = .none
-                                case .Remote:
+                                case .Remote, .Paused:
                                     statusState = .download(.white)
                             }
                         }
@@ -284,7 +284,7 @@ final class GridMessageItemNode: GridItemNode {
                                         mediaDownloadState = .compactFetching(progress: 0.0)
                                     case .Local:
                                         badgeContent = .text(inset: 0.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, text: NSAttributedString(string: durationString))
-                                    case .Remote:
+                                    case .Remote, .Paused:
                                         badgeContent = .text(inset: 12.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, text: NSAttributedString(string: durationString))
                                         mediaDownloadState = .compactRemote
                                 }
@@ -432,7 +432,7 @@ final class GridMessageItemNode: GridItemNode {
                     messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
                 case .Local:
                     let _ = controllerInteraction.openMessage(message, .default)
-                case .Remote:
+                case .Remote, .Paused:
                     self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
             }
         }

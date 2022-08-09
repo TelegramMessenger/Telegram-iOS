@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
@@ -21,7 +22,8 @@ import GridMessageSelectionNode
 import AppBundle
 import Markdown
 import WallpaperBackgroundNode
-import SwiftSignalKit
+import ChatPresentationInterfaceState
+import ChatMessageBackground
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -797,6 +799,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
     }
     
+    func animateContentFromGroupedMediaInput(transition: CombinedTransition) -> [CGRect] {
+        self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        
+        var rects: [CGRect] = []
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageMediaBubbleContentNode {
+                rects.append(contentNode.frame.offsetBy(dx: -self.clippingNode.frame.minX, dy: 0.0))
+            }
+        }
+        return rects
+    }
+    
     override func didLoad() {
         super.didLoad()
         
@@ -980,7 +994,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
-        replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
+        replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
         reactionButtonsLayout: (ChatMessageReactionButtonsNode.Arguments) -> (minWidth: CGFloat, layout: (CGFloat) -> (size: CGSize, apply: (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)),
         mosaicStatusLayout: (ChatMessageDateAndStatusNode.Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)),
@@ -1029,7 +1043,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var hasAvatar = false
         
         var allowFullWidth = false
-        let chatLocationPeerId: PeerId = item.chatLocation.peerId
+        let chatLocationPeerId: PeerId = item.chatLocation.peerId ?? item.content.firstMessage.id.peerId
         
         do {
             let peerId = chatLocationPeerId
@@ -1093,6 +1107,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     
                     if !isBroadcastChannel {
                         hasAvatar = item.content.firstMessage.effectivelyIncoming(item.context.account.peerId)
+                    } else if case .feed = item.chatLocation {
+                        hasAvatar = true
                     }
                 }
             } else if incoming {
@@ -1193,7 +1209,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 needsShareButton = false
             }
         }
-        
+                
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth
@@ -1741,7 +1757,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 } else {
                     headerSize.height += 2.0
                 }
-                let sizeAndApply = replyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .bubble(incoming: incoming), replyMessage, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
+                let sizeAndApply = replyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .bubble(incoming: incoming), replyMessage, item.message, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                 replyInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
                 
                 replyInfoOriginY = headerSize.height
@@ -2748,31 +2764,37 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             shareButtonNode.removeFromSupernode()
         }
         
-        if case .System = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
+        if case let .System(duration, _) = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
-                animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
-                animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
-                strongSelf.clippingNode.clipsToBounds = true
-                animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
-                    let _ = strongSelf
-                    //strongSelf?.clippingNode.clipsToBounds = false
-                })
+                if useDisplayLinkAnimations {
+                    let backgroundAnimation = ListViewAnimation(from: strongSelf.backgroundNode.frame, to: backgroundFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { [weak strongSelf] _, frame in
+                        if let strongSelf = strongSelf {
+                            strongSelf.backgroundNode.frame = frame
+                            strongSelf.clippingNode.position = CGPoint(x: frame.midX, y: frame.midY)
+                            strongSelf.clippingNode.bounds = CGRect(origin:  CGPoint(x: frame.minX, y: frame.minY), size: frame.size)
+                            
+                            strongSelf.backgroundNode.updateLayout(size: frame.size, transition: .immediate)
+                            strongSelf.backgroundWallpaperNode.updateFrame(frame, transition: .immediate)
+                            strongSelf.shadowNode.updateLayout(backgroundFrame: frame, transition: .immediate)
+                        }
+                    })
+                    strongSelf.setAnimationForKey("backgroundNodeFrame", animation: backgroundAnimation)
+                } else {
+                    animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
+                    animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
+                    strongSelf.clippingNode.clipsToBounds = true
+                    animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
+                        let _ = strongSelf
+                        //strongSelf?.clippingNode.clipsToBounds = false
+                    })
 
-                strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
-                animation.animator.updateFrame(layer: strongSelf.backgroundWallpaperNode.layer, frame: backgroundFrame, completion: nil)
-                strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: animation.transition)
-                strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: animation.transition)
+                    strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
+                    animation.animator.updateFrame(layer: strongSelf.backgroundWallpaperNode.layer, frame: backgroundFrame, completion: nil)
+                    strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: animation.transition)
+                    strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: animation.transition)
+                }
                 
                 if let _ = strongSelf.backgroundNode.type {
-                    /*var incomingOffset: CGFloat = 0.0
-                    switch type {
-                    case .incoming:
-                        incomingOffset = 5.0
-                    default:
-                        break
-                    }*/
-                    //strongSelf.mainContextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
-                    //strongSelf.mainContainerNode.targetNodeForActivationProgressContentRect = strongSelf.mainContextSourceNode.contentRect
                     if !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
                         if let (rect, size) = strongSelf.absoluteRect {
                             strongSelf.updateAbsoluteRect(rect, within: size)
@@ -3144,16 +3166,24 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                     botAddressName = attribute.title
                                 }
                                 
-                                return .optionalAction({
-                                    if let botAddressName = botAddressName {
-                                        item.controllerInteraction.updateInputState { textInputState in
-                                            return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
-                                        }
-                                        item.controllerInteraction.updateInputMode { _ in
-                                            return .text
-                                        }
+                                if let peerId = attribute.peerId {
+                                    if let botPeer = item.message.peers[peerId] as? TelegramUser, let inlinePlaceholder = botPeer.botInfo?.inlinePlaceholder, !inlinePlaceholder.isEmpty {
+                                        return .optionalAction({
+                                            if let botAddressName = botAddressName {
+                                                item.controllerInteraction.updateInputState { textInputState in
+                                                    return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                                }
+                                                item.controllerInteraction.updateInputMode { _ in
+                                                    return .text
+                                                }
+                                            }
+                                        })
+                                    } else {
+                                        return .optionalAction({
+                                            item.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, item.message.peers[peerId])
+                                        })
                                     }
-                                })
+                                }
                             }
                         }
                     }

@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import LegacyComponents
+import SwiftSignalKit
 
 private final class RadialProgressContentCancelNodeParameters: NSObject {
     let color: UIColor
@@ -159,23 +160,28 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
         }
     }
     
+    private var hierarchyVersion: Int = 0
     override func willEnterHierarchy() {
         super.willEnterHierarchy()
         
         if self.animateRotation {
-            let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-            basicAnimation.duration = 1.5
-            var fromValue = Float.pi + 0.58
-            if let presentation = self.layer.presentation(), let value = (presentation.value(forKeyPath: "transform.rotation.z") as? NSNumber)?.floatValue {
-                fromValue = value
-            }
-            basicAnimation.fromValue = NSNumber(value: fromValue)
-            basicAnimation.toValue = NSNumber(value: fromValue + Float.pi * 2.0)
-            basicAnimation.repeatCount = Float.infinity
-            basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-            basicAnimation.beginTime = 0.0
+            self.hierarchyVersion += 1
             
-            self.layer.add(basicAnimation, forKey: "progressRotation")
+            if self.layer.animation(forKey: "progressRotation") == nil {
+                let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+                basicAnimation.duration = 1.5
+                var fromValue = Float.pi + 0.58
+                if let presentation = self.layer.presentation(), let value = (presentation.value(forKeyPath: "transform.rotation.z") as? NSNumber)?.floatValue {
+                    fromValue = value
+                }
+                basicAnimation.fromValue = NSNumber(value: fromValue)
+                basicAnimation.toValue = NSNumber(value: fromValue + Float.pi * 2.0)
+                basicAnimation.repeatCount = Float.infinity
+                basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+                basicAnimation.beginTime = 0.0
+                
+                self.layer.add(basicAnimation, forKey: "progressRotation")
+            }
         }
     }
     
@@ -183,7 +189,12 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
         super.didExitHierarchy()
         
         if self.animateRotation {
-            self.layer.removeAnimation(forKey: "progressRotation")
+            let version = self.hierarchyVersion
+            Queue.mainQueue().after(0.1, {
+                if self.hierarchyVersion == version {
+                    self.layer.removeAnimation(forKey: "progressRotation")
+                }
+            })
         }
     }
 }

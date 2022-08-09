@@ -166,10 +166,10 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
         
         self.isAccessibilityElement = true
         
-        self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.addressNode)
         self.addSubnode(self.infoButton)
+        self.addSubnode(self.iconNode)
         
         self.infoButton.addTarget(self, action: #selector(self.infoPressed), forControlEvents: .touchUpInside)
     }
@@ -377,6 +377,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                             shimmerNode = ShimmerEffectNode()
                             strongSelf.placeholderNode = shimmerNode
                             if strongSelf.bottomStripeNode.supernode != nil {
+                                
                                 strongSelf.insertSubnode(shimmerNode, belowSubnode: strongSelf.bottomStripeNode)
                             } else {
                                 strongSelf.addSubnode(shimmerNode)
@@ -403,6 +404,8 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                         shapes.append(.roundedRectLine(startPoint: CGPoint(x: subtitleFrame.minX, y: subtitleFrame.minY + floor((subtitleFrame.height - lineDiameter) / 2.0)), width: subtitleLineWidth, diameter: lineDiameter))
                                                 
                         shimmerNode.update(backgroundColor: placeholderBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: layout.contentSize)
+                        
+                        strongSelf.iconNode.removeFromSupernode()
                     } else if let shimmerNode = strongSelf.placeholderNode {
                         strongSelf.placeholderNode = nil
                         shimmerNode.removeFromSupernode()
@@ -418,16 +421,10 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
         if highlighted {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
-                var anchorNode: ASDisplayNode?
                 if self.bottomStripeNode.supernode != nil {
-                    anchorNode = self.bottomStripeNode
-                } else if self.topStripeNode.supernode != nil {
-                    anchorNode = self.topStripeNode
+                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.bottomStripeNode)
                 } else if self.backgroundNode.supernode != nil {
-                    anchorNode = self.backgroundNode
-                }
-                if let anchorNode = anchorNode {
-                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: anchorNode)
+                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.backgroundNode)
                 } else {
                     self.addSubnode(self.highlightedBackgroundNode)
                 }

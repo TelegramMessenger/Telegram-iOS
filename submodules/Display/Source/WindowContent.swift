@@ -699,7 +699,7 @@ public class Window1 {
         if self.isInteractionBlocked {
             return nil
         }
-        
+                
         if let result = self.topPresentationContext.hitTest(view: self.hostView.containerView, point: point, with: event) {
             return result
         }
@@ -709,7 +709,8 @@ public class Window1 {
         }
         
         for view in self.hostView.eventView.subviews.reversed() {
-            if NSStringFromClass(type(of: view)) == "UITransitionView" {
+            let classString = NSStringFromClass(type(of: view))
+            if classString == "UITransitionView" || classString.contains("ContextMenuContainerView") {
                 if let result = view.hitTest(point, with: event) {
                     return result
                 }

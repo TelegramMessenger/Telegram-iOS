@@ -110,33 +110,45 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         }
         var finalDuration: Double = CMTimeGetSeconds(asset.duration)
         
-        let preset = adjustments?.preset ?? TGMediaVideoConversionPresetCompressedMedium
-        let finalDimensions = TGMediaVideoConverter.dimensions(for: asset.originalSize, adjustments: adjustments, preset: preset)
+        func loadValues(_ avAsset: AVURLAsset) -> Signal<AVURLAsset, Void> {
+            return Signal { subscriber in
+                avAsset.loadValuesAsynchronously(forKeys: ["tracks", "duration", "playable"]) {
+                    subscriber.putNext(avAsset)
+                }
+                return EmptyDisposable
+            }
+        }
         
-        var resourceAdjustments: VideoMediaResourceAdjustments?
-        if let adjustments = adjustments {
-            if adjustments.trimApplied() {
-                finalDuration = adjustments.trimEndValue - adjustments.trimStartValue
+        return loadValues(asset)
+        |> mapToSignal { asset -> Signal<PreparedShareItem, Void> in
+            let preset = adjustments?.preset ?? TGMediaVideoConversionPresetCompressedMedium
+            let finalDimensions = TGMediaVideoConverter.dimensions(for: asset.originalSize, adjustments: adjustments, preset: preset)
+            
+            var resourceAdjustments: VideoMediaResourceAdjustments?
+            if let adjustments = adjustments {
+                if adjustments.trimApplied() {
+                    finalDuration = adjustments.trimEndValue - adjustments.trimStartValue
+                }
+                
+                let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()!))
+                let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
+                resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest)
             }
             
-            let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()!))
-            let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
-            resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest)
-        }
-        
-        let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
-        
-        let resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), path: asset.url.path, adjustments: resourceAdjustments)
-        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
-        |> mapError { _ -> Void in
-            return Void()
-        }
-        |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
-            switch event {
-                case let .progress(value):
-                    return .single(.progress(value))
-                case let .result(media):
-                    return .single(.done(.media(media)))
+            let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
+            
+            let resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), path: asset.url.path, adjustments: resourceAdjustments)
+            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
+            |> mapError { _ -> Void in
+                return Void()
+            }
+            |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
+                switch event {
+                    case let .progress(value):
+                        return .single(.progress(value))
+                    case let .result(media):
+                        return .single(.done(.media(media)))
+                }
             }
         }
     } else if let data = value["data"] as? Data {

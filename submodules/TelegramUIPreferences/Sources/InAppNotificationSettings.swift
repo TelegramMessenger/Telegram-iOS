@@ -42,12 +42,13 @@ public struct InAppNotificationSettings: Codable, Equatable {
     public var disabledNotificationsAccountRecordsLogoutSnapshot: [AccountRecordId]
     public var hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot: Bool
     public var hasDisabledNotificationsAccountRecordsLogoutSnapshot: Bool
+    public var customSound: String?
     
     public static var defaultSettings: InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: .all, displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true, disabledNotificationsAccountRecords: [], savedDisabledNotificationsAccountRecords: [], disabledNotificationsAccountRecordsLogoutSnapshot: [], hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot: false, hasDisabledNotificationsAccountRecordsLogoutSnapshot: false)
+        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: .all, displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true, disabledNotificationsAccountRecords: [], savedDisabledNotificationsAccountRecords: [], disabledNotificationsAccountRecordsLogoutSnapshot: [], hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot: false, hasDisabledNotificationsAccountRecordsLogoutSnapshot: false, customSound: nil)
     }
     
-    public init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool, displayNotificationsFromAllAccounts: Bool, disabledNotificationsAccountRecords: [AccountRecordId], savedDisabledNotificationsAccountRecords: [AccountRecordId], disabledNotificationsAccountRecordsLogoutSnapshot: [AccountRecordId], hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot: Bool, hasDisabledNotificationsAccountRecordsLogoutSnapshot: Bool) {
+    public init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool, displayNotificationsFromAllAccounts: Bool, disabledNotificationsAccountRecords: [AccountRecordId], savedDisabledNotificationsAccountRecords: [AccountRecordId], disabledNotificationsAccountRecordsLogoutSnapshot: [AccountRecordId], hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot: Bool, hasDisabledNotificationsAccountRecordsLogoutSnapshot: Bool, customSound: String?) {
         self.playSounds = playSounds
         self.vibrate = vibrate
         self.displayPreviews = displayPreviews
@@ -61,6 +62,7 @@ public struct InAppNotificationSettings: Codable, Equatable {
         self.disabledNotificationsAccountRecordsLogoutSnapshot = disabledNotificationsAccountRecordsLogoutSnapshot
         self.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot = hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot
         self.hasDisabledNotificationsAccountRecordsLogoutSnapshot = hasDisabledNotificationsAccountRecordsLogoutSnapshot
+        self.customSound = customSound
     }
     
     public init(from decoder: Decoder) throws {
@@ -98,6 +100,8 @@ public struct InAppNotificationSettings: Codable, Equatable {
         self.disabledNotificationsAccountRecordsLogoutSnapshot = (try container.decode([Int64].self, forKey: "disabledIdsLogoutSnapshot")).map { AccountRecordId(rawValue: $0) }
         self.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot = (try container.decodeIfPresent(Int32.self, forKey: "hasDisabledIdsMasterPasscodeSnapshot") ?? 0) != 0
         self.hasDisabledNotificationsAccountRecordsLogoutSnapshot = (try container.decodeIfPresent(Int32.self, forKey: "hasDisabledIdsLogoutSnapshot") ?? 0) != 0
+        
+        self.customSound = try container.decodeIfPresent(String.self, forKey: "customSound")
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -116,6 +120,7 @@ public struct InAppNotificationSettings: Codable, Equatable {
         try container.encode(self.disabledNotificationsAccountRecordsLogoutSnapshot.map { $0.int64 }, forKey: "disabledIdsLogoutSnapshot")
         try container.encode((self.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot ? 1 : 0) as Int32, forKey: "hasDisabledIdsMasterPasscodeSnapshot")
         try container.encode((self.hasDisabledNotificationsAccountRecordsLogoutSnapshot ? 1 : 0) as Int32, forKey: "hasDisabledIdsLogoutSnapshot")
+        try container.encodeIfPresent(self.customSound, forKey: "customSound")
     }
 }
 

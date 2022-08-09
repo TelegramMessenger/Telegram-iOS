@@ -60,6 +60,7 @@ public struct Namespaces {
         public static let RecentlyUsedHashtags: Int32 = 8
         public static let CloudThemes: Int32 = 9
         public static let CloudGreetingStickers: Int32 = 10
+        public static let RecentDownloads: Int32 = 11
     }
     
     public struct CachedItemCollection {
@@ -81,6 +82,9 @@ public struct Namespaces {
         public static let cachedPeerExportedInvitations: Int8 = 17
         public static let cachedSendAsPeers: Int8 = 18
         public static let availableReactions: Int8 = 19
+        public static let resolvedByPhonePeers: Int8 = 20
+        public static let notificationSoundList: Int8 = 22
+        public static let attachMenuBots: Int8 = 23
     }
     
     public struct UnorderedItemList {

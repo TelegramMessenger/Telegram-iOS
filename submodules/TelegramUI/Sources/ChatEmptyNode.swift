@@ -10,6 +10,7 @@ import AppBundle
 import LocalizedPeerData
 import TelegramStringFormatting
 import AccountContext
+import ChatPresentationInterfaceState
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
@@ -41,7 +42,7 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
             
             let text: String
             switch interfaceState.chatLocation {
-            case .peer, .replyThread:
+            case .peer, .replyThread, .feed:
                 if case .scheduledMessages = interfaceState.subject {
                     text = interfaceState.strings.ScheduledMessages_EmptyPlaceholder
                 } else {

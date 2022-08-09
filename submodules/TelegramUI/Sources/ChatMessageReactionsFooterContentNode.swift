@@ -493,7 +493,7 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
                     context: item.context,
                     presentationData: item.presentationData,
                     presentationContext: item.controllerInteraction.presentationContext,
-                    availableReactions: item.associatedData.availableReactions, reactions: reactionsAttribute, message: item.message, alignment: .left, constrainedWidth: constrainedSize.width, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
+                    availableReactions: item.associatedData.availableReactions, reactions: reactionsAttribute, message: item.message, alignment: .left, constrainedWidth: constrainedSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
                      
                 return (layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + buttonsUpdate.proposedWidth, { boundingWidth in
                     var boundingSize = CGSize()

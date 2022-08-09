@@ -596,6 +596,8 @@ NSString *suffix = @"";
         return @"iPhone 13 Mini";
     if ([platform isEqualToString:@"iPhone14,5"])
         return @"iPhone 13";
+    if ([platform isEqualToString:@"iPhone14,6"])
+        return @"iPhone SE (3rd gen)";
     
     if ([platform hasPrefix:@"iPod1"])
         return @"iPod touch 1G";
@@ -727,6 +729,14 @@ NSString *suffix = @"";
         [platform isEqualToString:@"iPad13,10"] ||
         [platform isEqualToString:@"iPad13,11"])
         return @"iPad Pro 12.9 inch (5th gen)";
+    
+    if ([platform isEqualToString:@"iPad13,16"] ||
+        [platform isEqualToString:@"iPad13,17"])
+        return @"iPad Air (5th gen)";
+    
+    if ([platform isEqualToString:@"iPad14,1"] ||
+        [platform isEqualToString:@"iPad14,2"])
+        return @"iPad mini (6th gen)";
             
     if ([platform hasPrefix:@"iPhone"])
         return @"Unknown iPhone";

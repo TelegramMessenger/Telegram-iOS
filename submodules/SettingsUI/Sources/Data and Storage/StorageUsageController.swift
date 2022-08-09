@@ -1061,7 +1061,7 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode, ActionSheetGr
         self.progress = progress
         
         if let size = self.validLayout {
-            self.updateLayout(size: size, transition: .animated(duration: 0.2, curve: .easeInOut))
+            self.updateLayout(size: size, transition: .animated(duration: 0.5, curve: .linear))
         }
     }
     
@@ -1075,8 +1075,8 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode, ActionSheetGr
         let progressFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: size.width - inset * 2.0, height: progressHeight)
         self.progressBackgroundNode.frame = progressFrame
         let progressForegroundFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: floorToScreenPixels(progressFrame.width * CGFloat(self.progress)), height: progressHeight)
-        if !self.progressForegroundNode.frame.width.isZero {
-            transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame)
+        if !self.progressForegroundNode.frame.origin.x.isZero {
+            transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame, beginWithCurrentState: true)
         } else {
             self.progressForegroundNode.frame = progressForegroundFrame
         }
@@ -1085,7 +1085,7 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode, ActionSheetGr
         let descriptionTextSize = self.descriptionTextNode.updateLayout(CGSize(width: size.width - inset * 3.0, height: size.height))
         var descriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - descriptionTextSize.width) / 2.0), y: progressFrame.minY - spacing - 9.0 - descriptionTextSize.height), size: descriptionTextSize)
        
-        self.progressTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_Progress(Int(progress * 100.0)).string, font: Font.with(size: 17.0, design: .regular, weight: .bold, traits: [.monospacedNumbers]), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        self.progressTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_Progress(Int(progress * 100.0)).string, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
         let progressTextSize = self.progressTextNode.updateLayout(size)
         var progressTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressTextSize.width) / 2.0), y: descriptionTextFrame.minY - spacing - progressTextSize.height), size: progressTextSize)
         

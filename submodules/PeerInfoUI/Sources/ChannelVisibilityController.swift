@@ -36,8 +36,10 @@ private final class ChannelVisibilityControllerArguments {
     let manageInviteLinks: () -> Void
     let openLink: (ExportedInvitation) -> Void
     let toggleForwarding: (Bool) -> Void
+    let updateJoinToSend: (CurrentChannelJoinToSend) -> Void
+    let toggleApproveMembers: (Bool) -> Void
     
-    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode, ContextGesture?) -> Void, manageInviteLinks: @escaping () -> Void, openLink: @escaping (ExportedInvitation) -> Void, toggleForwarding: @escaping (Bool) -> Void) {
+    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode, ContextGesture?) -> Void, manageInviteLinks: @escaping () -> Void, openLink: @escaping (ExportedInvitation) -> Void, toggleForwarding: @escaping (Bool) -> Void, updateJoinToSend: @escaping (CurrentChannelJoinToSend) -> Void, toggleApproveMembers: @escaping (Bool) -> Void) {
         self.context = context
         self.updateCurrentType = updateCurrentType
         self.updatePublicLinkText = updatePublicLinkText
@@ -50,6 +52,8 @@ private final class ChannelVisibilityControllerArguments {
         self.manageInviteLinks = manageInviteLinks
         self.openLink = openLink
         self.toggleForwarding = toggleForwarding
+        self.updateJoinToSend = updateJoinToSend
+        self.toggleApproveMembers = toggleApproveMembers
     }
 }
 
@@ -57,6 +61,8 @@ private enum ChannelVisibilitySection: Int32 {
     case type
     case link
     case linkActions
+    case joinToSend
+    case approveMembers
     case forwarding
 }
 
@@ -94,6 +100,13 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     case existingLinksInfo(PresentationTheme, String)
     case existingLinkPeerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Peer, ItemListPeerItemEditing, Bool)
     
+    case joinToSendHeader(PresentationTheme, String)
+    case joinToSendEveryone(PresentationTheme, String, Bool)
+    case joinToSendMembers(PresentationTheme, String, Bool)
+    
+    case approveMembers(PresentationTheme, String, Bool)
+    case approveMembersInfo(PresentationTheme, String)
+    
     case forwardingHeader(PresentationTheme, String)
     case forwardingDisabled(PresentationTheme, String, Bool)
     case forwardingInfo(PresentationTheme, String)
@@ -108,6 +121,10 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return ChannelVisibilitySection.linkActions.rawValue
             case .existingLinksInfo, .existingLinkPeerItem:
                 return ChannelVisibilitySection.link.rawValue
+            case .joinToSendHeader, .joinToSendEveryone, .joinToSendMembers:
+                return ChannelVisibilitySection.joinToSend.rawValue
+            case .approveMembers, .approveMembersInfo:
+                return ChannelVisibilitySection.approveMembers.rawValue
             case .forwardingHeader, .forwardingDisabled, .forwardingInfo:
                 return ChannelVisibilitySection.forwarding.rawValue
         }
@@ -147,12 +164,22 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return 1000
             case .privateLinkManageInfo:
                 return 1001
-            case .forwardingHeader:
+            case .joinToSendHeader:
                 return 1002
-            case .forwardingDisabled:
+            case .joinToSendEveryone:
                 return 1003
-            case .forwardingInfo:
+            case .joinToSendMembers:
                 return 1004
+            case .approveMembers:
+                return 1005
+            case .approveMembersInfo:
+                return 1006
+            case .forwardingHeader:
+                return 1007
+            case .forwardingDisabled:
+                return 1008
+            case .forwardingInfo:
+                return 1009
         }
     }
     
@@ -278,6 +305,36 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .joinToSendHeader(lhsTheme, lhsText):
+                if case let .joinToSendHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .joinToSendEveryone(lhsTheme, lhsText, lhsValue):
+                if case let .joinToSendEveryone(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .joinToSendMembers(lhsTheme, lhsText, lhsValue):
+                if case let .joinToSendMembers(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .approveMembers(lhsTheme, lhsText, lhsValue):
+                if case let .approveMembers(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .approveMembersInfo(lhsTheme, lhsText):
+                if case let .approveMembersInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .forwardingHeader(lhsTheme, lhsText):
                 if case let .forwardingHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -393,6 +450,23 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 }, removePeer: { peerId in
                     arguments.revokePeerId(peerId)
                 })
+            case let .joinToSendHeader(_, title):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
+            case let .joinToSendEveryone(_, text, selected):
+                return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                    arguments.updateJoinToSend(.everyone)
+                    arguments.toggleApproveMembers(false)
+                })
+            case let .joinToSendMembers(_, text, selected):
+                return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                    arguments.updateJoinToSend(.members)
+                })
+            case let .approveMembers(_, text, selected):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: selected, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleApproveMembers(value)
+                })
+            case let .approveMembersInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .forwardingHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .forwardingDisabled(_, text, selected):
@@ -415,6 +489,11 @@ private enum CurrentChannelLocation: Equatable {
     case location(PeerGeoLocation)
 }
 
+private enum CurrentChannelJoinToSend {
+    case everyone
+    case members
+}
+
 private struct ChannelVisibilityControllerState: Equatable {
     let selectedType: CurrentChannelType?
     let editingPublicLinkText: String?
@@ -424,6 +503,8 @@ private struct ChannelVisibilityControllerState: Equatable {
     let revokingPeerId: PeerId?
     let revokingPrivateLink: Bool
     let forwardingEnabled: Bool?
+    let joinToSend: CurrentChannelJoinToSend?
+    let approveMembers: Bool?
     
     init() {
         self.selectedType = nil
@@ -434,9 +515,11 @@ private struct ChannelVisibilityControllerState: Equatable {
         self.revokingPeerId = nil
         self.revokingPrivateLink = false
         self.forwardingEnabled = nil
+        self.joinToSend = nil
+        self.approveMembers = nil
     }
     
-    init(selectedType: CurrentChannelType?, editingPublicLinkText: String?, addressNameValidationStatus: AddressNameValidationStatus?, updatingAddressName: Bool, revealedRevokePeerId: PeerId?, revokingPeerId: PeerId?, revokingPrivateLink: Bool, forwardingEnabled: Bool?) {
+    init(selectedType: CurrentChannelType?, editingPublicLinkText: String?, addressNameValidationStatus: AddressNameValidationStatus?, updatingAddressName: Bool, revealedRevokePeerId: PeerId?, revokingPeerId: PeerId?, revokingPrivateLink: Bool, forwardingEnabled: Bool?, joinToSend: CurrentChannelJoinToSend?, approveMembers: Bool?) {
         self.selectedType = selectedType
         self.editingPublicLinkText = editingPublicLinkText
         self.addressNameValidationStatus = addressNameValidationStatus
@@ -445,6 +528,8 @@ private struct ChannelVisibilityControllerState: Equatable {
         self.revokingPeerId = revokingPeerId
         self.revokingPrivateLink = revokingPrivateLink
         self.forwardingEnabled = forwardingEnabled
+        self.joinToSend = joinToSend
+        self.approveMembers = approveMembers
     }
     
     static func ==(lhs: ChannelVisibilityControllerState, rhs: ChannelVisibilityControllerState) -> Bool {
@@ -472,39 +557,53 @@ private struct ChannelVisibilityControllerState: Equatable {
         if lhs.forwardingEnabled != rhs.forwardingEnabled {
             return false
         }
+        if lhs.joinToSend != rhs.joinToSend {
+            return false
+        }
+        if lhs.approveMembers != rhs.approveMembers {
+            return false
+        }
         return true
     }
     
     func withUpdatedSelectedType(_ selectedType: CurrentChannelType?) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled)
+        return ChannelVisibilityControllerState(selectedType: selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled, joinToSend: self.joinToSend, approveMembers: self.approveMembers)
     }
     
     func withUpdatedEditingPublicLinkText(_ editingPublicLinkText: String?) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled, joinToSend: self.joinToSend, approveMembers: self.approveMembers)
     }
     
     func withUpdatedAddressNameValidationStatus(_ addressNameValidationStatus: AddressNameValidationStatus?) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: addressNameValidationStatus, updatingAddressName: self.updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled, joinToSend: self.joinToSend, approveMembers: self.approveMembers)
     }
     
     func withUpdatedUpdatingAddressName(_ updatingAddressName: Bool) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled, joinToSend: self.joinToSend, approveMembers: self.approveMembers)
     }
     
     func withUpdatedRevealedRevokePeerId(_ revealedRevokePeerId: PeerId?) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled, joinToSend: self.joinToSend, approveMembers: self.approveMembers)
     }
     
     func withUpdatedRevokingPeerId(_ revokingPeerId: PeerId?) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled, joinToSend: self.joinToSend, approveMembers: self.approveMembers)
     }
     
     func withUpdatedRevokingPrivateLink(_ revokingPrivateLink: Bool) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: revokingPrivateLink, forwardingEnabled: self.forwardingEnabled)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: revokingPrivateLink, forwardingEnabled: self.forwardingEnabled, joinToSend: self.joinToSend, approveMembers: self.approveMembers)
     }
     
     func withUpdatedForwardingEnabled(_ forwardingEnabled: Bool) -> ChannelVisibilityControllerState {
-        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: forwardingEnabled)
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: forwardingEnabled, joinToSend: self.joinToSend, approveMembers: self.approveMembers)
+    }
+    
+    func withUpdatedJoinToSend(_ joinToSend: CurrentChannelJoinToSend?) -> ChannelVisibilityControllerState {
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled, joinToSend: joinToSend, approveMembers: self.approveMembers)
+    }
+    
+    func withUpdatedApproveMembers(_ approveMembers: Bool) -> ChannelVisibilityControllerState {
+        return ChannelVisibilityControllerState(selectedType: self.selectedType, editingPublicLinkText: self.editingPublicLinkText, addressNameValidationStatus: self.addressNameValidationStatus, updatingAddressName: updatingAddressName, revealedRevokePeerId: self.revealedRevokePeerId, revokingPeerId: self.revokingPeerId, revokingPrivateLink: self.revokingPrivateLink, forwardingEnabled: self.forwardingEnabled, joinToSend: self.joinToSend, approveMembers: approveMembers)
     }
 }
 
@@ -536,6 +635,28 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             }
         }
         
+ /*       let joinToSend: CurrentChannelJoinToSend
+        if let current = state.joinToSend {
+            joinToSend = current
+        } else {
+            if peer.flags.contains(.joinToSend) {
+                joinToSend = .members
+            } else {
+                joinToSend = .everyone
+            }
+        }
+        
+        let approveMembers: Bool
+        if let enabled = state.approveMembers {
+            approveMembers = enabled
+        } else {
+            if peer.flags.contains(.requestToJoin) {
+                approveMembers = true
+            } else {
+                approveMembers = false
+            }
+        }
+ */
         let forwardingEnabled: Bool
         if let enabled = state.forwardingEnabled {
             forwardingEnabled = enabled
@@ -696,11 +817,28 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
                 }
         }
-        
+/*
+        if isGroup && selectedType == .publicChannel {
+            var isDiscussion = false
+            if let cachedData = view.cachedData as? CachedChannelData, case .known = cachedData.linkedDiscussionPeerId {
+                isDiscussion = true
+            }
+            
+            if isDiscussion {
+                entries.append(.joinToSendHeader(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Title.uppercased()))
+                entries.append(.joinToSendEveryone(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Everyone, joinToSend == .everyone))
+                entries.append(.joinToSendMembers(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_OnlyMembers, joinToSend == .members))
+            }
+                
+            if !isDiscussion || joinToSend == .members {
+                entries.append(.approveMembers(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembers, approveMembers))
+                entries.append(.approveMembersInfo(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembersInfo))
+            }
+        }
+*/
         entries.append(.forwardingHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased() : presentationData.strings.Group_Setup_ForwardingChannelTitle.uppercased()))
         entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
         entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingChannelInfo) : (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled : presentationData.strings.Group_Setup_ForwardingChannelInfoDisabled)))
-        
     } else if let peer = view.peers[view.peerId] as? TelegramGroup {
         switch mode {
             case .privateLink:
@@ -816,7 +954,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         }
             }
         }
-
+        
         let forwardingEnabled: Bool
         if let enabled = state.forwardingEnabled {
             forwardingEnabled = enabled
@@ -948,6 +1086,12 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     let toggleCopyProtectionDisposable = MetaDisposable()
     actionsDisposable.add(toggleCopyProtectionDisposable)
     
+    let toggleJoinToSendDisposable = MetaDisposable()
+    actionsDisposable.add(toggleJoinToSendDisposable)
+    
+    let toggleRequestToJoinDisposable = MetaDisposable()
+    actionsDisposable.add(toggleRequestToJoinDisposable)
+    
     let arguments = ChannelVisibilityControllerArguments(context: context, updateCurrentType: { type in
         updateState { state in
             return state.withUpdatedSelectedType(type)
@@ -1009,7 +1153,10 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     }, shareLink: { invite in
-        let shareController = ShareController(context: context, subject: .url(invite.link), updatedPresentationData: updatedPresentationData)
+        guard let inviteLink = invite.link else {
+            return
+        }
+        let shareController = ShareController(context: context, subject: .url(inviteLink), updatedPresentationData: updatedPresentationData)
         shareController.actionCompleted = {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
@@ -1151,6 +1298,14 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         updateState { state in
             return state.withUpdatedForwardingEnabled(value)
         }
+    }, updateJoinToSend: { value in
+        updateState { state in
+            return state.withUpdatedJoinToSend(value)
+        }
+    }, toggleApproveMembers: { value in
+        updateState { state in
+            return state.withUpdatedApproveMembers(value)
+        }
     })
     
     let peerView = context.account.viewTracker.peerView(peerId)
@@ -1218,6 +1373,14 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 
                 if let updatedCopyProtection = state.forwardingEnabled {
                     toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
+                }
+                
+                if let updatedJoinToSend = state.joinToSend {
+                    toggleJoinToSendDisposable.set(context.engine.peers.toggleChannelJoinToSend(peerId: peerId, enabled: updatedJoinToSend == .members).start())
+                }
+                
+                if let updatedApproveMembers = state.approveMembers {
+                    toggleRequestToJoinDisposable.set(context.engine.peers.toggleChannelJoinRequest(peerId: peerId, enabled: updatedApproveMembers).start())
                 }
                 
                 if let updatedAddressNameValue = updatedAddressNameValue {
@@ -1490,7 +1653,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                         }
                     })
                     if filteredPeerIds.isEmpty {
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(id: peerId), keepStack: .never, animated: true))
                     } else {
                         selectionController.displayProgress = true
                         let _ = (context.engine.peers.addChannelMembers(peerId: peerId, memberIds: filteredPeerIds)
@@ -1499,19 +1662,19 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                                 return
                             }
                             
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true))
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(id: peerId), keepStack: .never, animated: true))
                         }, completed: { [weak selectionController] in
                             guard let selectionController = selectionController, let navigationController = selectionController.navigationController as? NavigationController else {
                                 return
                             }
                             
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true))
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(id: peerId), keepStack: .never, animated: true))
                         })
                     }
                 })
             } else {
                 if let navigationController = controller.navigationController as? NavigationController {
-                    navigationController.replaceAllButRootController(context.sharedContext.makeChatController(context: context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)), animated: true)
+                    navigationController.replaceAllButRootController(context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)), animated: true)
                 }
             }
         }
@@ -1577,6 +1740,6 @@ final class InviteLinkContextReferenceContentSource: ContextReferenceContentSour
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

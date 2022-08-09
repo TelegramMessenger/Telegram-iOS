@@ -41,6 +41,7 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
     tulsi_build_command += ['--xcode_version={}'.format(build_environment.xcode_version)]
     tulsi_build_command += ['--use_top_level_targets_for_symlinks']
     tulsi_build_command += ['--verbose_failures']
+    tulsi_build_command += ['--swiftcopt=-whole-module-optimization']
 
     call_executable(tulsi_build_command)
 
@@ -91,6 +92,8 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
         bazel_build_arguments += ['--//{}:disableProvisioningProfiles'.format(app_target)]
     if generate_dsym:
         bazel_build_arguments += ['--apple_generate_dsym']
+    bazel_build_arguments += ['--//{}:disableStripping'.format('Telegram')]
+    bazel_build_arguments += ['--strip=never']
 
     call_executable([
         tulsi_path,

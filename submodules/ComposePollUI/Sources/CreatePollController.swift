@@ -10,6 +10,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import TextFormat
+import AttachmentUI
 
 private struct OrderedLinkedListItemOrderingId: RawRepresentable, Hashable {
     var rawValue: Int
@@ -160,8 +161,9 @@ private final class CreatePollControllerArguments {
     let updateQuiz: (Bool) -> Void
     let updateSolutionText: (NSAttributedString) -> Void
     let solutionTextFocused: (Bool) -> Void
+    let questionTextFocused: (Bool) -> Void
     
-    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String, Bool) -> Void, moveToNextOption: @escaping (Int) -> Void, moveToPreviousOption: @escaping (Int) -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int, Bool) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, toggleOptionSelected: @escaping (Int) -> Void, updateAnonymous: @escaping (Bool) -> Void, updateMultipleChoice: @escaping (Bool) -> Void, displayMultipleChoiceDisabled: @escaping () -> Void, updateQuiz: @escaping (Bool) -> Void, updateSolutionText: @escaping (NSAttributedString) -> Void, solutionTextFocused: @escaping (Bool) -> Void) {
+    init(updatePollText: @escaping (String) -> Void, updateOptionText: @escaping (Int, String, Bool) -> Void, moveToNextOption: @escaping (Int) -> Void, moveToPreviousOption: @escaping (Int) -> Void, removeOption: @escaping (Int, Bool) -> Void, optionFocused: @escaping (Int, Bool) -> Void, setItemIdWithRevealedOptions: @escaping (Int?, Int?) -> Void, toggleOptionSelected: @escaping (Int) -> Void, updateAnonymous: @escaping (Bool) -> Void, updateMultipleChoice: @escaping (Bool) -> Void, displayMultipleChoiceDisabled: @escaping () -> Void, updateQuiz: @escaping (Bool) -> Void, updateSolutionText: @escaping (NSAttributedString) -> Void, solutionTextFocused: @escaping (Bool) -> Void, questionTextFocused: @escaping (Bool) -> Void) {
         self.updatePollText = updatePollText
         self.updateOptionText = updateOptionText
         self.moveToNextOption = moveToNextOption
@@ -176,6 +178,7 @@ private final class CreatePollControllerArguments {
         self.updateQuiz = updateQuiz
         self.updateSolutionText = updateSolutionText
         self.solutionTextFocused = solutionTextFocused
+        self.questionTextFocused = questionTextFocused
     }
 }
 
@@ -348,6 +351,8 @@ private enum CreatePollEntry: ItemListNodeEntry {
         case let .text(placeholder, text, maxLength):
             return ItemListMultilineInputItem(presentationData: presentationData, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: maxLength, display: false), sectionId: self.section, style: .blocks, textUpdated: { value in
                 arguments.updatePollText(value)
+            }, updatedFocus: { value in
+                arguments.questionTextFocused(value)
             }, tag: CreatePollEntryTag.text)
         case let .optionsHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
@@ -511,7 +516,16 @@ public final class ComposedPoll {
     }
 }
 
-public func createPollController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, isQuiz: Bool? = nil, completion: @escaping (ComposedPoll) -> Void) -> ViewController {
+private class CreatePollControllerImpl: ItemListController, AttachmentContainable {
+    public var requestAttachmentMenuExpansion: () -> Void = {}
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    public var cancelPanGesture: () -> Void = { }
+    public var isContainerPanning: () -> Bool = { return false }
+    public var isContainerExpanded: () -> Bool = { return false }
+}
+
+public func createPollController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, isQuiz: Bool? = nil, completion: @escaping (ComposedPoll) -> Void) -> AttachmentContainable {
     var initialState = CreatePollControllerState()
     if let isQuiz = isQuiz {
         initialState.isQuiz = isQuiz
@@ -528,6 +542,7 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     var ensureTextVisibleImpl: (() -> Void)?
     var ensureOptionVisibleImpl: ((Int) -> Void)?
     var ensureSolutionVisibleImpl: (() -> Void)?
+    var ensureQuestionVisibleImpl: (() -> Void)?
     var displayQuizTooltipImpl: ((Bool) -> Void)?
     var attemptNavigationImpl: (() -> Bool)?
     
@@ -767,6 +782,10 @@ public func createPollController(context: AccountContext, updatedPresentationDat
         if isFocused {
             ensureSolutionVisibleImpl?()
         }
+    }, questionTextFocused: { isFocused in
+        if isFocused {
+            ensureQuestionVisibleImpl?()
+        }
     })
     
     let previousOptionIds = Atomic<[Int]?>(value: nil)
@@ -778,6 +797,12 @@ public func createPollController(context: AccountContext, updatedPresentationDat
         context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.Limits())
     )
     |> map { presentationData, state, limitsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var presentationData = presentationData
+        if presentationData.theme.list.blocksBackgroundColor.rgb == 0x000000 {
+            let updatedTheme = presentationData.theme.withInvertedBlocksBackground()
+            presentationData = presentationData.withUpdated(theme: updatedTheme)
+        }
+        
         var enabled = true
         if processPollText(state.text).isEmpty {
             enabled = false
@@ -884,8 +909,8 @@ public func createPollController(context: AccountContext, updatedPresentationDat
             focusItemTag = CreatePollEntryTag.solution
             ensureVisibleItemTag = focusItemTag
         } else {
-            focusItemTag = CreatePollEntryTag.text
-            ensureVisibleItemTag = focusItemTag
+//            focusItemTag = CreatePollEntryTag.text
+//            ensureVisibleItemTag = focusItemTag
         }
         
         let title: String
@@ -905,8 +930,17 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     }
     
     weak var currentTooltipController: TooltipController?
-    let controller = ItemListController(context: context, state: signal)
+    let controller = CreatePollControllerImpl(context: context, state: signal)
     controller.navigationPresentation = .modal
+//    controller.visibleBottomContentOffsetChanged = { [weak controller] offset in
+//        switch offset {
+//            case let .known(value):
+//                let backgroundAlpha: CGFloat = min(30.0, value) / 30.0
+//                controller?.updateTabBarAlpha(backgroundAlpha, .immediate)
+//            case .unknown, .none:
+//                controller?.updateTabBarAlpha(1.0, .immediate)
+//        }
+//    }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }
@@ -940,6 +974,8 @@ public func createPollController(context: AccountContext, updatedPresentationDat
                 return
             }
             
+            controller.requestAttachmentMenuExpansion()
+            
             var resultItemNode: ListViewItemNode?
             let _ = controller.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListItemNode {
@@ -955,11 +991,21 @@ public func createPollController(context: AccountContext, updatedPresentationDat
             }
         })
     }
+    ensureQuestionVisibleImpl = { [weak controller] in
+        controller?.afterLayout({
+            guard let controller = controller else {
+                return
+            }
+            controller.requestAttachmentMenuExpansion()
+        })
+    }
     ensureOptionVisibleImpl = { [weak controller] id in
         controller?.afterLayout({
             guard let controller = controller else {
                 return
             }
+            
+            controller.requestAttachmentMenuExpansion()
             
             var resultItemNode: ListViewItemNode?
             let state = stateValue.with({ $0 })

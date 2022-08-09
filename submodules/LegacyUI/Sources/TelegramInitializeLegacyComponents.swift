@@ -314,11 +314,5 @@ public func initializeLegacyComponents(application: UIApplication?, currentSizeC
     
     freedomInit()
     
-    TGRemoteImageView.setSharedCache(TGCache())
-    
-    TGImageDataSource.register(LegacyPeerAvatarPlaceholderDataSource(account: {
-        return legacyContext?.account
-    }))
-    ASActor.registerClass(LegacyImageDownloadActor.self)
     LegacyComponentsGlobals.setProvider(LegacyComponentsGlobalsProviderImpl())
 }

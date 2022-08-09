@@ -20,7 +20,6 @@ public enum DeviceAccessCameraSubject {
     case qrCode
 }
 
-
 public enum DeviceAccessMicrophoneSubject {
     case audio
     case video

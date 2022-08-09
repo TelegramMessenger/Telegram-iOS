@@ -10,7 +10,7 @@
 
 @implementation LottieInstance
 
-- (instancetype _Nullable)initWithData:(NSData * _Nonnull)data fitzModifier:(LottieFitzModifier)fitzModifier cacheKey:(NSString * _Nonnull)cacheKey {
+- (instancetype _Nullable)initWithData:(NSData * _Nonnull)data fitzModifier:(LottieFitzModifier)fitzModifier colorReplacements:(NSDictionary * _Nullable)colorReplacements cacheKey:(NSString * _Nonnull)cacheKey {
     self = [super init];
     if (self != nil) {
         rlottie::FitzModifier modifier;
@@ -35,7 +35,15 @@
                 break;
         }
         
-        _animation = rlottie::Animation::loadFromData(std::string(reinterpret_cast<const char *>(data.bytes), data.length), std::string([cacheKey UTF8String]), "", false, {}, modifier);
+        std::vector<std::pair<std::uint32_t, std::uint32_t>> colorsVector;
+        if (colorReplacements != nil) {
+            for (NSNumber *color in colorReplacements.allKeys) {
+                NSNumber *replacement = colorReplacements[color];
+                colorsVector.push_back({ color.unsignedIntValue, replacement.unsignedIntValue });
+            }
+        }
+        
+        _animation = rlottie::Animation::loadFromData(std::string(reinterpret_cast<const char *>(data.bytes), data.length), std::string([cacheKey UTF8String]), "", false, colorsVector, modifier);
         if (_animation == nullptr) {
             return nil;
         }

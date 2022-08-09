@@ -6,6 +6,13 @@ import TelegramPresentationData
 import LegacyUI
 import PhoneNumberFormat
 
+private func legacyImageLocationUri(resource: MediaResource) -> String? {
+    if let resource = resource as? CloudPeerPhotoSizeMediaResource {
+        return resource.id.stringRepresentation
+    }
+    return nil
+}
+
 func makePeerIdFromBridgeIdentifier(_ identifier: Int64) -> PeerId? {
     if identifier < 0 && identifier > Int32.min {
         return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(-identifier))

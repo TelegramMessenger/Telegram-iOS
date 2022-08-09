@@ -19,6 +19,7 @@
         case STPCardBrandMasterCard: return @"MasterCard";
         case STPCardBrandUnknown: return @"Unknown";
         case STPCardBrandVisa: return @"Visa";
+        case STPCardBrandOther: return @"Other";
     }
 }
 

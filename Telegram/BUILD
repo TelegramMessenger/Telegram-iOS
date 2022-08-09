@@ -2,6 +2,8 @@ load("@bazel_skylib//rules:common_settings.bzl",
     "bool_flag",
 )
 
+load("@bazel_skylib//lib:selects.bzl", "selects")
+
 load("@build_bazel_rules_apple//apple:ios.bzl",
     "ios_application",
     "ios_extension",
@@ -71,6 +73,19 @@ config_setting(
     name = "disableProvisioningProfilesSetting",
     flag_values = {
         ":disableProvisioningProfiles": "True",
+    },
+)
+
+bool_flag(
+    name = "disableStripping",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "disableStrippingSetting",
+    flag_values = {
+        ":disableStripping": "True",
     },
 )
 
@@ -184,8 +199,13 @@ debug_deps = select({
     "//conditions:default": [],
 })
 
+selects.config_setting_group(
+    name = "resolvedDisableStrippingSetting",
+    match_any = [":debug", ":disableStrippingSetting"],
+)
+
 strip_framework = select({
-    ":debug": None,
+    ":resolvedDisableStrippingSetting": None,
     "//conditions:default": ":StripFramework",
 })
 
@@ -1921,23 +1941,6 @@ ios_application(
         ":Main",
         ":Lib",
     ],
-)
-
-swift_library(
-    name = "UITestsLib",
-    module_name = "UITestsLib",
-    srcs = glob(["UITests/**/*.swift"]),
-    deps = [
-        "//submodules/TelegramUI:TelegramUI",
-    ],
-)
-
-ios_ui_test(
-    name = "UITests",
-    minimum_os_version = "9.0",
-    deps = [":UITestsLib"],
-    infoplists = [":UITestsLib/Info.plist"],
-    test_host = ":Telegram",
 )
 
 # Temporary targets used to simplify webrtc build tests

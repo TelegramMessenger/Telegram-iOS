@@ -121,8 +121,8 @@ private final class DoubleBottomSwitchScreenNode: ViewControllerTracingNode {
     private let switchNode: BorderSwitchNode
     private let textNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
-    private let animationNode: AnimatedStickerNode
-    private let animationNode2: AnimatedStickerNode
+    private let animationNode: PostufgramAnimatedStickerNode
+    private let animationNode2: PostufgramAnimatedStickerNode
     private var animationSize: CGSize = CGSize()
     private let buttonNode: SolidRoundedButtonNode
     
@@ -141,14 +141,14 @@ private final class DoubleBottomSwitchScreenNode: ViewControllerTracingNode {
         let buttonText = presentationData.strings.Common_Next
         let source = DoubleBottomAnimationSource(mode: .disableNotifications)
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = PostufgramAnimatedStickerNode()
         if let source = source {
             self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
             self.animationSize = CGSize(width: 264.0, height: 174.0)
             self.animationNode.visibility = true
         }
         
-        self.animationNode2 = AnimatedStickerNode()
+        self.animationNode2 = PostufgramAnimatedStickerNode()
         if let otherSource = DoubleBottomAnimationSource(mode: .disableNotifications2) {
             self.animationNode2.setup(source: otherSource, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
             self.animationNode2.visibility = true
@@ -188,7 +188,7 @@ private final class DoubleBottomSwitchScreenNode: ViewControllerTracingNode {
             strongSelf.switchNode.isUserInteractionEnabled = false
             
             if isOn {
-                strongSelf.animationNode2.finishAnimation(resume: true, fromIndex: 69) { [weak self] in
+                strongSelf.animationNode2.finishAnimation(resume: true, fromFrame: 69) { [weak self] in
                     guard let strongSelf = self else { return }
                     
                     strongSelf.animationNode2.pause()
@@ -205,14 +205,14 @@ private final class DoubleBottomSwitchScreenNode: ViewControllerTracingNode {
                 } else if frame < 90 {
                     frame = 90
                 }
-                strongSelf.animationNode.finishAnimation(resume: true, fromIndex: frame) { [weak self] in
+                strongSelf.animationNode.finishAnimation(resume: true, fromFrame: frame) { [weak self] in
                     guard let strongSelf = self else { return }
                     
                     strongSelf.animationNode.stop()
                     strongSelf.animationNode2.visibility = true
                     strongSelf.animationNode2.alpha = 1.0
                     strongSelf.animationNode.alpha = 0.0
-                    strongSelf.animationNode2.playTo(frame: 69, fromIndex: 0) { [weak self] in
+                    strongSelf.animationNode2.playTo(frame: 69, fromFrame: 0) { [weak self] in
                         guard let strongSelf = self else { return }
                         
                         strongSelf.switchNode.isUserInteractionEnabled = true

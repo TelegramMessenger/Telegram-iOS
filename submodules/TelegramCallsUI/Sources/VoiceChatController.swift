@@ -240,7 +240,15 @@ struct VoiceChatPeerEntry: Identifiable {
     }
 }
 
-public final class VoiceChatController: ViewController {
+public protocol VoiceChatController: ViewController {
+    var call: PresentationGroupCall { get }
+    var currentOverlayController: VoiceChatOverlayController? { get }
+    var parentNavigationController: NavigationController? { get set }
+    
+    func dismiss(closing: Bool, manual: Bool)
+}
+
+public final class VoiceChatControllerImpl: ViewController, VoiceChatController {
     enum DisplayMode {
         case modal(isExpanded: Bool, isFilled: Bool)
         case fullscreen(controlsHidden: Bool)
@@ -748,7 +756,7 @@ public final class VoiceChatController: ViewController {
         
         private var configuration: VoiceChatConfiguration?
         
-        private weak var controller: VoiceChatController?
+        private weak var controller: VoiceChatControllerImpl?
         private let sharedContext: SharedAccountContext
         private let context: AccountContext
         private let call: PresentationGroupCall
@@ -952,7 +960,7 @@ public final class VoiceChatController: ViewController {
 
         private var statsDisposable: Disposable?
         
-        init(controller: VoiceChatController, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
+        init(controller: VoiceChatControllerImpl, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
             self.controller = controller
             self.sharedContext = sharedContext
             self.context = call.accountContext
@@ -1564,7 +1572,7 @@ public final class VoiceChatController: ViewController {
                                             }).start()
                                         }
                                         
-                                        strongSelf.presentUndoOverlay(content: .info(text: strongSelf.presentationData.strings.VoiceChat_EditBioSuccess), action: { _ in return false })
+                                        strongSelf.presentUndoOverlay(content: .info(title: nil, text: strongSelf.presentationData.strings.VoiceChat_EditBioSuccess), action: { _ in return false })
                                     }
                                 })
                                 self?.controller?.present(controller, in: .window(.root))
@@ -1585,7 +1593,7 @@ public final class VoiceChatController: ViewController {
                                         if let strongSelf = self, let (firstName, lastName) = firstAndLastName {
                                             let _ = context.engine.accountData.updateAccountPeerName(firstName: firstName, lastName: lastName).start()
                                             
-                                            strongSelf.presentUndoOverlay(content: .info(text: strongSelf.presentationData.strings.VoiceChat_EditNameSuccess), action: { _ in return false })
+                                            strongSelf.presentUndoOverlay(content: .info(title: nil, text: strongSelf.presentationData.strings.VoiceChat_EditNameSuccess), action: { _ in return false })
                                         }
                                     })
                                     self?.controller?.present(controller, in: .window(.root))
@@ -1685,7 +1693,7 @@ public final class VoiceChatController: ViewController {
                             let context = strongSelf.context
                             strongSelf.controller?.dismiss(completion: {
                                 Queue.mainQueue().after(0.3) {
-                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer.id), keepStack: .always, purposefulAction: {}, peekData: nil))
+                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), keepStack: .always, purposefulAction: {}, peekData: nil))
                                 }
                             })
                         
@@ -2645,7 +2653,7 @@ public final class VoiceChatController: ViewController {
                                             let context = strongSelf.context
                                             strongSelf.controller?.dismiss(completion: {
                                                 Queue.mainQueue().justDispatch {
-                                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(context.account.peerId), keepStack: .always, purposefulAction: {}, peekData: nil))
+                                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: context.account.peerId), keepStack: .always, purposefulAction: {}, peekData: nil))
                                                 }
                                             })
                                             
@@ -7082,6 +7090,6 @@ private final class VoiceChatContextReferenceContentSource: ContextReferenceCont
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

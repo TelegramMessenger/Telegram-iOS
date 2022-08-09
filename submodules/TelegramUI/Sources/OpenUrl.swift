@@ -12,6 +12,7 @@ import UrlEscaping
 import PassportUI
 import UrlHandling
 import OpenInExternalAppUI
+import BrowserUI
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId
@@ -187,7 +188,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             if case let .externalUrl(value) = resolved {
                 context.sharedContext.applicationBindings.openUrl(value)
             } else {
-                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
+                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peerId, navigation in
                     switch navigation {
                         case .info:
                             let _ = (context.account.postbox.loadedPeerWithId(peerId)
@@ -200,12 +201,17 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         case let .chat(_, subject, peekData):
                             context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: subject, peekData: peekData))
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), subject: subject, peekData: peekData))
                             }
                         case let .withBotStartPayload(payload):
                             context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), botStart: payload))
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), botStart: payload))
+                            }
+                        case let .withAttachBot(attachBotStart):
+                            context.sharedContext.applicationBindings.dismissNativeController()
+                            if let navigationController = navigationController {
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), attachBotStart: attachBotStart))
                             }
                         default:
                             break
@@ -605,35 +611,51 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 
                 if parsedUrl.host == "resolve" {
                     if let components = URLComponents(string: "/?" + query) {
+                        var phone: String?
                         var domain: String?
                         var start: String?
                         var startGroup: String?
+                        var admin: String?
                         var game: String?
                         var post: String?
                         var voiceChat: String?
+                        var attach: String?
+                        var startAttach: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
-                                    if queryItem.name == "domain" {
+                                    if queryItem.name == "phone" {
+                                        phone = value
+                                    } else if queryItem.name == "domain" {
                                         domain = value
                                     } else if queryItem.name == "start" {
                                         start = value
                                     } else if queryItem.name == "startgroup" {
                                         startGroup = value
+                                    } else if queryItem.name == "admin" {
+                                        admin = value
                                     } else if queryItem.name == "game" {
                                         game = value
                                     } else if queryItem.name == "post" {
                                         post = value
                                     } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                         voiceChat = value
+                                    } else if queryItem.name == "attach" {
+                                        attach = value
+                                    } else if queryItem.name == "startattach" {
+                                        startAttach = value
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
+                                } else if queryItem.name == "startattach" {
+                                    startAttach = ""
                                 }
                             }
                         }
                         
-                        if let domain = domain {
+                        if let phone = phone {
+                            convertedUrl = "https://t.me/+\(phone)"
+                        } else if let domain = domain {
                             var result = "https://t.me/\(domain)"
                             if let post = post, let postValue = Int(post) {
                                 result += "/\(postValue)"
@@ -642,6 +664,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 result += "?start=\(start)"
                             } else if let startGroup = startGroup {
                                 result += "?startgroup=\(startGroup)"
+                                if let admin = admin {
+                                    result += "&admin=\(admin)"
+                                }
                             } else if let game = game {
                                 result += "?game=\(game)"
                             } else if let voiceChat = voiceChat {
@@ -649,6 +674,14 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     result += "?voicechat=\(voiceChat)"
                                 } else {
                                     result += "?voicechat="
+                                }
+                            } else if let attach = attach {
+                                result += "?attach=\(attach)"
+                            } else if let startAttach = startAttach {
+                                if !startAttach.isEmpty {
+                                    result += "?startattach=\(startAttach)"
+                                } else {
+                                    result += "?startattach"
                                 }
                             }
                             convertedUrl = result
@@ -683,7 +716,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     if let path = parsedUrl.pathComponents.last {
                         var section: ResolvedUrlSettingsSection?
                         switch path {
-                            case "theme":
+                            case "themes":
                                 section = .theme
                             case "devices":
                                 section = .devices
@@ -727,6 +760,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 let _ = (settings
                 |> deliverOnMainQueue).start(next: { settings in
                     if settings.defaultWebBrowser == nil {
+//                        let controller = BrowserScreen(context: context, subject: .webPage(parsedUrl.absoluteString))
+//                        navigationController?.pushViewController(controller)
                         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                             if let window = navigationController?.view.window {
                                 let controller = SFSafariViewController(url: parsedUrl)

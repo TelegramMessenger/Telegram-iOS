@@ -457,7 +457,7 @@
             {
                 return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
                 {
-                    AVAssetTrack *track = avAsset.tracks.firstObject;
+                    AVAssetTrack *track = [avAsset tracksWithMediaType:AVMediaTypeVideo].firstObject;
                     if (track == nil)
                     {
                         [subscriber putError:nil];

@@ -45,21 +45,21 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         self.contentNode.addSubnode(self.lineNode)
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: ChatPresentationData, _ strings: PresentationStrings, _ context: AccountContext, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
-        
+    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: ChatPresentationData, _ strings: PresentationStrings, _ context: AccountContext, _ type: ChatMessageReplyInfoType, _ message: Message, _ parentMessage: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
         let previousMediaReference = maybeNode?.previousMediaReference
         
-        return { presentationData, strings, context, type, message, constrainedSize in
+        return { presentationData, strings, context, type, message, parentMessage, constrainedSize in
             let fontSize = floor(presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
             let titleFont = Font.medium(fontSize)
             let textFont = Font.regular(fontSize)
             
-            var titleString = message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
+            let author = message.effectiveAuthor
+            var titleString = author.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
             
-            if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+            if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) || parentMessage.forwardInfo != nil {
                 if let author = forwardInfo.author {
                     titleString = EnginePeer(author).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
                 } else if let authorSignature = forwardInfo.authorSignature {
@@ -189,7 +189,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     if fileReference.media.isVideo {
                         updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                     } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                        updateImageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
+                        updateImageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                     }
                 }
             }
@@ -242,9 +242,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
                 node.imageNode?.captureProtected = message.isCopyProtected()
                 
-                titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: spacing - textInsets.top), size: titleLayout.size)
+                titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: spacing - textInsets.top + 1.0), size: titleLayout.size)
                 
-                let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top), size: textLayout.size)
+                let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top - 2.0), size: textLayout.size)
                 textNode.frame = textFrame
                 
                 if !textLayout.spoilers.isEmpty {
@@ -265,7 +265,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
                     
                 node.lineNode.image = lineImage
-                node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: max(0.0, size.height - 5.0)))
+                node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: max(0.0, size.height - 4.0)))
                 
                 node.contentNode.frame = CGRect(origin: CGPoint(), size: size)
                 

@@ -10,9 +10,12 @@ import AlertUI
 import PresentationDataUtils
 import PeerInfoUI
 import UndoUI
+import ChatPresentationInterfaceState
 
 private enum SubscriberAction: Equatable {
     case join
+    case joinGroup
+    case applyToJoin
     case kicked
     case muteNotifications
     case unmuteNotifications
@@ -24,6 +27,10 @@ private func titleAndColorForAction(_ action: SubscriberAction, theme: Presentat
     switch action {
         case .join:
             return (strings.Channel_JoinChannel, theme.chat.inputPanel.panelControlAccentColor)
+        case .joinGroup:
+            return (strings.Group_JoinGroup, theme.chat.inputPanel.panelControlAccentColor)
+        case .applyToJoin:
+            return (strings.Group_ApplyToJoin, theme.chat.inputPanel.panelControlAccentColor)
         case .kicked:
             return (strings.Channel_JoinChannel, theme.chat.inputPanel.panelControlDisabledColor)
         case .muteNotifications:
@@ -74,7 +81,15 @@ private func actionForPeer(peer: Peer, interfaceState: ChatPresentationInterface
                 case .kicked:
                     return .kicked
                 case .left:
-                    return .join
+                    if case .group = channel.info {
+                        if channel.flags.contains(.requestToJoin) {
+                            return .applyToJoin
+                        } else {
+                            return .joinGroup
+                        }
+                    } else {
+                        return .join
+                    }
                 case .member:
                     if isMuted {
                         return .unmuteNotifications
@@ -174,7 +189,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         }
         
         switch action {
-        case .join:
+        case .join, .joinGroup, .applyToJoin:
             var delayActivity = false
             if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                 delayActivity = true
@@ -211,6 +226,10 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 }
                 let text: String
                 switch error {
+                case .inviteRequestSent:
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .inviteRequestSent(title: presentationInterfaceState.strings.Group_RequestToJoinSent, text: presentationInterfaceState.strings.Group_RequestToJoinSentDescriptionGroup ), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    return
                 case .tooMuchJoined:
                     strongSelf.interfaceInteraction?.getNavigationController()?.pushViewController(oldChannelsController(context: context, intent: .join, completed: { value in
                         if value {

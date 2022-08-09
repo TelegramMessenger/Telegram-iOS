@@ -147,6 +147,23 @@ public struct Transition {
         return result
     }
     
+    public func withAnimation(_ animation: Animation) -> Transition {
+        var result = self
+        result.animation = animation
+        return result
+    }
+    
+    public func withAnimationIfAnimated(_ animation: Animation) -> Transition {
+        switch self.animation {
+        case .none:
+            return self
+        default:
+            var result = self
+            result.animation = animation
+            return result
+        }
+    }
+    
     public static var immediate: Transition = Transition(animation: .none)
     
     public static func easeInOut(duration: Double) -> Transition {
@@ -176,6 +193,40 @@ public struct Transition {
         }
     }
     
+    public func setBounds(view: UIView, bounds: CGRect, completion: ((Bool) -> Void)? = nil) {
+        if view.bounds == bounds {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            view.bounds = bounds
+            completion?(true)
+        case .curve:
+            let previousBounds = view.bounds
+            view.bounds = bounds
+
+            self.animateBounds(view: view, from: previousBounds, to: view.bounds, completion: completion)
+        }
+    }
+    
+    public func setPosition(view: UIView, position: CGPoint, completion: ((Bool) -> Void)? = nil) {
+        if view.center == position {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            view.center = position
+            completion?(true)
+        case .curve:
+            let previousPosition = view.center
+            view.center = position
+
+            self.animatePosition(view: view, from: previousPosition, to: view.center, completion: completion)
+        }
+    }
+    
     public func setAlpha(view: UIView, alpha: CGFloat, completion: ((Bool) -> Void)? = nil) {
         if view.alpha == alpha {
             completion?(true)
@@ -191,7 +242,35 @@ public struct Transition {
             self.animateAlpha(view: view, from: previousAlpha, to: alpha, completion: completion)
         }
     }
-
+    
+    public func setScale(view: UIView, scale: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        let t = view.layer.presentation()?.transform ?? view.layer.transform
+        let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+        if currentScale == scale {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            view.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+            completion?(true)
+        case let .curve(duration, curve):
+            let previousScale = currentScale
+            view.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+            view.layer.animate(
+                from: previousScale as NSNumber,
+                to: scale as NSNumber,
+                keyPath: "transform.scale",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+    
     public func setSublayerTransform(view: UIView, transform: CATransform3D, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:

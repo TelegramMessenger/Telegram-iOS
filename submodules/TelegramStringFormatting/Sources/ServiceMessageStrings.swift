@@ -329,7 +329,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 let messagePeer = message.peers[message.id.peerId]
                 
                 if timeout > 0 {
-                    let timeValue = timeIntervalString(strings: strings, value: timeout, preferLowerValue: true)
+                    let timeValue = timeIntervalString(strings: strings, value: timeout, preferLowerValue: false)
                     
                     let string: String
                     if let _ = messagePeer as? TelegramUser {
@@ -631,6 +631,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     }
                 }
+            case let .webViewData(text):
+                attributedString = NSAttributedString(string: strings.Notification_WebAppSentData(text).string, font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }

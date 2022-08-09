@@ -15,22 +15,31 @@ public struct CounterContollerTitle: Equatable {
 }
 
 public final class CounterContollerTitleView: UIView {
-    private var theme: PresentationTheme
     private let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     
     public var title: CounterContollerTitle = CounterContollerTitle(title: "", counter: "") {
         didSet {
             if self.title != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: self.title.title, font: Font.semibold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                self.subtitleNode.attributedText = NSAttributedString(string: self.title.counter, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                
-                self.accessibilityLabel = self.title.title
-                self.accessibilityValue = self.title.counter
-                
-                self.setNeedsLayout()
+                self.update()
             }
         }
+    }
+    
+    public var theme: PresentationTheme {
+        didSet {
+            self.update()
+        }
+    }
+    
+    private func update() {
+        self.titleNode.attributedText = NSAttributedString(string: self.title.title, font: Font.semibold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+        self.subtitleNode.attributedText = NSAttributedString(string: self.title.counter, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+        
+        self.accessibilityLabel = self.title.title
+        self.accessibilityValue = self.title.counter
+        
+        self.setNeedsLayout()
     }
     
     public init(theme: PresentationTheme) {

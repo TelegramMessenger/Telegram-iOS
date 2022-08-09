@@ -16,7 +16,7 @@ import PresentationDataUtils
 import ImageContentAnalysis
 import TextSelectionNode
 import Speak
-import Translate
+import TranslateUI
 import ShareController
 import UndoUI
 
@@ -92,7 +92,7 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
                 }
             case let .file(fileReference):
                 if let representation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                    return (chatWebpageSnippetFile(account: self.account, fileReference: fileReference, representation: representation), representation.dimensions.cgSize)
+                    return (chatWebpageSnippetFile(account: self.account, mediaReference: fileReference.abstract, representation: representation), representation.dimensions.cgSize)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
@@ -352,9 +352,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                             window.rootViewController?.present(controller, animated: true)
                                                         }
                                                     case .speak:
-                                                        speakText(string)
+                                                        let _ = speakText(context: strongSelf.context, text: string)
                                                     case .translate:
-                                                        translateText(context: strongSelf.context, text: string)
+                                                        if let parentController = strongSelf.baseNavigationController()?.topViewController as? ViewController {
+                                                            let controller = TranslateScreen(context: strongSelf.context, text: string, fromLanguage: nil)
+                                                            parentController.present(controller, in: .window(.root))
+                                                        }
                                                     }
                                                 })
                                                 recognizedContentNode.barcodeAction = { [weak self] payload, rect in
@@ -529,7 +532,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 let previousStatus = strongSelf.status
                 strongSelf.status = status
                 switch status {
-                    case .Remote:
+                    case .Remote, .Paused:
                         strongSelf.statusNode.isHidden = false
                         strongSelf.statusNode.alpha = 1.0
                         strongSelf.statusNodeContainer.isUserInteractionEnabled = true

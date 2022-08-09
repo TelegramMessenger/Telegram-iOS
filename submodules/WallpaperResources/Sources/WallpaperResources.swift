@@ -531,7 +531,7 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                         var image: UIImage?
                         if let fullSizeData = fullSizeData {
                             if mode == .screen {
-                                image = renderPreparedImage(fullSizeData, CGSize(width: size.width * context.scale, height: size.height * context.scale))
+                                image = renderPreparedImage(fullSizeData, CGSize(width: size.width * context.scale, height: size.height * context.scale), .black, 1.0)
                             } else {
                                 image = UIImage(data: fullSizeData)
                             }
@@ -1446,7 +1446,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                                     
                                     return patternWallpaperImage(account: account, accountManager: accountManager, representations: convertedPreviewRepresentations, mode: .thumbnail, autoFetchFullSize: true)
                                     |> mapToSignal { generator -> Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Bool, Bool, CGFloat, Int32?), NoError> in
-                                        let imageSize = CGSize(width: 148, height: 320)
+                                        let imageSize = CGSize(width: 148.0, height: 320.0)
                                         let imageArguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil, custom: arguments)
                                         let context = generator?(imageArguments)
                                         let image = context?.generateImage()

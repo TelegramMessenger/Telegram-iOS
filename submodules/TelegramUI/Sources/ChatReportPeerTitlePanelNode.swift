@@ -9,6 +9,7 @@ import LocalizedPeerData
 import TelegramStringFormatting
 import TextFormat
 import Markdown
+import ChatPresentationInterfaceState
 
 private enum ChatReportPeerTitleButton: Equatable {
     case block

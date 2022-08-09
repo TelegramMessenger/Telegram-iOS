@@ -17,6 +17,7 @@ public struct CachedChannelFlags: OptionSet {
     public static let preHistoryEnabled = CachedChannelFlags(rawValue: 1 << 3)
     public static let canViewStats = CachedChannelFlags(rawValue: 1 << 4)
     public static let canChangePeerGeoLocation = CachedChannelFlags(rawValue: 1 << 5)
+    public static let canDeleteHistory = CachedChannelFlags(rawValue: 1 << 6)
 }
 
 public struct CachedChannelParticipantsSummary: PostboxCoding, Equatable {
@@ -161,19 +162,22 @@ public final class CachedChannelData: CachedPeerData {
         public var title: String?
         public var scheduleTimestamp: Int32?
         public var subscribedToScheduled: Bool
+        public var isStream: Bool?
         
         public init(
             id: Int64,
             accessHash: Int64,
             title: String?,
             scheduleTimestamp: Int32?,
-            subscribedToScheduled: Bool
+            subscribedToScheduled: Bool,
+            isStream: Bool?
         ) {
             self.id = id
             self.accessHash = accessHash
             self.title = title
             self.scheduleTimestamp = scheduleTimestamp
             self.subscribedToScheduled = subscribedToScheduled
+            self.isStream = isStream
         }
         
         public init(decoder: PostboxDecoder) {
@@ -182,6 +186,7 @@ public final class CachedChannelData: CachedPeerData {
             self.title = decoder.decodeOptionalStringForKey("title")
             self.scheduleTimestamp = decoder.decodeOptionalInt32ForKey("scheduleTimestamp")
             self.subscribedToScheduled = decoder.decodeBoolForKey("subscribed", orElse: false)
+            self.isStream = decoder.decodeOptionalBoolForKey("isStream_v2")
         }
         
         public func encode(_ encoder: PostboxEncoder) {
@@ -198,6 +203,11 @@ public final class CachedChannelData: CachedPeerData {
                 encoder.encodeNil(forKey: "scheduleTimestamp")
             }
             encoder.encodeBool(self.subscribedToScheduled, forKey: "subscribed")
+            if let isStream = self.isStream {
+                encoder.encodeBool(isStream, forKey: "isStream")
+            } else {
+                encoder.encodeNil(forKey: "isStream")
+            }
         }
     }
     

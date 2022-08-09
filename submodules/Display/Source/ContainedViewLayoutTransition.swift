@@ -105,6 +105,16 @@ public extension CGRect {
 }
 
 public extension ContainedViewLayoutTransition {
+    func animation() -> CABasicAnimation? {
+        switch self {
+        case .immediate:
+            return nil
+        case let .animated(duration, curve):
+            let animation = CALayer().makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "position", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: false, additive: false, completion: { _ in })
+            return animation as? CABasicAnimation
+        }
+    }
+    
     func updateFrame(node: ASDisplayNode, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
         if frame.origin.x.isNaN {
             return
@@ -1440,13 +1450,17 @@ public struct CombinedTransition {
 }
     
 public extension ContainedViewLayoutTransition {
-    func animateView(_ f: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
+    func animateView(allowUserInteraction: Bool = false, _ f: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
         switch self {
         case .immediate:
             f()
             completion?(true)
         case let .animated(duration, curve):
-            UIView.animate(withDuration: duration, delay: 0.0, options: curve.viewAnimationOptions, animations: {
+            var options = curve.viewAnimationOptions
+            if allowUserInteraction {
+                options.insert(.allowUserInteraction)
+            }
+            UIView.animate(withDuration: duration, delay: 0.0, options: options, animations: {
                 f()
             }, completion: completion)
         }

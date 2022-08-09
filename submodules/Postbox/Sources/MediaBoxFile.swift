@@ -605,7 +605,15 @@ final class MediaBoxPartialFile {
             if let truncationSize = self.fileMap.truncationSize, self.fileMap.sum == truncationSize {
                 status = .Local
             } else {
-                status = .Remote
+                let progress: Float
+                if let truncationSize = self.fileMap.truncationSize, truncationSize != 0 {
+                    progress = Float(self.fileMap.sum) / Float(truncationSize)
+                } else if let size = size {
+                    progress = Float(self.fileMap.sum) / Float(size)
+                } else {
+                    progress = self.fileMap.progress ?? 0.0
+                }
+                status = .Remote(progress: progress)
             }
         } else {
             let progress: Float

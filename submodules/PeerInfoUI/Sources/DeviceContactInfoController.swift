@@ -1240,7 +1240,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
     }
     openChatImpl = { [weak controller] peerId in
         if let navigationController = (controller?.navigationController as? NavigationController) {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
         }
     }
     replaceControllerImpl = { [weak controller] value in
@@ -1322,7 +1322,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
     (parentController.navigationController as? NavigationController)?.pushViewController(contactsController)
     let _ = (contactsController.result
     |> deliverOnMainQueue).start(next: { result in
-        if let (peers, _) = result, let peer = peers.first {
+        if let (peers, _, _, _, _) = result, let peer = peers.first {
             let dataSignal: Signal<(Peer?, DeviceContactStableId?), NoError>
             switch peer {
                 case let .peer(contact, _, _):

@@ -29,14 +29,6 @@ typedef enum {
     iPadPro = 6
 } DeviceScreen;
 
-static void TGDispatchOnMainThread(dispatch_block_t block) {
-    if ([NSThread isMainThread]) {
-        block();
-    } else {
-        dispatch_async(dispatch_get_main_queue(), block);
-    }
-}
-
 @interface UIScrollView (CurrentPage)
 - (int)currentPage;
 - (void)setPage:(NSInteger)page;
@@ -242,8 +234,8 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     
     if (/*[[UIApplication sharedApplication] applicationState] != UIApplicationStateBackground*/true && !_isOpenGLLoaded)
     {
-        context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
-        if (!context)
+        _context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
+        if (!_context)
             NSLog(@"Failed to create ES context");
         
         bool isIpad = ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad);
@@ -256,7 +248,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
         if (isIpad)
             height += 138 / 2;
         
-        _glkView = [[GLKView alloc] initWithFrame:CGRectMake(self.view.bounds.size.width / 2 - size / 2, height, size, size) context:context];
+        _glkView = [[GLKView alloc] initWithFrame:CGRectMake(self.view.bounds.size.width / 2 - size / 2, height, size, size) context:_context];
         _glkView.backgroundColor = _backgroundColor;
         _glkView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
         _glkView.drawableDepthFormat = GLKViewDrawableDepthFormat24;
@@ -284,7 +276,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
         [EAGLContext setCurrentContext:nil];
 
     _glkView.context = nil;
-    context = nil;
+    _context = nil;
     [_glkView removeFromSuperview];
     _glkView = nil;
     _isOpenGLLoaded = false;

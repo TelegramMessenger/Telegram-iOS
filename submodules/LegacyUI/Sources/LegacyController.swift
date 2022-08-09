@@ -4,6 +4,7 @@ import Display
 import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
+import AttachmentUI
 
 public enum LegacyControllerPresentation {
     case custom
@@ -375,7 +376,7 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     }
 }
 
-open class LegacyController: ViewController, PresentableController {
+open class LegacyController: ViewController, PresentableController, AttachmentContainable {
     public private(set) var legacyController: UIViewController!
     private let presentation: LegacyControllerPresentation
     
@@ -390,6 +391,8 @@ open class LegacyController: ViewController, PresentableController {
     
     fileprivate var validLayout: ContainerViewLayout?
     
+    public var parentInsets: UIEdgeInsets = UIEdgeInsets()
+    
     public var controllerLoaded: (() -> Void)?
     public var presentationCompleted: (() -> Void)?
     
@@ -401,6 +404,13 @@ open class LegacyController: ViewController, PresentableController {
     private var enableContainerLayoutUpdates = false
     
     public var disposables = DisposableSet()
+    
+    open var requestAttachmentMenuExpansion: () -> Void = {}
+    open var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
+    open var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    open var cancelPanGesture: () -> Void = { }
+    open var isContainerPanning: () -> Bool = { return false }
+    open var isContainerExpanded: () -> Bool = { return false }
     
     public init(presentation: LegacyControllerPresentation, theme: PresentationTheme? = nil, strings: PresentationStrings? = nil, initialLayout: ContainerViewLayout? = nil) {
         self.sizeClass.set(SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber))
@@ -453,6 +463,10 @@ open class LegacyController: ViewController, PresentableController {
         }
         
         if self.controllerNode.controllerView == nil {
+            if self.controllerNode.frame.width == 0.0, let layout = self.validLayout {
+                self.controllerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width - self.parentInsets.left - self.parentInsets.right, height: layout.size.height))
+            }
+            
             self.controllerNode.controllerView = self.legacyController.view
             if let legacyController = self.legacyController as? TGViewController {
                 legacyController.ignoreAppearEvents = true
@@ -554,10 +568,12 @@ open class LegacyController: ViewController, PresentableController {
                 orientation = .landscapeRight
             }
             
-            legacyTelegramController.intrinsicSize = layout.size
+            let size = CGSize(width: layout.size.width - layout.intrinsicInsets.left - layout.intrinsicInsets.right, height: layout.size.height)
+            
+            legacyTelegramController.intrinsicSize = size
             legacyTelegramController._updateInset(for: orientation, force: false, notify: true)
             if self.enableContainerLayoutUpdates {
-                legacyTelegramController.layoutController(for: layout.size, duration: duration)
+                legacyTelegramController.layoutController(for: size, duration: duration)
             }
         }
         let updatedSizeClass: UIUserInterfaceSizeClass

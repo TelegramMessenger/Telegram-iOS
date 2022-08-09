@@ -215,7 +215,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     open func navigationLayout(layout: ContainerViewLayout) -> NavigationLayout {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         var defaultNavigationBarHeight: CGFloat
-        if self._presentedInModal {
+        if self._presentedInModal && layout.orientation == .portrait {
             defaultNavigationBarHeight = 56.0
         } else {
             defaultNavigationBarHeight = 44.0
@@ -533,8 +533,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
             }
             navigationController.filterController(self, animated: animated)
         } else {
-            self.presentingViewController?.dismiss(animated: false, completion: nil)
-            assertionFailure()
+            self.presentingViewController?.dismiss(animated: flag, completion: nil)
         }
     }
     
@@ -555,7 +554,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         (self.navigationController as? NavigationController)?.pushViewController(controller)
     }
     
-    public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
+    open func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
         if !(controller is StandalonePresentableController), case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation, self.navigationController != nil {
             controller.navigationPresentation = .modal
             self.push(controller)
@@ -619,7 +618,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.filterController(self, animated: true)
         } else {
-            self.presentingViewController?.dismiss(animated: false, completion: nil)
+            self.presentingViewController?.dismiss(animated: true, completion: nil)
         }
     }
     

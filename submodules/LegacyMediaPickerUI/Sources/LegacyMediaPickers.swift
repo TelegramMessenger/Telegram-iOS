@@ -14,12 +14,13 @@ import MimeTypes
 import LocalMediaResources
 import LegacyUI
 import TextFormat
+import AttachmentUI
 
 public func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, chatLocation: ChatLocation, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: NSAttributedString, hasSchedule: Bool, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?) {
+public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, chatLocation: ChatLocation, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: NSAttributedString, hasSchedule: Bool, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?) {
     let paintStickersContext = LegacyPaintStickersContext(context: context)
     paintStickersContext.captionPanelView = {
         return getCaptionPanelView()
@@ -35,7 +36,6 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
     controller.captionsEnabled = captionsEnabled
     controller.inhibitDocumentCaptions = false
     controller.stickersContext = paintStickersContext
-    controller.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
     if peer.id != context.account.peerId {
         if peer is TelegramUser {
             controller.hasTimer = hasSchedule
@@ -44,17 +44,15 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
     }
     controller.hasSchedule = hasSchedule
     controller.reminder = peer.id == context.account.peerId
-    controller.presentScheduleController = { done in
-        presentSchedulePicker { time in
+    controller.presentScheduleController = { media, done in
+        presentSchedulePicker(media, { time in
             done?(time)
-        }
+        })
     }
     controller.presentTimerController = { done in
         presentTimerPicker { time in
             done?(time)
         }
-    }
-    controller.dismissalBlock = {
     }
     controller.selectionLimitExceeded = {
         presentSelectionLimitExceeded()
@@ -66,6 +64,64 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
     
     if !initialCaption.string.isEmpty {
         controller.editingContext.setForcedCaption(initialCaption)
+    }
+}
+
+public class LegacyAssetPickerContext: AttachmentMediaPickerContext {
+    private weak var controller: TGMediaAssetsController?
+    
+    public var selectionCount: Signal<Int, NoError> {
+        return Signal { [weak self] subscriber in
+            let disposable = self?.controller?.selectionContext.selectionChangedSignal().start(next: { [weak self] value in
+                subscriber.putNext(Int(self?.controller?.selectionContext.count() ?? 0))
+            }, error: { _ in }, completed: { })
+            return ActionDisposable {
+                disposable?.dispose()
+            }
+        }
+    }
+    
+    public var caption: Signal<NSAttributedString?, NoError> {
+        return Signal { [weak self] subscriber in
+            let disposable = self?.controller?.editingContext.forcedCaption().start(next: { caption in
+                if let caption = caption as? NSAttributedString {
+                    subscriber.putNext(caption)
+                } else {
+                    subscriber.putNext(nil)
+                }
+            }, error: { _ in }, completed: { })
+            return ActionDisposable {
+                disposable?.dispose()
+            }
+        }
+    }
+    
+    public var loadingProgress: Signal<CGFloat?, NoError> {
+        return .single(nil)
+    }
+    
+    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return .single(nil)
+    }
+        
+    public init(controller: TGMediaAssetsController) {
+        self.controller = controller
+    }
+    
+    public func setCaption(_ caption: NSAttributedString) {
+        self.controller?.editingContext.setForcedCaption(caption, skipUpdate: true)
+    }
+    
+    public func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
+        self.controller?.send(silently)
+    }
+    
+    public func schedule() {
+        self.controller?.schedule(false)
+    }
+    
+    public func mainButtonAction() {
+        
     }
 }
 

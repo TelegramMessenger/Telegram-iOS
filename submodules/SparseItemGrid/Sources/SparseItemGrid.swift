@@ -5,13 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
 public protocol SparseItemGridLayer: CALayer {
     func update(size: CGSize)
     func needsShimmer() -> Bool
@@ -1070,6 +1063,8 @@ public final class SparseItemGrid: ASDisplayNode {
             }
         }
 
+        private var previousScrollingUpdate: (timestamp: Double, date: String?, tag: Int32?)?
+        
         private func updateScrollingArea() {
             guard let layout = self.layout, let items = self.items, !items.items.isEmpty else {
                 return
@@ -1096,16 +1091,38 @@ public final class SparseItemGrid: ASDisplayNode {
                     }
                 }
                 
-                scrollingArea.update(
-                    containerSize: layout.containerLayout.size,
-                    containerInsets: layout.containerLayout.insets,
-                    contentHeight: contentHeight,
-                    contentOffset: self.scrollView.bounds.minY,
-                    isScrolling: self.scrollView.isDragging || self.scrollView.isDecelerating || self.decelerationAnimator != nil,
-                    date: (dateString ?? "", tag ?? 0),
-                    theme: self.theme,
-                    transition: .immediate
-                )
+                let currentTimestamp = CACurrentMediaTime()
+                let update: (String?, Int32?) -> Void = { dateString, tag in
+                    scrollingArea.update(
+                        containerSize: layout.containerLayout.size,
+                        containerInsets: layout.containerLayout.insets,
+                        contentHeight: contentHeight,
+                        contentOffset: self.scrollView.bounds.minY,
+                        isScrolling: self.scrollView.isDragging || self.scrollView.isDecelerating || self.decelerationAnimator != nil,
+                        date: (dateString ?? "", tag ?? 0),
+                        theme: self.theme,
+                        transition: .immediate
+                    )
+                }
+                if let (timestamp, previousDateString, previousTag) = self.previousScrollingUpdate {
+                    let delta = currentTimestamp - timestamp
+                    let delay = 0.1
+                    if delta < delay {
+                        update(previousDateString, previousTag)
+                        Queue.mainQueue().after(max(0.0, min(delay, timestamp + delay - currentTimestamp)), {
+                            if self.currentScrollingTag == tag {
+                                self.previousScrollingUpdate = (CACurrentMediaTime(), dateString, tag)
+                                update(dateString, tag)
+                            }
+                        })
+                    } else {
+                        self.previousScrollingUpdate = (currentTimestamp, dateString, tag)
+                        update(dateString, tag)
+                    }
+                } else {
+                    self.previousScrollingUpdate = (currentTimestamp, dateString, tag)
+                    update(dateString, tag)
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import ChatPresentationInterfaceState
 
 final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
     private let separatorNode: ASDisplayNode

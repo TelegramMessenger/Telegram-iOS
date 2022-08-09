@@ -6,6 +6,7 @@ import MediaResources
 import RLottieBinding
 import GZip
 import ManagedFile
+import AnimationCompression
 
 private let sharedStoreQueue = Queue.concurrentDefaultQueue()
 
@@ -244,6 +245,12 @@ public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource 
     }
 }
 
+private func alignUp(size: Int, align: Int) -> Int {
+    precondition(((align - 1) & align) == 0, "Align must be a power of two")
+
+    let alignmentMask = align - 1
+    return (size + alignmentMask) & ~alignmentMask
+}
 
 private final class AnimatedStickerDirectFrameSourceCache {
     private enum FrameRangeResult {
@@ -259,18 +266,23 @@ private final class AnimatedStickerDirectFrameSourceCache {
     private let width: Int
     private let height: Int
     
+    private let useHardware: Bool
+    
     private var isStoringFrames = Set<Int>()
     
     private var scratchBuffer: Data
     private var decodeBuffer: Data
     
-    init?(queue: Queue, pathPrefix: String, width: Int, height: Int, frameCount: Int, fitzModifier: EmojiFitzModifier?) {
+    private var frameCompressor: AnimationCompressor?
+    
+    init?(queue: Queue, pathPrefix: String, width: Int, height: Int, frameCount: Int, fitzModifier: EmojiFitzModifier?, useHardware: Bool) {
         self.queue = queue
         self.storeQueue = sharedStoreQueue
         
         self.frameCount = frameCount
-        self.width = width
-        self.height = height
+        self.width = width// alignUp(size: width, align: 8)
+        self.height = height//alignUp(size: height, align: 8)
+        self.useHardware = useHardware
         
         let suffix : String
         if let fitzModifier = fitzModifier {
@@ -278,7 +290,7 @@ private final class AnimatedStickerDirectFrameSourceCache {
         } else {
             suffix = ""
         }
-        let path = "\(pathPrefix)_\(width):\(height)\(suffix).stickerframecache"
+        let path = "\(pathPrefix)_\(width):\(height)\(suffix).stickerframecachev3\(useHardware ? "-mtl" : "")"
         var file = ManagedFile(queue: queue, path: path, mode: .readwrite)
         if let file = file {
             self.file = file
@@ -333,7 +345,7 @@ private final class AnimatedStickerDirectFrameSourceCache {
         if length < 0 || offset < 0 {
             return .corruptedFile
         }
-        if Int64(offset) + Int64(length) > 100 * 1024 * 1024 {
+        if Int64(offset) + Int64(length) > 200 * 1024 * 1024 {
             return .corruptedFile
         }
         
@@ -341,6 +353,54 @@ private final class AnimatedStickerDirectFrameSourceCache {
     }
     
     func storeUncompressedRgbFrame(index: Int, rgbData: Data) {
+        if self.useHardware {
+            self.storeUncompressedRgbFrameMetal(index: index, rgbData: rgbData)
+        } else {
+            self.storeUncompressedRgbFrameSoft(index: index, rgbData: rgbData)
+        }
+    }
+    
+    func storeUncompressedRgbFrameMetal(index: Int, rgbData: Data) {
+        if self.isStoringFrames.contains(index) {
+            return
+        }
+        self.isStoringFrames.insert(index)
+        
+        if self.frameCompressor == nil {
+            self.frameCompressor = AnimationCompressor(sharedContext: AnimationCompressor.SharedContext.shared)
+        }
+        
+        let queue = self.queue
+        let frameCompressor = self.frameCompressor
+        let width = self.width
+        let height = self.height
+        DispatchQueue.main.async { [weak self] in
+            frameCompressor?.compress(image: AnimationCompressor.ImageData(width: width, height: height, bytesPerRow: width * 4, data: rgbData), completion: { compressedData in
+                queue.async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    guard let currentSize = strongSelf.file.getSize() else {
+                        return
+                    }
+                    
+                    strongSelf.file.seek(position: Int64(index * 4 * 2))
+                    var offset = Int32(currentSize)
+                    var length = Int32(compressedData.data.count)
+                    let _ = strongSelf.file.write(&offset, count: 4)
+                    let _ = strongSelf.file.write(&length, count: 4)
+                    strongSelf.file.seek(position: Int64(currentSize))
+                    compressedData.data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> Void in
+                        if let baseAddress = buffer.baseAddress {
+                            let _ = strongSelf.file.write(baseAddress, count: Int(length))
+                        }
+                    }
+                }
+            })
+        }
+    }
+    
+    func storeUncompressedRgbFrameSoft(index: Int, rgbData: Data) {
         if index < 0 || index >= self.frameCount {
             return
         }
@@ -382,7 +442,7 @@ private final class AnimatedStickerDirectFrameSourceCache {
         }
     }
     
-    func readUncompressedYuvaFrame(index: Int) -> Data? {
+    /*func readUncompressedYuvaFrameOld(index: Int) -> Data? {
         if index < 0 || index >= self.frameCount {
             return nil
         }
@@ -432,6 +492,72 @@ private final class AnimatedStickerDirectFrameSourceCache {
             
             return nil
         }
+    }*/
+    
+    func readCompressedFrame(index: Int, totalFrames: Int) -> AnimatedStickerFrame? {
+        if index < 0 || index >= self.frameCount {
+            return nil
+        }
+        let rangeResult = self.readFrameRange(index: index)
+        
+        switch rangeResult {
+        case let .range(range):
+            self.file.seek(position: Int64(range.lowerBound))
+            let length = range.upperBound - range.lowerBound
+            let compressedData = self.file.readData(count: length)
+            if compressedData.count != length {
+                return nil
+            }
+            
+            if compressedData.count > 4 {
+                var magic: Int32 = 0
+                compressedData.withUnsafeBytes { bytes in
+                    let _ = memcpy(&magic, bytes.baseAddress!, 4)
+                }
+                if magic == 0x543ee445 {
+                    return AnimatedStickerFrame(data: compressedData, type: .dct, width: 0, height: 0, bytesPerRow: 0, index: index, isLastFrame: index == frameCount - 1, totalFrames: frameCount)
+                }
+            }
+            
+            var frameData: Data?
+            
+            let decodeBufferLength = self.decodeBuffer.count
+            
+            compressedData.withUnsafeBytes { buffer -> Void in
+                guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                    return
+                }
+                
+                self.scratchBuffer.withUnsafeMutableBytes { scratchBuffer -> Void in
+                    guard let scratchBytes = scratchBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                        return
+                    }
+
+                    self.decodeBuffer.withUnsafeMutableBytes { decodeBuffer -> Void in
+                        guard let decodeBytes = decodeBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                            return
+                        }
+
+                        let resultLength = compression_decode_buffer(decodeBytes, decodeBufferLength, bytes, length, UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZFSE)
+                        
+                        frameData = Data(bytes: decodeBytes, count: resultLength)
+                    }
+                }
+            }
+            
+            if let frameData = frameData {
+                return AnimatedStickerFrame(data: frameData, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.width * 2, index: index, isLastFrame: index == frameCount - 1, totalFrames: frameCount)
+            } else {
+                return nil
+            }
+        case .notFound:
+            return nil
+        case .corruptedFile:
+            self.file.truncate(count: 0)
+            self.initializeFrameTable()
+            
+            return nil
+        }
     }
 }
 
@@ -452,16 +578,16 @@ final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource {
         return self.currentFrame % self.frameCount
     }
     
-    init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?, fitzModifier: EmojiFitzModifier?) {
+    init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?, useMetalCache: Bool = false, fitzModifier: EmojiFitzModifier?, currentFrame: Int = 0) {
         self.queue = queue
         self.data = data
         self.width = width
         self.height = height
         self.bytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(width))
-        self.currentFrame = 0
+        self.currentFrame = currentFrame
         let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
         
-        guard let animation = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, cacheKey: "") else {
+        guard let animation = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil, cacheKey: "") else {
             return nil
         }
         self.animation = animation
@@ -470,7 +596,7 @@ final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource {
         self.frameRate = Int(animation.frameRate)
         
         self.cache = cachePathPrefix.flatMap { cachePathPrefix in
-            AnimatedStickerDirectFrameSourceCache(queue: queue, pathPrefix: cachePathPrefix, width: width, height: height, frameCount: frameCount, fitzModifier: fitzModifier)
+            AnimatedStickerDirectFrameSourceCache(queue: queue, pathPrefix: cachePathPrefix, width: width, height: height, frameCount: frameCount, fitzModifier: fitzModifier, useHardware: useMetalCache)
         }
     }
     
@@ -482,8 +608,8 @@ final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource {
         let frameIndex = self.currentFrame % self.frameCount
         self.currentFrame += 1
         if draw {
-            if let cache = self.cache, let yuvData = cache.readUncompressedYuvaFrame(index: frameIndex) {
-                return AnimatedStickerFrame(data: yuvData, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.width * 2, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount)
+            if let cache = self.cache, let compressedFrame = cache.readCompressedFrame(index: frameIndex, totalFrames: self.frameCount) {
+                return compressedFrame
             } else {
                 var frameData = Data(count: self.bytesPerRow * self.height)
                 frameData.withUnsafeMutableBytes { buffer -> Void in

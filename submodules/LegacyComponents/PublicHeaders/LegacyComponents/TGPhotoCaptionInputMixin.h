@@ -1,7 +1,6 @@
 #import <Foundation/Foundation.h>
-#import <LegacyComponents/TGMediaPickerCaptionInputPanel.h>
+#import <UIKit/UIKit.h>
 
-@class TGSuggestionContext;
 @protocol TGPhotoPaintStickersContext;
 @protocol TGCaptionPanelView;
 
@@ -17,8 +16,6 @@
 @property (nonatomic, readonly) CGFloat keyboardHeight;
 @property (nonatomic, assign) CGFloat contentAreaHeight;
 @property (nonatomic, assign) bool allowEntities;
-
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 
 @property (nonatomic, copy) UIView *(^panelParentView)(void);
 

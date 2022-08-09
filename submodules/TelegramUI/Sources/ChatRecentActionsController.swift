@@ -9,6 +9,7 @@ import TelegramBaseController
 import AccountContext
 import AlertUI
 import PresentationDataUtils
+import ChatPresentationInterfaceState
 
 final class ChatRecentActionsController: TelegramBaseController {
     private var controllerNode: ChatRecentActionsControllerNode {
@@ -150,6 +151,10 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, openSendAsPeer: { _, _ in
         }, presentChatRequestAdminInfo: {
         }, displayCopyProtectionTip: { _, _ in
+        }, openWebView: { _, _, _, _ in
+        }, updateShowWebView: { _ in
+        }, chatController: {
+            return nil
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView

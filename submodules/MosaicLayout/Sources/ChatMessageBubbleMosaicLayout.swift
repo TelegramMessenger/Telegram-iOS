@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 public struct MosaicItemPosition: OptionSet {
     public var rawValue: Int32
@@ -34,9 +35,7 @@ private struct MosaicLayoutAttempt {
     let heights: [CGFloat]
 }
 
-public func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(CGRect, MosaicItemPosition)], CGSize) {
-    let spacing: CGFloat = 2.0
-    
+public func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize], spacing: CGFloat = 1.0, fillWidth: Bool = false) -> ([(CGRect, MosaicItemPosition)], CGSize) {
     var proportions = ""
     var averageAspectRatio: CGFloat = 1.0
     var forceCalc = false
@@ -103,9 +102,14 @@ public func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) 
                 
                 let thirdHeight = min((maxSize.height - spacing) * 0.5, round(itemInfos[1].aspectRatio * (maxSize.width - spacing) / (itemInfos[2].aspectRatio + itemInfos[1].aspectRatio)))
                 let secondHeight = maxSize.height - thirdHeight - spacing
-                let rightWidth = max(minWidth, min((maxSize.width - spacing) * 0.5, round(min(thirdHeight * itemInfos[2].aspectRatio, secondHeight * itemInfos[1].aspectRatio))))
-                
-                let leftWidth = round(min(firstHeight * itemInfos[0].aspectRatio, (maxSize.width - spacing - rightWidth)))
+                var rightWidth = max(minWidth, min((maxSize.width - spacing) * 0.5, round(min(thirdHeight * itemInfos[2].aspectRatio, secondHeight * itemInfos[1].aspectRatio))))
+                if fillWidth {
+                    rightWidth = floorToScreenPixels(maxSize.width / 2.0)
+                }
+                var leftWidth = round(min(firstHeight * itemInfos[0].aspectRatio, (maxSize.width - spacing - rightWidth)))
+                if fillWidth {
+                    leftWidth = maxSize.width - spacing - rightWidth
+                }
                 itemInfos[0].layoutFrame = CGRect(x: 0.0, y: 0.0, width: leftWidth, height: firstHeight)
                 itemInfos[0].position = [.top, .left, .bottom]
                 

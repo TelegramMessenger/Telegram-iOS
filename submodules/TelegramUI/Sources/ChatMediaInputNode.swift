@@ -18,6 +18,8 @@ import GalleryUI
 import OverlayStatusController
 import PresentationDataUtils
 import ChatInterfaceState
+import ChatPresentationInterfaceState
+import UndoUI
 
 struct PeerSpecificPackData {
     let peer: Peer
@@ -1387,6 +1389,7 @@ final class ChatMediaInputNode: ChatInputNode {
             guard let strongSelf = self else {
                 return
             }
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             
             let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [])
             
@@ -1460,10 +1463,10 @@ final class ChatMediaInputNode: ChatInputNode {
                         return
                     }
                     let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: file.file).start()
+                    
+                    strongSelf.controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
                 })))
             }
-            
-            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             
             let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: sourceNode, sourceRect: sourceRect)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             strongSelf.controllerInteraction.presentGlobalOverlayController(contextController, nil)

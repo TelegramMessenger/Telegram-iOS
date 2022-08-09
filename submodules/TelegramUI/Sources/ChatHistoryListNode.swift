@@ -19,6 +19,7 @@ import ChatInterfaceState
 import ChatListUI
 import ComponentFlow
 import ReactionSelectionNode
+import ChatPresentationInterfaceState
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
@@ -246,8 +247,8 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .ReplyCountEntry(_, isComments, count, presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatReplyCountItem(index: entry.entry.index, isComments: isComments, count: count, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction), directionHint: entry.directionHint)
-            case let .ChatInfoEntry(title, text, presentationData):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(title: title, text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
+            case let .ChatInfoEntry(title, text, photo, presentationData):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(title: title, text: text, photo: photo, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     controllerInteraction.openSearch()
@@ -291,8 +292,8 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .ReplyCountEntry(_, isComments, count, presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatReplyCountItem(index: entry.entry.index, isComments: isComments, count: count, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction), directionHint: entry.directionHint)
-            case let .ChatInfoEntry(title, text, presentationData):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(title: title, text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
+            case let .ChatInfoEntry(title, text, photo, presentationData):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(title: title, text: text, photo: photo, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     controllerInteraction.openSearch()
@@ -927,7 +928,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let customChannelDiscussionReadState: Signal<MessageId?, NoError>
         if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
-            let cachedDataKey = PostboxViewKey.cachedPeerData(peerId: chatLocation.peerId)
+            let cachedDataKey = PostboxViewKey.cachedPeerData(peerId: peerId)
             let peerKey = PostboxViewKey.basicPeer(peerId)
             customChannelDiscussionReadState = context.account.postbox.combinedView(keys: [cachedDataKey, peerKey])
             |> mapToSignal { views -> Signal<PeerId?, NoError> in
@@ -1061,7 +1062,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 case let .id(id):
                                     initialSearchLocation = .id(id)
                                 case let .timestamp(timestamp):
-                                    initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: strongSelf.chatLocation.peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                                    if let peerId = strongSelf.chatLocation.peerId {
+                                        initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                                    } else {
+                                        //TODO:implement
+                                        initialSearchLocation = .index(.absoluteUpperBound())
+                                    }
                                 }
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: 60, highlight: highlight), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
@@ -1306,7 +1312,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
                 if apply {
                     switch chatLocation {
-                    case .peer, .replyThread:
+                    case .peer, .replyThread, .feed:
                         if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                             context.applyMaxReadIndex(for: chatLocation, contextHolder: chatLocationContextHolder, messageIndex: messageIndex)
                         }
@@ -1347,7 +1353,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             case let .id(id):
                 initialSearchLocation = .id(id)
             case let .timestamp(timestamp):
-                initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: self.chatLocation.peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                if let peerId = self.chatLocation.peerId {
+                    initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                } else {
+                    //TODO:implement
+                    initialSearchLocation = .index(MessageIndex.absoluteUpperBound())
+                }
             }
             self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: 60, highlight: highlight), id: 0)
         } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
@@ -1814,6 +1825,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithRefreshMedia: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messageIdsWithUnseenReactions: [MessageId] = []
+            var downloadableResourceIds: [(messageId: MessageId, resourceId: String)] = []
             
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
@@ -1874,6 +1886,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         }
                                     }
                                 }
+                                downloadableResourceIds.append((message.id, telegramFile.resource.id.stringRepresentation))
+                            } else if let image = media as? TelegramMediaImage {
+                                if let representation = image.representations.last {
+                                    downloadableResourceIds.append((message.id, representation.resource.id.stringRepresentation))
+                                }
                             }
                         }
                         if contentRequiredValidation {
@@ -1888,6 +1905,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if hasUnseenReactions {
                             messageIdsWithUnseenReactions.append(message.id)
                         }
+                        
                         if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                             isTopReplyThreadMessageShownValue = true
                         }
@@ -1905,6 +1923,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 for attribute in message.attributes {
                                     if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
                                         hasUnconsumedMention = true
+                                    }
+                                }
+                            }
+                            for media in message.media {
+                                if let telegramFile = media as? TelegramMediaFile {
+                                    downloadableResourceIds.append((message.id, telegramFile.resource.id.stringRepresentation))
+                                } else if let image = media as? TelegramMediaImage {
+                                    if let representation = image.representations.last {
+                                        downloadableResourceIds.append((message.id, representation.resource.id.stringRepresentation))
                                     }
                                 }
                             }
@@ -2072,6 +2099,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             if !messageIdsWithPossibleReactions.isEmpty {
                 self.messageWithReactionsProcessingManager.add(messageIdsWithPossibleReactions)
             }
+            if !downloadableResourceIds.isEmpty {
+                let _ = markRecentDownloadItemsAsSeen(postbox: self.context.account.postbox, items: downloadableResourceIds).start()
+            }
             
             self.currentEarlierPrefetchMessages = toEarlierMediaMessages
             self.currentLaterPrefetchMessages = toLaterMediaMessages
@@ -2088,7 +2118,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 switch self.chatLocation {
                 case .peer:
                     messageIndex = maxIncomingIndex
-                case .replyThread:
+                case .replyThread, .feed:
                     messageIndex = maxOverallIndex
                 }
                 
@@ -2500,7 +2530,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             switch strongSelf.chatLocation {
                             case .peer:
                                 messageIndex = incomingIndex
-                            case .replyThread:
+                            case .replyThread, .feed:
                                 messageIndex = overallIndex
                             }
                             
@@ -2575,15 +2605,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     self?.scrolledToSomeIndex?()
                 }
 
-                if let currentSendAnimationCorrelationId = strongSelf.currentSendAnimationCorrelationId {
-                    var foundItemNode: ChatMessageItemView?
+                if let currentSendAnimationCorrelationIds = strongSelf.currentSendAnimationCorrelationIds {
+                    var foundItemNodes: [Int64: ChatMessageItemView] = [:]
                     strongSelf.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                             for (message, _) in item.content {
                                 for attribute in message.attributes {
-                                    if let attribute = attribute as? OutgoingMessageInfoAttribute {
-                                        if attribute.correlationId == currentSendAnimationCorrelationId {
-                                            foundItemNode = itemNode
+                                    if let attribute = attribute as? OutgoingMessageInfoAttribute, let correlationId = attribute.correlationId {
+                                        if currentSendAnimationCorrelationIds.contains(correlationId) {
+                                            foundItemNodes[correlationId] = itemNode
                                         }
                                     }
                                 }
@@ -2591,9 +2621,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                     }
 
-                    if let foundItemNode = foundItemNode {
-                        strongSelf.currentSendAnimationCorrelationId = nil
-                        strongSelf.animationCorrelationMessageFound?(foundItemNode, currentSendAnimationCorrelationId)
+                    if !foundItemNodes.isEmpty {
+                        strongSelf.currentSendAnimationCorrelationIds = nil
+                        strongSelf.animationCorrelationMessagesFound?(foundItemNodes)
                     }
                 }
                 
@@ -3205,12 +3235,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
 
-    private var currentSendAnimationCorrelationId: Int64?
-    func setCurrentSendAnimationCorrelationId(_ value: Int64?) {
-        self.currentSendAnimationCorrelationId = value
+    private var currentSendAnimationCorrelationIds: Set<Int64>?
+    func setCurrentSendAnimationCorrelationIds(_ value: Set<Int64>?) {
+        self.currentSendAnimationCorrelationIds = value
     }
 
-    var animationCorrelationMessageFound: ((ChatMessageItemView, Int64?) -> Void)?
+    var animationCorrelationMessagesFound: (([Int64: ChatMessageItemView]) -> Void)?
 
     final class SnapshotState {
         fileprivate let snapshotTopInset: CGFloat

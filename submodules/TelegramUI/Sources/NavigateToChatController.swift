@@ -10,6 +10,7 @@ import InstantPageUI
 import ChatListUI
 import PeerAvatarGalleryUI
 import SettingsUI
+import ChatPresentationInterfaceState
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false
@@ -60,6 +61,10 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                         return state.updatedBotStartPayload(botStart.payload)
                     })
                 }
+                if let attachBotStart = params.attachBotStart {
+                    controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload)
+                }
+                params.setupController(controller)
                 found = true
                 break
             }
@@ -75,8 +80,11 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     return state.updatedBotStartPayload(botStart.payload)
                 })
             }
+            if let attachBotStart = params.attachBotStart {
+                controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload)
+            }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, attachBotStart: params.attachBotStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
         }
         controller.purposefulAction = params.purposefulAction
         if let search = params.activateMessageSearch {
@@ -114,9 +122,16 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     params.completion(controller)
                 })
             } else {
-                params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: {
-                    params.completion(controller)
-                })
+                if params.useBackAnimation {
+                    params.navigationController.viewControllers = [controller] + params.navigationController.viewControllers
+                    params.navigationController.replaceControllers(controllers: viewControllers + [controller], animated: params.animated, options: params.options, completion: {
+                        params.completion(controller)
+                    })
+                } else {
+                    params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: {
+                        params.completion(controller)
+                    })
+                }
             }
         }
         if params.activateInput {
@@ -135,14 +150,16 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let item = item as? ChatMessageNotificationItem {
                     for message in item.messages {
                         switch params.chatLocation {
-                            case let .peer(peerId):
-                                if message.id.peerId == peerId {
-                                    return true
-                                }
-                            case let .replyThread(replyThreadMessage):
-                                if message.id.peerId == replyThreadMessage.messageId.peerId {
-                                    return true
-                                }
+                        case let .peer(peerId):
+                            if message.id.peerId == peerId {
+                                return true
+                            }
+                        case let .replyThread(replyThreadMessage):
+                            if message.id.peerId == replyThreadMessage.messageId.peerId {
+                                return true
+                            }
+                        case .feed:
+                            break
                         }
                     }
                 }

@@ -336,15 +336,15 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                     arguments.openTwoStepVerification(data)
                 })
             case let .doubleBottom(_, text, value):
-            return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/DoubleBottom")?.precomposed(), longTapIcon: UIImage(bundleImageName: "Settings/Menu/DoubleBottomEaster")?.precomposed(), backgroundIcon: UIImage(bundleImageName: "Settings/Menu/DoubleBottomBackground")?.precomposed(), title: text, label: value, labelStyle: .monospaceText, sectionId: self.section, style: .blocks, action: {
-                arguments.openDoubleBottomFlow()
-            })
-        case let .activeSessions(_, text, value):
-            return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Websites")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                arguments.openActiveSessions()
-            })
-        case let .autoArchiveHeader(text):
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            	return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/DoubleBottom")?.precomposed(), longTapIcon: UIImage(bundleImageName: "Settings/Menu/DoubleBottomEaster")?.precomposed(), backgroundIcon: UIImage(bundleImageName: "Settings/Menu/DoubleBottomBackground")?.precomposed(), title: text, label: value, labelStyle: .monospaceText, sectionId: self.section, style: .blocks, action: {
+                	arguments.openDoubleBottomFlow()
+            	})
+            case let .activeSessions(_, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Websites")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                    arguments.openActiveSessions()
+                })
+            case let .autoArchiveHeader(text):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .autoArchive(text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleArchiveAndMuteNonContacts(value)
@@ -758,6 +758,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         actionText: presentationData.strings.TwoFactorSetup_Intro_Action,
                         doneText: presentationData.strings.TwoFactorSetup_Done_Action
                     )))
+
                     pushControllerImpl?(controller, true)
                     return
                 }
@@ -838,7 +839,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                     1 * 30 * 24 * 60 * 60,
                     3 * 30 * 24 * 60 * 60,
                     6 * 30 * 24 * 60 * 60,
-                    12 * 30 * 24 * 60 * 60
+                    365 * 24 * 60 * 60
                 ]
                 let timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
                     return ActionSheetButtonItem(title: timeIntervalString(strings: presentationData.strings, value: value), action: {

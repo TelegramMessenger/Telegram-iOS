@@ -207,6 +207,8 @@ public final class ManagedAudioSession {
     private let isActiveSubscribers = Bag<(Bool) -> Void>()
     private let isPlaybackActiveSubscribers = Bag<(Bool) -> Void>()
     
+    private var callKitAudioSessionIsActive: Bool = false
+    
     public init() {
         self.queue = Queue()
         
@@ -899,18 +901,18 @@ public final class ManagedAudioSession {
     }
     
     public func callKitActivatedAudioSession() {
-        /*self.queue.async {
-             managedAudioSessionLog("ManagedAudioSession callKitDeactivatedAudioSession")
+        self.queue.async {
+            managedAudioSessionLog("ManagedAudioSession callKitDeactivatedAudioSession")
             self.callKitAudioSessionIsActive = true
             self.updateHolders()
-        }*/
+        }
     }
     
     public func callKitDeactivatedAudioSession() {
-        /*self.queue.async {
-             managedAudioSessionLog("ManagedAudioSession callKitDeactivatedAudioSession")
+        self.queue.async {
+            managedAudioSessionLog("ManagedAudioSession callKitDeactivatedAudioSession")
             self.callKitAudioSessionIsActive = false
             self.updateHolders()
-        }*/
+        }
     }
 }

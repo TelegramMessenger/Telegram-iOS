@@ -14,6 +14,7 @@ import PresentationDataUtils
 import TextFormat
 import Markdown
 import TelegramNotices
+import ChatPresentationInterfaceState
 
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
     for media in message.media {
@@ -150,86 +151,90 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.messageDisposable.set((context.account.postbox.messagesAtIds(messageIds)
         |> deliverOnMainQueue).start(next: { [weak self] messages in
             if let strongSelf = self {
-                var authors = ""
-                var uniquePeerIds = Set<PeerId>()
-                var title = ""
-                var text = ""
-                var sourcePeer: (Bool, String)?
-                for message in messages {
-                    if let author = message.forwardInfo?.author ?? message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
-                        uniquePeerIds.insert(author.id)
-                        if !authors.isEmpty {
-                            authors.append(", ")
-                        }
-                        if author.id == context.account.peerId {
-                            authors.append(strongSelf.strings.DialogList_You)
-                        } else {
-                            authors.append(EnginePeer(author).compactDisplayTitle)
-                        }
-                    }
-                    if let peer = message.peers[message.id.peerId] {
-                        sourcePeer = (peer.id.namespace == Namespaces.Peer.CloudUser, EnginePeer(peer).displayTitle(strings: strongSelf.strings, displayOrder: strongSelf.nameDisplayOrder))
-                    }
-                }
-                
-                if messages.count == 1 {
-                    title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitleSingle
-                    let (string, _) = textStringForForwardedMessage(messages[0], strings: strings)
-                    text = "\(authors): \(string)"
+                if messages.isEmpty {
+                    strongSelf.dismiss?()
                 } else {
-                    title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitle(Int32(messages.count))
-                    text = strongSelf.strings.Conversation_ForwardFrom(authors).string
-                }
-                
-                strongSelf.messages = messages
-                strongSelf.sourcePeer = sourcePeer
-                strongSelf.authors = authors
-                
-                strongSelf.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
-                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
-                
-                let headerString: String
-                if messages.count == 1 {
-                    headerString = "Forward message"
-                } else {
-                    headerString = "Forward messages"
-                }
-                strongSelf.actionArea.accessibilityLabel = "\(headerString). From: \(authors).\n\(text)"
-
-                if let (size, inset, interfaceState) = strongSelf.validLayout {
-                    strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
-                }
-                
-                let _ = (ApplicationSpecificNotice.getChatForwardOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager)
-                |> deliverOnMainQueue).start(next: { [weak self] count in
-                    if let strongSelf = self, count < 3 {
-                        Queue.mainQueue().after(3.0) {
-                            if let snapshotView = strongSelf.textNode.view.snapshotContentTree() {
-                                let text: String
-                                if let (size, _, _) = strongSelf.validLayout, size.width > 320.0 {
-                                    text = strongSelf.strings.Conversation_ForwardOptions_TapForOptions
-                                } else {
-                                    text = strongSelf.strings.Conversation_ForwardOptions_TapForOptionsShort
-                                }
-                                
-                                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
-                                
-                                strongSelf.view.addSubview(snapshotView)
-                                
-                                if let (size, inset, interfaceState) = strongSelf.validLayout {
-                                    strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
-                                }
-                                
-                                strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                                    snapshotView?.removeFromSuperview()
-                                })
+                    var authors = ""
+                    var uniquePeerIds = Set<PeerId>()
+                    var title = ""
+                    var text = ""
+                    var sourcePeer: (Bool, String)?
+                    for message in messages {
+                        if let author = message.forwardInfo?.author ?? message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
+                            uniquePeerIds.insert(author.id)
+                            if !authors.isEmpty {
+                                authors.append(", ")
                             }
-                            
-                            let _ = ApplicationSpecificNotice.incrementChatForwardOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                            if author.id == context.account.peerId {
+                                authors.append(strongSelf.strings.DialogList_You)
+                            } else {
+                                authors.append(EnginePeer(author).compactDisplayTitle)
+                            }
+                        }
+                        if let peer = message.peers[message.id.peerId] {
+                            sourcePeer = (peer.id.namespace == Namespaces.Peer.CloudUser, EnginePeer(peer).displayTitle(strings: strongSelf.strings, displayOrder: strongSelf.nameDisplayOrder))
                         }
                     }
-                })
+                    
+                    if messages.count == 1 {
+                        title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitleSingle
+                        let (string, _) = textStringForForwardedMessage(messages[0], strings: strings)
+                        text = "\(authors): \(string)"
+                    } else {
+                        title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitle(Int32(messages.count))
+                        text = strongSelf.strings.Conversation_ForwardFrom(authors).string
+                    }
+                    
+                    strongSelf.messages = messages
+                    strongSelf.sourcePeer = sourcePeer
+                    strongSelf.authors = authors
+                    
+                    strongSelf.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                    strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
+                    
+                    let headerString: String
+                    if messages.count == 1 {
+                        headerString = "Forward message"
+                    } else {
+                        headerString = "Forward messages"
+                    }
+                    strongSelf.actionArea.accessibilityLabel = "\(headerString). From: \(authors).\n\(text)"
+
+                    if let (size, inset, interfaceState) = strongSelf.validLayout {
+                        strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
+                    }
+                    
+                    let _ = (ApplicationSpecificNotice.getChatForwardOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager)
+                    |> deliverOnMainQueue).start(next: { [weak self] count in
+                        if let strongSelf = self, count < 3 {
+                            Queue.mainQueue().after(3.0) {
+                                if let snapshotView = strongSelf.textNode.view.snapshotContentTree() {
+                                    let text: String
+                                    if let (size, _, _) = strongSelf.validLayout, size.width > 320.0 {
+                                        text = strongSelf.strings.Conversation_ForwardOptions_TapForOptions
+                                    } else {
+                                        text = strongSelf.strings.Conversation_ForwardOptions_TapForOptionsShort
+                                    }
+                                    
+                                    strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
+                                    
+                                    strongSelf.view.addSubview(snapshotView)
+                                    
+                                    if let (size, inset, interfaceState) = strongSelf.validLayout {
+                                        strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
+                                    }
+                                    
+                                    strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                        snapshotView?.removeFromSuperview()
+                                    })
+                                }
+                                
+                                let _ = ApplicationSpecificNotice.incrementChatForwardOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                            }
+                        }
+                    })
+                }
             }
         }))
     }

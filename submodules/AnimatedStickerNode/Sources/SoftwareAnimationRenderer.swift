@@ -20,6 +20,8 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                 assert(bytesPerRow == calculatedBytesPerRow)
             case .yuva:
                 break
+            case .dct:
+                break
             }
             
             var image: UIImage?
@@ -56,6 +58,8 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                                 memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
                             }
                         }
+                    case .dct:
+                        break
                     }
                 })
             }

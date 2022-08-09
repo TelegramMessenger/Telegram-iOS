@@ -401,8 +401,8 @@ public final class InviteLinkInviteController: ViewController {
                                 ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                                     dismissAction()
                                     
-                                    if let invite = invite {
-                                        let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                    if let inviteLink = invite?.link {
+                                        let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: inviteLink) |> deliverOnMainQueue).start(next: { result in
                                             if let result = result, case let .replace(_, invite) = result {
                                                 mainInvitePromise.set(invite)
                                             }
@@ -429,11 +429,11 @@ public final class InviteLinkInviteController: ViewController {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }, shareLink: { [weak self] invite in
-                guard let strongSelf = self else {
+                guard let strongSelf = self, let inviteLink = invite.link else {
                     return
                 }
                 let updatedPresentationData = (strongSelf.presentationData, strongSelf.presentationDataPromise.get())
-                let shareController = ShareController(context: context, subject: .url(invite.link), updatedPresentationData: updatedPresentationData)
+                let shareController = ShareController(context: context, subject: .url(inviteLink), updatedPresentationData: updatedPresentationData)
                 shareController.completed = { [weak self] peerIds in
                     if let strongSelf = self {
                         let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in

@@ -385,7 +385,7 @@ public final class CallListController: TelegramBaseController {
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak controller, weak self] result in
             controller?.dismissSearch()
-            if let strongSelf = self, let (contactPeers, action) = result, let contactPeer = contactPeers.first,  case let .peer(peer, _, _) = contactPeer {
+            if let strongSelf = self, let (contactPeers, action, _, _, _) = result, let contactPeer = contactPeers.first,  case let .peer(peer, _, _) = contactPeer {
                 strongSelf.call(peer.id, isVideo: action == .videoCall, began: {
                     if let strongSelf = self {
                         let _ = (strongSelf.context.sharedContext.hasOngoingCall.get()

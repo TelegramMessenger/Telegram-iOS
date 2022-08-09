@@ -627,7 +627,22 @@ bool MTCheckIsSafeGAOrB(id<EncryptionProvider> provider, NSData *gAOrB, NSData *
         [context subInto:bnPMinusOne a:bnP b:bnOne];
         
         if ([context compare:bnNumber with:bnPMinusOne] == -1) {
-            result = true;
+            id<MTBignum> n2 = [context create];
+            [context assignWordTo:n2 value:2];
+            
+            id<MTBignum> n2048_minus_64 = [context create];
+            [context assignWordTo:n2048_minus_64 value:2048 - 64];
+            
+            id<MTBignum> n2_to_2048_minus_64 = [context create];
+            [context expInto:n2_to_2048_minus_64 a:n2 b:n2048_minus_64];
+            
+            id<MTBignum> dh_prime_minus_n2_to_2048_minus_64 = [context create];
+            [context subInto:dh_prime_minus_n2_to_2048_minus_64 a:bnP b:n2_to_2048_minus_64];
+            
+            if ([context compare:bnNumber with:n2_to_2048_minus_64] == 1 &&
+                [context compare:bnNumber with:dh_prime_minus_n2_to_2048_minus_64] == -1) {
+                result = true;
+            }
         }
     }
     

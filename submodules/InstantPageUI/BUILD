@@ -25,7 +25,7 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/LocationResources:LocationResources",
         "//submodules/UndoUI:UndoUI",
-        "//submodules/Translate:Translate",
+        "//submodules/TranslateUI:TranslateUI",
     ],
     visibility = [
         "//visibility:public",

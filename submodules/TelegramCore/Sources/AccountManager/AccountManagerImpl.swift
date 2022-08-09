@@ -177,10 +177,10 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         assert(self.queue.isCurrent())
         unlockedHiddenAccountRecordIdDisposable?.dispose()
     }
-    
-    fileprivate func transactionSync<T>(ignoreDisabled: Bool, _ f: @escaping (AccountManagerModifier<Types>) -> T) -> T {
+
+    fileprivate func transactionSync<T>(ignoreDisabled: Bool, _ f: (AccountManagerModifier<Types>) -> T) -> T {
         self.valueBox.begin()
-        
+
         let transaction = AccountManagerModifier<Types>(getRecords: {
             return self.currentAtomicState.records.map { $0.1 }
         }, updateRecord: { id, update in
@@ -257,28 +257,27 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         }, setStoredLoginTokens: { list in
             self.setLoginTokens(list: list)
         })
-        
+
         let result = f(transaction)
-        
+
         self.beforeCommit()
-        
+
         self.valueBox.commit()
-        //self.valueBox.checkpoint()
-        
+
         return result
     }
     
     fileprivate func transaction<T>(ignoreDisabled: Bool, _ f: @escaping (AccountManagerModifier<Types>) -> T) -> Signal<T, NoError> {
-            return Signal { subscriber in
-                self.queue.justDispatch {
-                    let result = self.transactionSync(ignoreDisabled: ignoreDisabled, f)
-                    
-                    subscriber.putNext(result)
-                    subscriber.putCompletion()
-                }
-                return EmptyDisposable
+        return Signal { subscriber in
+            self.queue.justDispatch {
+                let result = self.transactionSync(ignoreDisabled: ignoreDisabled, f)
+                
+                subscriber.putNext(result)
+                subscriber.putCompletion()
             }
+            return EmptyDisposable
         }
+    }
     
     private func syncAtomicStateToFile() {
         if let data = try? JSONEncoder().encode(self.currentAtomicState) {

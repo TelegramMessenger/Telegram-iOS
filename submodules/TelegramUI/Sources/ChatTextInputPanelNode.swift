@@ -18,6 +18,11 @@ import ObjCRuntimeUtils
 import AvatarNode
 import ContextUI
 import InvisibleInkDustNode
+import TextInputMenu
+import Pasteboard
+import ChatPresentationInterfaceState
+import ManagedAnimationNode
+import AttachmentUI
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -252,7 +257,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let menuButton: HighlightTrackingButtonNode
     private let menuButtonBackgroundNode: ASDisplayNode
     private let menuButtonClippingNode: ASDisplayNode
-    private let menuButtonIconNode: AnimationNode
+    private let menuButtonIconNode: MenuIconNode
     private let menuButtonTextNode: ImmediateTextNode
     
     let sendAsAvatarButtonNode: HighlightableButtonNode
@@ -296,7 +301,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     var isMediaDeleted: Bool = false
     
-    private let inputMenu: ChatTextInputMenu
+    private let inputMenu: TextInputMenu
     
     private var theme: PresentationTheme?
     private var strings: PresentationStrings?
@@ -449,10 +454,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.presentationInterfaceState = presentationInterfaceState
 
         var hasSpoilers = true
-        if presentationInterfaceState.chatLocation.peerId.namespace == Namespaces.Peer.SecretChat {
+        if presentationInterfaceState.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
             hasSpoilers = false
         }
-        self.inputMenu = ChatTextInputMenu(hasSpoilers: hasSpoilers)
+        self.inputMenu = TextInputMenu(hasSpoilers: hasSpoilers)
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
@@ -480,7 +485,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.menuButtonClippingNode = ASDisplayNode()
         self.menuButtonClippingNode.clipsToBounds = true
         
-        self.menuButtonIconNode = AnimationNode(animation: "anim_menuclose", colors: ["1.1.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+        self.menuButtonIconNode = MenuIconNode()
+        self.menuButtonIconNode.customColor = presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor
         self.menuButtonTextNode = ImmediateTextNode()
         
         self.sendAsAvatarButtonNode = HighlightableButtonNode()
@@ -871,23 +877,58 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.attachmentButton.accessibilityTraits = (!isSlowmodeActive || isMediaEnabled) ? [.button] : [.button, .notEnabled]
         self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive || isMediaEnabled
         
+        var buttonTitleUpdated = false
         var menuTextSize = self.menuButtonTextNode.frame.size
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
             
+            if case .webView = interfaceState.botMenuButton, self.menuButtonIconNode.iconState == .menu {
+                self.menuButtonIconNode.enqueueState(.app, animated: false)
+            } else if case .commands = interfaceState.botMenuButton, self.menuButtonIconNode.iconState == .app {
+                self.menuButtonIconNode.enqueueState(.menu, animated: false)
+            }
             let themeUpdated = previousState?.theme !== interfaceState.theme
-            
+            if themeUpdated {
+                self.menuButtonIconNode.customColor = interfaceState.theme.chat.inputPanel.actionControlForegroundColor
+            }
             if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty {
-                self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+                self.menuButtonIconNode.enqueueState(.close, animated: false)
+            } else if case .webView = interfaceState.botMenuButton, let previousShowWebView = previousState?.showWebView, previousShowWebView != interfaceState.showWebView {
+                if interfaceState.showWebView {
+                    self.menuButtonIconNode.enqueueState(.close, animated: true)
+                } else {
+                    self.menuButtonIconNode.enqueueState(.app, animated: true)
+                }
             } else if let previousShowCommands = previousState?.showCommands, previousShowCommands != interfaceState.showCommands {
                 if interfaceState.showCommands {
-                    self.menuButtonIconNode.setAnimation(name: "anim_menuclose", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+                    self.menuButtonIconNode.enqueueState(.close, animated: true)
                 } else {
-                    self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+                    self.menuButtonIconNode.enqueueState(.menu, animated: true)
                 }
-                self.menuButtonIconNode.playOnce()
             }
+            
+            let buttonTitle: String
+            if case let .webView(title, _) = interfaceState.botMenuButton {
+                buttonTitle = title
+            } else {
+                buttonTitle = interfaceState.strings.Conversation_InputMenu
+            }
+            
+            buttonTitleUpdated = self.menuButtonTextNode.attributedText != nil && self.menuButtonTextNode.attributedText?.string != buttonTitle
+            
+            self.menuButtonTextNode.attributedText = NSAttributedString(string: buttonTitle, font: Font.with(size: 16.0, design: .round, weight: .medium, traits: []), textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
+            self.menuButton.accessibilityLabel = self.menuButtonTextNode.attributedText?.string
+            
+            if buttonTitleUpdated, let buttonTextSnapshotView = self.menuButtonTextNode.view.snapshotView(afterScreenUpdates: false) {
+                buttonTextSnapshotView.frame = self.menuButtonTextNode.view.frame
+                self.menuButtonTextNode.view.superview?.addSubview(buttonTextSnapshotView)
+                buttonTextSnapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonTextSnapshotView] _ in
+                    buttonTextSnapshotView?.removeFromSuperview()
+                })
+                self.menuButtonTextNode.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+            menuTextSize = self.menuButtonTextNode.updateLayout(CGSize(width: width, height: 44.0))
             
             var updateSendButtonIcon = false
             if (previousState?.interfaceState.editMessage != nil) != (interfaceState.interfaceState.editMessage != nil) {
@@ -926,9 +967,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.theme = interfaceState.theme
                 
                 self.menuButtonBackgroundNode.backgroundColor = interfaceState.theme.chat.inputPanel.actionControlFillColor
-                self.menuButtonTextNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_InputMenu, font: Font.with(size: 16.0, design: .round, weight: .medium, traits: []), textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
-                self.menuButton.accessibilityLabel = interfaceState.strings.Conversation_InputMenu
-                menuTextSize = self.menuButtonTextNode.updateLayout(CGSize(width: width, height: 44.0))
                 
                 if isEditingMedia {
                     self.attachmentButton.setImage(PresentationResourcesChat.chatInputPanelEditAttachmentButtonImage(interfaceState.theme), for: [])
@@ -1130,6 +1168,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var hasMenuButton = false
         var menuButtonExpanded = false
         var isSendAsButton = false
+        
+        var shouldDisplayMenuButton = false
+        if interfaceState.hasBotCommands {
+            shouldDisplayMenuButton = true
+        } else if case .webView = interfaceState.botMenuButton {
+            shouldDisplayMenuButton = true
+        }
+        
         if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty && interfaceState.editMessageState == nil {
             hasMenuButton = true
             menuButtonExpanded = false
@@ -1143,7 +1189,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if let context = self.context, let peer = currentPeer {
                 self.sendAsAvatarNode.setPeer(context: context, theme: interfaceState.theme, peer: EnginePeer(peer), emptyColor: interfaceState.theme.list.mediaPlaceholderColor)
             }
-        } else if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, interfaceState.hasBotCommands && interfaceState.editMessageState == nil {
+        } else if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, shouldDisplayMenuButton && interfaceState.editMessageState == nil {
             hasMenuButton = true
             
             if !inputHasText {
@@ -1178,6 +1224,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         self.leftMenuInset = leftMenuInset
         
+        if buttonTitleUpdated && !transition.isAnimated {
+            transition = .animated(duration: 0.3, curve: .easeInOut)
+        }
+        
         let baseWidth = width - leftInset - leftMenuInset - rightInset
         let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: baseWidth, maxHeight: maxHeight, metrics: metrics)
         let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
@@ -1186,7 +1236,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         transition.updateFrameAsPositionAndBounds(node: self.menuButton, frame: menuButtonFrame)
         transition.updateFrame(node: self.menuButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: menuButtonFrame.size))
         transition.updateFrame(node: self.menuButtonClippingNode, frame: CGRect(origin: CGPoint(x: 19.0, y: 0.0), size: CGSize(width: menuButtonWidth - 19.0, height: menuButtonFrame.height)))
-        transition.updateFrame(node: self.menuButtonTextNode, frame: CGRect(origin: CGPoint(x: 16.0, y: 7.0 - UIScreenPixel), size: menuTextSize))
+        var buttonTitlteTransition = transition
+        if buttonTitleUpdated {
+            buttonTitlteTransition = .immediate
+        }
+        buttonTitlteTransition.updateFrame(node: self.menuButtonTextNode, frame: CGRect(origin: CGPoint(x: 16.0, y: 7.0 - UIScreenPixel), size: menuTextSize))
         transition.updateAlpha(node: self.menuButtonTextNode, alpha: menuButtonExpanded ? 1.0 : 0.0)
         transition.updateFrame(node: self.menuButtonIconNode, frame: CGRect(x: isSendAsButton ? 1.0 + UIScreenPixel : (4.0 + UIScreenPixel), y: 1.0 + UIScreenPixel, width: 30.0, height: 30.0))
         
@@ -2313,7 +2367,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             text = current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)).string
             return (current, inputMode)
         }
-        speakText(text)
+        if let context = self.context {
+            let _ = speakText(context: context, text: text)
+        }
         
         if #available(iOS 13.0, *) {
             UIMenuController.shared.hideMenu()
@@ -2522,9 +2578,22 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func menuButtonPressed() {
         self.hapticFeedback.impact(.light)
-        if let sendAsPeers = self.presentationInterfaceState?.sendAsPeers, !sendAsPeers.isEmpty {
+        guard let presentationInterfaceState = self.presentationInterfaceState else {
+            return
+        }
+        
+        if let sendAsPeers = presentationInterfaceState.sendAsPeers, !sendAsPeers.isEmpty {
             self.interfaceInteraction?.updateShowSendAsPeers { value in
                 return !value
+            }
+        } else if case let .webView(title, url) = presentationInterfaceState.botMenuButton {
+            let willShow = !(self.presentationInterfaceState?.showWebView ?? false)
+            if willShow {
+                self.interfaceInteraction?.openWebView(title, url, false, true)
+            } else {
+                self.interfaceInteraction?.updateShowWebView { _ in
+                    return false
+                }
             }
         } else {
             self.interfaceInteraction?.updateShowCommands { value in
@@ -2709,5 +2778,80 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             scrollOffset: textInputNode.textView.contentOffset.y
         )
     }
+    
+    func makeAttachmentMenuTransition(accessoryPanelNode: ASDisplayNode?) -> AttachmentController.InputPanelTransition {
+        return AttachmentController.InputPanelTransition(inputNode: self, accessoryPanelNode: accessoryPanelNode, menuButtonNode: self.menuButton, menuButtonBackgroundNode: self.menuButtonBackgroundNode, menuIconNode: self.menuButtonIconNode, menuTextNode: self.menuButtonTextNode, prepareForDismiss: { self.menuButtonIconNode.enqueueState(.app, animated: false) })
+    }
 }
 
+private enum MenuIconNodeState: Equatable {
+    case menu
+    case app
+    case close
+}
+
+private final class MenuIconNode: ManagedAnimationNode {
+    private let duration: Double = 0.33
+    fileprivate var iconState: MenuIconNodeState = .menu
+    
+    init() {
+        super.init(size: CGSize(width: 30.0, height: 30.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+    }
+    
+    func enqueueState(_ state: MenuIconNodeState, animated: Bool) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        switch previousState {
+            case .close:
+                switch state {
+                    case .menu:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_closemenu"), frames: .range(startFrame: 0, endFrame: 20), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .app:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_webview"), frames: .range(startFrame: 0, endFrame: 22), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_webview"), frames: .range(startFrame: 22, endFrame: 22), duration: 0.01))
+                        }
+                    case .close:
+                        break
+                }
+            case .menu:
+                switch state {
+                    case .close:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 20), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 20, endFrame: 20), duration: 0.01))
+                        }
+                    case .app:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("anim_webview"), frames: .range(startFrame: 22, endFrame: 22), duration: 0.01))
+                    case .menu:
+                        break
+                }
+            case .app:
+                switch state {
+                    case .close:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_webview"), frames: .range(startFrame: 22, endFrame: 0), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_webview"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .menu:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 20), duration: 0.01))
+                    case .app:
+                        break
+            }
+        }
+    }
+}

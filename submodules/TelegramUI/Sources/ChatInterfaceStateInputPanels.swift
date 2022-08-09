@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import TelegramCore
 import AccountContext
+import ChatPresentationInterfaceState
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputPanelNode?, currentSecondaryPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> (primary: ChatInputPanelNode?, secondary: ChatInputPanelNode?) {
     if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
@@ -151,7 +152,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 isMember = true
             case .left:
                 if case .replyThread = chatPresentationInterfaceState.chatLocation {
-                    isMember = true
+                    if !channel.flags.contains(.joinToSend) {
+                        isMember = true
+                    }
                 }
             }
                         

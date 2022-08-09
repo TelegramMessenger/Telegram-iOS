@@ -373,6 +373,10 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                             checkNode.frame = checkFrame
                             transition.animatePositionAdditive(node: checkNode, offset: CGPoint(x: -checkFrame.maxX, y: 0.0))
                         }
+                        
+                        if let checkNode = strongSelf.checkNode {
+                            transition.updateAlpha(node: checkNode, alpha: strongSelf.textNode.textView.text.isEmpty && item.placeholder == item.presentationData.strings.CreatePoll_AddOption ? 0.0 : 1.0)
+                        }
                     } else if let checkNode = strongSelf.checkNode {
                         strongSelf.checkNode = nil
                         transition.updateFrame(node: checkNode, frame: checkFrame.offsetBy(dx: -checkFrame.maxX, dy: 0.0), completion: { [weak checkNode] _ in

@@ -251,7 +251,7 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
             switch status {
                 case .Local:
                     return 1.0
-                case .Remote:
+                case .Remote, .Paused:
                     return 0.027
                 case let .Fetching(_, progress):
                     return max(progress, 0.1)
@@ -340,9 +340,6 @@ func presentLegacyWebSearchGallery(context: AccountContext, peer: EnginePeer?, c
     
     let model = TGMediaPickerGalleryModel(context: legacyController.context, items: items, focus: focusItem, selectionContext: selectionContext, editingContext: editingContext, hasCaptions: false, allowCaptionEntities: true, hasTimer: false, onlyCrop: false, inhibitDocumentCaptions: false, hasSelectionPanel: false, hasCamera: false, recipientName: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))!
     model.stickersContext = paintStickersContext
-    if let peer = peer, let chatLocation = chatLocation {
-        model.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
-    }
     controller.model = model
     model.controller = controller
     model.useGalleryImageAsEditableItemImage = true

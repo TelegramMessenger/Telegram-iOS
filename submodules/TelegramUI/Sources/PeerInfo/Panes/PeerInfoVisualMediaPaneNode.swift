@@ -678,13 +678,6 @@ private final class VisualMediaItem: SparseItemGrid.Item {
     }
 }
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
 private struct Month: Equatable {
     var packedValue: Int32
 
@@ -1705,7 +1698,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
         self.itemGridBinding = SparseItemGridBindingImpl(
             context: context,
-            chatLocation: .peer(peerId),
+            chatLocation: .peer(id: peerId),
             useListItems: useListItems,
             listItemInteraction: listItemInteraction,
             chatControllerInteraction: chatControllerInteraction,
@@ -2059,11 +2052,11 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 let videoCount: Int32 = dict[.video] ?? 0
 
                 if photoCount != 0 && videoCount != 0 {
-                    return PeerInfoStatusData(text: "\(presentationData.strings.SharedMedia_PhotoCount(Int32(photoCount))), \(presentationData.strings.SharedMedia_VideoCount(Int32(videoCount)))", isActivity: false)
+                    return PeerInfoStatusData(text: "\(presentationData.strings.SharedMedia_PhotoCount(Int32(photoCount))), \(presentationData.strings.SharedMedia_VideoCount(Int32(videoCount)))", isActivity: false, key: .media)
                 } else if photoCount != 0 {
-                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_PhotoCount(Int32(photoCount)), isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_PhotoCount(Int32(photoCount)), isActivity: false, key: .media)
                 } else if videoCount != 0 {
-                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VideoCount(Int32(videoCount)), isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VideoCount(Int32(videoCount)), isActivity: false, key: .media)
                 } else {
                     return nil
                 }
@@ -2071,7 +2064,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 let photoCount: Int32 = dict[.photo] ?? 0
 
                 if photoCount != 0 {
-                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_PhotoCount(Int32(photoCount)), isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_PhotoCount(Int32(photoCount)), isActivity: false, key: .media)
                 } else {
                     return nil
                 }
@@ -2079,7 +2072,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 let videoCount: Int32 = dict[.video] ?? 0
 
                 if videoCount != 0 {
-                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VideoCount(Int32(videoCount)), isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VideoCount(Int32(videoCount)), isActivity: false, key: .media)
                 } else {
                     return nil
                 }
@@ -2087,7 +2080,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 let gifCount: Int32 = dict[.gif] ?? 0
 
                 if gifCount != 0 {
-                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_GifCount(Int32(gifCount)), isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_GifCount(Int32(gifCount)), isActivity: false, key: .gifs)
                 } else {
                     return nil
                 }
@@ -2095,7 +2088,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 let fileCount: Int32 = dict[.file] ?? 0
 
                 if fileCount != 0 {
-                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_FileCount(Int32(fileCount)), isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_FileCount(Int32(fileCount)), isActivity: false, key: .files)
                 } else {
                     return nil
                 }
@@ -2103,7 +2096,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 let itemCount: Int32 = dict[.voiceOrInstantVideo] ?? 0
 
                 if itemCount != 0 {
-                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VoiceMessageCount(Int32(itemCount)), isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VoiceMessageCount(Int32(itemCount)), isActivity: false, key: .voice)
                 } else {
                     return nil
                 }
@@ -2111,7 +2104,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 let itemCount: Int32 = dict[.music] ?? 0
 
                 if itemCount != 0 {
-                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_MusicCount(Int32(itemCount)), isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_MusicCount(Int32(itemCount)), isActivity: false, key: .music)
                 } else {
                     return nil
                 }

@@ -81,6 +81,11 @@ public func searchPeerMembers(context: AccountContext, peerId: EnginePeer.Id, ch
                     return ActionDisposable {
                         disposable.dispose()
                     }
+                case .feed:
+                    subscriber.putNext(([], true))
+                    
+                    return ActionDisposable {
+                    }
                 }
             } |> runOn(Queue.mainQueue())
         }

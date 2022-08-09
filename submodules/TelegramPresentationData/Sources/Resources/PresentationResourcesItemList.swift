@@ -222,6 +222,18 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func imageIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListImageIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/Image"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func cloudIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListCloudIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/Cloud"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     public static func cornersImage(_ theme: PresentationTheme, top: Bool, bottom: Bool) -> UIImage? {
         if !top && !bottom {
             return nil
@@ -255,6 +267,12 @@ public struct PresentationResourcesItemList {
                 context.addPath(path.cgPath)
                 context.fillPath()
             })?.stretchableImage(withLeftCapWidth: 25, topCapHeight: 25)
+        })
+    }
+    
+    public static func uploadToneIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.uploadToneIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/UploadTone"), color: theme.list.itemAccentColor)
         })
     }
 }

@@ -20,6 +20,8 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TextFormat:TextFormat",
         "//submodules/ObjCRuntimeUtils:ObjCRuntimeUtils",
+        "//submodules/AttachmentUI:AttachmentUI",
+        "//submodules/TextInputMenu:TextInputMenu",
     ],
     visibility = [
         "//visibility:public",

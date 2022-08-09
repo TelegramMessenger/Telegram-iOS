@@ -209,7 +209,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                 statusState = .cloudProgress(color: UIColor.white, strokeBackgroundColor: UIColor.white.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
                             case .Local:
                                 break
-                            case .Remote:
+                            case .Remote, .Paused:
                                 if let image = cloudFetchIcon {
                                     statusState = .customIcon(image)
                                 }
@@ -1252,6 +1252,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                         if let strongSelf = self {
                                             let message = messages[0]
                                             let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .message(message: MessageReference(message), media: file)).start()
+                                            
+                                            strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
                                         }
                                     }))
                                 } else if file.mimeType.hasPrefix("image/") || file.mimeType.hasPrefix("video/") {
@@ -1416,6 +1418,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
                         if let strongSelf = self {
                             let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .webPage(webPage: WebpageReference(webPage), media: file)).start()
+                            
+                            strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
                         }
                     }))
                 } else if file.mimeType.hasPrefix("image/") || file.mimeType.hasPrefix("video/") {

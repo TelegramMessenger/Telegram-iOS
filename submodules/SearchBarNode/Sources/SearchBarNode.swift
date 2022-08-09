@@ -713,6 +713,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     public var textReturned: ((String) -> Void)?
     public var clearPrefix: (() -> Void)?
     public var clearTokens: (() -> Void)?
+    public var focusUpdated: ((Bool) -> Void)?
     
     public var tokensUpdated: (([SearchBarToken]) -> Void)?
     
@@ -1052,10 +1053,29 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         })
 
         self.textBackgroundNode.isHidden = true
+        
+        if let accessoryComponentView = node.accessoryComponentView {
+            let tempContainer = UIView()
+            
+            let accessorySize = accessoryComponentView.bounds.size
+            tempContainer.frame = CGRect(origin: CGPoint(x: self.textBackgroundNode.frame.maxX - accessorySize.width - 4.0, y: floor((self.textBackgroundNode.frame.minY + self.textBackgroundNode.frame.height - accessorySize.height) / 2.0)), size: accessorySize)
+            
+            let targetTempContainerFrame = CGRect(origin: CGPoint(x: targetTextBackgroundFrame.maxX - accessorySize.width - 4.0, y: floor((targetTextBackgroundFrame.minY + 8.0 + targetTextBackgroundFrame.height - accessorySize.height) / 2.0)), size: accessorySize)
+            
+            tempContainer.layer.animateFrame(from: tempContainer.frame, to: targetTempContainerFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
+            
+            accessoryComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            tempContainer.addSubview(accessoryComponentView)
+            self.view.addSubview(tempContainer)
+        }
 
-        self.textBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { _ in
+        self.textBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak node] _ in
             textBackgroundCompleted = true
             intermediateCompletion()
+            
+            if let node = node, let accessoryComponentContainer = node.accessoryComponentContainer, let accessoryComponentView = node.accessoryComponentView {
+                accessoryComponentContainer.addSubview(accessoryComponentView)
+            }
         })
         
         let transitionBackgroundNode = ASDisplayNode()
@@ -1101,6 +1121,10 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.cancelButton.layer.animatePosition(from: self.cancelButton.layer.position, to: CGPoint(x: self.bounds.size.width + cancelButtonFrame.size.width / 2.0, y: targetTextBackgroundFrame.midY), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
     }
     
+    public func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.focusUpdated?(true)
+    }
+    
     public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if let _ = self.textField.selectedTokenIndex {
             if !string.isEmpty {
@@ -1132,6 +1156,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func textFieldDidEndEditing(_ textField: UITextField) {
+        self.focusUpdated?(false)
         self.textField.selectedTokenIndex = nil
     }
     

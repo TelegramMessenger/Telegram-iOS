@@ -209,6 +209,10 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
         
         let gb = MTExp(network.encryptionProvider, g, bData, p)!
         
+        if !MTCheckIsSafeGAOrB(network.encryptionProvider, gb, p) {
+            return .complete()
+        }
+        
         var key = MTExp(network.encryptionProvider, gA.makeData(), bData, p)!
         
         if key.count > 256 {
@@ -284,6 +288,10 @@ private func pfsRequestKey(postbox: Postbox, network: Network, peerId: PeerId, l
         let aData = a.makeData()
         let ga = MTExp(network.encryptionProvider, g, aData, p)!
         
+        if !MTCheckIsSafeGAOrB(network.encryptionProvider, ga, p) {
+            return .complete()
+        }
+        
         return postbox.transaction { transaction -> Signal<Void, NoError> in
             if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
                 switch state.embeddedState {
@@ -308,9 +316,17 @@ private func pfsAcceptKey(postbox: Postbox, network: Network, peerId: PeerId, la
         let g = Data(bytes: &gValue, count: 4)
         let p = config.p.makeData()
         
+        if !MTCheckIsSafeGAOrB(network.encryptionProvider, gA.makeData(), p) {
+            return .complete()
+        }
+        
         let bData = b.makeData()
         
         let gb = MTExp(network.encryptionProvider, g, bData, p)!
+        
+        if !MTCheckIsSafeGAOrB(network.encryptionProvider, gb, p) {
+            return .complete()
+        }
         
         var key = MTExp(network.encryptionProvider, gA.makeData(), bData, p)!
         

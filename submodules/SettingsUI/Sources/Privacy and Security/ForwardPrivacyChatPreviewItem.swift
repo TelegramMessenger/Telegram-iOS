@@ -181,7 +181,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
             
             var authorNameCenter: CGFloat?
             
-            let forwardedString = item.strings.Message_ForwardedMessage("").string
+            let forwardedString = item.strings.Message_ForwardedMessageShort("").string
             var fromString: String?
             if let newlineRange = forwardedString.range(of: "\n") {
                 let from = forwardedString[newlineRange.upperBound...]

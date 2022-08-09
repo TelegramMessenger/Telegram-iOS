@@ -260,7 +260,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 messageMediaFileCancelInteractiveFetch(context: self.context, messageId: message.id, file: file)
             case .Local:
                 self.interaction.openMessage(message)
-            case .Remote:
+            case .Remote, .Paused:
                 self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: self.context, message: message, file: file, userInitiated: true).start())
             }
         }
@@ -348,7 +348,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                                 statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true, animateRotation: true)
                             case .Local:
                                 statusState = .none
-                            case .Remote:
+                            case .Remote, .Paused:
                                 statusState = .download(.white)
                             }
                         }
@@ -382,7 +382,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                                         mediaDownloadState = .compactFetching(progress: 0.0)
                                     case .Local:
                                         badgeContent = .text(inset: 0.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, text: NSAttributedString(string: durationString))
-                                    case .Remote:
+                                    case .Remote, .Paused:
                                         badgeContent = .text(inset: 12.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, text: NSAttributedString(string: durationString))
                                         mediaDownloadState = .compactRemote
                                 }
@@ -889,7 +889,7 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
 
             switch contentType {
             case .gifs:
-                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_GifCount(Int32(count)), isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_GifCount(Int32(count)), isActivity: false, key: .gifs)
             default:
                 return nil
             }
@@ -922,7 +922,7 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
             return
         }
         self.isRequestingView = true
-        self.listDisposable.set((self.context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(self.peerId), index: .upperBound, anchorIndex: .upperBound, count: self.numberOfItemsToRequest, fixedCombinedReadStates: nil, tagMask: tagMaskForType(self.contentType))
+        self.listDisposable.set((self.context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: self.peerId), index: .upperBound, anchorIndex: .upperBound, count: self.numberOfItemsToRequest, fixedCombinedReadStates: nil, tagMask: tagMaskForType(self.contentType))
         |> deliverOnMainQueue).start(next: { [weak self] (view, updateType, _) in
             guard let strongSelf = self else {
                 return

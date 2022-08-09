@@ -29,6 +29,8 @@ import ChatInterfaceState
 import ShareController
 import UndoUI
 import TextFormat
+import Postbox
+import TelegramAnimatedStickerNode
 
 private enum ChatListTokenId: Int32 {
     case archive
@@ -45,14 +47,14 @@ final class ChatListSearchInteraction {
     let clearRecentSearch: () -> Void
     let addContact: (String) -> Void
     let toggleMessageSelection: (EngineMessage.Id, Bool) -> Void
-    let messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)
+    let messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int, isFirstInList: Bool)?) -> Void)
     let mediaMessageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)
     let peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
     let present: (ViewController, Any?) -> Void
     let dismissInput: () -> Void
     let getSelectedMessageIds: () -> Set<EngineMessage.Id>?
     
-    init(openPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?) {
+    init(openPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int, isFirstInList: Bool)?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?) {
         self.openPeer = openPeer
         self.openDisabledPeer = openDisabledPeer
         self.openMessage = openMessage
@@ -82,6 +84,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private let peersFilter: ChatListNodePeersFilter
     private let groupId: EngineChatList.Group
     private let displaySearchFilters: Bool
+    private let hasDownloads: Bool
     private var interaction: ChatListSearchInteraction?
     private let openMessage: (EnginePeer, EngineMessage.Id, Bool) -> Void
     private let navigationController: NavigationController?
@@ -112,8 +115,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var stateValue = ChatListSearchContainerNodeSearchState()
     private let statePromise = ValuePromise<ChatListSearchContainerNodeSearchState>()
     
-    private var selectedFilterKey: ChatListSearchFilterEntryId?
-    private var selectedFilterKeyPromise = Promise<ChatListSearchFilterEntryId?>()
+    private var selectedFilter: ChatListSearchFilterEntry?
+    private var selectedFilterPromise = Promise<ChatListSearchFilterEntry?>()
     private var transitionFraction: CGFloat = 0.0
     
     private weak var copyProtectionTooltipController: TooltipController?
@@ -126,16 +129,17 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter, groupId: EngineChatList.Group, displaySearchFilters: Bool, initialFilter: ChatListSearchFilter = .chats, openPeer originalOpenPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openRecentPeerOptions: @escaping (EnginePeer) -> Void, openMessage originalOpenMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter, groupId: EngineChatList.Group, displaySearchFilters: Bool, hasDownloads: Bool, initialFilter: ChatListSearchFilter = .chats, openPeer originalOpenPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openRecentPeerOptions: @escaping (EnginePeer) -> Void, openMessage originalOpenMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
         self.context = context
         self.peersFilter = filter
         self.groupId = groupId
         self.displaySearchFilters = displaySearchFilters
+        self.hasDownloads = hasDownloads
         self.navigationController = navigationController
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
-        self.selectedFilterKey = .filter(initialFilter.id)
-        self.selectedFilterKeyPromise.set(.single(self.selectedFilterKey))
+        self.selectedFilter = .filter(initialFilter)
+        self.selectedFilterPromise.set(.single(self.selectedFilter))
         
         self.openMessage = originalOpenMessage
         self.present = present
@@ -167,7 +171,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             openUserGeneratedUrl(context: context, peerId: nil, url: url, concealed: false, present: { c in
                 present(c, nil)
             }, openResolved: { [weak self] resolved in
-                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
+                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peerId, navigation in
                     
                 }, sendFile: nil,
                 sendSticker: nil,
@@ -217,8 +221,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     return state.withUpdatedSelectedMessageIds(selectedMessageIds)
                 }
             }
-        }, messageContextAction: { [weak self] message, node, rect, gesture in
-            self?.messageContextAction(message, node: node, rect: rect, gesture: gesture)
+        }, messageContextAction: { [weak self] message, node, rect, gesture, paneKey, downloadResource in
+            self?.messageContextAction(message, node: node, rect: rect, gesture: gesture, paneKey: paneKey, downloadResource: downloadResource)
         }, mediaMessageContextAction: { [weak self] message, node, rect, gesture in
             self?.mediaMessageContextAction(message, node: node, rect: rect, gesture: gesture)
         }, peerContextAction: { peer, source, node, gesture in
@@ -244,6 +248,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         filterKey = .chats
                     case .media:
                         filterKey = .media
+                    case .downloads:
+                        filterKey = .downloads
                     case .links:
                         filterKey = .links
                     case .files:
@@ -253,8 +259,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     case .voice:
                         filterKey = .voice
                 }
-                strongSelf.selectedFilterKey = .filter(filterKey.id) 
-                strongSelf.selectedFilterKeyPromise.set(.single(strongSelf.selectedFilterKey))
+                strongSelf.selectedFilter = .filter(filterKey)
+                strongSelf.selectedFilterPromise.set(.single(strongSelf.selectedFilter))
                 strongSelf.transitionFraction = transitionFraction
                 
                 if let (layout, _) = strongSelf.validLayout {
@@ -262,9 +268,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     if let suggestedFilters = strongSelf.suggestedFilters, !suggestedFilters.isEmpty {
                         filters = suggestedFilters
                     } else {
-                        filters = [.chats, .media, .links, .files, .music, .voice]
+                        filters = defaultAvailableSearchPanes(hasDownloads: strongSelf.hasDownloads).map(\.filter)
                     }
-                    strongSelf.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: strongSelf.selectedFilterKey, transitionFraction: strongSelf.transitionFraction, presentationData: strongSelf.presentationData, transition: transition)
+                    strongSelf.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: strongSelf.selectedFilter?.id, transitionFraction: strongSelf.transitionFraction, presentationData: strongSelf.presentationData, transition: transition)
                 }
             }
         }
@@ -283,6 +289,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     key = .chats
                 case .media:
                     key = .media
+                case .downloads:
+                    key = .downloads
                 case .links:
                     key = .links
                 case .files:
@@ -306,7 +314,31 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         self.filterContainerNode.filterPressed?(initialFilter)
         
-        let suggestedPeers = self.searchQuery.get()
+        let searchQuerySignal = self.searchQuery.get()
+        
+        let suggestedPeers = self.selectedFilterPromise.get()
+        |> map { filter -> Bool in
+            guard let filter = filter else {
+                return false
+            }
+            switch filter {
+            case let .filter(filter):
+                switch filter {
+                case .downloads:
+                    return false
+                default:
+                    return true
+                }
+            }
+        }
+        |> distinctUntilChanged
+        |> mapToSignal { value -> Signal<String?, NoError> in
+            if value {
+                return searchQuerySignal
+            } else {
+                return .single(nil)
+            }
+        }
         |> mapToSignal { query -> Signal<[EnginePeer], NoError> in
             if let query = query {
                 return context.account.postbox.searchPeers(query: query.lowercased())
@@ -320,14 +352,14 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         let accountPeer = self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
         |> take(1)
-                        
-        self.suggestedFiltersDisposable.set((combineLatest(suggestedPeers, self.suggestedDates.get(), self.selectedFilterKeyPromise.get(), self.searchQuery.get(), accountPeer)
+        
+        self.suggestedFiltersDisposable.set((combineLatest(suggestedPeers, self.suggestedDates.get(), self.selectedFilterPromise.get(), self.searchQuery.get(), accountPeer)
         |> mapToSignal { peers, dates, selectedFilter, searchQuery, accountPeer -> Signal<([EnginePeer], [(Date?, Date, String?)], ChatListSearchFilterEntryId?, String?, EnginePeer?), NoError> in
             if searchQuery?.isEmpty ?? true {
-                return .single((peers, dates, selectedFilter, searchQuery, EnginePeer(accountPeer)))
+                return .single((peers, dates, selectedFilter?.id, searchQuery, EnginePeer(accountPeer)))
             } else {
                 return (.complete() |> delay(0.25, queue: Queue.mainQueue()))
-                |> then(.single((peers, dates, selectedFilter, searchQuery, EnginePeer(accountPeer))))
+                |> then(.single((peers, dates, selectedFilter?.id, searchQuery, EnginePeer(accountPeer))))
             }
         } |> map { peers, dates, selectedFilter, searchQuery, accountPeer -> [ChatListSearchFilter] in
             var suggestedFilters: [ChatListSearchFilter] = []
@@ -523,6 +555,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 key = .music
             case .voice:
                 key = .voice
+            case .downloads:
+                key = .downloads
             default:
                 key = .chats
         }
@@ -549,11 +583,11 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         if let suggestedFilters = self.suggestedFilters, !suggestedFilters.isEmpty {
             filters = suggestedFilters
         } else {
-            filters = [.chats, .media, .links, .files, .music, .voice]
+            filters = defaultAvailableSearchPanes(hasDownloads: self.hasDownloads).map(\.filter)
         }
         
         let overflowInset: CGFloat = 20.0
-        self.filterContainerNode.update(size: CGSize(width: layout.size.width - overflowInset * 2.0, height: 38.0), sideInset: layout.safeInsets.left - overflowInset, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilterKey, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
+        self.filterContainerNode.update(size: CGSize(width: layout.size.width - overflowInset * 2.0, height: 38.0), sideInset: layout.safeInsets.left - overflowInset, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilter?.id, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         
         var bottomIntrinsicInset = layout.intrinsicInsets.bottom
         if case .root = self.groupId {
@@ -705,7 +739,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         let availablePanes: [ChatListSearchPaneKey]
         if self.displaySearchFilters {
-            availablePanes = defaultAvailableSearchPanes
+            availablePanes = defaultAvailableSearchPanes(hasDownloads: self.hasDownloads)
         } else {
             availablePanes = [.chats]
         }
@@ -737,10 +771,172 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let _ = self.paneContainerNode.scrollToTop()
     }
     
-    private func messageContextAction(_ message: EngineMessage, node: ASDisplayNode?, rect: CGRect?, gesture anyRecognizer: UIGestureRecognizer?) {
+    private func messageContextAction(_ message: EngineMessage, node: ASDisplayNode?, rect: CGRect?, gesture anyRecognizer: UIGestureRecognizer?, paneKey: ChatListSearchPaneKey, downloadResource: (id: String, size: Int, isFirstInList: Bool)?) {
         guard let node = node as? ContextExtractedContentContainingNode else {
             return
         }
+        
+        let gesture: ContextGesture? = anyRecognizer as? ContextGesture
+        
+        if paneKey == .downloads {
+            let isCachedValue: Signal<Bool, NoError>
+            if let downloadResource = downloadResource {
+                isCachedValue = self.context.account.postbox.mediaBox.resourceStatus(MediaResourceId(downloadResource.id), resourceSize: downloadResource.size)
+                |> map { status -> Bool in
+                    switch status {
+                    case .Local:
+                        return true
+                    default:
+                        return false
+                    }
+                }
+                |> distinctUntilChanged
+            } else {
+                isCachedValue = .single(false)
+            }
+            
+            let shouldBeDismissed: Signal<Bool, NoError> = Signal { subscriber in
+                subscriber.putNext(false)
+                let previous = Atomic<Bool?>(value: nil)
+                return isCachedValue.start(next: { value in
+                    let previousSwapped = previous.swap(value)
+                    if let previousSwapped = previousSwapped, previousSwapped != value {
+                        subscriber.putNext(true)
+                        subscriber.putCompletion()
+                    }
+                })
+            }
+            
+            let items = combineLatest(queue: .mainQueue(),
+                context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: [message.id], messages: [message.id: message], peers: [:]),
+                isCachedValue |> take(1)
+            )
+            |> deliverOnMainQueue
+            |> map { [weak self] actions, isCachedValue -> [ContextMenuItem] in
+                guard let strongSelf = self else {
+                    return []
+                }
+                
+                var items: [ContextMenuItem] = []
+                
+                if isCachedValue {
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_DeleteFromCache, textColor: .primary, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.primaryColor)
+                    }, action: { _, f in
+                        guard let strongSelf = self, let downloadResource = downloadResource else {
+                            f(.default)
+                            return
+                        }
+                        let _ = (strongSelf.context.account.postbox.mediaBox.removeCachedResources([MediaResourceId(downloadResource.id)], notify: true)
+                        |> deliverOnMainQueue).start(completed: {
+                            f(.dismissWithoutContent)
+                        })
+                    })))
+                } else {
+                    if let downloadResource = downloadResource, !downloadResource.isFirstInList {
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_RaisePriority, textColor: .primary, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Raise"), color: theme.contextMenu.primaryColor)
+                        }, action: { _, f in
+                            guard let strongSelf = self else {
+                                f(.default)
+                                return
+                            }
+                            
+                            strongSelf.context.fetchManager.raisePriority(resourceId: downloadResource.id)
+                            
+                            Queue.mainQueue().after(0.2, {
+                                f(.default)
+                            })
+                        })))
+                    }
+                    
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_CancelDownloading, textColor: .primary, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.primaryColor)
+                    }, action: { _, f in
+                        guard let strongSelf = self, let downloadResource = downloadResource else {
+                            f(.default)
+                            return
+                        }
+                        
+                        strongSelf.context.fetchManager.cancelInteractiveFetches(resourceId: downloadResource.id)
+                        
+                        f(.dismissWithoutContent)
+                    })))
+                }
+                
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                    c.dismiss(completion: { [weak self] in
+                        self?.openMessage(EnginePeer(message.peers[message.id.peerId]!), message.id, false)
+                    })
+                })))
+                
+                if isCachedValue {
+                    if !items.isEmpty {
+                        items.append(.separator)
+                    }
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                        c.dismiss(completion: {
+                            if let strongSelf = self {
+                                strongSelf.dismissInput()
+                                
+                                strongSelf.updateState { state in
+                                    return state.withUpdatedSelectedMessageIds([message.id])
+                                }
+                                
+                                if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                                }
+                            }
+                        })
+                    })))
+                }
+                
+                /*if !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
+                    if !items.isEmpty {
+                        items.append(.separator)
+                    }
+                    
+                    if actions.options.contains(.deleteLocally) {
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe, textColor: .destructive, icon: { _ in
+                            return nil
+                        }, action: { controller, f in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forLocalPeer).start()
+                            f(.dismissWithoutContent)
+                        })))
+                    }
+                    
+                    if actions.options.contains(.deleteGlobally) {
+                        let text: String
+                        if let mainPeer = message.peers[message.id.peerId] {
+                            if mainPeer is TelegramUser {
+                                text = strongSelf.presentationData.strings.ChatList_DeleteForEveryone(EnginePeer(mainPeer).compactDisplayTitle).string
+                            } else {
+                                text = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
+                            }
+                        } else {
+                            text = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
+                        }
+                        items.append(.action(ContextMenuActionItem(text: text, textColor: .destructive, icon: { _ in
+                            return nil
+                        }, action: { controller, f in
+                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).start()
+                            f(.dismissWithoutContent)
+                        })))
+                    }
+                }*/
+                
+                return items
+            }
+            
+            let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(MessageContextExtractedContentSource(sourceNode: node, shouldBeDismissed: shouldBeDismissed)), items: items |> map { ContextController.Items(content: .list($0)) }, recognizer: nil, gesture: gesture)
+            self.presentInGlobalOverlay?(controller, nil)
+            
+            return
+        }
+        
         let _ = storedMessageFromSearch(account: self.context.account, message: message._asMessage()).start()
         
         var linkForCopying: String?
@@ -755,8 +951,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 currentSupernode = currentSupernode?.supernode
             }
         }
-        
-        let gesture: ContextGesture? = anyRecognizer as? ContextGesture
         
         let context = self.context
         let (peers, messages) = self.currentMessages
@@ -815,7 +1009,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private func mediaMessageContextAction(_ message: EngineMessage, node: ASDisplayNode?, rect: CGRect?, gesture anyRecognizer: UIGestureRecognizer?) {
         let gesture: ContextGesture? = anyRecognizer as? ContextGesture
-        let _ = (chatMediaListPreviewControllerData(context: self.context, chatLocation: .peer(message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), message: message._asMessage(), standalone: true, reverseMessageGalleryOrder: false, navigationController: self.navigationController)
+        let _ = (chatMediaListPreviewControllerData(context: self.context, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), message: message._asMessage(), standalone: true, reverseMessageGalleryOrder: false, navigationController: self.navigationController)
             |> deliverOnMainQueue).start(next: { [weak self] previewData in
                 guard let strongSelf = self else {
                     gesture?.cancel()
@@ -888,34 +1082,46 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     }
     
     func deleteMessages(messageIds: Set<EngineMessage.Id>?) {
+        let isDownloads = self.paneContainerNode.currentPaneKey == .downloads
+        
         if let messageIds = messageIds ?? self.stateValue.selectedMessageIds, !messageIds.isEmpty {
-            let (peers, messages) = self.currentMessages
-            let _ = (self.context.account.postbox.transaction { transaction -> Void in
-                for id in messageIds {
-                    if transaction.getMessage(id) == nil, let message = messages[id] {
-                        storeMessageFromSearch(transaction: transaction, message: message._asMessage())
-                    }
+            if isDownloads {
+                let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
+                    return messageIds.compactMap(transaction.getMessage)
                 }
-            }).start()
-            
-            self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
-            |> deliverOnMainQueue).start(next: { [weak self] actions in
-                if let strongSelf = self, !actions.options.isEmpty {
-                    let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                    var items: [ActionSheetItem] = []
-                    let personalPeerName: String? = nil
+                |> deliverOnMainQueue).start(next: { [weak self] messages in
+                    guard let strongSelf = self else {
+                        return
+                    }
                     
-                    if actions.options.contains(.deleteGlobally) {
-                        let globalTitle: String
-                        if let personalPeerName = personalPeerName {
-                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).string
-                        } else {
-                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
-                        }
-                        items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
+                    let title: String
+                    let text: String
+                    
+                    title = strongSelf.presentationData.strings.DownloadList_RemoveFileAlertTitle(Int32(messages.count))
+                    text = strongSelf.presentationData.strings.DownloadList_RemoveFileAlertText(Int32(messages.count))
+                    
+                    strongSelf.present?(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                        }),
+                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.DownloadList_RemoveFileAlertRemove, action: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            var resourceIds = Set<MediaResourceId>()
+                            for message in messages {
+                                for media in message.media {
+                                    if let file = media as? TelegramMediaFile {
+                                        resourceIds.insert(file.resource.id)
+                                    }
+                                }
+                            }
+                            
+                            let _ = (strongSelf.context.account.postbox.mediaBox.removeCachedResources(resourceIds, force: true, notify: true)
+                            |> deliverOnMainQueue).start(completed: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
                                 
                                 strongSelf.updateState { state in
                                     return state.withUpdatedSelectedMessageIds(nil)
@@ -923,34 +1129,74 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                                     strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
                                 }
-                            }
-                        }))
-                    }
-                    if actions.options.contains(.deleteLocally) {
-                        let localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
-                        items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).start()
-                                
-                                strongSelf.updateState { state in
-                                    return state.withUpdatedSelectedMessageIds(nil)
-                                }
-                                if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
-                                }
-                            }
-                        }))
-                    }
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                            })
                         })
-                    ])])
-                    strongSelf.view.endEditing(true)
-                    strongSelf.present?(actionSheet, nil)
-                }
-            }))
+                    ], actionLayout: .horizontal, parseMarkdown: true), nil)
+                })
+            } else {
+                let (peers, messages) = self.currentMessages
+                let _ = (self.context.account.postbox.transaction { transaction -> Void in
+                    for id in messageIds {
+                        if transaction.getMessage(id) == nil, let message = messages[id] {
+                            storeMessageFromSearch(transaction: transaction, message: message._asMessage())
+                        }
+                    }
+                }).start()
+                
+                self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
+                |> deliverOnMainQueue).start(next: { [weak self] actions in
+                    if let strongSelf = self, !actions.options.isEmpty {
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        var items: [ActionSheetItem] = []
+                        let personalPeerName: String? = nil
+                        
+                        if actions.options.contains(.deleteGlobally) {
+                            let globalTitle: String
+                            if let personalPeerName = personalPeerName {
+                                globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).string
+                            } else {
+                                globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
+                            }
+                            items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
+                                    
+                                    strongSelf.updateState { state in
+                                        return state.withUpdatedSelectedMessageIds(nil)
+                                    }
+                                    if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                    }
+                                }
+                            }))
+                        }
+                        if actions.options.contains(.deleteLocally) {
+                            let localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
+                            items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                    
+                                    strongSelf.updateState { state in
+                                        return state.withUpdatedSelectedMessageIds(nil)
+                                    }
+                                    if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                    }
+                                }
+                            }))
+                        }
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        strongSelf.view.endEditing(true)
+                        strongSelf.present?(actionSheet, nil)
+                    }
+                }))
+            }
         }
     }
     
@@ -1105,7 +1351,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         })
                         |> deliverOnMainQueue).start(completed: {
                             if let strongSelf = self {
-                                let controller = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
+                                let controller = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
                                 controller.purposefulAction = { [weak self] in
                                     self?.cancel?()
                                 }
@@ -1150,10 +1396,13 @@ private final class MessageContextExtractedContentSource: ContextExtractedConten
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true
     
+    let shouldBeDismissed: Signal<Bool, NoError>
+    
     private let sourceNode: ContextExtractedContentContainingNode
     
-    init(sourceNode: ContextExtractedContentContainingNode) {
+    init(sourceNode: ContextExtractedContentContainingNode, shouldBeDismissed: Signal<Bool, NoError>? = nil) {
         self.sourceNode = sourceNode
+        self.shouldBeDismissed = shouldBeDismissed ?? .single(false)
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
@@ -1191,5 +1440,119 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     
     func animatedIn() {
         self.controller.didAppearInContextPreview()
+    }
+}
+
+final class ActionSheetAnimationAndTextItem: ActionSheetItem {
+    public let title: String
+    public let text: String
+    
+    public init(title: String, text: String) {
+        self.title = title
+        self.text = text
+    }
+    
+    public func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
+        let node = ActionSheetAnimationAndTextItemNode(theme: theme)
+        node.setItem(self)
+        return node
+    }
+    
+    public func updateNode(_ node: ActionSheetItemNode) {
+        guard let node = node as? ActionSheetAnimationAndTextItemNode else {
+            assertionFailure()
+            return
+        }
+        
+        node.setItem(self)
+        node.requestLayoutUpdate()
+    }
+}
+
+final class ActionSheetAnimationAndTextItemNode: ActionSheetItemNode {
+    private let defaultFont: UIFont
+    
+    private let theme: ActionSheetControllerTheme
+    
+    private var item: ActionSheetAnimationAndTextItem?
+    
+    private let animationNode: AnimatedStickerNode
+    private let textLabel: ImmediateTextNode
+    private let titleLabel: ImmediateTextNode
+    
+    private let accessibilityArea: AccessibilityAreaNode
+    
+    override public init(theme: ActionSheetControllerTheme) {
+        self.theme = theme
+        self.defaultFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
+        
+        self.animationNode = AnimatedStickerNode()
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ClearDownloadList"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        self.animationNode.visibility = true
+        
+        self.titleLabel = ImmediateTextNode()
+        self.titleLabel.isUserInteractionEnabled = false
+        self.titleLabel.maximumNumberOfLines = 0
+        self.titleLabel.displaysAsynchronously = false
+        self.titleLabel.truncationType = .end
+        self.titleLabel.isAccessibilityElement = false
+        
+        self.textLabel = ImmediateTextNode()
+        self.textLabel.isUserInteractionEnabled = false
+        self.textLabel.maximumNumberOfLines = 0
+        self.textLabel.displaysAsynchronously = false
+        self.textLabel.truncationType = .end
+        self.textLabel.isAccessibilityElement = false
+        
+        self.accessibilityArea = AccessibilityAreaNode()
+        self.accessibilityArea.accessibilityTraits = .staticText
+        
+        super.init(theme: theme)
+        
+        self.addSubnode(self.animationNode)
+        
+        self.titleLabel.isUserInteractionEnabled = false
+        self.textLabel.isUserInteractionEnabled = false
+        
+        self.addSubnode(self.titleLabel)
+        self.addSubnode(self.textLabel)
+        
+        self.addSubnode(self.accessibilityArea)
+    }
+    
+    func setItem(_ item: ActionSheetAnimationAndTextItem) {
+        self.item = item
+        
+        let defaultTitleFont = Font.semibold(floor(theme.baseFontSize * 17.0 / 17.0))
+        let defaultFont = Font.regular(floor(theme.baseFontSize * 16.0 / 17.0))
+        
+        self.titleLabel.attributedText = NSAttributedString(string: item.title, font: defaultTitleFont, textColor: self.theme.primaryTextColor, paragraphAlignment: .center)
+        self.textLabel.attributedText = NSAttributedString(string: item.text, font: defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
+        self.accessibilityArea.accessibilityLabel = item.title
+    }
+    
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let topInset: CGFloat = 20.0
+        let textSpacing: CGFloat = 10.0
+        let bottomInset: CGFloat = 16.0
+        let imageInset: CGFloat = 6.0
+        
+        let titleSize = self.titleLabel.updateLayout(CGSize(width: max(1.0, constrainedSize.width - 20.0), height: constrainedSize.height))
+        let textSize = self.textLabel.updateLayout(CGSize(width: max(1.0, constrainedSize.width - 20.0), height: constrainedSize.height))
+        var size = CGSize(width: constrainedSize.width, height: max(57.0, titleSize.height + textSpacing + textSize.height + bottomInset))
+        
+        let imageSize = CGSize(width: 140.0, height: 140.0)
+        size.height += topInset + 160.0 + imageInset
+        
+        self.animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: topInset), size: imageSize)
+        self.animationNode.updateLayout(size: imageSize)
+       
+        self.titleLabel.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - textSize.height - textSpacing - bottomInset), size: titleSize)
+        self.textLabel.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: size.height - textSize.height - bottomInset), size: textSize)
+        
+        self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
+        return size
     }
 }

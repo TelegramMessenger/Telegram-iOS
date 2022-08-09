@@ -285,7 +285,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     let mainInvite: ExportedInvitation?
     var isPublic = false
     if let peer = peer, let address = peer.addressName, !address.isEmpty && admin == nil {
-        mainInvite = ExportedInvitation(link: "t.me/\(address)", title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: EnginePeer.Id(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil)
+        mainInvite = .link(link: "t.me/\(address)", title: nil, isPermanent: true, requestApproval: false, isRevoked: false, adminId: EnginePeer.Id(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil)
         isPublic = true
     } else if let invites = invites, let invite = invites.first(where: { $0.isPermanent && !$0.isRevoked }) {
         mainInvite = invite
@@ -300,7 +300,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     let importersCount: Int32
     if let count = importers?.count {
         importersCount = count
-    } else if let count = mainInvite?.count {
+    } else if let mainInvite = mainInvite, case let .link(_, _, _, _, _, _, _, _, _, _, count, _) = mainInvite, let count = count {
         importersCount = count
     } else {
         importersCount = 0
@@ -339,8 +339,10 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     if let additionalInvites = additionalInvites {
         var index: Int32 = 0
         for invite in additionalInvites {
-            entries.append(.link(index, presentationData.theme, invite, canEditLinks, invite.expireDate != nil ? tick : nil))
-            index += 1
+            if case let .link(_, _, _, _, _, _, _, _, expireDate, _, _, _) = invite {
+                entries.append(.link(index, presentationData.theme, invite, canEditLinks, expireDate != nil ? tick : nil))
+                index += 1
+            }
         }
     } else if let admin = admin, admin.count > 1 {
         var index: Int32 = 0
@@ -427,7 +429,10 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
     }
     
     let arguments = InviteLinkListControllerArguments(context: context, shareMainLink: { invite in
-        let shareController = ShareController(context: context, subject: .url(invite.link), updatedPresentationData: updatedPresentationData)
+        guard let inviteLink = invite.link else {
+            return
+        }
+        let shareController = ShareController(context: context, subject: .url(inviteLink), updatedPresentationData: updatedPresentationData)
         shareController.completed = { peerIds in
             let _ = (context.account.postbox.transaction { transaction -> [Peer] in
                 var peers: [Peer] = []
@@ -516,7 +521,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
             })
         })))
         
-        if invite.adminId.toInt64() != 0 {
+        if case let .link(_, _, _, _, _, adminId, _, _, _, _, _, _) = invite, adminId.toInt64() != 0 {
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { _, f in
@@ -552,8 +557,8 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                                         return state
                                     }
                                 }
-                                if revoke {
-                                    revokeLinkDisposable.set((context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
+                                if revoke, let inviteLink = invite.link {
+                                    revokeLinkDisposable.set((context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: inviteLink) |> deliverOnMainQueue).start(next: { result in
                                         updateState { state in
                                             var updatedState = state
                                             updatedState.revokingPrivateLink = false
@@ -626,8 +631,12 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
                 }, action: { _, f in
                     f(.default)
+                    
+                    guard let inviteLink = invite.link else {
+                        return
+                    }
                 
-                    let shareController = ShareController(context: context, subject: .url(invite.link), updatedPresentationData: updatedPresentationData)
+                    let shareController = ShareController(context: context, subject: .url(inviteLink), updatedPresentationData: updatedPresentationData)
                     shareController.completed = { peerIds in
                         let _ = (context.account.postbox.transaction { transaction -> [Peer] in
                             var peers: [Peer] = []
@@ -729,8 +738,9 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                         ActionSheetButtonItem(title: presentationData.strings.InviteLink_DeleteLinkAlert_Action, color: .destructive, action: {
                             dismissAction()
 
-                            revokeLinkDisposable.set((context.engine.peers.deletePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
-                            }))
+                            if let inviteLink = invite.link {
+                                revokeLinkDisposable.set((context.engine.peers.deletePeerExportedInvitation(peerId: peerId, link: inviteLink) |> deliverOnMainQueue).start())
+                            }
                             
                             revokedInvitesContext.remove(invite)
                         })
@@ -763,11 +773,13 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                             ActionSheetButtonItem(title: presentationData.strings.GroupInfo_InviteLink_RevokeLink, color: .destructive, action: {
                                 dismissAction()
                                 
-                                revokeLinkDisposable.set((context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
-                                    if case let .replace(_, newInvite) = result {
-                                        invitesContext.add(newInvite)
-                                    }
-                                }))
+                                if let inviteLink = invite.link {
+                                    revokeLinkDisposable.set((context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: inviteLink) |> deliverOnMainQueue).start(next: { result in
+                                        if case let .replace(_, newInvite) = result {
+                                            invitesContext.add(newInvite)
+                                        }
+                                    }))
+                                }
                                 
                                 invitesContext.remove(invite)
                                 revokedInvitesContext.add(invite.withUpdated(isRevoked: true))
@@ -982,6 +994,6 @@ final class InviteLinkContextReferenceContentSource: ContextReferenceContentSour
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

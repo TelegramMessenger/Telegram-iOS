@@ -9,6 +9,8 @@
 
 @interface TGMediaSelectionContext ()
 {
+    NSMutableArray *_savedSelectedIdentifiers;
+    
     NSMutableArray *_selectedIdentifiers;
     NSMutableDictionary *_selectionMap;
     
@@ -74,8 +76,9 @@
     NSString *identifier = item.uniqueIdentifier;
     if (selected)
     {
-        if (_selectionMap[identifier] != nil)
+        if ([_selectedIdentifiers containsObject:identifier]) {
             return false;
+        }
         
         if (_selectedIdentifiers.count >= _selectionLimit) {
             if (_selectionLimitExceeded) {
@@ -92,7 +95,6 @@
         if (_selectionMap[identifier] == nil)
             return false;
         
-        [_selectionMap removeObjectForKey:identifier];
         [_selectedIdentifiers removeObject:identifier];
     }
     
@@ -151,6 +153,15 @@
     return newValue;
 }
 
+- (void)moveItem:(id<TGMediaSelectableItem>)item toIndex:(NSUInteger)index {
+    NSUInteger sourceIndex = [self indexOfItem:item] - 1;
+    
+    [_selectedIdentifiers removeObjectAtIndex:sourceIndex];
+    [_selectedIdentifiers insertObject:item.uniqueIdentifier atIndex:index - 1];
+    
+    _pipe.sink([TGMediaSelectionChange changeWithItem:item selected:true animated:false sender:nil]);
+}
+
 - (SSignal *)itemSelectedSignal:(id<TGMediaSelectableItem>)item
 {
     return [[self itemInformativeSelectedSignal:item] map:^NSNumber *(TGMediaSelectionChange *change)
@@ -177,9 +188,29 @@
     if (enumerationBlock == nil)
         return;
     
-    NSArray *items = [_selectionMap allValues];
-    for (id<TGMediaSelectableItem> item in items)
-        enumerationBlock(item);
+    for (NSString *identifier in _selectedIdentifiers)
+    {
+        NSObject<TGMediaSelectableItem> *item = _selectionMap[identifier];
+        if (item != nil) {
+            enumerationBlock(item);
+        }
+    }
+}
+
+- (void)enumerateDeselectedItems:(void (^)(id<TGMediaSelectableItem>))enumerationBlock
+{
+    if (enumerationBlock == nil || _savedSelectedIdentifiers == nil)
+        return;
+    
+    for (NSString *identifier in _savedSelectedIdentifiers)
+    {
+        if (![_selectedIdentifiers containsObject:identifier]) {
+            NSObject<TGMediaSelectableItem> *item = _selectionMap[identifier];
+            if (item != nil) {
+                enumerationBlock(item);
+            }
+        }
+    }
 }
 
 - (NSOrderedSet *)selectedItemsIdentifiers
@@ -202,6 +233,31 @@
 - (NSUInteger)count
 {
     return _selectedIdentifiers.count;
+}
+
+- (void)saveState {
+    if (_savedSelectedIdentifiers == nil) {
+        _savedSelectedIdentifiers = [_selectedIdentifiers mutableCopy];
+    }
+}
+
+- (void)restoreState {
+    _selectedIdentifiers = _savedSelectedIdentifiers;
+    _savedSelectedIdentifiers = nil;
+    
+    _pipe.sink([TGMediaSelectionChange changeWithItem:nil selected:false animated:false sender:nil]);
+}
+
+- (void)clearSavedState {
+    _savedSelectedIdentifiers = nil;
+}
+
+- (NSUInteger)savedStateDifference {
+    if (_savedSelectedIdentifiers != nil) {
+        return _savedSelectedIdentifiers.count - _selectedIdentifiers.count;
+    } else {
+        return 0;
+    }
 }
 
 #pragma mark - 

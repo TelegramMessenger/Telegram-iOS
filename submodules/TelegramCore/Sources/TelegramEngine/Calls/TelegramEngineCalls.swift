@@ -1,5 +1,17 @@
 import SwiftSignalKit
 import Postbox
+import TelegramApi
+import MtProtoKit
+
+public struct EngineCallStreamState {
+    public struct Channel {
+        public var id: Int32
+        public var scale: Int32
+        public var latestTimestamp: Int64
+    }
+    
+    public var channels: [Channel]
+}
 
 public extension TelegramEngine {
     final class Calls {
@@ -13,16 +25,20 @@ public extension TelegramEngine {
             return _internal_rateCall(account: self.account, callId: callId, starsCount: starsCount, comment: comment, userInitiated: userInitiated)
         }
 
-        public func saveCallDebugLog(callId: CallId, log: String) -> Signal<Void, NoError> {
+        public func saveCallDebugLog(callId: CallId, log: String) -> Signal<SaveCallDebugLogResult, NoError> {
             return _internal_saveCallDebugLog(network: self.account.network, callId: callId, log: log)
+        }
+        
+        public func saveCompleteCallDebugLog(callId: CallId, logPath: String) -> Signal<Never, NoError> {
+            return _internal_saveCompleteCallDebugLog(account: self.account, callId: callId, logPath: logPath)
         }
 
         public func getCurrentGroupCall(callId: Int64, accessHash: Int64, peerId: PeerId? = nil) -> Signal<GroupCallSummary?, GetCurrentGroupCallError> {
             return _internal_getCurrentGroupCall(account: self.account, callId: callId, accessHash: accessHash, peerId: peerId)
         }
 
-        public func createGroupCall(peerId: PeerId, title: String?, scheduleDate: Int32?) -> Signal<GroupCallInfo, CreateGroupCallError> {
-            return _internal_createGroupCall(account: self.account, peerId: peerId, title: title, scheduleDate: scheduleDate)
+        public func createGroupCall(peerId: PeerId, title: String?, scheduleDate: Int32?, isExternalStream: Bool) -> Signal<GroupCallInfo, CreateGroupCallError> {
+            return _internal_createGroupCall(account: self.account, peerId: peerId, title: title, scheduleDate: scheduleDate, isExternalStream: isExternalStream)
         }
 
         public func startScheduledGroupCall(peerId: PeerId, callId: Int64, accessHash: Int64) -> Signal<GroupCallInfo, StartScheduledGroupCallError> {
@@ -118,6 +134,29 @@ public extension TelegramEngine {
                 return Int64(value * 1000.0)
             }
             |> take(1)
+        }
+        
+        public func requestStreamState(dataSource: AudioBroadcastDataSource, callId: Int64, accessHash: Int64) -> Signal<EngineCallStreamState?, NoError> {
+            return dataSource.download.request(Api.functions.phone.getGroupCallStreamChannels(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+            |> mapToSignal { result -> Signal<EngineCallStreamState?, MTRpcError> in
+                switch result {
+                case let .groupCallStreamChannels(channels):
+                    let state = EngineCallStreamState(channels: channels.map { channel -> EngineCallStreamState.Channel in
+                        switch channel {
+                        case let .groupCallStreamChannel(channel, scale, lastTimestampMs):
+                            return EngineCallStreamState.Channel(id: channel, scale: scale, latestTimestamp: lastTimestampMs)
+                        }
+                    })
+                    return .single(state)
+                }
+            }
+            |> `catch` { _ -> Signal<EngineCallStreamState?, NoError> in
+                return .single(nil)
+            }
+        }
+        
+        public func getGroupCallStreamCredentials(peerId: EnginePeer.Id, revokePreviousCredentials: Bool) -> Signal<GroupCallStreamCredentials, GetGroupCallStreamCredentialsError> {
+            return _internal_getGroupCallStreamCredentials(account: self.account, peerId: peerId, revokePreviousCredentials: revokePreviousCredentials)
         }
     }
 }

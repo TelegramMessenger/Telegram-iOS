@@ -83,7 +83,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         return self.groupsInCommonContext.state
         |> map { state in
             if let count = state.count {
-                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_CommonGroupCount(Int32(count)), isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_CommonGroupCount(Int32(count)), isActivity: false, key: .groupsInCommon)
             } else {
                 return nil
             }

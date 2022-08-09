@@ -90,9 +90,7 @@ final class RecentSessionsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         if layout.size.width == 320 {
             textVisible = false
         }
-        
-        self.backgroundColor = .red
-        
+                
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right - 50.0, height: max(1.0, layout.size.height - insets.top - insets.bottom)))
         let textSize = self.textNode.measure(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right - 50.0, height: max(1.0, layout.size.height - insets.top - insets.bottom)))
         

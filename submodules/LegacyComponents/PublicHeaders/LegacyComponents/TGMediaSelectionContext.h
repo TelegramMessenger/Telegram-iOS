@@ -29,6 +29,8 @@
 - (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item success:(bool *)success;
 - (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item animated:(bool)animated sender:(id)sender success:(bool *)success;
 
+- (void)moveItem:(id<TGMediaSelectableItem>)item toIndex:(NSUInteger)index;
+
 - (void)clear;
 
 - (bool)isItemSelected:(id<TGMediaSelectableItem>)item;
@@ -39,9 +41,16 @@
 - (SSignal *)selectionChangedSignal;
 
 - (void)enumerateSelectedItems:(void (^)(id<TGMediaSelectableItem>))enumerationBlock;
+- (void)enumerateDeselectedItems:(void (^)(id<TGMediaSelectableItem>))enumerationBlock;
 
 - (NSOrderedSet *)selectedItemsIdentifiers;
 - (NSArray *)selectedItems;
+
+- (void)saveState;
+- (void)restoreState;
+- (void)clearSavedState;
+
+- (NSUInteger)savedStateDifference;
 
 - (NSUInteger)count;
 

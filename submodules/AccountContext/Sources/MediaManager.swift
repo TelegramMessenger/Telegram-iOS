@@ -10,6 +10,7 @@ import UniversalMediaPlayer
 public enum PeerMessagesMediaPlaylistId: Equatable, SharedMediaPlaylistId {
     case peer(PeerId)
     case recentActions(PeerId)
+    case feed(Int32)
     case custom
     
     public func isEqual(to: SharedMediaPlaylistId) -> Bool {
@@ -34,6 +35,8 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
                     return .peer(peerId)
                 case let .replyThread(replyThreaMessage):
                     return .peer(replyThreaMessage.messageId.peerId)
+                case let .feed(id):
+                    return .feed(id)
                 }
             case let .singleMessage(id):
                 return .peer(id.peerId)
@@ -116,10 +119,10 @@ public func peerMessageMediaPlayerType(_ message: Message) -> MediaManagerPlayer
     return nil
 }
     
-public func peerMessagesMediaPlaylistAndItemId(_ message: Message, isRecentActions: Bool, isGlobalSearch: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
-    if isGlobalSearch {
+public func peerMessagesMediaPlaylistAndItemId(_ message: Message, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
+    if isGlobalSearch && !isDownloadList {
         return (PeerMessagesMediaPlaylistId.custom, PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index))
-    } else if isRecentActions {
+    } else if isRecentActions && !isDownloadList {
         return (PeerMessagesMediaPlaylistId.recentActions(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index))
     } else {
         return (PeerMessagesMediaPlaylistId.peer(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index))

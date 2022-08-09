@@ -27,6 +27,7 @@ public enum ContextMenuActionItemTextLayout {
     case singleLine
     case twoLinesMax
     case secondLineWithValue(String)
+    case multiline
 }
 
 public enum ContextMenuActionItemTextColor {
@@ -43,6 +44,7 @@ public enum ContextMenuActionResult {
 
 public enum ContextMenuActionItemFont {
     case regular
+    case small
     case custom(UIFont)
 }
 
@@ -542,18 +544,54 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private func initializeContent() {
         switch self.source {
         case let .reference(source):
-            let transitionInfo = source.transitionInfo()
-            if let transitionInfo = transitionInfo {
-                let referenceNode = transitionInfo.referenceNode
-                self.contentContainerNode.contentNode = .reference(node: referenceNode)
-                self.contentAreaInScreenSpace = transitionInfo.contentAreaInScreenSpace
-                self.customPosition = transitionInfo.customPosition
-                var projectedFrame = convertFrame(referenceNode.view.bounds, from: referenceNode.view, to: self.view)
-                projectedFrame.origin.x += transitionInfo.insets.left
-                projectedFrame.size.width -= transitionInfo.insets.left + transitionInfo.insets.right
-                projectedFrame.origin.y += transitionInfo.insets.top
-                projectedFrame.size.width -= transitionInfo.insets.top + transitionInfo.insets.bottom
-                self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
+            if let controller = self.getController() as? ContextController, controller.workaroundUseLegacyImplementation {
+                let transitionInfo = source.transitionInfo()
+                if let transitionInfo = transitionInfo {
+                    let referenceView = transitionInfo.referenceView
+                    self.contentContainerNode.contentNode = .reference(view: referenceView)
+                    self.contentAreaInScreenSpace = transitionInfo.contentAreaInScreenSpace
+                    self.customPosition = transitionInfo.customPosition
+                    var projectedFrame = convertFrame(referenceView.bounds, from: referenceView, to: self.view)
+                    projectedFrame.origin.x += transitionInfo.insets.left
+                    projectedFrame.size.width -= transitionInfo.insets.left + transitionInfo.insets.right
+                    projectedFrame.origin.y += transitionInfo.insets.top
+                    projectedFrame.size.width -= transitionInfo.insets.top + transitionInfo.insets.bottom
+                    self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
+                }
+            } else {
+                let presentationNode = ContextControllerExtractedPresentationNode(
+                    getController: { [weak self] in
+                        return self?.getController()
+                    },
+                    requestUpdate: { [weak self] transition in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let validLayout = strongSelf.validLayout {
+                            strongSelf.updateLayout(
+                                layout: validLayout,
+                                transition: transition,
+                                previousActionsContainerNode: nil
+                            )
+                        }
+                    },
+                    requestDismiss: { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.dismissedForCancel?()
+                        strongSelf.beginDismiss(result)
+                    },
+                    requestAnimateOut: { [weak self] result, completion in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.animateOut(result: result, completion: completion)
+                    },
+                    source: .reference(source)
+                )
+                self.presentationNode = presentationNode
+                self.addSubnode(presentationNode)
             }
         case let .extracted(source):
             let presentationNode = ContextControllerExtractedPresentationNode(
@@ -585,7 +623,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                     strongSelf.animateOut(result: result, completion: completion)
                 },
-                source: source
+                source: .extracted(source)
             )
             self.presentationNode = presentationNode
             self.addSubnode(presentationNode)
@@ -842,7 +880,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             if let validLayout = self.validLayout {
                 self.updateLayout(
                     layout: validLayout,
-                    transition: .animated(duration: 0.25, curve: .easeInOut),
+                    transition: .animated(duration: 0.35, curve: .easeInOut),
                     previousActionsContainerNode: nil
                 )
             }
@@ -856,7 +894,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         switch self.source {
         case let .reference(source):
-            guard let maybeContentNode = self.contentContainerNode.contentNode, case let .reference(referenceNode) = maybeContentNode else {
+            guard let maybeContentNode = self.contentContainerNode.contentNode, case let .reference(referenceView) = maybeContentNode else {
                 return
             }
             
@@ -883,8 +921,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             
             self.scrollNode.view.setContentOffset(self.scrollNode.view.contentOffset, animated: false)
             
-            if let transitionInfo = transitionInfo, let parentSupernode = referenceNode.supernode {
-                self.originalProjectedContentViewFrame = (convertFrame(referenceNode.frame, from: parentSupernode.view, to: self.view), convertFrame(referenceNode.bounds, from: referenceNode.view, to: self.view))
+            if let transitionInfo = transitionInfo, let parentSuperview = referenceView.superview {
+                self.originalProjectedContentViewFrame = (convertFrame(referenceView.frame, from: parentSuperview, to: self.view), convertFrame(referenceView.bounds, from: referenceView, to: self.view))
                 
                 var updatedContentAreaInScreenSpace = transitionInfo.contentAreaInScreenSpace
                 updatedContentAreaInScreenSpace.origin.x = 0.0
@@ -2027,13 +2065,13 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
 }
 
 public final class ContextControllerReferenceViewInfo {
-    public let referenceNode: ContextReferenceContentNode
+    public let referenceView: UIView
     public let contentAreaInScreenSpace: CGRect
     public let insets: UIEdgeInsets
     public let customPosition: CGPoint?
     
-    public init(referenceNode: ContextReferenceContentNode, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil) {
-        self.referenceNode = referenceNode
+    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil) {
+        self.referenceView = referenceView
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.insets = insets
         self.customPosition = customPosition
@@ -2216,6 +2254,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var useComplexItemsTransitionAnimation = false
     public var immediateItemsTransitionAnimation = false
+    let workaroundUseLegacyImplementation: Bool
 
     public enum HandledTouchEvent {
         case ignore
@@ -2228,13 +2267,14 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var reactionSelected: ((ReactionContextItem, Bool) -> Void)?
     
-    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
+    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, workaroundUseLegacyImplementation: Bool = false) {
         self.account = account
         self.presentationData = presentationData
         self.source = source
         self.items = items
         self.recognizer = recognizer
         self.gesture = gesture
+        self.workaroundUseLegacyImplementation = workaroundUseLegacyImplementation
         
         super.init(navigationBarPresentationData: nil)
               

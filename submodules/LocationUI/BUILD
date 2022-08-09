@@ -42,6 +42,9 @@ swift_library(
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/TooltipUI:TooltipUI",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/AttachmentUI:AttachmentUI",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

@@ -490,6 +490,12 @@ public final class ShareController: ViewController {
         })
         
         self.switchToAccount(account: currentAccount, animateIn: false)
+        
+        if self.fromForeignApp {
+            if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
+                application.isIdleTimerDisabled = true
+            }
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -501,6 +507,12 @@ public final class ShareController: ViewController {
         self.readyDisposable.dispose()
         self.accountActiveDisposable.dispose()
         self.activeAccountsDisposable?.dispose()
+        
+        if self.fromForeignApp {
+            if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
+                application.isIdleTimerDisabled = false
+            }
+        }
     }
     
     override public func loadDisplayNode() {

@@ -174,7 +174,7 @@ final class ContactsControllerNode: ASDisplayNode {
         guard let contactsController = self.controller else {
             return
         }
-        let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+        let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
         chatController.canReadHistory.set(false)
         let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: contactContextMenuItems(context: self.context, peerId: peer.id, contactsController: contactsController) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
         contactsController.presentInGlobalOverlay(contextController)

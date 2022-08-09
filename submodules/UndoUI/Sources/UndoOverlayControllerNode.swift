@@ -24,6 +24,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let timerTextNode: ImmediateTextNode
     private let avatarNode: AvatarNode?
     private let iconNode: ASImageNode?
+    private var iconImageSize: CGSize?
     private let iconCheckNode: RadialStatusNode?
     private let animationNode: AnimationNode?
     private var animatedStickerNode: AnimatedStickerNode?
@@ -41,7 +42,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let action: (UndoOverlayAction) -> Bool
     private let dismiss: () -> Void
     
-    private let content: UndoOverlayContent
+    private var content: UndoOverlayContent
     
     private let effectView: UIView
     
@@ -166,12 +167,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 5
                 displayUndo = false
                 self.originalRemainingSeconds = 3
-            case let .info(text):
+            case let .info(title, text):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
+            
+                if let title = title {
+                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                }
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -749,6 +754,78 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .notificationSoundAdded(title, text, action):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_notificationsound", colors: [:], scale: 0.066)
+                self.animatedStickerNode = nil
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                
+            
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                    return ("URL", contents)
+                }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+            
+                self.textNode.maximumNumberOfLines = 5
+                displayUndo = false
+                self.originalRemainingSeconds = 5
+            
+                if let action = action {
+                    self.textNode.highlightAttributeAction = { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                            return NSAttributedString.Key(rawValue: "URL")
+                        } else {
+                            return nil
+                        }
+                    }
+                    self.textNode.tapAttributeAction = { attributes, _ in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                            action()
+                        }
+                    }
+                }
+            case let .universal(animation, scale, colors, title, text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: animation, colors: colors, scale: scale)
+                self.animatedStickerNode = nil
+                if let title = title {
+                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                } else {
+                    self.titleNode.attributedText = nil
+                }
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                    return ("URL", contents)
+                }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+            
+                self.textNode.maximumNumberOfLines = 5
+                displayUndo = false
+                self.originalRemainingSeconds = 3
+            case let .image(image, text):
+                self.avatarNode = nil
+                self.iconNode = ASImageNode()
+                self.iconNode?.clipsToBounds = true
+                self.iconNode?.contentMode = .scaleAspectFill
+                self.iconNode?.image = image
+                self.iconNode?.cornerRadius = 4.0
+                self.iconImageSize = CGSize(width: 32.0, height: 32.0)
+                self.iconCheckNode = nil
+                self.animationNode = nil
+                self.animatedStickerNode = nil
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+                displayUndo = true
+                self.originalRemainingSeconds = 5
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -775,15 +852,33 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         super.init()
         
         switch content {
-            case .removedChat:
-                self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved, .paymentSent, .inviteRequestSent:
-                break
-            case .dice:
-                self.panelWrapperNode.clipsToBounds = true
-            case .info:
+        case .removedChat:
+            self.panelWrapperNode.addSubnode(self.timerTextNode)
+        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal:
+            if self.textNode.tapAttributeAction != nil {
+                self.isUserInteractionEnabled = true
+            } else {
                 self.isUserInteractionEnabled = false
+            }
+        case .dice:
+            self.panelWrapperNode.clipsToBounds = true
+        case .info:
+            if self.textNode.tapAttributeAction != nil {
+                self.isUserInteractionEnabled = true
+            } else {
+                self.isUserInteractionEnabled = false
+            }
         }
+        
+        self.titleNode.isUserInteractionEnabled = false
+        self.textNode.isUserInteractionEnabled = self.textNode.tapAttributeAction != nil
+        self.iconNode?.isUserInteractionEnabled = false
+        self.animationNode?.isUserInteractionEnabled = false
+        self.iconCheckNode?.isUserInteractionEnabled = false
+        self.avatarNode?.isUserInteractionEnabled = false
+        self.slotMachineNode?.isUserInteractionEnabled = false
+        self.animatedStickerNode?.isUserInteractionEnabled = false
+        
         self.statusNode.flatMap(self.panelWrapperNode.addSubnode)
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)
         self.iconCheckNode.flatMap(self.panelWrapperNode.addSubnode)
@@ -792,9 +887,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.animatedStickerNode.flatMap(self.panelWrapperNode.addSubnode)
         self.slotMachineNode.flatMap(self.panelWrapperNode.addSubnode)
         self.avatarNode.flatMap(self.panelWrapperNode.addSubnode)
+        self.panelWrapperNode.addSubnode(self.buttonNode)
         self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
-        self.panelWrapperNode.addSubnode(self.buttonNode)
         if displayUndo {
             self.panelWrapperNode.addSubnode(self.undoButtonTextNode)
             self.panelWrapperNode.addSubnode(self.undoButtonNode)
@@ -880,6 +975,24 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.timer = nil
         self.remainingSeconds = self.originalRemainingSeconds
         self.checkTimer()
+    }
+    
+    func updateContent(_ content: UndoOverlayContent) {
+        self.content = content
+        
+        switch content {
+            case let .image(image, text):
+                self.iconNode?.image = image
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+            default:
+                break
+        }
+        
+        self.renewWithCurrentContent()
+        
+        if let validLayout = self.validLayout {
+            self.containerLayoutUpdated(layout: validLayout, transition: .immediate)
+        }
     }
     
     func containerLayoutUpdated(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -969,7 +1082,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: textContentOrigin), size: titleSize))
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: textContentOrigin + textOffset), size: textSize))
         
-        if let iconNode = self.iconNode, let iconSize = iconNode.image?.size {
+        if let iconNode = self.iconNode {
+            let iconSize: CGSize
+            if let size = self.iconImageSize {
+                iconSize = size
+            } else if let size = iconNode.image?.size {
+                iconSize = size
+            } else {
+                iconSize = CGSize()
+            }
+            
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0) + verticalOffset), size: iconSize)
             transition.updateFrame(node: iconNode, frame: iconFrame)
             

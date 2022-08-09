@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import AccountContext
+import ChatPresentationInterfaceState
 
 class ChatInputPanelNode: ASDisplayNode {
     var context: AccountContext?

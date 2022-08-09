@@ -11,9 +11,18 @@ enum MessageHistoryIndexHoleOperation {
     case remove(ClosedRange<MessageId.Id>)
 }
 
-public enum MessageHistoryHoleSpace: Equatable, Hashable {
+public enum MessageHistoryHoleSpace: Equatable, Hashable, CustomStringConvertible {
     case everywhere
     case tag(MessageTags)
+    
+    public var description: String {
+        switch self {
+        case .everywhere:
+            return ".everywhere"
+        case let .tag(tags):
+            return ".tag\(tags.rawValue)"
+        }
+    }
 }
 
 private func addOperation(_ operation: MessageHistoryIndexHoleOperation, peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, to operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
@@ -377,6 +386,8 @@ final class MessageHistoryHoleIndexTable: Table {
     }
     
     private func removeInternal(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>, operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
+        postboxLog("MessageHistoryHoleIndexTable: removeInternal peerId: \(peerId) namespace: \(namespace) space: \(space) range: \(range)")
+        
         var removeKeys: [Int32] = []
         var insertRanges = IndexSet()
         

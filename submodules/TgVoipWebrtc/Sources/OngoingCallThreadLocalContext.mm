@@ -1,9 +1,12 @@
 #import <TgVoipWebrtc/OngoingCallThreadLocalContext.h>
 
+#import "MediaUtils.h"
 
 #import "Instance.h"
 #import "InstanceImpl.h"
 #import "v2/InstanceV2Impl.h"
+#import "v2/InstanceV2ReferenceImpl.h"
+#import "v2_4_0_0/InstanceV2_4_0_0Impl.h"
 #include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
@@ -22,6 +25,9 @@
 #import "platform/darwin/VideoSampleBufferView.h"
 #import "platform/darwin/VideoCaptureView.h"
 #import "platform/darwin/CustomExternalCapturer.h"
+
+#include "platform/darwin/iOS/tgcalls_audio_device_module_ios.h"
+
 #endif
 
 #import "group/GroupInstanceImpl.h"
@@ -795,13 +801,29 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return 92;
 }
 
++ (void)ensureRegisteredImplementations {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        tgcalls::Register<tgcalls::InstanceImpl>();
+        tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
+        tgcalls::Register<tgcalls::InstanceV2Impl>();
+        tgcalls::Register<tgcalls::InstanceV2ReferenceImpl>();
+    });
+}
+
 + (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference {
+    [self ensureRegisteredImplementations];
+    
     NSMutableArray<NSString *> *list = [[NSMutableArray alloc] init];
-    [list addObject:@"2.7.7"];
-    [list addObject:@"3.0.0"];
-    if (includeReference) {
-        [list addObject:@"4.0.0"];
+    
+    for (const auto &version : tgcalls::Meta::Versions()) {
+        [list addObject:[NSString stringWithUTF8String:version.c_str()]];
     }
+    
+    [list sortUsingComparator:^NSComparisonResult(NSString * _Nonnull lhs, NSString * _Nonnull rhs) {
+        return [lhs compare:rhs];
+    }];
+    
     return list;
 }
 
@@ -909,14 +931,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
         tgcalls::EncryptionKey encryptionKey(encryptionKeyValue, isOutgoing);
         
-        __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            tgcalls::Register<tgcalls::InstanceImpl>();
-            tgcalls::Register<tgcalls::InstanceV2Impl>();
-        });
+        [OngoingCallThreadLocalContextWebrtc ensureRegisteredImplementations];
         
+        __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
         _tgVoip = tgcalls::Meta::Create([version UTF8String], (tgcalls::Descriptor){
+            .version = [version UTF8String],
             .config = config,
             .persistentState = (tgcalls::PersistentState){ derivedStateValue },
             .endpoints = endpoints,
@@ -1037,9 +1056,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                         [strongSelf signalingDataEmitted:mappedData];
                     }
                 }];
+            },
+            .createAudioDeviceModule = [](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<webrtc::AudioDeviceModule> {
+                return rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, false, 1);
             }
         });
-        
         _state = OngoingCallStateInitializing;
         _signalBars = 4;
     }
@@ -1363,10 +1384,16 @@ private:
     requestVideoBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, int32_t, OngoingGroupCallRequestedVideoQuality, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestVideoBroadcastPart
     outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
-    enableNoiseSuppression:(bool)enableNoiseSuppression {
+    enableNoiseSuppression:(bool)enableNoiseSuppression
+    disableAudioInput:(bool)disableAudioInput
+    preferX264:(bool)preferX264 {
     self = [super init];
     if (self != nil) {
         _queue = queue;
+
+        _sinks = [[NSMutableDictionary alloc] init];
+        
+        tgcalls::PlatformInterface::SharedInstance()->preferX264 = preferX264;
 
         _sinks = [[NSMutableDictionary alloc] init];
         
@@ -1529,6 +1556,7 @@ private:
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
             .disableOutgoingAudioProcessing = disableOutgoingAudioProcessing,
+            .disableAudioInput = disableAudioInput,
             .videoContentType = _videoContentType,
             .videoCodecPreferences = videoCodecPreferences,
             .initialEnableNoiseSuppression = enableNoiseSuppression,
@@ -1577,7 +1605,7 @@ private:
     }
 }
 
-- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled {
+- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled isUnifiedBroadcast:(bool)isUnifiedBroadcast {
     if (_instance) {
         tgcalls::GroupConnectionMode mappedConnectionMode;
         switch (connectionMode) {
@@ -1598,7 +1626,7 @@ private:
                 break;
             }
         }
-        _instance->setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled);
+        _instance->setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled, isUnifiedBroadcast);
     }
 }
 

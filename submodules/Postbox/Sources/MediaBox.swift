@@ -142,6 +142,11 @@ public final class MediaBox {
     private let cacheQueue = Queue()
     private let timeBasedCleanup: TimeBasedCleanup
     
+    private let didRemoveResourcesPipe = ValuePipe<Void>()
+    public var didRemoveResources: Signal<Void, NoError> {
+        return .single(Void()) |> then(self.didRemoveResourcesPipe.signal())
+    }
+    
     private var statusContexts: [MediaResourceId: ResourceStatusContext] = [:]
     private var cachedRepresentationContexts: [CachedMediaResourceRepresentationKey: CachedMediaResourceRepresentationContext] = [:]
     
@@ -310,11 +315,15 @@ public final class MediaBox {
     }
     
     public func resourceStatus(_ resource: MediaResource, approximateSynchronousValue: Bool = false) -> Signal<MediaResourceStatus, NoError> {
+        return self.resourceStatus(resource.id, resourceSize: resource.size, approximateSynchronousValue: approximateSynchronousValue)
+    }
+    
+    public func resourceStatus(_ resourceId: MediaResourceId, resourceSize: Int?, approximateSynchronousValue: Bool = false) -> Signal<MediaResourceStatus, NoError> {
         let signal = Signal<MediaResourceStatus, NoError> { subscriber in
             let disposable = MetaDisposable()
             
             self.concurrentQueue.async {
-                let paths = self.storePathsForId(resource.id)
+                let paths = self.storePathsForId(resourceId)
                 
                 if let _ = fileSize(paths.complete) {
                     self.timeBasedCleanup.touch(paths: [
@@ -324,7 +333,6 @@ public final class MediaBox {
                     subscriber.putCompletion()
                 } else {
                     self.statusQueue.async {
-                        let resourceId = resource.id
                         let statusContext: ResourceStatusContext
                         var statusUpdateDisposable: MetaDisposable?
                         if let current = self.statusContexts[resourceId] {
@@ -347,7 +355,7 @@ public final class MediaBox {
                         if let statusUpdateDisposable = statusUpdateDisposable {
                             let statusQueue = self.statusQueue
                             self.dataQueue.async {
-                                if let (fileContext, releaseContext) = self.fileContext(for: resource.id) {
+                                if let (fileContext, releaseContext) = self.fileContext(for: resourceId) {
                                     let statusDisposable = fileContext.status(next: { [weak statusContext] value in
                                         statusQueue.async {
                                             if let current = self.statusContexts[resourceId], current === statusContext, current.status != value {
@@ -367,7 +375,7 @@ public final class MediaBox {
                                                 }
                                             }
                                         }
-                                    }, size: resource.size.flatMap(Int32.init))
+                                    }, size: resourceSize.flatMap(Int32.init))
                                     statusUpdateDisposable.set(ActionDisposable {
                                         statusDisposable.dispose()
                                         releaseContext()
@@ -378,10 +386,10 @@ public final class MediaBox {
                         
                         disposable.set(ActionDisposable { [weak statusContext] in
                             self.statusQueue.async {
-                                if let current = self.statusContexts[resource.id], current ===  statusContext {
+                                if let current = self.statusContexts[resourceId], current ===  statusContext {
                                     current.subscribers.remove(index)
                                     if current.subscribers.isEmpty {
-                                        self.statusContexts.removeValue(forKey: resource.id)
+                                        self.statusContexts.removeValue(forKey: resourceId)
                                         current.disposable.dispose()
                                     }
                                 }
@@ -395,13 +403,13 @@ public final class MediaBox {
         }
         if approximateSynchronousValue {
             return Signal<Signal<MediaResourceStatus, NoError>, NoError> { subscriber in
-                let paths = self.storePathsForId(resource.id)
+                let paths = self.storePathsForId(resourceId)
                 if let _ = fileSize(paths.complete) {
                     subscriber.putNext(.single(.Local))
-                } else if let size = fileSize(paths.partial), size == resource.size {
+                } else if let size = fileSize(paths.partial), size == resourceSize {
                     subscriber.putNext(.single(.Local))
                 } else {
-                    subscriber.putNext(.single(.Remote) |> then(signal))
+                    subscriber.putNext(.single(.Remote(progress: 0.0)) |> then(signal))
                 }
                 subscriber.putCompletion()
                 return EmptyDisposable
@@ -417,7 +425,11 @@ public final class MediaBox {
     }
     
     public func completedResourcePath(_ resource: MediaResource, pathExtension: String? = nil) -> String? {
-        let paths = self.storePathsForId(resource.id)
+        return self.completedResourcePath(id: resource.id, pathExtension: pathExtension)
+    }
+    
+    public func completedResourcePath(id: MediaResourceId, pathExtension: String? = nil) -> String? {
+        let paths = self.storePathsForId(id)
         if let _ = fileSize(paths.complete) {
             self.timeBasedCleanup.touch(paths: [
                 paths.complete
@@ -775,8 +787,12 @@ public final class MediaBox {
     }
     
     public func cancelInteractiveResourceFetch(_ resource: MediaResource) {
+        self.cancelInteractiveResourceFetch(resourceId: resource.id)
+    }
+    
+    public func cancelInteractiveResourceFetch(resourceId: MediaResourceId) {
         self.dataQueue.async {
-            if let (fileContext, releaseContext) = self.fileContext(for: resource.id) {
+            if let (fileContext, releaseContext) = self.fileContext(for: resourceId) {
                 fileContext.cancelFullRangeFetches()
                 releaseContext()
             }
@@ -1287,7 +1303,7 @@ public final class MediaBox {
         }
     }
     
-    public func removeCachedResources(_ ids: Set<MediaResourceId>, force: Bool = false) -> Signal<Float, NoError> {
+    public func removeCachedResources(_ ids: Set<MediaResourceId>, force: Bool = false, notify: Bool = false) -> Signal<Float, NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
                 let uniqueIds = Set(ids.map { $0.stringRepresentation })
@@ -1352,6 +1368,31 @@ public final class MediaBox {
                     reportProgress(count)
                 }
                 
+                if notify {
+                    for id in ids {
+                        if let context = self.statusContexts[id] {
+                            context.status = .Remote(progress: 0.0)
+                            for f in context.subscribers.copyItems() {
+                                f(.Remote(progress: 0.0))
+                            }
+                        }
+                    }
+                }
+                
+                self.dataQueue.justDispatch {
+                    self.didRemoveResourcesPipe.putNext(Void())
+                }
+                
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+    
+    public func allFileContextResourceIds() -> Signal<Set<MediaResourceId>, NoError> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                subscriber.putNext(Set(self.fileContexts.map({ $0.key })))
                 subscriber.putCompletion()
             }
             return EmptyDisposable

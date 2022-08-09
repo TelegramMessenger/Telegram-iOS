@@ -29,6 +29,8 @@ public enum PeerReportOption {
     case copyright
     case pornography
     case childAbuse
+    case illegalDrugs
+    case personalDetails
     case other
 }
 
@@ -59,6 +61,12 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
             case .copyright:
                 title = presentationData.strings.ReportPeer_ReasonCopyright
                 icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
+            case .illegalDrugs:
+                title = presentationData.strings.ReportPeer_ReasonIllegalDrugs
+                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportDrugs")
+            case .personalDetails:
+                title = presentationData.strings.ReportPeer_ReasonPersonalDetails
+                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportPersonal")
             case .other:
                 title = presentationData.strings.ReportPeer_ReasonOther
                 icon = UIImage(bundleImageName: "Chat/Context Menu/Report")
@@ -82,6 +90,10 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                     reportReason = .childAbuse
                 case .copyright:
                     reportReason = .copyright
+                case .illegalDrugs:
+                    reportReason = .illegalDrugs
+                case .personalDetails:
+                    reportReason = .personalDetails
                 case .other:
                     reportReason = .custom
                 }
@@ -191,6 +203,10 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                 title = presentationData.strings.ReportPeer_ReasonChildAbuse
             case .copyright:
                 title = presentationData.strings.ReportPeer_ReasonCopyright
+            case .illegalDrugs:
+                title = presentationData.strings.ReportPeer_ReasonIllegalDrugs
+            case .personalDetails:
+                title = presentationData.strings.ReportPeer_ReasonPersonalDetails
             case .other:
                 title = presentationData.strings.ReportPeer_ReasonOther
         }
@@ -209,6 +225,10 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                     reportReason = .childAbuse
                 case .copyright:
                     reportReason = .copyright
+                case .illegalDrugs:
+                    reportReason = .illegalDrugs
+                case .personalDetails:
+                    reportReason = .personalDetails
                 case .other:
                     reportReason = .custom
             }

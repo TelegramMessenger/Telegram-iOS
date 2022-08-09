@@ -42,7 +42,7 @@ public enum ChatListItemContent {
     public var chatLocation: ChatLocation? {
         switch self {
             case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _):
-                return .peer(peer.peerId)
+                return .peer(id: peer.peerId)
             case .groupReference:
                 return nil
         }
@@ -181,19 +181,19 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     }
 }
 
-private let pinIcon = ItemListRevealOptionIcon.animation(animation: "anim_pin", scale: 0.33333, offset: 0.0, keysToColor: nil, flip: false)
-private let unpinIcon = ItemListRevealOptionIcon.animation(animation: "anim_unpin", scale: 0.33333, offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"], flip: false)
-private let muteIcon = ItemListRevealOptionIcon.animation(animation: "anim_mute", scale: 0.33333, offset: 0.0, keysToColor: ["un Outlines.Group 1.Stroke 1"], flip: false)
-private let unmuteIcon = ItemListRevealOptionIcon.animation(animation: "anim_unmute", scale: 0.33333, offset: 0.0, keysToColor: nil, flip: false)
-private let deleteIcon = ItemListRevealOptionIcon.animation(animation: "anim_delete", scale: 0.33333, offset: 0.0, keysToColor: nil, flip: false)
-private let groupIcon = ItemListRevealOptionIcon.animation(animation: "anim_group", scale: 0.33333, offset: 0.0, keysToColor: nil, flip: false)
-private let ungroupIcon = ItemListRevealOptionIcon.animation(animation: "anim_ungroup", scale: 0.33333, offset: 0.0, keysToColor: nil, flip: false)
-private let readIcon = ItemListRevealOptionIcon.animation(animation: "anim_read", scale: 0.33333, offset: 0.0, keysToColor: nil, flip: false)
-private let unreadIcon = ItemListRevealOptionIcon.animation(animation: "anim_unread", scale: 0.33333, offset: 0.0, keysToColor: ["Oval.Oval.Stroke 1"], flip: false)
-private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_archive", scale: 0.33333, offset: 2.0, keysToColor: ["box2.box2.Fill 1"], flip: false)
-private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_unarchive", scale: 0.16214, offset: -9.0, keysToColor: ["box2.box2.Fill 1"], flip: false)
-private let hideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 0.33333, offset: 2.0, keysToColor: ["Path 2.Path 2.Fill 1"], flip: false)
-private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 0.33333, offset: -20.0, keysToColor: ["Path 2.Path 2.Fill 1"], flip: true)
+private let pinIcon = ItemListRevealOptionIcon.animation(animation: "anim_pin", scale: 1.0, offset: 0.0, replaceColors: nil, flip: false)
+private let unpinIcon = ItemListRevealOptionIcon.animation(animation: "anim_unpin", scale: 1.0, offset: 0.0, replaceColors: [0x1993fa], flip: false)
+private let muteIcon = ItemListRevealOptionIcon.animation(animation: "anim_mute", scale: 1.0, offset: 0.0, replaceColors: [0xff9500], flip: false)
+private let unmuteIcon = ItemListRevealOptionIcon.animation(animation: "anim_unmute", scale: 1.0, offset: 0.0, replaceColors: nil, flip: false)
+private let deleteIcon = ItemListRevealOptionIcon.animation(animation: "anim_delete", scale: 1.0, offset: 0.0, replaceColors: nil, flip: false)
+private let groupIcon = ItemListRevealOptionIcon.animation(animation: "anim_group", scale: 1.0, offset: 0.0, replaceColors: nil, flip: false)
+private let ungroupIcon = ItemListRevealOptionIcon.animation(animation: "anim_ungroup", scale: 1.0, offset: 0.0, replaceColors: nil, flip: false)
+private let readIcon = ItemListRevealOptionIcon.animation(animation: "anim_read", scale: 1.0, offset: 0.0, replaceColors: nil, flip: false)
+private let unreadIcon = ItemListRevealOptionIcon.animation(animation: "anim_unread", scale: 1.0, offset: 0.0, replaceColors: [0x2194fa], flip: false)
+private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_archive", scale: 1.0, offset: 2.0, replaceColors: [0xa9a9ad], flip: false)
+private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_unarchive", scale: 0.642, offset: -9.0, replaceColors: [0xa9a9ad], flip: false)
+private let hideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 1.0, offset: 2.0, replaceColors: [0xbdbdc2], flip: false)
+private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 1.0, offset: -20.0, replaceColors: [0xbdbdc2], flip: true)
 
 private enum RevealOptionKey: Int32 {
     case pin

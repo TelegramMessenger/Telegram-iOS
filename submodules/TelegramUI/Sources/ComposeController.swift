@@ -157,13 +157,13 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                 strongSelf.createActionDisposable.set((controller.result
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak controller] result in
-                    if let strongSelf = self, let (contactPeers, _) = result, case let .peer(peer, _, _) = contactPeers.first {
+                    if let strongSelf = self, let (contactPeers, _, _, _, _) = result, case let .peer(peer, _, _) = contactPeers.first {
                         controller?.dismissSearch()
                         controller?.displayNavigationActivity = true
                         strongSelf.createActionDisposable.set((strongSelf.context.engine.peers.createSecretChat(peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in
                             if let strongSelf = self, let controller = controller {
                                 controller.displayNavigationActivity = false
-                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: true)
+                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: peerId)), animated: true)
                             }
                         }, error: { error in
                             if let strongSelf = self, let controller = controller {
@@ -207,7 +207,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                             if let peer = peer {
                                 DispatchQueue.main.async {
                                     if let navigationController = strongSelf.navigationController as? NavigationController {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id)))
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id)))
                                     }
                                 }
                             } else {
@@ -305,7 +305,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
     }
     
     private func openPeer(peerId: PeerId) {
-        (self.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId)), animated: true)
+        (self.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: self.context, chatLocation: .peer(id: peerId)), animated: true)
     }
     
     @objc private func cancelPressed() {

@@ -47,6 +47,14 @@ public enum EnqueueMessage {
                 return .forward(source: source, grouping: grouping, attributes: attributes, correlationId: value)
         }
     }
+    
+    public var groupingKey: Int64? {
+        if case let .message(_, _, _, _, localGroupingKey, _) = self {
+            return localGroupingKey
+        } else {
+            return nil
+        }
+    }
 }
 
 private extension EnqueueMessage {
@@ -123,7 +131,7 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
     }
 }
 
-private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAttribute]) -> [MessageAttribute] {
+private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAttribute], forwardedMessageIds: Set<MessageId>? = nil) -> [MessageAttribute] {
     return attributes.filter { attribute in
         switch attribute {
             case _ as TextEntitiesMessageAttribute:
@@ -138,6 +146,12 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
                 return true
             case _ as SendAsMessageAttribute:
                 return true
+            case let attribute as ReplyMessageAttribute:
+                if let forwardedMessageIds = forwardedMessageIds {
+                    return forwardedMessageIds.contains(attribute.messageId)
+                } else {
+                    return false
+                }
             default:
                 return false
         }
@@ -271,6 +285,13 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
 }
 
 func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)], disableAutoremove: Bool = false, transformGroupingKeysWithPeerId: Bool = false) -> [MessageId?] {
+    var forwardedMessageIds = Set<MessageId>()
+    for (_, message) in messages {
+        if case let .forward(sourceId, _, _, _) = message {
+            forwardedMessageIds.insert(sourceId)
+        }
+    }
+    
     var updatedMessages: [(Bool, EnqueueMessage)] = []
     outer: for (transformedMedia, message) in messages {
         var updatedMessage = message
@@ -602,7 +623,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             }
                             
                             attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(requestedAttributes))
-                            attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes))
+                            attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes, forwardedMessageIds: forwardedMessageIds))
                             
                             var sourceReplyMarkup: ReplyMarkupMessageAttribute? = nil
                             var sourceSentViaBot = false

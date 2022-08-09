@@ -15,7 +15,7 @@ import SearchBarNode
 import SearchUI
 import UndoUI
 import TelegramUIPreferences
-import Translate
+import TranslateUI
 
 private enum LanguageListSection: ItemListSectionId {
     case translate
@@ -453,7 +453,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             if let localizationListState = localizationListState, !localizationListState.availableOfficialLocalizations.isEmpty {
                 strongSelf.currentListState = localizationListState
                 
-                if #available(iOS 15.0, *) {
+                if #available(iOS 12.0, *) {
                     entries.append(.translateTitle(text: presentationData.strings.Localization_TranslateMessages.uppercased()))
                     entries.append(.translate(text: presentationData.strings.Localization_ShowTranslate, value: showTranslate))
                     if showTranslate {
@@ -470,7 +470,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                         entries.append(.doNotTranslate(text: presentationData.strings.Localization_DoNotTranslate, value: value))
                         entries.append(.translateInfo(text: ignoredLanguages.count > 1 ? presentationData.strings.Localization_DoNotTranslateManyInfo : presentationData.strings.Localization_DoNotTranslateInfo))
                     } else {
-                        entries.append(.translateInfo(text: presentationData.strings.Localization_ShowTranslateInfo))
+                        entries.append(.translateInfo(text: presentationData.strings.Localization_ShowTranslateInfoExtended))
                     }
                 }
                 
@@ -520,7 +520,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 if let strongSelf = self {
                     strongSelf.push(translationSettingsController(context: strongSelf.context))
                 }
-            }, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem, firstTime: previousEntriesAndPresentationData == nil, isLoading: entries.isEmpty, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings, animated: (previousEntriesAndPresentationData?.0.count ?? 0) >= entries.count, crossfade: (previousState == nil) != (localizationListState == nil))
+            }, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem, firstTime: previousEntriesAndPresentationData == nil, isLoading: entries.isEmpty, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings, animated: (previousEntriesAndPresentationData?.0.count ?? 0) != entries.count, crossfade: (previousState == nil) != (localizationListState == nil))
             strongSelf.enqueueTransition(transition)
         })
         self.updatedDisposable = context.engine.localization.synchronizedLocalizationListState().start()

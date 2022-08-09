@@ -26,6 +26,7 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
     ],
     visibility = [
         "//visibility:public",

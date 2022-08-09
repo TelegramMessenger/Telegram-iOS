@@ -240,13 +240,52 @@ struct LocationPickerState {
     }
 }
 
+private class LocationContext: NSObject, CLLocationManagerDelegate {
+    private let locationManager: CLLocationManager
+    
+    private let accessSink = ValuePipe<CLAuthorizationStatus>()
+    
+    override init() {
+        self.locationManager = CLLocationManager()
+        
+        super.init()
+        
+        self.locationManager.delegate = self
+    }
+    
+    func locationAccess() -> Signal<CLAuthorizationStatus, NoError> {
+        let initialStatus: CLAuthorizationStatus
+        if #available(iOS 14.0, *) {
+            initialStatus = self.locationManager.authorizationStatus
+        } else {
+            initialStatus = CLLocationManager.authorizationStatus()
+        }
+        return .single(initialStatus)
+        |> then(
+            self.accessSink.signal()
+        )
+    }
+    
+    @available(iOS 14.0, *)
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        self.accessSink.putNext(manager.authorizationStatus)
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        self.accessSink.putNext(status)
+    }
+}
+
 final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationManagerDelegate {
+    private weak var controller: LocationPickerController?
     private let context: AccountContext
     private var presentationData: PresentationData
     private let presentationDataPromise: Promise<PresentationData>
     private let mode: LocationPickerMode
     private let interaction: LocationPickerInteraction
     private let locationManager: LocationManager
+    
+    private let locationContext: LocationContext
     
     private let listNode: ListView
     private let emptyResultsTextNode: ImmediateTextNode
@@ -256,6 +295,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
     
     private let optionsNode: LocationOptionsNode
     private(set) var searchContainerNode: LocationSearchContainerNode?
+    
+    private var placeholderBackgroundNode: NavigationBackgroundNode?
+    private var placeholderNode: LocationPlaceholderNode?
+    private var locationAccessDenied = false
     
     private var enqueuedTransitions: [LocationPickerTransaction] = []
     
@@ -269,13 +312,19 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
         
-    init(context: AccountContext, presentationData: PresentationData, mode: LocationPickerMode, interaction: LocationPickerInteraction, locationManager: LocationManager) {
+    var beganInteractiveDragging: () -> Void = {}
+    var locationAccessDeniedUpdated: (Bool) -> Void = { _ in }
+    
+    init(controller: LocationPickerController, context: AccountContext, presentationData: PresentationData, mode: LocationPickerMode, interaction: LocationPickerInteraction, locationManager: LocationManager) {
+        self.controller = controller
         self.context = context
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(presentationData)
         self.mode = mode
         self.interaction = interaction
         self.locationManager = locationManager
+        
+        self.locationContext = LocationContext()
         
         self.state = LocationPickerState()
         self.statePromise = Promise(self.state)
@@ -446,8 +495,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         let previousAnnotations = Atomic<[LocationPinAnnotation]>(value: [])
         let previousEntries = Atomic<[LocationPickerEntry]?>(value: nil)
         
-        self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), userLocation, venues, foundVenues)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, userLocation, venues, foundVenuesAndLocation in
+        self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), userLocation, venues, foundVenues, self.locationContext.locationAccess())
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, userLocation, venues, foundVenuesAndLocation, access in
             if let strongSelf = self {
                 let (foundVenues, foundVenuesLocation) = foundVenuesAndLocation ?? (nil, nil)
                 
@@ -587,6 +636,20 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                     var updateLayout = false
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
+                
+                    if [.denied, .restricted].contains(access) {
+                        if !strongSelf.locationAccessDenied {
+                            strongSelf.locationAccessDenied = true
+                            strongSelf.locationAccessDeniedUpdated(true)
+                            updateLayout = true
+                        }
+                    } else {
+                        if strongSelf.locationAccessDenied {
+                            strongSelf.locationAccessDenied = false
+                            strongSelf.locationAccessDeniedUpdated(false)
+                            updateLayout = true
+                        }
+                    }
                     
                     if previousState.displayingMapModeOptions != state.displayingMapModeOptions {
                         updateLayout = true
@@ -654,6 +717,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             guard let strongSelf = self else {
                 return
             }
+            strongSelf.beganInteractiveDragging()
             strongSelf.updateState { state in
                 var state = state
                 state.displayingMapModeOptions = false
@@ -831,7 +895,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             }
         }
         
-        let topInset: CGFloat = floor((layout.size.height - navigationHeight) / 2.0 + navigationHeight)
+//        let topInset: CGFloat = floor((layout.size.height - navigationHeight) / 2.0 + navigationHeight)
+        let topInset: CGFloat = 240.0
         let overlap: CGFloat = 6.0
         let headerHeight: CGFloat
         if isPickingLocation, let actionHeight = actionHeight {
@@ -881,13 +946,66 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         let optionsOffset: CGFloat = self.state.displayingMapModeOptions ? navigationHeight : navigationHeight - optionsHeight
         let optionsFrame = CGRect(x: 0.0, y: optionsOffset, width: layout.size.width, height: optionsHeight)
         transition.updateFrame(node: self.optionsNode, frame: optionsFrame)
-        self.optionsNode.updateLayout(size: optionsFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+        self.optionsNode.updateLayout(size: optionsFrame.size, leftInset: insets.left, rightInset: insets.right, transition: transition)
         self.optionsNode.isUserInteractionEnabled = self.state.displayingMapModeOptions
         
         if let searchContainerNode = self.searchContainerNode {
             searchContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
             searchContainerNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationHeight, transition: transition)
         }
+        
+        if self.locationAccessDenied {
+            self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+            Queue.mainQueue().after(0.25) {
+                self.controller?.updateTabBarAlpha(0.0, .immediate)
+            }
+            
+            var placeholderTransition = transition
+            let placeholderNode: LocationPlaceholderNode
+            let backgroundNode: NavigationBackgroundNode
+            if let current = self.placeholderNode, let background = self.placeholderBackgroundNode {
+                placeholderNode = current
+                backgroundNode = background
+                
+                backgroundNode.updateColor(color: self.presentationData.theme.rootController.tabBar.backgroundColor, transition: .immediate)
+            } else {
+                backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.tabBar.backgroundColor)
+                if let navigationBar = self.controller?.navigationBar {
+                    self.insertSubnode(backgroundNode, belowSubnode: navigationBar)
+                } else {
+                    self.addSubnode(backgroundNode)
+                }
+                self.placeholderBackgroundNode = backgroundNode
+                
+                placeholderNode = LocationPlaceholderNode(content: .intro)
+                placeholderNode.settingsPressed = { [weak self] in
+                    self?.context.sharedContext.applicationBindings.openSettings()
+                }
+                self.insertSubnode(placeholderNode, aboveSubnode: backgroundNode)
+                self.placeholderNode = placeholderNode
+                
+                placeholderTransition = .immediate
+            }
+            placeholderNode.update(layout: layout, theme: self.presentationData.theme, strings: self.presentationData.strings, transition: placeholderTransition)
+            placeholderTransition.updateFrame(node: placeholderNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+            
+            let placeholderFrame = CGRect(origin: CGPoint(), size: layout.size)
+            backgroundNode.update(size: placeholderFrame.size, transition: placeholderTransition)
+            placeholderTransition.updateFrame(node: placeholderNode, frame: placeholderFrame)
+        } else {
+            if let placeholderNode = self.placeholderNode {
+                self.placeholderNode = nil
+                placeholderNode.removeFromSupernode()
+            }
+            if let placeholderBackgroundNode = self.placeholderBackgroundNode {
+                self.placeholderBackgroundNode = nil
+                placeholderBackgroundNode.removeFromSupernode()
+            }
+            
+            self.controller?.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+            self.controller?.updateTabBarAlpha(1.0, .immediate)
+        }
+        
     }
     
     func updateSendActionHighlight(_ highlighted: Bool) {

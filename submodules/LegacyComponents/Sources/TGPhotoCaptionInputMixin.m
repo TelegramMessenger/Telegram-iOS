@@ -4,12 +4,7 @@
 
 #import <LegacyComponents/TGObserverProxy.h>
 
-#import "TGSuggestionContext.h"
 #import "TGPhotoPaintStickersContext.h"
-
-#import "TGModernConversationMentionsAssociatedPanel.h"
-#import "TGModernConversationHashtagsAssociatedPanel.h"
-#import "TGModernConversationAlphacodeAssociatedPanel.h"
 
 @interface TGPhotoCaptionInputMixin ()
 {
@@ -167,7 +162,6 @@
 
 #pragma mark - Input Panel Delegate
 
-
 //- (void)inputPanelMentionEntered:(TGMediaPickerCaptionInputPanel *)__unused inputTextPanel mention:(NSString *)mention startOfLine:(bool)__unused startOfLine
 //{
 //    if (mention == nil)
@@ -323,9 +317,6 @@
 - (void)setContentAreaHeight:(CGFloat)contentAreaHeight
 {
     _contentAreaHeight = contentAreaHeight;
-    
-    CGFloat finalHeight = _contentAreaHeight - _keyboardHeight;
-//    [_inputPanel setContentAreaHeight:finalHeight];
 }
 
 - (UIView *)_parentView
@@ -383,13 +374,21 @@
     _currentEdgeInsets = edgeInsets;
     
     CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size sideInset:0.0];
-    _inputPanelView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, panelHeight);
+    
+    CGFloat y = 0.0;
+    if (frame.size.width > frame.size.height && !TGIsPad()) {
+        y = edgeInsets.top + frame.size.height;
+    } else {
+        y = edgeInsets.top + frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight);
+    }
+    
+    _inputPanelView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, panelHeight);
     
     CGFloat backgroundHeight = panelHeight;
     if (_keyboardHeight > 0.0) {
         backgroundHeight += _keyboardHeight - edgeInsets.bottom;
     }
-    _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, backgroundHeight);
+    _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight);
 }
 
 @end

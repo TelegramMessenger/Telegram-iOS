@@ -18,5 +18,6 @@ typedef NS_ENUM(NSInteger, STPCardBrand) {
     STPCardBrandDiscover,
     STPCardBrandJCB,
     STPCardBrandDinersClub,
+    STPCardBrandOther,
     STPCardBrandUnknown,
 };

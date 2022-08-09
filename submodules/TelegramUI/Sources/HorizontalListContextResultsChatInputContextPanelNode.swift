@@ -11,6 +11,8 @@ import MergeLists
 import AccountContext
 import StickerPackPreviewUI
 import ContextUI
+import ChatPresentationInterfaceState
+import UndoUI
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult
@@ -185,6 +187,9 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                         return
                                     }
                                     let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .standalone(media: file)).start()
+                                    
+                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                    strongSelf.interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: strongSelf.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
                                 })))
                             }
                             menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.ShareMenu_Send, icon: { theme in

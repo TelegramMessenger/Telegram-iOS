@@ -801,6 +801,9 @@ public final class ContactListNode: ASDisplayNode {
     public var selectionState: ContactListNodeGroupSelectionState? {
         return self.selectionStateValue
     }
+    public var selectionStateSignal: Signal<ContactListNodeGroupSelectionState?, NoError> {
+        return self.selectionStatePromise.get()
+    }
     public var selectionStateUpdated: ((ContactListNodeGroupSelectionState?) -> Void)?
     
     public var selectedPeers: [ContactListPeer] {
@@ -980,8 +983,8 @@ public final class ContactListNode: ASDisplayNode {
             }
             
             var insets = layout.0.insets(options: [.input])
-            insets.left += layout.0.safeInsets.left
-            insets.right += layout.0.safeInsets.right
+            insets.left = layout.0.safeInsets.left
+            insets.right = layout.0.safeInsets.right
             
             var headerInsets = layout.1
             if headerInsets.top == insets.top {
@@ -1469,8 +1472,8 @@ public final class ContactListNode: ASDisplayNode {
         self.validLayout = (layout, headerInsets)
         
         var insets = layout.insets(options: [.input])
-        insets.left += layout.safeInsets.left
-        insets.right += layout.safeInsets.right
+        insets.left = layout.safeInsets.left
+        insets.right = layout.safeInsets.right
         
         var headerInsets = headerInsets
         if !hadValidLayout {
@@ -1488,15 +1491,22 @@ public final class ContactListNode: ASDisplayNode {
             if let inputHeight = layout.inputHeight {
                 insets.bottom -= inputHeight
             }
-            insets.left += layout.safeInsets.left
-            insets.right += layout.safeInsets.right
+            insets.left = layout.safeInsets.left
+            insets.right = layout.safeInsets.right
             
             let indexNodeFrame = CGRect(origin: CGPoint(x: layout.size.width - insets.right - 20.0, y: insets.top), size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom))
             transition.updateFrame(node: indexNode, frame: indexNodeFrame)
             self.indexNode.update(size: indexNodeFrame.size, color: self.presentationData.theme.list.itemAccentColor, sections: indexSections, transition: transition)
         }
         
-        self.authorizationNode.updateLayout(size: layout.size, insets: insets, transition: transition)
+        if self.multipleSelection {
+            let permissionSize = CGSize(width: layout.size.width, height: layout.size.height - 160.0)
+            var permissionInsets = insets
+            permissionInsets.bottom += 100.0
+            self.authorizationNode.updateLayout(size: permissionSize, insets: permissionInsets, transition: transition)
+        } else {
+            self.authorizationNode.updateLayout(size: layout.size, insets: insets, transition: transition)
+        }
         transition.updateFrame(node: self.authorizationNode, frame: self.bounds)
             
         if !hadValidLayout {
@@ -1534,8 +1544,8 @@ public final class ContactListNode: ASDisplayNode {
                     self.indexSections = transition.indexSections
                     
                     var insets = layout.insets(options: [.input])
-                    insets.left += layout.safeInsets.left
-                    insets.right += layout.safeInsets.right
+                    insets.left = layout.safeInsets.left
+                    insets.right = layout.safeInsets.right
                     
                     if let inputHeight = layout.inputHeight {
                         insets.bottom -= inputHeight

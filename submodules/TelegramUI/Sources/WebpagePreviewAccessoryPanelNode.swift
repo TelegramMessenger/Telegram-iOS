@@ -8,6 +8,7 @@ import Display
 import TelegramPresentationData
 import AccountContext
 import TelegramStringFormatting
+import ChatPresentationInterfaceState
 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()
@@ -138,6 +139,8 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                         }
                     } else if content.type == "telegram_theme" {
                         text = strings.Message_Theme
+                    } else if content.type == "video" {
+                        text = stringForMediaKind(.video, strings: self.strings).0
                     } else if let _ = content.image {
                         text = stringForMediaKind(.image, strings: self.strings).0
                     }

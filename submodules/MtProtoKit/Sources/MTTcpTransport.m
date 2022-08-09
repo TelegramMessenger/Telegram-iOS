@@ -82,7 +82,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     return queue;
 }
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId schemes:(NSArray<MTTransportScheme *> * _Nonnull)schemes proxySettings:(MTSocksProxySettings *)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId schemes:(NSArray<MTTransportScheme *> * _Nonnull)schemes proxySettings:(MTSocksProxySettings *)proxySettings usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo getLogPrefix:(NSString *(^)())getLogPrefix
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
@@ -90,7 +90,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     NSAssert(schemes.count != 0, @"schemes should not be empty");
 #endif
     
-    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId schemes:schemes proxySettings:proxySettings usageCalculationInfo:usageCalculationInfo];
+    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId schemes:schemes proxySettings:proxySettings usageCalculationInfo:usageCalculationInfo getLogPrefix:getLogPrefix];
     if (self != nil)
     {
         _context = context;
@@ -196,7 +196,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
                 [self startConnectionWatchdogTimer:scheme];
                 [self startSleepWatchdogTimer];
                 
-                transportContext.connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:_datacenterId scheme:scheme interface:nil usageCalculationInfo:_usageCalculationInfo];
+                transportContext.connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:_datacenterId scheme:scheme interface:nil usageCalculationInfo:_usageCalculationInfo getLogPrefix:self.getLogPrefix];
                 transportContext.connection.delegate = self;
                 [transportContext.connection start];
             }

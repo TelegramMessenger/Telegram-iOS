@@ -17,7 +17,7 @@ private func findTaggedViewImpl(view: UIView, tag: Any) -> UIView? {
     return nil
 }
 
-public final class ComponentHostView<EnvironmentType>: UIView {
+public final class ComponentHostView<EnvironmentType: Equatable>: UIView {
     private var currentComponent: AnyComponent<EnvironmentType>?
     private var currentContainerSize: CGSize?
     private var currentSize: CGSize?
@@ -32,20 +32,13 @@ public final class ComponentHostView<EnvironmentType>: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func update(transition: Transition, component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, containerSize: CGSize) -> CGSize {
-        if let currentComponent = self.currentComponent, let currentContainerSize = self.currentContainerSize, let currentSize = self.currentSize {
-            if currentContainerSize == containerSize && currentComponent == component {
-                return currentSize
-            }
-        }
-        self.currentComponent = component
-        self.currentContainerSize = containerSize
-        let size = self._update(transition: transition, component: component, maybeEnvironment: environment, updateEnvironment: true, containerSize: containerSize)
+    public func update(transition: Transition, component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, forceUpdate: Bool = false, containerSize: CGSize) -> CGSize {
+        let size = self._update(transition: transition, component: component, maybeEnvironment: environment, updateEnvironment: true, forceUpdate: forceUpdate, containerSize: containerSize)
         self.currentSize = size
         return size
     }
 
-    private func _update(transition: Transition, component: AnyComponent<EnvironmentType>, maybeEnvironment: () -> Environment<EnvironmentType>, updateEnvironment: Bool, containerSize: CGSize) -> CGSize {
+    private func _update(transition: Transition, component: AnyComponent<EnvironmentType>, maybeEnvironment: () -> Environment<EnvironmentType>, updateEnvironment: Bool, forceUpdate: Bool, containerSize: CGSize) -> CGSize {
         precondition(!self.isUpdating)
         self.isUpdating = true
 
@@ -72,6 +65,20 @@ public final class ComponentHostView<EnvironmentType>: UIView {
             let _ = maybeEnvironment()
             EnvironmentBuilder._environment = nil
         }
+        
+        let isEnvironmentUpdated = context.erasedEnvironment.calculateIsUpdated()
+        if isEnvironmentUpdated {
+            context.erasedEnvironment._isUpdated = false
+        }
+        
+        if !forceUpdate, !isEnvironmentUpdated, let currentComponent = self.currentComponent, let currentContainerSize = self.currentContainerSize, let currentSize = self.currentSize {
+            if currentContainerSize == containerSize && currentComponent == component {
+                self.isUpdating = false
+                return currentSize
+            }
+        }
+        self.currentComponent = component
+        self.currentContainerSize = containerSize
 
         componentState._updated = { [weak self] transition in
             guard let strongSelf = self else {
@@ -79,7 +86,7 @@ public final class ComponentHostView<EnvironmentType>: UIView {
             }
             let _ = strongSelf._update(transition: transition, component: component, maybeEnvironment: {
                 preconditionFailure()
-            } as () -> Environment<EnvironmentType>, updateEnvironment: false, containerSize: containerSize)
+            } as () -> Environment<EnvironmentType>, updateEnvironment: false, forceUpdate: true, containerSize: containerSize)
         }
 
         let updatedSize = component._update(view: componentView, availableSize: containerSize, environment: context.erasedEnvironment, transition: transition)

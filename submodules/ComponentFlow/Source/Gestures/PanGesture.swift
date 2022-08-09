@@ -5,7 +5,7 @@ public extension Gesture {
     enum PanGestureState {
         case began
         case updated(offset: CGPoint)
-        case ended
+        case ended(velocity: CGPoint)
     }
 
     private final class PanGesture: Gesture {
@@ -24,7 +24,7 @@ public extension Gesture {
                 case .began:
                     self.action(.began)
                 case .ended, .cancelled:
-                    self.action(.ended)
+                    self.action(.ended(velocity: self.velocity(in: self.view)))
                 case .changed:
                     let offset = self.translation(in: self.view)
                     self.action(.updated(offset: offset))
