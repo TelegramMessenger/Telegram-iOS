@@ -83,6 +83,12 @@ def call_executable(arguments, use_clean_environment=True, check_result=True):
         subprocess.call(resolved_arguments, env=resolved_env)
 
 
+def check_run_system(command):
+    if os.system(command) != 0:
+        print('Command failed: {}'.format(command))
+        sys.exit(1)
+
+
 def get_bazel_version(bazel_path):
     command_result = run_executable_with_output(bazel_path, ['--version']).strip('\n')
     if not command_result.startswith('bazel '):

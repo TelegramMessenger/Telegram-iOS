@@ -5,12 +5,7 @@ import shutil
 import tempfile
 import plistlib
 
-from BuildEnvironment import run_executable_with_output
-
-def check_run_system(command):
-    if os.system(command) != 0:
-        print('Command failed: {}'.format(command))
-        sys.exit(1)
+from BuildEnvironment import run_executable_with_output, check_run_system
 
 class BuildConfiguration:
     def __init__(self,
