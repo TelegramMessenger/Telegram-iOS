@@ -78,6 +78,8 @@
     _dct->inverse(coefficients, pixels, (int)width, (int)height, (int)coefficientsPerRow, (int)bytesPerRow);
 }
 
+#if defined(__aarch64__)
+
 - (void)forward4x4:(int16_t const * _Nonnull)normalizedCoefficients coefficients:(int16_t * _Nonnull)coefficients width:(NSInteger)width height:(NSInteger)height {
     _dct->forward4x4(normalizedCoefficients, coefficients, (int)width, (int)height);
 }
@@ -85,5 +87,7 @@
 - (void)inverse4x4Add:(int16_t const * _Nonnull)coefficients normalizedCoefficients:(int16_t * _Nonnull)normalizedCoefficients width:(NSInteger)width height:(NSInteger)height {
     _dct->inverse4x4Add(coefficients, normalizedCoefficients, (int)width, (int)height);
 }
+
+#endif
 
 @end

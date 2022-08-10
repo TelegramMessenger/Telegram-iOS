@@ -70,6 +70,7 @@ public final class TelegramUser: Peer, Equatable {
     public let botInfo: BotUserInfo?
     public let restrictionInfo: PeerAccessRestrictionInfo?
     public let flags: UserInfoFlags
+    public let emojiStatus: PeerEmojiStatus?
     
     public var nameOrPhone: String {
         if let firstName = self.firstName {
@@ -106,7 +107,7 @@ public final class TelegramUser: Peer, Equatable {
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
-    public init(id: PeerId, accessHash: TelegramPeerAccessHash?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?, restrictionInfo: PeerAccessRestrictionInfo?, flags: UserInfoFlags) {
+    public init(id: PeerId, accessHash: TelegramPeerAccessHash?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?, restrictionInfo: PeerAccessRestrictionInfo?, flags: UserInfoFlags, emojiStatus: PeerEmojiStatus?) {
         self.id = id
         self.accessHash = accessHash
         self.firstName = firstName
@@ -117,6 +118,7 @@ public final class TelegramUser: Peer, Equatable {
         self.botInfo = botInfo
         self.restrictionInfo = restrictionInfo
         self.flags = flags
+        self.emojiStatus = emojiStatus
     }
     
     public init(decoder: PostboxDecoder) {
@@ -151,6 +153,8 @@ public final class TelegramUser: Peer, Equatable {
         self.restrictionInfo = decoder.decodeObjectForKey("ri") as? PeerAccessRestrictionInfo
         
         self.flags = UserInfoFlags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
+        
+        self.emojiStatus = decoder.decode(PeerEmojiStatus.self, forKey: "emjs")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -196,6 +200,12 @@ public final class TelegramUser: Peer, Equatable {
         }
         
         encoder.encodeInt32(self.flags.rawValue, forKey: "fl")
+        
+        if let emojiStatus = self.emojiStatus {
+            encoder.encode(emojiStatus, forKey: "emjs")
+        } else {
+            encoder.encodeNil(forKey: "emjs")
+        }
     }
     
     public func isEqual(_ other: Peer) -> Bool {
@@ -239,8 +249,10 @@ public final class TelegramUser: Peer, Equatable {
         if lhs.restrictionInfo != rhs.restrictionInfo {
             return false
         }
-
         if lhs.flags != rhs.flags {
+            return false
+        }
+        if lhs.emojiStatus != rhs.emojiStatus {
             return false
         }
 
@@ -248,18 +260,22 @@ public final class TelegramUser: Peer, Equatable {
     }
     
     public func withUpdatedUsername(_ username:String?) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus)
     }
     
     public func withUpdatedNames(firstName: String?, lastName: String?) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: firstName, lastName: lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: firstName, lastName: lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus)
     }
     
     public func withUpdatedPhone(_ phone: String?) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus)
     }
     
     public func withUpdatedPhoto(_ representations: [TelegramMediaImageRepresentation]) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: representations, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: representations, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus)
+    }
+    
+    public func withUpdatedEmojiStatus(_ emojiStatus: PeerEmojiStatus?) -> TelegramUser {
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: emojiStatus)
     }
 }

@@ -1,4 +1,92 @@
 public extension Api {
+    enum InputClientProxy: TypeConstructorDescription {
+        case inputClientProxy(address: String, port: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputClientProxy(let address, let port):
+                    if boxed {
+                        buffer.appendInt32(1968737087)
+                    }
+                    serializeString(address, buffer: buffer, boxed: false)
+                    serializeInt32(port, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputClientProxy(let address, let port):
+                return ("inputClientProxy", [("address", String(describing: address)), ("port", String(describing: port))])
+    }
+    }
+    
+        public static func parse_inputClientProxy(_ reader: BufferReader) -> InputClientProxy? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputClientProxy.inputClientProxy(address: _1!, port: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum InputContact: TypeConstructorDescription {
+        case inputPhoneContact(clientId: Int64, phone: String, firstName: String, lastName: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputPhoneContact(let clientId, let phone, let firstName, let lastName):
+                    if boxed {
+                        buffer.appendInt32(-208488460)
+                    }
+                    serializeInt64(clientId, buffer: buffer, boxed: false)
+                    serializeString(phone, buffer: buffer, boxed: false)
+                    serializeString(firstName, buffer: buffer, boxed: false)
+                    serializeString(lastName, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPhoneContact(let clientId, let phone, let firstName, let lastName):
+                return ("inputPhoneContact", [("clientId", String(describing: clientId)), ("phone", String(describing: phone)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName))])
+    }
+    }
+    
+        public static func parse_inputPhoneContact(_ reader: BufferReader) -> InputContact? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputContact.inputPhoneContact(clientId: _1!, phone: _2!, firstName: _3!, lastName: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputDialogPeer: TypeConstructorDescription {
         case inputDialogPeer(peer: Api.InputPeer)
         case inputDialogPeerFolder(folderId: Int32)

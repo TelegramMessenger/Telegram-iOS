@@ -194,6 +194,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[594408994] = { return Api.EmojiKeyword.parse_emojiKeywordDeleted($0) }
     dict[1556570557] = { return Api.EmojiKeywordsDifference.parse_emojiKeywordsDifference($0) }
     dict[-1275374751] = { return Api.EmojiLanguage.parse_emojiLanguage($0) }
+    dict[-1835310691] = { return Api.EmojiStatus.parse_emojiStatus($0) }
+    dict[769727150] = { return Api.EmojiStatus.parse_emojiStatusEmpty($0) }
     dict[-1519029347] = { return Api.EmojiURL.parse_emojiURL($0) }
     dict[1643173063] = { return Api.EncryptedChat.parse_encryptedChat($0) }
     dict[505183301] = { return Api.EncryptedChat.parse_encryptedChatDiscarded($0) }
@@ -838,7 +840,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1886646706] = { return Api.UrlAuthResult.parse_urlAuthResultAccepted($0) }
     dict[-1445536993] = { return Api.UrlAuthResult.parse_urlAuthResultDefault($0) }
     dict[-1831650802] = { return Api.UrlAuthResult.parse_urlAuthResultRequest($0) }
-    dict[1073147056] = { return Api.User.parse_user($0) }
+    dict[1570352622] = { return Api.User.parse_user($0) }
     dict[-742634630] = { return Api.User.parse_userEmpty($0) }
     dict[-994968513] = { return Api.UserFull.parse_userFull($0) }
     dict[-2100168954] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
@@ -1219,6 +1221,8 @@ public extension Api {
             case let _1 as Api.EmojiKeywordsDifference:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EmojiLanguage:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.EmojiStatus:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EmojiURL:
                 _1.serialize(buffer, boxed)

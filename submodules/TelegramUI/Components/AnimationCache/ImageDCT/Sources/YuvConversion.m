@@ -96,6 +96,9 @@ void combineYUVAPlanesIntoARGB(uint8_t *argb, uint8_t const *inY, uint8_t const 
     error = vImageConvert_420Yp8_Cb8_Cr8ToARGB8888(&srcYp, &srcCb, &srcCr, &destArgb, &info, permuteMap, 255, kvImageDoNotTile);
     error = vImageOverwriteChannels_ARGB8888(&srcA, &destArgb, &destArgb, 1 << 0, kvImageDoNotTile);
     
+    if (error != kvImageNoError) {
+    }
+    
     //error = vImageOverwriteChannels_ARGB8888(&srcYp, &destArgb, &destArgb, 1 << 1, kvImageDoNotTile);
     //error = vImageOverwriteChannels_ARGB8888(&srcYp, &destArgb, &destArgb, 1 << 2, kvImageDoNotTile);
     //error = vImageOverwriteChannels_ARGB8888(&srcYp, &destArgb, &destArgb, 1 << 3, kvImageDoNotTile);
@@ -118,11 +121,13 @@ void scaleImagePlane(uint8_t *outPlane, int outWidth, int outHeight, int outByte
 }
 
 void convertUInt8toInt16(uint8_t const *source, int16_t *dest, int length) {
+#if defined(__aarch64__)
+    
 #if DEBUG
     assert(!((intptr_t)source % sizeof(uint64_t)));
     assert(!((intptr_t)dest % sizeof(uint64_t)));
 #endif
-    
+
     for (int i = 0; i < length; i += 8 * 4) {
         #pragma unroll
         for (int j = 0; j < 4; j++) {
@@ -137,9 +142,15 @@ void convertUInt8toInt16(uint8_t const *source, int16_t *dest, int length) {
             dest[i] = (int16_t)source[i];
         }
     }
+#else
+    for (int i = 0; i < length; i++) {
+        dest[i] = (int16_t)source[i];
+    }
+#endif
 }
 
 void convertInt16toUInt8(int16_t const *source, uint8_t *dest, int length) {
+#if defined(__aarch64__)
     for (int i = 0; i < length; i += 8) {
         int16x8_t lhs16 = vld1q_s16(&source[i]);
         int8x8_t lhs = vqmovun_s16(lhs16);
@@ -158,9 +169,22 @@ void convertInt16toUInt8(int16_t const *source, uint8_t *dest, int length) {
             dest[i] = (int8_t)result;
         }
     }
+#else
+    for (int i = 0; i < length; i++) {
+        int16_t result = source[i];
+        if (result < 0) {
+            result = 0;
+        }
+        if (result > 255) {
+            result = 255;
+        }
+        dest[i] = (int8_t)result;
+    }
+#endif
 }
 
 void subtractArraysInt16(int16_t const *a, int16_t const *b, int16_t *dest, int length) {
+#if defined(__aarch64__)
     for (int i = 0; i < length; i += 8) {
         int16x8_t lhs = vld1q_s16((int16_t *)&a[i]);
         int16x8_t rhs = vld1q_s16((int16_t *)&b[i]);
@@ -172,9 +196,15 @@ void subtractArraysInt16(int16_t const *a, int16_t const *b, int16_t *dest, int 
             dest[i] = a[i] - b[i];
         }
     }
+#else
+    for (int i = 0; i < length; i++) {
+        dest[i] = a[i] - b[i];
+    }
+#endif
 }
 
 void addArraysInt16(int16_t const *a, int16_t const *b, int16_t *dest, int length) {
+#if defined(__aarch64__)
     for (int i = 0; i < length; i += 8 * 4) {
         #pragma unroll
         for (int j = 0; j < 4; j++) {
@@ -189,9 +219,15 @@ void addArraysInt16(int16_t const *a, int16_t const *b, int16_t *dest, int lengt
             dest[i] = a[i] - b[i];
         }
     }
+#else
+    for (int i = 0; i < length; i++) {
+        dest[i] = a[i] - b[i];
+    }
+#endif
 }
 
 void subtractArraysUInt8Int16(uint8_t const *a, int16_t const *b, uint8_t *dest, int length) {
+#if defined(__aarch64__)
     for (int i = 0; i < length; i += 8) {
         uint8x8_t lhs8 = vld1_u8(&a[i]);
         int16x8_t lhs = vreinterpretq_s16_u16(vmovl_u8(lhs8));
@@ -214,12 +250,9 @@ void subtractArraysUInt8Int16(uint8_t const *a, int16_t const *b, uint8_t *dest,
             dest[i] = (int8_t)result;
         }
     }
-}
-
-void addArraysUInt8Int16(uint8_t const *a, int16_t const *b, uint8_t *dest, int length) {
-#if false
+#else
     for (int i = 0; i < length; i++) {
-        int16_t result = ((int16_t)a[i]) + b[i];
+        int16_t result = ((int16_t)a[i]) - b[i];
         if (result < 0) {
             result = 0;
         }
@@ -228,7 +261,11 @@ void addArraysUInt8Int16(uint8_t const *a, int16_t const *b, uint8_t *dest, int 
         }
         dest[i] = (int8_t)result;
     }
-#else
+#endif
+}
+
+void addArraysUInt8Int16(uint8_t const *a, int16_t const *b, uint8_t *dest, int length) {
+#if defined(__aarch64__)
     for (int i = 0; i < length; i += 8) {
         uint8x8_t lhs8 = vld1_u8(&a[i]);
         int16x8_t lhs = vreinterpretq_s16_u16(vmovl_u8(lhs8));
@@ -250,6 +287,17 @@ void addArraysUInt8Int16(uint8_t const *a, int16_t const *b, uint8_t *dest, int 
             }
             dest[i] = (int8_t)result;
         }
+    }
+#else
+    for (int i = 0; i < length; i++) {
+        int16_t result = ((int16_t)a[i]) + b[i];
+        if (result < 0) {
+            result = 0;
+        }
+        if (result > 255) {
+            result = 255;
+        }
+        dest[i] = (int8_t)result;
     }
 #endif
 }

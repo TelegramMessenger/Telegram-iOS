@@ -247,6 +247,54 @@ public extension Api {
     }
 }
 public extension Api {
+    enum EmojiStatus: TypeConstructorDescription {
+        case emojiStatus(documentId: Int64)
+        case emojiStatusEmpty
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .emojiStatus(let documentId):
+                    if boxed {
+                        buffer.appendInt32(-1835310691)
+                    }
+                    serializeInt64(documentId, buffer: buffer, boxed: false)
+                    break
+                case .emojiStatusEmpty:
+                    if boxed {
+                        buffer.appendInt32(769727150)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .emojiStatus(let documentId):
+                return ("emojiStatus", [("documentId", String(describing: documentId))])
+                case .emojiStatusEmpty:
+                return ("emojiStatusEmpty", [])
+    }
+    }
+    
+        public static func parse_emojiStatus(_ reader: BufferReader) -> EmojiStatus? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.EmojiStatus.emojiStatus(documentId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_emojiStatusEmpty(_ reader: BufferReader) -> EmojiStatus? {
+            return Api.EmojiStatus.emojiStatusEmpty
+        }
+    
+    }
+}
+public extension Api {
     enum EmojiURL: TypeConstructorDescription {
         case emojiURL(url: String)
     
@@ -1282,96 +1330,6 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.GroupCallParticipantVideo.groupCallParticipantVideo(flags: _1!, endpoint: _2!, sourceGroups: _3!, audioSource: _4)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum GroupCallParticipantVideoSourceGroup: TypeConstructorDescription {
-        case groupCallParticipantVideoSourceGroup(semantics: String, sources: [Int32])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .groupCallParticipantVideoSourceGroup(let semantics, let sources):
-                    if boxed {
-                        buffer.appendInt32(-592373577)
-                    }
-                    serializeString(semantics, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sources.count))
-                    for item in sources {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .groupCallParticipantVideoSourceGroup(let semantics, let sources):
-                return ("groupCallParticipantVideoSourceGroup", [("semantics", String(describing: semantics)), ("sources", String(describing: sources))])
-    }
-    }
-    
-        public static func parse_groupCallParticipantVideoSourceGroup(_ reader: BufferReader) -> GroupCallParticipantVideoSourceGroup? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: [Int32]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.GroupCallParticipantVideoSourceGroup.groupCallParticipantVideoSourceGroup(semantics: _1!, sources: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum GroupCallStreamChannel: TypeConstructorDescription {
-        case groupCallStreamChannel(channel: Int32, scale: Int32, lastTimestampMs: Int64)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .groupCallStreamChannel(let channel, let scale, let lastTimestampMs):
-                    if boxed {
-                        buffer.appendInt32(-2132064081)
-                    }
-                    serializeInt32(channel, buffer: buffer, boxed: false)
-                    serializeInt32(scale, buffer: buffer, boxed: false)
-                    serializeInt64(lastTimestampMs, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .groupCallStreamChannel(let channel, let scale, let lastTimestampMs):
-                return ("groupCallStreamChannel", [("channel", String(describing: channel)), ("scale", String(describing: scale)), ("lastTimestampMs", String(describing: lastTimestampMs))])
-    }
-    }
-    
-        public static func parse_groupCallStreamChannel(_ reader: BufferReader) -> GroupCallStreamChannel? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.GroupCallStreamChannel.groupCallStreamChannel(channel: _1!, scale: _2!, lastTimestampMs: _3!)
             }
             else {
                 return nil

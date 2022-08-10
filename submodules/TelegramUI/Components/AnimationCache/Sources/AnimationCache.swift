@@ -449,7 +449,7 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
             self.differenceCoefficients = differenceCoefficients
         }
         
-        #if DEBUG && false
+        #if !arch(arm64)
         var insertKeyframe = insertKeyframe
         insertKeyframe = true
         #endif

@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramApi
 
 public enum CachedPeerAutoremoveTimeout: Equatable, PostboxCoding {
     public struct Value: Equatable, PostboxCoding {
@@ -81,6 +82,25 @@ public struct CachedPremiumGiftOption: Equatable, PostboxCoding {
             encoder.encodeString(storeProductId, forKey: "storeProductId")
         } else {
             encoder.encodeNil(forKey: "storeProductId")
+        }
+    }
+}
+
+public struct PeerEmojiStatus: Equatable, Codable {
+    public var fileId: Int64
+    
+    public init(fileId: Int64) {
+        self.fileId = fileId
+    }
+}
+
+extension PeerEmojiStatus {
+    init?(apiStatus: Api.EmojiStatus) {
+        switch apiStatus {
+        case let .emojiStatus(documentId):
+            self.init(fileId: documentId)
+        case .emojiStatusEmpty:
+            return nil
         }
     }
 }

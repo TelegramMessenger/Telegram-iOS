@@ -69,6 +69,9 @@ import CreateExternalMediaStreamScreen
 import PaymentMethodUI
 import PremiumUI
 import InstantPageCache
+import EmojiStatusSelectionComponent
+import AnimationCache
+import MultiAnimationRenderer
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -443,6 +446,7 @@ private enum PeerInfoSettingsSection {
     case addAccount
     case logout
     case rememberPassword
+    case emojiStatus
 }
 
 private final class PeerInfoInteraction {
@@ -612,13 +616,29 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         setPhotoTitle = presentationData.strings.Settings_SetProfilePhotoOrVideo
         displaySetPhoto = true
     }
+    
+    //TODO:localize
+    let setStatusTitle: String = "Set Emoji Status"
+    let displaySetStatus: Bool
+    if let peer = data.peer as? TelegramUser, peer.isPremium {
+        displaySetStatus = true
+    } else {
+        displaySetStatus = false
+    }
+    
+    if displaySetStatus {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: setStatusTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+            interaction.openSettings(.emojiStatus)
+        }))
+    }
+    
     if displaySetPhoto {
-        items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
             interaction.openSettings(.avatar)
         }))
     }
     if let peer = data.peer, (peer.addressName ?? "").isEmpty {
-        items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
             interaction.openSettings(.username)
         }))
     }
@@ -3024,6 +3044,31 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         return nil
                     }
                 }))
+            }
+            
+            self.headerNode.displayPremiumIntro = { [weak self] sourceView, white in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+                    return TempBox.shared.tempFile(fileName: "file").path
+                })
+                let animationRenderer = MultiAnimationRendererImpl()
+                strongSelf.controller?.present(EmojiStatusSelectionController(
+                    context: strongSelf.context,
+                    sourceView: sourceView,
+                    emojiContent: ChatEntityKeyboardInputNode.emojiInputData(
+                        context: strongSelf.context,
+                        animationCache: animationCache,
+                        animationRenderer: animationRenderer,
+                        isStandalone: false,
+                        isReactionSelection: true,
+                        areUnicodeEmojiEnabled: false,
+                        areCustomEmojiEnabled: true,
+                        chatPeerId: strongSelf.context.account.peerId
+                    )
+                ), in: .window(.root))
             }
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)
@@ -6368,6 +6413,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).start()
                 }
                 push(controller)
+            case .emojiStatus:
+                self.headerNode.invokeDisplayPremiumIntro()
         }
     }
     

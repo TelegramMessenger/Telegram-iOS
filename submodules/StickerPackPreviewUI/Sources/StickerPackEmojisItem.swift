@@ -242,7 +242,10 @@ final class StickerPackEmojisItemNode: GridItemNode {
         
         for index in 0 ..< items.count {
             let item = items[index]
-            let itemId = EmojiPagerContentComponent.View.ItemLayer.Key(groupId: 0, itemId: .file(item.file.fileId), staticEmoji: nil)
+            let itemId = EmojiPagerContentComponent.View.ItemLayer.Key(
+                groupId: 0,
+                itemId: .animation(.file(item.file.fileId))
+            )
             validIds.insert(itemId)
             
             let itemDimensions = item.file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
@@ -258,16 +261,22 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 updateItemLayerPlaceholder = true
                 itemTransition = .immediate
                                 
+                let animationData = EntityKeyboardAnimationData(file: item.file)
                 itemLayer = EmojiPagerContentComponent.View.ItemLayer(
-                    item: EmojiPagerContentComponent.Item(animationData: EntityKeyboardAnimationData(file: item.file), itemFile: item.file, staticEmoji: nil, subgroupId: nil),
+                    item: EmojiPagerContentComponent.Item(
+                        animationData: animationData,
+                        content: .animation(animationData),
+                        itemFile: item.file,
+                        subgroupId: nil
+                    ),
                     context: context,
                     attemptSynchronousLoad: attemptSynchronousLoads,
-                    animationData: EntityKeyboardAnimationData(file: item.file),
-                    staticEmoji: nil,
+                    content: .animation(animationData),
                     cache: animationCache,
                     renderer: animationRenderer,
                     placeholderColor: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1),
                     blurredBadgeColor: theme.chat.inputPanel.panelBackgroundColor.withMultipliedAlpha(0.5),
+                    accentIconColor: theme.list.itemAccentColor,
                     pointSize: itemNativeFitSize,
                     onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
                         guard let strongSelf = self else {

@@ -6,7 +6,6 @@ import PagerComponent
 import TelegramPresentationData
 import TelegramCore
 import Postbox
-import BlurredBackgroundComponent
 import BundleIconComponent
 import AudioToolbox
 import SwiftSignalKit
@@ -83,6 +82,7 @@ public final class EntityKeyboardComponent: Component {
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let containerInsets: UIEdgeInsets
+    public let topPanelInsets: UIEdgeInsets
     public let emojiContent: EmojiPagerContentComponent
     public let stickerContent: EmojiPagerContentComponent?
     public let gifContent: GifPagerContentComponent?
@@ -97,12 +97,14 @@ public final class EntityKeyboardComponent: Component {
     public let makeSearchContainerNode: (EntitySearchContentType) -> EntitySearchContainerNode?
     public let deviceMetrics: DeviceMetrics
     public let hiddenInputHeight: CGFloat
+    public let displayBottomPanel: Bool
     public let isExpanded: Bool
     
     public init(
         theme: PresentationTheme,
         strings: PresentationStrings,
         containerInsets: UIEdgeInsets,
+        topPanelInsets: UIEdgeInsets,
         emojiContent: EmojiPagerContentComponent,
         stickerContent: EmojiPagerContentComponent?,
         gifContent: GifPagerContentComponent?,
@@ -117,11 +119,13 @@ public final class EntityKeyboardComponent: Component {
         makeSearchContainerNode: @escaping (EntitySearchContentType) -> EntitySearchContainerNode?,
         deviceMetrics: DeviceMetrics,
         hiddenInputHeight: CGFloat,
+        displayBottomPanel: Bool,
         isExpanded: Bool
     ) {
         self.theme = theme
         self.strings = strings
         self.containerInsets = containerInsets
+        self.topPanelInsets = topPanelInsets
         self.emojiContent = emojiContent
         self.stickerContent = stickerContent
         self.gifContent = gifContent
@@ -136,6 +140,7 @@ public final class EntityKeyboardComponent: Component {
         self.makeSearchContainerNode = makeSearchContainerNode
         self.deviceMetrics = deviceMetrics
         self.hiddenInputHeight = hiddenInputHeight
+        self.displayBottomPanel = displayBottomPanel
         self.isExpanded = isExpanded
     }
     
@@ -147,6 +152,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.containerInsets != rhs.containerInsets {
+            return false
+        }
+        if lhs.topPanelInsets != rhs.topPanelInsets {
             return false
         }
         if lhs.emojiContent != rhs.emojiContent {
@@ -174,6 +182,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.hiddenInputHeight != rhs.hiddenInputHeight {
+            return false
+        }
+        if lhs.displayBottomPanel != rhs.displayBottomPanel {
             return false
         }
         if lhs.isExpanded != rhs.isExpanded {
@@ -247,6 +258,7 @@ public final class EntityKeyboardComponent: Component {
                         content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                             icon: .recent,
                             theme: component.theme,
+                            useAccentColor: !component.displayBottomPanel,
                             title: component.strings.Stickers_Recent,
                             pressed: { [weak self] in
                                 self?.component?.switchToGifSubject(.recent)
@@ -260,6 +272,7 @@ public final class EntityKeyboardComponent: Component {
                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                         icon: .trending,
                         theme: component.theme,
+                        useAccentColor: !component.displayBottomPanel,
                         title: component.strings.Stickers_Trending,
                         pressed: { [weak self] in
                             self?.component?.switchToGifSubject(.trending)
@@ -297,7 +310,7 @@ public final class EntityKeyboardComponent: Component {
                 contentTopPanels.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(EntityKeyboardTopPanelComponent(
                     theme: component.theme,
                     items: topGifItems,
-                    containerSideInset: component.containerInsets.left,
+                    containerSideInset: component.containerInsets.left + component.topPanelInsets.left,
                     forceActiveItemId: defaultActiveGifItemId,
                     activeContentItemIdUpdated: gifsContentItemIdUpdated,
                     reorderItems: { _ in
@@ -325,6 +338,7 @@ public final class EntityKeyboardComponent: Component {
                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                         icon: .featured,
                         theme: component.theme,
+                        useAccentColor: !component.displayBottomPanel,
                         title: component.strings.Stickers_Trending,
                         pressed: { [weak self] in
                             self?.component?.stickerContent?.inputInteractionHolder.inputInteraction?.openFeatured()
@@ -368,6 +382,7 @@ public final class EntityKeyboardComponent: Component {
                                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                                         icon: icon,
                                         theme: component.theme,
+                                        useAccentColor: !component.displayBottomPanel,
                                         title: title,
                                         pressed: { [weak self] in
                                             self?.scrollToItemGroup(contentId: "stickers", groupId: itemGroup.supergroupId, subgroupId: nil)
@@ -404,7 +419,7 @@ public final class EntityKeyboardComponent: Component {
                 contentTopPanels.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(EntityKeyboardTopPanelComponent(
                     theme: component.theme,
                     items: topStickerItems,
-                    containerSideInset: component.containerInsets.left,
+                    containerSideInset: component.containerInsets.left + component.topPanelInsets.left,
                     defaultActiveItemId: stickerContent.itemGroups.first?.groupId,
                     activeContentItemIdUpdated: stickersContentItemIdUpdated,
                     reorderItems: { [weak self] items in
@@ -457,6 +472,7 @@ public final class EntityKeyboardComponent: Component {
                                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                                         icon: icon,
                                         theme: component.theme,
+                                        useAccentColor: !component.displayBottomPanel,
                                         title: title,
                                         pressed: { [weak self] in
                                             self?.scrollToItemGroup(contentId: "emoji", groupId: itemGroup.supergroupId, subgroupId: nil)
@@ -506,7 +522,7 @@ public final class EntityKeyboardComponent: Component {
             contentTopPanels.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(EntityKeyboardTopPanelComponent(
                 theme: component.theme,
                 items: topEmojiItems,
-                containerSideInset: component.containerInsets.left,
+                containerSideInset: component.containerInsets.left + component.topPanelInsets.left,
                 activeContentItemIdUpdated: emojiContentItemIdUpdated,
                 reorderItems: { [weak self] items in
                     guard let strongSelf = self else {
@@ -571,14 +587,14 @@ public final class EntityKeyboardComponent: Component {
                         displayBackground: component.externalTopPanelContainer == nil
                     )),
                     externalTopPanelContainer: component.externalTopPanelContainer,
-                    bottomPanel: AnyComponent(EntityKeyboardBottomPanelComponent(
+                    bottomPanel: component.displayBottomPanel ? AnyComponent(EntityKeyboardBottomPanelComponent(
                         theme: component.theme,
                         containerInsets: component.containerInsets,
                         deleteBackwards: { [weak self] in
                             self?.component?.emojiContent.inputInteractionHolder.inputInteraction?.deleteBackwards()
                             AudioServicesPlaySystemSound(0x451)
                         }
-                    )),
+                    )) : nil,
                     panelStateUpdated: { [weak self] panelState, transition in
                         guard let strongSelf = self else {
                             return
