@@ -71,6 +71,10 @@ def remote_build(darwin_containers_host, bazel_cache_host, configuration, build_
 
     source_dir = os.path.basename(base_dir)
     buildbox_dir = 'buildbox'
+
+    transient_data_dir = '{}/transient-data'.format(buildbox_dir)
+    os.makedirs(transient_data_dir, exist_ok=True)
+
     source_archive_path = '{buildbox_dir}/transient-data/source.tar'.format(buildbox_dir=buildbox_dir)
 
     if os.path.exists(source_archive_path):
