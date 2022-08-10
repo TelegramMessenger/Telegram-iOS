@@ -129,7 +129,7 @@ def load_codesigning_data_from_git(working_dir, repo_url, branch, password, alwa
         os.makedirs(encrypted_working_dir, exist_ok=True)
         original_working_dir = os.getcwd()
         os.chdir(working_dir)
-        os.system('git -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null clone {repo_url} -b "{branch}" "{target_path}"'.format(
+        os.system('GIT_SSH_COMMAND="ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git clone {repo_url} -b "{branch}" "{target_path}"'.format(
             repo_url=repo_url,
             branch=branch,
             target_path=encrypted_working_dir
