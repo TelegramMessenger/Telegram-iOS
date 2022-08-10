@@ -396,8 +396,11 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
             print('--gitCodesigningType is required if --gitCodesigningRepository is set')
             sys.exit(1)
 
+        private_key = os.getenv('TELEGRAM_CODESIGNING_PRIVATE_KEY')
+
         profile_source = GitCodesigningSource(
             repo_url=arguments.gitCodesigningRepository,
+            private_key=private_key,
             team_id=build_configuration.team_id,
             bundle_id=build_configuration.bundle_id,
             codesigning_type=arguments.gitCodesigningType,

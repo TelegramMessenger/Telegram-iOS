@@ -7,6 +7,11 @@ import plistlib
 
 from BuildEnvironment import run_executable_with_output
 
+def check_run_system(command):
+    if os.system(command) != 0:
+        print('Command failed: {}'.format(command))
+        sys.exit(1)
+
 class BuildConfiguration:
     def __init__(self,
         bundle_id,
@@ -112,24 +117,29 @@ def decrypt_codesigning_directory_recursively(source_base_path, destination_base
             decrypt_codesigning_directory_recursively(source_path, destination_path, password)
 
 
-def load_codesigning_data_from_git(working_dir, repo_url, branch, password, always_fetch):
+def load_codesigning_data_from_git(working_dir, repo_url, temp_key_path, branch, password, always_fetch):
     if not os.path.exists(working_dir):
         os.makedirs(working_dir, exist_ok=True)
+
+    ssh_command = 'ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+    if temp_key_path is not None:
+        ssh_command += ' -i {}'.format(temp_key_path)
 
     encrypted_working_dir = working_dir + '/encrypted'
     if os.path.exists(encrypted_working_dir):
         if always_fetch:
             original_working_dir = os.getcwd()
             os.chdir(encrypted_working_dir)
-            os.system('GIT_SSH_COMMAND="ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git fetch')
-            os.system('git checkout "{branch}"'.format(branch=branch))
-            os.system('GIT_SSH_COMMAND="ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git pull')
+            check_run_system('GIT_SSH_COMMAND="{ssh_command}" git fetch'.format(ssh_command=ssh_command))
+            check_run_system('git checkout "{branch}"'.format(branch=branch))
+            check_run_system('GIT_SSH_COMMAND="{ssh_command}" git pull'.format(ssh_command=ssh_command))
             os.chdir(original_working_dir)
     else:
         os.makedirs(encrypted_working_dir, exist_ok=True)
         original_working_dir = os.getcwd()
         os.chdir(working_dir)
-        os.system('GIT_SSH_COMMAND="ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git clone {repo_url} -b "{branch}" "{target_path}"'.format(
+        check_run_system('GIT_SSH_COMMAND="{ssh_command}" git clone --depth=1 {repo_url} -b "{branch}" "{target_path}"'.format(
+            ssh_command=ssh_command,
             repo_url=repo_url,
             branch=branch,
             target_path=encrypted_working_dir
@@ -208,8 +218,9 @@ class CodesigningSource:
 
 
 class GitCodesigningSource(CodesigningSource):
-    def __init__(self, repo_url, team_id, bundle_id, codesigning_type, password, always_fetch):
+    def __init__(self, repo_url, private_key, team_id, bundle_id, codesigning_type, password, always_fetch):
         self.repo_url = repo_url
+        self.private_key = private_key
         self.team_id = team_id
         self.bundle_id = bundle_id
         self.codesigning_type = codesigning_type
@@ -218,7 +229,19 @@ class GitCodesigningSource(CodesigningSource):
 
     def load_data(self, working_dir):
         self.working_dir = working_dir
-        load_codesigning_data_from_git(working_dir=self.working_dir, repo_url=self.repo_url, branch=self.team_id, password=self.password, always_fetch=self.always_fetch)
+        temp_key_path = None
+        if self.private_key is not None:
+            temp_key_path = tempfile.mktemp()
+            with open(temp_key_path, 'w+') as file:
+                file.write(self.private_key)
+                if not self.private_key.endswith('\n'):
+                    file.write('\n')
+            os.chmod(temp_key_path, 0o600)
+
+        load_codesigning_data_from_git(working_dir=self.working_dir, repo_url=self.repo_url, temp_key_path=temp_key_path, branch=self.team_id, password=self.password, always_fetch=self.always_fetch)
+
+        if temp_key_path is not None:
+            os.remove(temp_key_path)
 
     def copy_profiles_to_destination(self, destination_path):
         source_path = self.working_dir + '/decrypted/profiles/{}'.format(self.codesigning_type)
