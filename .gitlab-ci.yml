@@ -55,7 +55,7 @@ experimental_i:
   except:
     - tags
   script:
-    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 build-system/Make/Make.py remote-build --darwinContainersHost="http://host.docker.internal:8650" --cacheHost="grpc://host.docker.internal:9092" --configurationPath=build-system/appstore-configuration.json  --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=appstore --configuration=release_arm64
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 build-system/Make/Make.py remote-build --darwinContainersHost="http://host.docker.internal:8650" --cacheHost="TELEGRAM_BAZEL_CACHE_HOST" --configurationPath=build-system/appstore-configuration.json  --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=appstore --configuration=release_arm64
   environment:
     name: experimental
   artifacts:
