@@ -28,7 +28,7 @@ def resolve_executable(program):
     return None
 
 
-def run_executable_with_output(path, arguments, decode=True, input=None, stderr_to_stdout=True, check_result=False):
+def run_executable_with_output(path, arguments, decode=True, input=None, stderr_to_stdout=True, print_command=False, check_result=False):
     executable_path = resolve_executable(path)
     if executable_path is None:
         raise Exception('Could not resolve {} to a valid executable file'.format(path))
@@ -36,6 +36,9 @@ def run_executable_with_output(path, arguments, decode=True, input=None, stderr_
     stderr_assignment = subprocess.DEVNULL
     if stderr_to_stdout:
         stderr_assignment = subprocess.STDOUT
+
+    if print_command:
+        print('Running {} {}'.format(executable_path, arguments))
 
     process = subprocess.Popen(
         [executable_path] + arguments,

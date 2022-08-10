@@ -554,7 +554,7 @@ def build(bazel, arguments):
     bazel_command_line.invoke_build()
 
     if arguments.outputBuildArtifactsPath is not None:
-        artifacts_path = arguments.outputBuildArtifactsPath
+        artifacts_path = os.path.abspath(arguments.outputBuildArtifactsPath)
         if os.path.exists(artifacts_path + '/Telegram.ipa'):
             os.remove(path)
         if os.path.exists(artifacts_path + '/DSYMs'):
@@ -574,13 +574,15 @@ def build(bazel, arguments):
         dsym_paths = glob.glob('bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/*.dSYM')
         for dsym_path in dsym_paths:
             file_name = os.path.basename(dsym_path)
-            shutil.copyfile(ipa_paths[0], artifacts_path + '/DSYMs/{}'.format(file_name))
+            shutil.copytree(dsym_path, artifacts_path + '/DSYMs/{}'.format(file_name))
+        previous_directory = os.getcwd()
+        os.chdir(artifacts_path)
         run_executable_with_output('zip', arguments=[
-            '-9',
             '-r',
-            artifacts_path + '/Telegram.DSYMs.zip',
-            artifacts_path + '/DSYMs'
+            'Telegram.DSYMs.zip',
+            './DSYMs'
         ], check_result=True)
+        os.chdir(previous_directory)
         shutil.rmtree(artifacts_path + '/DSYMs')
 
 
