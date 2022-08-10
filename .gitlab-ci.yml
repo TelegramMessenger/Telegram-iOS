@@ -56,7 +56,7 @@ experimental_i:
     - tags
   script:
     - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-build --darwinContainersHost="http://host.docker.internal:8650" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath=build-system/appstore-configuration.json  --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=appstore --configuration=release_arm64
-    - python3 -u build-system/Make/DeployYoAppCenter.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/appcenter-configurations/appcenter-experimental.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
+    - python3 -u build-system/Make/DeployToAppCenter.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/appcenter-configurations/appcenter-experimental.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
   environment:
     name: experimental
   artifacts:
