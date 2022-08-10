@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramStringFormatting
 
 private let productIdentifiers = [
+    "org.telegram.telegramPremium.annual",
     "org.telegram.telegramPremium.monthly",
     "org.telegram.telegramPremium.twelveMonths",
     "org.telegram.telegramPremium.sixMonths",
@@ -50,7 +51,7 @@ public final class InAppPurchaseManager: NSObject {
             } else if #available(iOS 11.2, *) {
                 return self.skProduct.subscriptionPeriod != nil
             } else {
-                return self.id.contains(".monthly")
+                return self.id.hasSuffix(".monthly") || self.id.hasSuffix(".annual")
             }
         }
         

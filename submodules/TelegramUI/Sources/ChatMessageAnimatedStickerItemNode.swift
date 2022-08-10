@@ -712,7 +712,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if !alreadySeen {
                 item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
                 if let emojiString = self.emojiString, emojiString.count == 1 {
-                    self.playAdditionalEmojiAnimation(index: 1)
+                    if item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                        self.playAdditionalEmojiAnimation(index: 1)
+                    }
                 } else if let file = file, file.isPremiumSticker {
                     Queue.mainQueue().after(0.1) {
                         self.playPremiumStickerAnimation()
@@ -979,7 +981,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 tmpWidth -= deliveryFailedInset
                 
-                let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset) - 70.0
+                let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
                 
                 let font = Font.regular(fontSizeForEmojiString(item.message.text))
                 let attributedText = stringWithAppliedEntities(item.message.text, entities: item.message.textEntitiesAttribute?.entities ?? [], baseColor: .black, linkColor: .black, baseFont: font, linkFont: font, boldFont: font, italicFont: font, boldItalicFont: font, fixedFont: font, blockQuoteFont: font, message: item.message)
@@ -2658,23 +2660,23 @@ private func fontSizeForEmojiString(_ string: String) -> CGFloat {
         case 1:
             multiplier = 1.0
         case 2:
-            multiplier = 0.7
+            multiplier = 0.84
         case 3:
-            multiplier = 0.52
+            multiplier = 0.69
         case 4:
-            multiplier = 0.37
+            multiplier = 0.53
         case 5:
-            multiplier = 0.28
+            multiplier = 0.46
         case 6:
-            multiplier = 0.25
+            multiplier = 0.38
         case 7:
-            multiplier = 0.23
+            multiplier = 0.32
         case 8:
-            multiplier = 0.21
+            multiplier = 0.27
         case 9:
-            multiplier = 0.19
+            multiplier = 0.24
         default:
-            multiplier = 0.19
+            multiplier = 0.21
     }
     return floor(basicSize * multiplier)
 }

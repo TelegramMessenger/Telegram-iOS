@@ -7957,3 +7957,6 @@ Sorry for the inconvenience.";
 "KeyCommand.ExitFullscreen" = "Exit Fullscreen";
 
 "StickerPacksSettings.SuggestAnimatedEmoji" = "Suggest Animated Emoji";
+
+"Premium.Annual" = "Annual";
+"Premium.Monthly" = "Monthly";

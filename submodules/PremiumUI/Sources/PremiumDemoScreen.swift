@@ -919,7 +919,7 @@ private final class DemoSheetContent: CombinedComponent {
                 var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
                 let index: Int
                 switch component.source {
-                    case .intro:
+                    case .intro, .gift:
                         index = items.firstIndex(where: { (component.subject as AnyHashable) == $0.content.id }) ?? 0
                     case .other:
                         items = items.filter { item in
@@ -981,6 +981,8 @@ private final class DemoSheetContent: CombinedComponent {
                 switch component.source {
                     case let .intro(price):
                         buttonText = strings.Premium_SubscribeFor(price ?? "–").string
+                    case let .gift(price):
+                        buttonText = strings.Premium_Gift_GiftSubscription(price ?? "–").string
                     case .other:
                         switch component.subject {
                             case .uniqueReactions:
@@ -1173,6 +1175,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
     
     public enum Source: Equatable {
         case intro(String?)
+        case gift(String?)
         case other
     }
     
