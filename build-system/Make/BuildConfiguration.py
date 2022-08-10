@@ -112,7 +112,7 @@ def decrypt_codesigning_directory_recursively(source_base_path, destination_base
             decrypt_codesigning_directory_recursively(source_path, destination_path, password)
 
 
-def load_provisioning_profiles_from_git(working_dir, repo_url, branch, password, always_fetch):
+def load_codesigning_data_from_git(working_dir, repo_url, branch, password, always_fetch):
     if not os.path.exists(working_dir):
         os.makedirs(working_dir, exist_ok=True)
 
@@ -121,15 +121,15 @@ def load_provisioning_profiles_from_git(working_dir, repo_url, branch, password,
         if always_fetch:
             original_working_dir = os.getcwd()
             os.chdir(encrypted_working_dir)
-            os.system('git fetch')
+            os.system('GIT_SSH_COMMAND="ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git fetch')
             os.system('git checkout "{branch}"'.format(branch=branch))
-            os.system('git pull')
+            os.system('GIT_SSH_COMMAND="ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git pull')
             os.chdir(original_working_dir)
     else:
         os.makedirs(encrypted_working_dir, exist_ok=True)
         original_working_dir = os.getcwd()
         os.chdir(working_dir)
-        os.system('git clone {repo_url} -b "{branch}" "{target_path}"'.format(
+        os.system('git -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null clone {repo_url} -b "{branch}" "{target_path}"'.format(
             repo_url=repo_url,
             branch=branch,
             target_path=encrypted_working_dir
@@ -185,42 +185,67 @@ def copy_profiles_from_directory(source_path, destination_path, team_id, bundle_
                     print('Warning: skipping provisioning profile at {} with bundle_id {} (base_name {})'.format(file_path, profile_name, profile_base_name))
 
 
-class ProvisioningProfileSource:
+def copy_certificates_from_directory(source_path, destination_path):
+    for file_name in os.listdir(source_path):
+        file_path = source_path + '/' + file_name
+        if os.path.isfile(file_path):
+            if file_path.endswith('.p12') or file_path.endswith('.cer'):
+                shutil.copyfile(file_path, destination_path + '/' + file_name)
+
+
+class CodesigningSource:
     def __init__(self):
         pass
+
+    def load_data(self, working_dir):
+        raise Exception('Not implemented')
 
     def copy_profiles_to_destination(self, destination_path):
         raise Exception('Not implemented')
 
+    def copy_certificates_to_destination(self, destination_path):
+        raise Exception('Not implemented')
 
-class GitProvisioningProfileSource(ProvisioningProfileSource):
-    def __init__(self, working_dir, repo_url, team_id, bundle_id, profile_type, password, always_fetch):
-        self.working_dir = working_dir
+
+class GitCodesigningSource(CodesigningSource):
+    def __init__(self, repo_url, team_id, bundle_id, codesigning_type, password, always_fetch):
         self.repo_url = repo_url
         self.team_id = team_id
         self.bundle_id = bundle_id
-        self.profile_type = profile_type
+        self.codesigning_type = codesigning_type
         self.password = password
         self.always_fetch = always_fetch
 
+    def load_data(self, working_dir):
+        self.working_dir = working_dir
+        load_codesigning_data_from_git(working_dir=self.working_dir, repo_url=self.repo_url, branch=self.team_id, password=self.password, always_fetch=self.always_fetch)
+
     def copy_profiles_to_destination(self, destination_path):
-        load_provisioning_profiles_from_git(working_dir=self.working_dir, repo_url=self.repo_url, branch=self.team_id, password=self.password, always_fetch=self.always_fetch)
-        copy_profiles_from_directory(source_path=self.working_dir + '/decrypted/profiles/{}'.format(self.profile_type), destination_path=destination_path, team_id=self.team_id, bundle_id=self.bundle_id)
+        source_path = self.working_dir + '/decrypted/profiles/{}'.format(self.codesigning_type)
+        copy_profiles_from_directory(source_path=source_path, destination_path=destination_path, team_id=self.team_id, bundle_id=self.bundle_id)
+
+    def copy_certificates_to_destination(self, destination_path):
+        source_path = None
+        if self.codesigning_type in ['adhoc', 'appstore', 'enterprise']:
+            source_path = self.working_dir + '/decrypted/certs/distribution'
+        elif self.codesigning_type == 'development':
+            source_path = self.working_dir + '/decrypted/certs/development'
+        else:
+            raise Exception('Unknown codesigning type {}'.format(self.codesigning_type))
+        copy_certificates_from_directory(source_path=source_path, destination_path=destination_path)
 
 
-class DirectoryProvisioningProfileSource(ProvisioningProfileSource):
+class DirectoryCodesigningSource(CodesigningSource):
     def __init__(self, directory_path, team_id, bundle_id):
         self.directory_path = directory_path
         self.team_id = team_id
         self.bundle_id = bundle_id
 
+    def load_data(self, working_dir):
+        pass
+
     def copy_profiles_to_destination(self, destination_path):
-        profiles_path = self.directory_path
-        if not os.path.exists(profiles_path):
-            print('{} does not exist'.format(profiles_path))
-            sys.exit(1)
-        copy_profiles_from_directory(source_path=profiles_path, destination_path=destination_path, team_id=self.team_id, bundle_id=self.bundle_id)
+        copy_profiles_from_directory(source_path=self.directory_path + '/profiles', destination_path=destination_path, team_id=self.team_id, bundle_id=self.bundle_id)
 
-
-def generate_configuration_repository(path, profile_source):
-    pass
+    def copy_certificates_to_destination(self, destination_path):
+        copy_certificates_from_directory(source_path=self.directory_path + '/certs', destination_path=destination_path)

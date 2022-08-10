@@ -7,11 +7,12 @@ import sys
 import tempfile
 import subprocess
 import shutil
+import glob
 
-from BuildEnvironment import resolve_executable, call_executable, BuildEnvironment
+from BuildEnvironment import resolve_executable, call_executable, run_executable_with_output, BuildEnvironment
 from ProjectGeneration import generate
 from BazelLocation import locate_bazel
-from BuildConfiguration import ProvisioningProfileSource, GitProvisioningProfileSource, DirectoryProvisioningProfileSource, BuildConfiguration, build_configuration_from_json
+from BuildConfiguration import CodesigningSource, GitCodesigningSource, DirectoryCodesigningSource, BuildConfiguration, build_configuration_from_json
 import RemoteBuild
 
 class BazelCommandLine:
@@ -383,7 +384,7 @@ def clean(bazel, arguments):
     bazel_command_line.invoke_clean()
 
 
-def resolve_codesigning(arguments, base_path, build_configuration, certificates_path, provisioning_profiles_path):
+def resolve_codesigning(arguments, base_path, build_configuration, provisioning_profiles_path, additional_codesigning_output_path):
     profile_source = None
     if arguments.gitCodesigningRepository is not None:
         password = os.getenv('TELEGRAM_CODESIGNING_GIT_PASSWORD')
@@ -395,31 +396,36 @@ def resolve_codesigning(arguments, base_path, build_configuration, certificates_
             print('--gitCodesigningType is required if --gitCodesigningRepository is set')
             sys.exit(1)
 
-        workdir_path = '{}/build-input/configuration-repository-workdir'.format(base_path)
-        os.makedirs(workdir_path, exist_ok=True)
-
-        profile_source = GitProvisioningProfileSource(
-            working_dir=workdir_path,
+        profile_source = GitCodesigningSource(
             repo_url=arguments.gitCodesigningRepository,
             team_id=build_configuration.team_id,
             bundle_id=build_configuration.bundle_id,
-            profile_type=arguments.gitCodesigningType,
+            codesigning_type=arguments.gitCodesigningType,
             password=password,
             always_fetch=arguments.gitCodesigningAlwaysFetch
         )
-    elif arguments.provisioningProfilesPath is not None:
-        profile_source = DirectoryProvisioningProfileSource(
-            directory_path=arguments.provisioningProfilesPath,
+    elif arguments.codesigningInformationPath is not None:
+        profile_source = DirectoryCodesigningSource(
+            directory_path=arguments.codesigningInformationPath,
             team_id=build_configuration.team_id,
             bundle_id=build_configuration.bundle_id
         )
     else:
-        raise Exception('Neither gitCodesigningRepository nor provisioningProfilesPath are set')
+        raise Exception('Neither gitCodesigningRepository nor codesigningInformationPath are set')
 
-    profile_source.copy_profiles_to_destination(destination_path=provisioning_profiles_path)
+    workdir_path = '{}/build-input/configuration-repository-workdir'.format(base_path)
+    os.makedirs(workdir_path, exist_ok=True)
+    profile_source.load_data(working_dir=workdir_path)
+
+    if provisioning_profiles_path is not None:
+        profile_source.copy_profiles_to_destination(destination_path=provisioning_profiles_path)
+
+    if additional_codesigning_output_path is not None:
+        profile_source.copy_profiles_to_destination(destination_path=additional_codesigning_output_path + '/profiles')
+        profile_source.copy_certificates_to_destination(destination_path=additional_codesigning_output_path + '/certs')
 
 
-def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, arguments, aps_environment):
+def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, arguments, aps_environment, additional_codesigning_output_path):
     configuration_repository_path = '{}/build-input/configuration-repository'.format(base_path)
     os.makedirs(configuration_repository_path, exist_ok=True)
 
@@ -438,7 +444,13 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
         shutil.rmtree(provisioning_path)
     os.makedirs(provisioning_path, exist_ok=True)
 
-    resolve_codesigning(arguments=arguments, base_path=base_path, build_configuration=build_configuration, certificates_path=None, provisioning_profiles_path=provisioning_path)
+    resolve_codesigning(
+        arguments=arguments,
+        base_path=base_path,
+        build_configuration=build_configuration,
+        provisioning_profiles_path=provisioning_path,
+        additional_codesigning_output_path=additional_codesigning_output_path
+    )
 
     provisioning_profile_files = []
     for file_name in os.listdir(provisioning_path):
@@ -451,7 +463,8 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
             file.write('    "{}",\n'.format(file_name))
         file.write('])\n')
 
-    return configuration_repository_path
+    if bazel_command_line is not None:
+        bazel_command_line.set_configuration_path(configuration_repository_path)
 
 
 def generate_project(bazel, arguments):
@@ -469,10 +482,13 @@ def generate_project(bazel, arguments):
 
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
 
-    configuration_repository_path = resolve_configuration(base_path=os.getcwd(), bazel_command_line=bazel_command_line, arguments=arguments, aps_environment=arguments.apsEnvironment)
-
-    if bazel_command_line is not None:
-        bazel_command_line.set_configuration_path(configuration_repository_path)
+    resolve_configuration(
+        base_path=os.getcwd(),
+        bazel_command_line=bazel_command_line,
+        arguments=arguments,
+        aps_environment=arguments.apsEnvironment,
+        additional_codesigning_output_path=None
+    )
 
     bazel_command_line.set_build_number(arguments.buildNumber)
 
@@ -516,7 +532,13 @@ def build(bazel, arguments):
     elif arguments.cacheHost is not None:
         bazel_command_line.add_remote_cache(arguments.cacheHost)
 
-    resolve_configuration(base_path=os.getcwd(), bazel_command_line=bazel_command_line, arguments=arguments, aps_environment=arguments.apsEnvironment)
+    resolve_configuration(
+        base_path=os.getcwd(),
+        bazel_command_line=bazel_command_line,
+        arguments=arguments,
+        aps_environment=arguments.apsEnvironment,
+        additional_codesigning_output_path=None
+    )
 
     bazel_command_line.set_configuration(arguments.configuration)
     bazel_command_line.set_build_number(arguments.buildNumber)
@@ -527,6 +549,36 @@ def build(bazel, arguments):
     bazel_command_line.set_split_swiftmodules(not arguments.disableParallelSwiftmoduleGeneration)
 
     bazel_command_line.invoke_build()
+
+    if arguments.outputBuildArtifactsPath is not None:
+        artifacts_path = arguments.outputBuildArtifactsPath
+        if os.path.exists(artifacts_path + '/Telegram.ipa'):
+            os.remove(path)
+        if os.path.exists(artifacts_path + '/DSYMs'):
+            shutil.rmtree(artifacts_path + '/DSYMs')
+        os.makedirs(artifacts_path, exist_ok=True)
+        os.makedirs(artifacts_path + '/DSYMs', exist_ok=True)
+
+        ipa_paths = glob.glob('bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa')
+        if len(ipa_paths) == 0:
+            print('Could not find the IPA at bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa')
+            sys.exit(1)
+        elif len(ipa_paths) > 1:
+            print('Multiple matching IPA files found: {}'.format(ipa_paths))
+            sys.exit(1)
+        shutil.copyfile(ipa_paths[0], artifacts_path + '/Telegram.ipa')
+
+        dsym_paths = glob.glob('bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/*.dSYM')
+        for dsym_path in dsym_paths:
+            file_name = os.path.basename(dsym_path)
+            shutil.copyfile(ipa_paths[0], artifacts_path + '/DSYMs/{}'.format(file_name))
+        run_executable_with_output('zip', arguments=[
+            '-9',
+            '-r',
+            artifacts_path + '/Telegram.DSYMs.zip',
+            artifacts_path + '/DSYMs'
+        ], check_result=True)
+        shutil.rmtree(artifacts_path + '/DSYMs')
 
 
 def test(bazel, arguments):
@@ -542,7 +594,13 @@ def test(bazel, arguments):
     elif arguments.cacheHost is not None:
         bazel_command_line.add_remote_cache(arguments.cacheHost)
 
-    resolve_configuration(base_path=os.getcwd(), bazel_command_line=bazel_command_line, arguments=arguments, aps_environment=arguments.apsEnvironment)
+    resolve_configuration(
+        base_path=os.getcwd(),
+        bazel_command_line=bazel_command_line,
+        arguments=arguments,
+        aps_environment=arguments.apsEnvironment,
+        additional_codesigning_output_path=None
+    )
 
     bazel_command_line.set_configuration('debug_sim_arm64')
     bazel_command_line.set_build_number('10000')
@@ -563,13 +621,6 @@ def add_codesigning_common_arguments(current_parser: argparse.ArgumentParser):
 
     codesigning_group = current_parser.add_mutually_exclusive_group(required=True)
     codesigning_group.add_argument(
-        '--reproducibleCodesigning',
-        action='store_true',
-        help='''
-            Use locally generated provisioning profiles and certificates for a reproducible build.
-            '''
-    )
-    codesigning_group.add_argument(
         '--gitCodesigningRepository',
         help='''
             If specified, certificates and provisioning profiles will be loaded from git.
@@ -578,15 +629,21 @@ def add_codesigning_common_arguments(current_parser: argparse.ArgumentParser):
         metavar='path'
     )
     codesigning_group.add_argument(
-        '--provisioningProfilesPath',
+        '--codesigningInformationPath',
         help='''
-            Use provisioning profiles from a local directory.
+            Use signing certificates and provisioning profiles from a local directory.
             ''',
         metavar='command'
     )
 
     current_parser.add_argument(
         '--gitCodesigningType',
+        choices=[
+            'development',
+            'adhoc',
+            'appstore',
+            'enterprise'
+        ],
         required=False,
         help='''
             The name of the folder to use inside "profiles" folder in the git repository.
@@ -793,6 +850,12 @@ if __name__ == '__main__':
         default=False,
         help='Enable sandbox.',
     )
+    buildParser.add_argument(
+        '--outputBuildArtifactsPath',
+        required=False,
+        help='Store IPA and DSYM at the specified path after a successful build.',
+        metavar='arguments'
+    )
 
     remote_build_parser = subparsers.add_parser('remote-build', help='Build the app using a remote environment.')
     add_codesigning_common_arguments(remote_build_parser)
@@ -802,7 +865,7 @@ if __name__ == '__main__':
         type=str,
         help='DarwinContainers host address.'
     )
-    buildParser.add_argument(
+    remote_build_parser.add_argument(
         '--configuration',
         choices=[
             'debug_universal',
@@ -816,7 +879,7 @@ if __name__ == '__main__':
         help='Build configuration'
     )
     remote_build_parser.add_argument(
-        '--bazelCacheHost',
+        '--cacheHost',
         required=False,
         type=str,
         help='Bazel remote cache host address.'
@@ -850,24 +913,27 @@ if __name__ == '__main__':
         elif args.commandName == 'remote-build':
             base_path = os.getcwd()
             remote_input_path = '{}/build-input/remote-input'.format(base_path)
-            certificates_path = '{}/certs'.format(remote_input_path)
-            provisioning_profiles_path = '{}/profiles'.format(remote_input_path)
+            if os.path.exists(remote_input_path):
+                shutil.rmtree(remote_input_path)
+            os.makedirs(remote_input_path)
+            os.makedirs(remote_input_path + '/certs')
+            os.makedirs(remote_input_path + '/profiles')
 
-            os.makedirs(certificates_path, exist_ok=True)
-            os.makedirs(provisioning_profiles_path, exist_ok=True)
-
-            configuration_repository_path = resolve_configuration(base_path=os.getcwd(), bazel_command_line=None, arguments=arguments, aps_environment='production')
-
-            certificates_path = '{}/certs'.format(configuration_repository_path)
-            provisioning_profiles_path = '{}/profiles'.format(configuration_repository_path)
+            resolve_configuration(
+                base_path=os.getcwd(),
+                bazel_command_line=None,
+                arguments=args,
+                aps_environment='production',
+                additional_codesigning_output_path=remote_input_path
+            )
+            
+            shutil.copyfile(args.configurationPath, remote_input_path + '/configuration.json')
 
             RemoteBuild.remote_build(
                 darwin_containers_host=args.darwinContainersHost,
-                bazel_cache_host=args.bazelCacheHost,
+                bazel_cache_host=args.cacheHost,
                 configuration=args.configuration,
-                certificates_path=certificates_path,
-                provisioning_profiles_path=provisioning_profiles_path,
-                configurationPath=args.configurationPath
+                build_input_data_path=remote_input_path
             )
         elif args.commandName == 'test':
             test(bazel=bazel_path, arguments=args)

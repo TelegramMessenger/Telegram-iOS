@@ -35,7 +35,9 @@ def session_ssh(session, command):
     )
     return os.system(ssh_command)
 
-def remote_build(darwin_containers_host, bazel_cache_host, configuration, certificates_path, provisioning_profiles_path, configurationPath):
+def remote_build(darwin_containers_host, bazel_cache_host, configuration, build_input_data_path):
+    macos_version = '12.5'
+
     from darwin_containers import DarwinContainers
 
     base_dir = os.getcwd()
@@ -63,7 +65,6 @@ def remote_build(darwin_containers_host, bazel_cache_host, configuration, certif
     build_number = build_number_offset + int(commit_count)
     print('Build number: {}'.format(build_number))
 
-    macos_version = '12.5'
     image_name = 'macos-{macos_version}-xcode-{xcode_version}'.format(macos_version=macos_version, xcode_version=xcode_version)
 
     print('Image name: {}'.format(image_name))
@@ -83,29 +84,34 @@ def remote_build(darwin_containers_host, bazel_cache_host, configuration, certif
     print('Opening container session...')
     with darwinContainers.workingImageSession(name=image_name) as session:
         print('Uploading data to container...')
-        session_scp_upload(session=session, source_path=certificates_path, destination_path='certs')
-        session_scp_upload(session=session, source_path=provisioning_profiles_path, destination_path='profiles')
-        session_scp_upload(session=session, source_path=configurationPath, destination_path='configuration.json')
+        session_scp_upload(session=session, source_path=build_input_data_path, destination_path='telegram-build-input')
         session_scp_upload(session=session, source_path='{base_dir}/{buildbox_dir}/transient-data/source.tar'.format(base_dir=base_dir, buildbox_dir=buildbox_dir), destination_path='')
 
         guest_build_sh = '''
-            mkdir telegram-ios
-            cd telegram-ios
-            tar -xf ../source.tar
+            set -x
+            set -e
 
-            python3 build-system/Make/ImportCertificates.py --path $HOME/certs
+            mkdir /Users/Shared/telegram-ios
+            cd /Users/Shared/telegram-ios
 
-            python3 build-system/Make/Make.py \\
-                build \\
-                --buildNumber={build_number} \\
-                --configuration={configuration} \\
-                --configurationPath=$HOME/configuration.json \\
-                --apsEnvironment=production \\
-                --provisioningProfilesPath=$HOME/profiles
-        '''.format(
-            build_number=build_number,
-            configuration=configuration
-        )
+            tar -xf $HOME/source.tar
+
+            python3 build-system/Make/ImportCertificates.py --path $HOME/telegram-build-input/certs
+
+        '''
+
+        guest_build_sh += 'python3 build-system/Make/Make.py \\'
+        if bazel_cache_host is not None:
+            guest_build_sh += '--cacheHost="{}" \\'.format(bazel_cache_host)
+        guest_build_sh += 'build \\'
+        guest_build_sh += ''
+        guest_build_sh += '--buildNumber={} \\'.format(build_number)
+        guest_build_sh += '--configuration={} \\'.format(configuration)
+        guest_build_sh += '--configurationPath=$HOME/telegram-build-input/configuration.json \\'
+        guest_build_sh += '--codesigningInformationPath=$HOME/telegram-build-input \\'
+        guest_build_sh += '--apsEnvironment=production \\'
+        guest_build_sh += '--outputBuildArtifactsPath=/Users/Shared/telegram-ios/build/artifacts \\'
+
         guest_build_file_path = tempfile.mktemp()
         with open(guest_build_file_path, 'w+') as file:
             file.write(guest_build_sh)
@@ -114,8 +120,6 @@ def remote_build(darwin_containers_host, bazel_cache_host, configuration, certif
 
         print('Executing remote build...')
 
-        if bazel_cache_host is None:
-            bazel_cache_host = ''
         session_ssh(session=session, command='bash -l guest-build-telegram.sh')
 
         print('Retrieving build artifacts...')
@@ -125,5 +129,10 @@ def remote_build(darwin_containers_host, bazel_cache_host, configuration, certif
             shutil.rmtree(artifacts_path)
         os.makedirs(artifacts_path, exist_ok=True)
 
-        session_scp_download(session=session, source_path='telegram-ios/build/artifacts/*', destination_path='{artifacts_path}/'.format(artifacts_path=artifacts_path))
-        print('Artifacts have been stored at {}'.format(artifacts_path))
+        session_scp_download(session=session, source_path='/Users/Shared/telegram-ios/build/artifacts/*', destination_path='{artifacts_path}/'.format(artifacts_path=artifacts_path))
+
+        if os.path.exists(artifacts_path + '/Telegram.ipa'):
+            print('Artifacts have been stored at {}'.format(artifacts_path))
+        else:
+            print('Telegram.ipa not found')
+            sys.exit(1)
