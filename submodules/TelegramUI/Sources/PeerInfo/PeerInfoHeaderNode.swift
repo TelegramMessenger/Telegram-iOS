@@ -2213,12 +2213,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
     }
     
-    /*@objc private func handleStarTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard let view = gestureRecognizer.view, self.currentCredibilityIcon == .premium else {
-            return
-        }
-        self.displayPremiumIntro?(view, view == self.titleExpandedCredibilityIconView.componentView)
-    }*/
+    func invokeDisplayPremiumIntro() {
+        self.displayPremiumIntro?(self.isAvatarExpanded ? self.titleExpandedCredibilityIconView : self.titleCredibilityIconView, self.isAvatarExpanded)
+    }
     
     func initiateAvatarExpansion(gallery: Bool, first: Bool) {
         if let peer = self.peer, peer.profileImageRepresentations.isEmpty && gallery {
@@ -2315,7 +2312,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
         
         let credibilityIcon: CredibilityIcon
-        if let cachedData = cachedData as? CachedUserData, let emojiStatus = cachedData.emojiStatus {
+        if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus {
             credibilityIcon = .emojiStatus(emojiStatus)
         } else if let peer = peer {
             if peer.isFake {

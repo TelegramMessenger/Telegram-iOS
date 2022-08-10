@@ -338,7 +338,8 @@ public final class EmojiStatusSelectionController: ViewController {
                 transition.setFrame(layer: self.cloudShadowLayer1, frame: cloudFrame1)
                 transition.setCornerRadius(layer: self.cloudLayer1, cornerRadius: cloudFrame1.width / 2.0)
                 
-                transition.setFrame(view: componentView, frame: componentFrame)
+                //transition.setFrame(view: componentView, frame: componentFrame)
+                transition.setFrame(view: componentView, frame: CGRect(origin: componentFrame.origin, size: CGSize(width: componentFrame.width, height: componentFrame.height)))
                 
                 if animateIn {
                     self.allowsGroupOpacity = true
@@ -379,13 +380,10 @@ public final class EmojiStatusSelectionController: ViewController {
         }
         
         private func applyItem(item: EmojiPagerContentComponent.Item?) {
+            self.controller?.dismiss()
+            
             let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile)
-            |> deliverOnMainQueue).start(completed: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.controller?.dismiss()
-            })
+            |> deliverOnMainQueue).start()
         }
     }
     

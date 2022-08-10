@@ -179,7 +179,8 @@ public final class EmojiStatusComponent: Component {
                         iconImage = generateImage(sourceImage.size, contextGenerator: { size, context in
                             if let cgImage = sourceImage.cgImage {
                                 context.clear(CGRect(origin: CGPoint(), size: size))
-                                context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
+                                let imageSize = CGSize(width: sourceImage.size.width - 8.0, height: sourceImage.size.height - 8.0)
+                                context.clip(to: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize), mask: cgImage)
                                 
                                 context.setFillColor(color.cgColor)
                                 context.fill(CGRect(origin: CGPoint(), size: size))

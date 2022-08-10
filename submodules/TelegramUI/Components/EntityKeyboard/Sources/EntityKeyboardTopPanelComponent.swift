@@ -112,18 +112,18 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                 let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
                     item: EmojiPagerContentComponent.Item(
                         animationData: component.item,
+                        content: .animation(component.item),
                         itemFile: nil,
-                        staticEmoji: nil,
                         subgroupId: nil
                     ),
                     context: component.context,
                     attemptSynchronousLoad: false,
-                    animationData: component.item,
-                    staticEmoji: nil,
+                    content: .animation(component.item),
                     cache: component.animationCache,
                     renderer: component.animationRenderer,
                     placeholderColor: .lightGray,
                     blurredBadgeColor: .clear,
+                    accentIconColor: component.theme.list.itemAccentColor,
                     pointSize: displaySize,
                     onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
                         guard let strongSelf = self else {

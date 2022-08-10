@@ -1,6 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
+import TelegramApi
 
 public extension TelegramEngine {
     final class AccountData {
@@ -56,20 +57,25 @@ public extension TelegramEngine {
         
         public func setEmojiStatus(file: TelegramMediaFile?) -> Signal<Never, NoError> {
             let peerId = self.account.peerId
+            
+            let remoteApply = self.account.network.request(Api.functions.account.updateEmojiStatus(emojiStatus: file.flatMap({ Api.EmojiStatus.emojiStatus(documentId: $0.fileId.id) }) ?? Api.EmojiStatus.emojiStatusEmpty))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
+            
             return self.account.postbox.transaction { transaction -> Void in
                 if let file = file {
                     transaction.storeMediaIfNotPresent(media: file)
                 }
-                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                    guard let current = current as? CachedUserData else {
-                        return current
-                    }
-                    return current.withUpdatedEmojiStatus(file.flatMap { file -> PeerEmojiStatus in
-                        return PeerEmojiStatus(fileId: file.fileId.id)
+                if let peer = transaction.getPeer(peerId) as? TelegramUser {
+                    updatePeers(transaction: transaction, peers: [peer.withUpdatedEmojiStatus(file.flatMap({ PeerEmojiStatus(fileId: $0.fileId.id) }))], update: { _, updated in
+                        updated
                     })
-                })
+                }
             }
             |> ignoreValues
+            |> then(remoteApply)
         }
     }
 }

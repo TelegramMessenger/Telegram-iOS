@@ -149,8 +149,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 }
                                 if peer.id != self.context.account.peerId {
                                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
-                                    if let _ = peerView.cachedData as? CachedUserData, peer.isPremium && !premiumConfiguration.isPremiumDisabled, "".isEmpty {
-                                        titleCredibilityIcon = .emojiStatus(PeerEmojiStatus(fileId: 5431449001532594346))
+                                    if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus {
+                                        titleCredibilityIcon = .emojiStatus(emojiStatus)
                                     } else if peer.isFake {
                                         titleCredibilityIcon = .fake
                                     } else if peer.isScam {

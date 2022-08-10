@@ -733,7 +733,7 @@ static void copyKeychainKey(NSString * _Nonnull group, NSString * _Nonnull key, 
             
             for (id<MTContextChangeListener> listener in currentListeners) {
                 if ([listener respondsToSelector:@selector(contextDatacenterTransportSchemesUpdated:datacenterId:shouldReset:)])
-                    [listener contextDatacenterTransportSchemesUpdated:self datacenterId:datacenterId shouldReset:true];
+                    [listener contextDatacenterTransportSchemesUpdated:self datacenterId:datacenterId shouldReset:false];
             }
         }
     }];
