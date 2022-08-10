@@ -1829,9 +1829,14 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             if let topContentOffset = state.topContentOffset, topContentOffset >= 123.0 {
                 starIsVisible = false
             }
-                
+            
+            var isIntro = true
+            if case .profile = context.component.source {
+                isIntro = false
+            }
+                 
             let star = star.update(
-                component: PremiumStarComponent(isVisible: starIsVisible, hasIdleAnimations: state.hasIdleAnimations),
+                component: PremiumStarComponent(isIntro: isIntro, isVisible: starIsVisible, hasIdleAnimations: state.hasIdleAnimations),
                 availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
             )

@@ -375,10 +375,13 @@ class PremiumStarComponent: Component {
                 return
             }
 
+            let fromScale: Float = self.isIntro ? 0.1 : 0.08
+            let toScale: Float = self.isIntro ? 0.115 : 0.092
+            
             let animation = CABasicAnimation(keyPath: "scale")
             animation.duration = 2.0
-            animation.fromValue = NSValue(scnVector3: SCNVector3(x: 0.1, y: 0.1, z: 0.1))
-            animation.toValue = NSValue(scnVector3: SCNVector3(x: 0.115, y: 0.115, z: 0.115))
+            animation.fromValue = NSValue(scnVector3: SCNVector3(x: fromScale, y: fromScale, z: fromScale))
+            animation.toValue = NSValue(scnVector3: SCNVector3(x: toScale, y: toScale, z: toScale))
             animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             animation.autoreverses = true
             animation.repeatCount = .infinity
