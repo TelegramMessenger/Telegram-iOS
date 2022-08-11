@@ -68,6 +68,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
         private var stickersDisposable: Disposable?
         private var preloadDisposableSet =  DisposableSet()
         
+        var price: String?
+        
         init(context: AccountContext) {
             self.context = context
             
@@ -305,6 +307,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             let buy = context.component.buy
             
             let price = context.component.products?.first(where: { $0.id == context.component.selectedProductId })?.price
+            state.price = price
             
             let gradientColors: [UIColor] = [
                 UIColor(rgb: 0xF27C30),
@@ -347,7 +350,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         switch perk {
                         case .doubleLimits:
                             var dismissImpl: (() -> Void)?
-                            let controller = PremimLimitsListScreen(context: accountContext, buttonText: strings.Premium_Gift_GiftSubscription(price ?? "–").string, isPremium: false)
+                            let controller = PremimLimitsListScreen(context: accountContext, buttonText: strings.Premium_Gift_GiftSubscription(state?.price ?? "–").string, isPremium: false)
                             controller.action = {
                                 dismissImpl?()
                                 buy()
@@ -388,7 +391,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         let controller = PremiumDemoScreen(
                             context: accountContext,
                             subject: demoSubject,
-                            source: .gift(price),
+                            source: .gift(state?.price),
                             order: state?.configuration.perks,
                             action: {
                                 buy()
