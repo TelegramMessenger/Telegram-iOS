@@ -244,8 +244,10 @@ class GitCodesigningSource(CodesigningSource):
 
     def copy_certificates_to_destination(self, destination_path):
         source_path = None
-        if self.codesigning_type in ['adhoc', 'appstore', 'enterprise']:
+        if self.codesigning_type in ['adhoc', 'appstore']:
             source_path = self.working_dir + '/decrypted/certs/distribution'
+        elif self.codesigning_type == 'enterprise':
+            source_path = self.working_dir + '/decrypted/certs/enterprise'
         elif self.codesigning_type == 'development':
             source_path = self.working_dir + '/decrypted/certs/development'
         else:
