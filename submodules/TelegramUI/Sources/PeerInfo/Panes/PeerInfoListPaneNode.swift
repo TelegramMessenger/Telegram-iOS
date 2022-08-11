@@ -141,10 +141,12 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 }
             })
         }
-
-        self.statusPromise.set(context.account.postbox.combinedView(keys: [PostboxViewKey.historyTagSummaryView(tag: tagMask, peerId: peerId, namespace: Namespaces.Message.Cloud)])
-        |> map { views -> PeerInfoStatusData? in
-            let count: Int32 = (views.views[PostboxViewKey.historyTagSummaryView(tag: tagMask, peerId: peerId, namespace: Namespaces.Message.Cloud)] as? MessageHistoryTagSummaryView)?.count ?? 0
+        
+        self.statusPromise.set(context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: tagMask)
+        )
+        |> map { count -> PeerInfoStatusData? in
+            let count: Int = count ?? 0
             if count == 0 {
                 return nil
             }

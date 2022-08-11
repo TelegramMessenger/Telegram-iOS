@@ -20,6 +20,10 @@
 - (void)play;
 - (void)pause;
 - (void)resetToStart;
+
+- (void)playFromFrame:(NSInteger)frameIndex;
+- (void)copyStickerView:(NSObject<TGPhotoPaintStickerRenderView> *)view;
+
 - (int64_t)documentId;
 - (UIImage *)image;
 

@@ -7,6 +7,7 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
+        "//Nicegram/EsimModule/EsimKeychainWrapper:EsimKeychainWrapper",
     ],
     visibility = [
         "//visibility:public",

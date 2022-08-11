@@ -161,6 +161,12 @@ public final class Transaction {
         self.postbox?.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace, forEachMedia: forEachMedia)
     }
     
+    // MARK: Nicegram SelectAllMessagesWithAuthor
+    public func allMessageIdsWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) -> [MessageId] {
+        return self.postbox?.allMessageIdsWithAuthor(peerId, authorId: authorId, namespace: namespace) ?? []
+    }
+    //
+    
     public func removeAllMessagesWithGlobalTag(tag: GlobalMessageTags) {
         assert(!self.disposed)
         self.postbox?.removeAllMessagesWithGlobalTag(tag: tag)
@@ -740,9 +746,9 @@ public final class Transaction {
         return self.postbox?.storedMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp)
     }
     
-    public func putItemCacheEntry(id: ItemCacheEntryId, entry: CodableEntry, collectionSpec: ItemCacheCollectionSpec) {
+    public func putItemCacheEntry(id: ItemCacheEntryId, entry: CodableEntry) {
         assert(!self.disposed)
-        self.postbox?.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
+        self.postbox?.putItemCacheEntry(id: id, entry: entry)
     }
     
     public func removeItemCacheEntry(id: ItemCacheEntryId) {
@@ -1837,6 +1843,12 @@ final class PostboxImpl {
         self.messageHistoryTable.removeAllMessagesWithAuthor(peerId: peerId, authorId: authorId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: forEachMedia)
     }
     
+    // MARK: Nicegram SelectAllMessagesWithAuthor
+    fileprivate func allMessageIdsWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) -> [MessageId] {
+        return self.messageHistoryTable.allMessageIdsWithAuthor(peerId: peerId, authorId: authorId, namespace: namespace)
+    }
+    //
+    
     fileprivate func removeAllMessagesWithGlobalTag(tag: GlobalMessageTags) {
         self.messageHistoryTable.removeAllMessagesWithGlobalTag(tag: tag, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations, forEachMedia: { _ in })
     }
@@ -2107,7 +2119,7 @@ final class PostboxImpl {
         return indices.max()
     }
     
-    fileprivate func getPeerChatListInclusion(_ id: PeerId) -> PeerChatListInclusion {
+    func getPeerChatListInclusion(_ id: PeerId) -> PeerChatListInclusion {
         if let inclusion = self.currentUpdatedChatListInclusions[id] {
             return inclusion
         } else {
@@ -2351,7 +2363,7 @@ final class PostboxImpl {
         }
     }
     
-    fileprivate func putItemCacheEntry(id: ItemCacheEntryId, entry: CodableEntry, collectionSpec: ItemCacheCollectionSpec) {
+    fileprivate func putItemCacheEntry(id: ItemCacheEntryId, entry: CodableEntry) {
         self.itemCacheTable.put(id: id, entry: entry, metaTable: self.itemCacheMetaTable)
         self.currentUpdatedCacheEntryKeys.insert(id)
     }

@@ -13,6 +13,44 @@
 #import <MtProtoKit/MTProto.h>
 #import <MtProtoKit/MTSerialization.h>
 #import <MtProtoKit/MTLogging.h>
+#import <MtProtoKit/MTKeychain.h>
+
+@interface MTTemporaryKeychain : NSObject<MTKeychain> {
+    NSMutableDictionary<NSString *, id> *_dict;
+}
+
+@end
+
+@implementation MTTemporaryKeychain
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+        _dict = [[NSMutableDictionary alloc] init];
+    }
+    return self;
+}
+
+- (NSString *)itemKeyForGroup:(NSString *)group key:(NSString *)key {
+    return [NSString stringWithFormat:@"%@:%@", group, key];
+}
+
+- (void)setObject:(id)object forKey:(NSString *)aKey group:(NSString *)group {
+    if (object == nil) {
+        return;
+    }
+    _dict[[self itemKeyForGroup:group key:aKey]] = object;
+}
+
+- (id)objectForKey:(NSString *)aKey group:(NSString *)group {
+    return _dict[[self itemKeyForGroup:group key:aKey]];
+}
+
+- (void)removeObjectForKey:(NSString *)aKey group:(NSString *)group {
+    [_dict removeObjectForKey:[self itemKeyForGroup:group key:aKey]];
+}
+
+@end
 
 static NSData *base64_decode(NSString *str) {
     if ([NSData instancesRespondToSelector:@selector(initWithBase64EncodedString:options:)]) {
@@ -224,7 +262,7 @@ static NSString *makeRandomPadding() {
     return [[MTSignal mergeSignals:signals] take:1];
 }
 
-+ (MTSignal *)fetchConfigFromAddress:(MTBackupDatacenterAddress *)address currentContext:(MTContext *)currentContext {
++ (MTSignal *)fetchConfigFromAddress:(MTBackupDatacenterAddress *)address currentContext:(MTContext *)currentContext mainDatacenterId:(NSInteger)mainDatacenterId {
     MTApiEnvironment *apiEnvironment = [currentContext.apiEnvironment copy];
     
     apiEnvironment = [apiEnvironment withUpdatedSocksProxySettings:nil];
@@ -242,13 +280,24 @@ static NSString *makeRandomPadding() {
     
     MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization encryptionProvider:currentContext.encryptionProvider apiEnvironment:apiEnvironment isTestingEnvironment:currentContext.isTestingEnvironment useTempAuthKeys:false];
     
+    NSInteger authTokenMasterDatacenterId = 0;
+    NSNumber *requiredAuthToken = nil;
+    bool allowUnboundEphemeralKeys = true;
     if (address.datacenterId != 0) {
-        //context.keychain = currentContext.keychain;
+        authTokenMasterDatacenterId = mainDatacenterId;
+        requiredAuthToken = @(address.datacenterId);
+        MTTemporaryKeychain *tempKeychain = [[MTTemporaryKeychain alloc] init];
+        [MTContext copyAuthInfoFrom:currentContext.keychain toTempKeychain:tempKeychain];
+        context.keychain = tempKeychain;
+        allowUnboundEphemeralKeys = false;
+    } else {
+        MTTemporaryKeychain *tempKeychain = [[MTTemporaryKeychain alloc] init];
+        context.keychain = tempKeychain;
     }
     
-    MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:address.datacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];
+    MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:address.datacenterId usageCalculationInfo:nil requiredAuthToken:requiredAuthToken authTokenMasterDatacenterId:authTokenMasterDatacenterId];
     mtProto.useTempAuthKeys = true;
-    mtProto.allowUnboundEphemeralKeys = true;
+    mtProto.allowUnboundEphemeralKeys = allowUnboundEphemeralKeys;
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
     [mtProto addMessageService:requestService];
     
@@ -258,7 +307,6 @@ static NSString *makeRandomPadding() {
     
     NSData *getConfigData = nil;
     MTRequestDatacenterAddressListParser responseParser = [currentContext.serialization requestDatacenterAddressWithData:&getConfigData];
-    
     [request setPayload:getConfigData metadata:@"getConfig" shortMetadata:@"getConfig" responseParser:responseParser];
     
     __weak MTContext *weakCurrentContext = currentContext;
@@ -300,7 +348,7 @@ static NSString *makeRandomPadding() {
     }];
 }
 
-+ (MTSignal * _Nonnull)fetchBackupIps:(bool)isTestingEnvironment currentContext:(MTContext * _Nonnull)currentContext additionalSource:(MTSignal * _Nullable)additionalSource phoneNumber:(NSString * _Nullable)phoneNumber {
++ (MTSignal * _Nonnull)fetchBackupIps:(bool)isTestingEnvironment currentContext:(MTContext * _Nonnull)currentContext additionalSource:(MTSignal * _Nullable)additionalSource phoneNumber:(NSString * _Nullable)phoneNumber mainDatacenterId:(NSInteger)mainDatacenterId {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     [signals addObject:[self fetchBackupIpsResolveGoogle:isTestingEnvironment phoneNumber:phoneNumber currentContext:currentContext addressOverride:currentContext.apiEnvironment.accessHostOverride]];
     [signals addObject:[self fetchBackupIpsResolveCloudflare:isTestingEnvironment phoneNumber:phoneNumber currentContext:currentContext addressOverride:currentContext.apiEnvironment.accessHostOverride]];
@@ -322,7 +370,7 @@ static NSString *makeRandomPadding() {
             NSMutableArray *signals = [[NSMutableArray alloc] init];
             NSTimeInterval delay = 0.0;
             for (MTBackupDatacenterAddress *address in data.addressList) {
-                MTSignal *signal = [self fetchConfigFromAddress:address currentContext:currentContext];
+                MTSignal *signal = [self fetchConfigFromAddress:address currentContext:currentContext mainDatacenterId:mainDatacenterId];
                 if (delay > DBL_EPSILON) {
                     signal = [signal delay:delay onQueue:[[MTQueue alloc] init]];
                 }

@@ -2,14 +2,12 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-
 public enum UpdateChannelJoinToSendError {
     case generic
 }
 
 func _internal_toggleChannelJoinToSend(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, peerId: PeerId, enabled: Bool) -> Signal<Never, UpdateChannelJoinToSendError> {
-    return .never()
-/*    return postbox.transaction { transaction -> Peer? in
+    return postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
     |> castError(UpdateChannelJoinToSendError.self)
@@ -26,7 +24,6 @@ func _internal_toggleChannelJoinToSend(postbox: Postbox, network: Network, accou
             return .complete()
         }
     }
-*/
 }
 
 public enum UpdateChannelJoinRequestError {
@@ -34,8 +31,7 @@ public enum UpdateChannelJoinRequestError {
 }
 
 func _internal_toggleChannelJoinRequest(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, peerId: PeerId, enabled: Bool) -> Signal<Never, UpdateChannelJoinRequestError> {
-    return .never()
-/*    return postbox.transaction { transaction -> Peer? in
+    return postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
     |> castError(UpdateChannelJoinRequestError.self)
@@ -52,5 +48,4 @@ func _internal_toggleChannelJoinRequest(postbox: Postbox, network: Network, acco
             return .complete()
         }
     }
-*/
 }

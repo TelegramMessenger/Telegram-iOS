@@ -81,22 +81,18 @@ extension UIStackView {
             return allSubviews + [subview]
         }
         
-        // Deactivate all constraints
-        NSLayoutConstraint.deactivate(removedSubviews.flatMap({ $0.constraints }))
-        
         // Remove the views from self
         removedSubviews.forEach({ $0.removeFromSuperview() })
     }
 }
 
-extension UIView {
-    public static func separator() -> UIView {
-        let view = UIView()
-        view.backgroundColor = .ngLine
-        view.snp.makeConstraints { make in
-            make.height.equalTo(1)
+extension UIScrollView {
+    public func adjustBottomInsetToNotBeCovered(by coveringView: UIView, additionalInset: CGFloat = 0) {
+        let coveringFrame = coveringView.convert(coveringView.bounds, to: self)
+        let inset = bounds.maxY - (coveringFrame.minY - additionalInset)
+        if inset > 0 {
+            contentInset.bottom = inset
         }
-        return view
     }
 }
 
@@ -139,10 +135,37 @@ public extension ReuseIdentifiable where Self: UIView {
 }
 
 public extension UIBarItem {
-    public var view: UIView? {
+    var view: UIView? {
         if let item = self as? UIBarButtonItem, let customView = item.customView {
             return customView
         }
         return self.value(forKey: "view") as? UIView
+    }
+}
+
+public protocol ClosureBindable: AnyObject { }
+
+public extension ClosureBindable {
+    typealias Function = Self
+
+    func weak<Args>(_ method: @escaping ((Self) -> ((Args) -> Void))) -> ((Args) -> Void) {
+        return { [weak self] arg in
+            guard let strongSelf = self else { return }
+            method(strongSelf)(arg)
+        }
+    }
+
+    func weak<Arg1, Arg2>(_ method: @escaping ((Self) -> ((Arg1, Arg2) -> Void))) -> ((Arg1, Arg2) -> Void) {
+        return { [weak self] arg1, arg2 in
+            guard let strongSelf = self else { return }
+            method(strongSelf)(arg1, arg2)
+        }
+    }
+
+    func weak(_ method: @escaping ((Self) -> (() -> Void))) -> (() -> Void) {
+        return { [weak self] in
+            guard let strongSelf = self else { return }
+            method(strongSelf)()
+        }
     }
 }

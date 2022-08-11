@@ -10,6 +10,7 @@ import UniversalMediaPlayer
 import TelegramAudio
 import AccountContext
 import PhotoResources
+import RangeSet
 
 public enum PlatformVideoContentId: Hashable {
     case message(MessageId, UInt32, MediaId)
@@ -132,8 +133,8 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
         return self._status.get()
     }
     
-    private let _bufferingStatus = Promise<(IndexSet, Int)?>()
-    var bufferingStatus: Signal<(IndexSet, Int)?, NoError> {
+    private let _bufferingStatus = Promise<(RangeSet<Int64>, Int64)?>()
+    var bufferingStatus: Signal<(RangeSet<Int64>, Int64)?, NoError> {
         return self._bufferingStatus.get()
     }
     

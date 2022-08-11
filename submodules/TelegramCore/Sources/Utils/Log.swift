@@ -157,6 +157,30 @@ public final class Logger {
         }
     }
     
+    public func collectLogs(basePath: String) -> Signal<[(String, String)], NoError> {
+        return Signal { subscriber in
+            self.queue.async {
+                let logsPath: String = basePath
+                
+                var result: [(Date, String, String)] = []
+                if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: logsPath), includingPropertiesForKeys: [URLResourceKey.creationDateKey], options: []) {
+                    for url in files {
+                        if url.lastPathComponent.hasPrefix("log-") {
+                            if let creationDate = (try? url.resourceValues(forKeys: Set([.creationDateKey])))?.creationDate {
+                                result.append((creationDate, url.lastPathComponent, url.path))
+                            }
+                        }
+                    }
+                }
+                result.sort(by: { $0.0 < $1.0 })
+                subscriber.putNext(result.map { ($0.1, $0.2) })
+                subscriber.putCompletion()
+            }
+            
+            return EmptyDisposable
+        }
+    }
+    
     public func collectShortLogFiles() -> Signal<[(String, String)], NoError> {
         return Signal { subscriber in
             self.queue.async {

@@ -56,6 +56,7 @@ private enum ShareAuthorizationError {
 
 public struct ShareRootControllerInitializationData {
     public let appBundleId: String
+    public let appBuildType: TelegramAppBuildType
     public let appGroupPath: String
     public let apiId: Int32
     public let apiHash: String
@@ -64,8 +65,9 @@ public struct ShareRootControllerInitializationData {
     public let appVersion: String
     public let bundleData: Data?
     
-    public init(appBundleId: String, appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?) {
+    public init(appBundleId: String, appBuildType: TelegramAppBuildType, appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?) {
         self.appBundleId = appBundleId
+        self.appBuildType = appBuildType
         self.appGroupPath = appGroupPath
         self.apiId = apiId
         self.apiHash = apiHash
@@ -84,10 +86,10 @@ private func extractTextFileHeader(path: String) -> String? {
         return nil
     }
     
-    let limit = 3000
+    let limit: Int64 = 3000
     
-    var data = file.readData(count: min(size, limit))
-    let additionalCapacity = min(10, max(0, size - data.count))
+    var data = file.readData(count: Int(min(size, limit)))
+    let additionalCapacity = min(10, max(0, Int(size) - data.count))
     
     for alignment in 0 ... additionalCapacity {
         if alignment != 0 {
@@ -173,12 +175,12 @@ public class ShareRootControllerImpl {
             
             TempBox.initializeShared(basePath: rootPath, processType: "share", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
             
-            let logsPath = rootPath + "/share-logs"
+            let logsPath = rootPath + "/logs/share-logs"
             let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
             
             setupSharedLogger(rootPath: rootPath, path: logsPath)
             
-            let applicationBindings = TelegramApplicationBindings(isMainApp: false, appBundleId: self.initializationData.appBundleId, containerPath: self.initializationData.appGroupPath, appSpecificScheme: "tg", openUrl: { _ in
+            let applicationBindings = TelegramApplicationBindings(isMainApp: false, appBundleId: self.initializationData.appBundleId, appBuildType: self.initializationData.appBuildType, containerPath: self.initializationData.appGroupPath, appSpecificScheme: "tg", openUrl: { _ in
             }, openUniversalUrl: { _, completion in
                 completion.completion(false)
                 return
@@ -191,7 +193,10 @@ public class ShareRootControllerImpl {
             }, applicationInForeground: .single(false), applicationIsActive: .single(false), clearMessageNotifications: { _ in
             }, pushIdleTimerExtension: {
                 return EmptyDisposable
-            }, openSettings: {}, openAppStorePage: {}, registerForNotifications: { _ in }, requestSiriAuthorization: { _ in }, siriAuthorization: { return .notDetermined }, getWindowHost: {
+            }, openSettings: {
+            }, openAppStorePage: {
+            }, openSubscriptions: {
+            }, registerForNotifications: { _ in }, requestSiriAuthorization: { _ in }, siriAuthorization: { return .notDetermined }, getWindowHost: {
                 return nil
             }, presentNativeController: { _ in
             }, dismissNativeController: {
@@ -232,7 +237,7 @@ public class ShareRootControllerImpl {
                     return nil
                 })
                 
-                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), premiumProductId: nil, rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
@@ -299,20 +304,19 @@ public class ShareRootControllerImpl {
             
             let applicationInterface = account
             |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContext, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
-                let limitsConfigurationAndContentSettings = account.postbox.transaction { transaction -> (LimitsConfiguration, ContentSettings, AppConfiguration) in
-                    return (
-                        transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue,
-                        getContentSettings(transaction: transaction),
-                        getAppConfiguration(transaction: transaction)
-                    )
-                }
+                let limitsConfigurationAndContentSettings = TelegramEngine(account: account).data.get(
+                    TelegramEngine.EngineData.Item.Configuration.Limits(),
+                    TelegramEngine.EngineData.Item.Configuration.ContentSettings(),
+                    TelegramEngine.EngineData.Item.Configuration.App()
+                )
+                
                 return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), limitsConfigurationAndContentSettings, sharedContext.accountManager.accessChallengeData())
                 |> take(1)
                 |> deliverOnMainQueue
                 |> castError(ShareAuthorizationError.self)
                 |> map { sharedData, limitsConfigurationAndContentSettings, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
                     updateLegacyLocalization(strings: sharedContext.currentPresentationData.with({ $0 }).strings)
-                    let context = AccountContextImpl(sharedContext: sharedContext, account: account, limitsConfiguration: limitsConfigurationAndContentSettings.0, contentSettings: limitsConfigurationAndContentSettings.1, appConfiguration: limitsConfigurationAndContentSettings.2)
+                    let context = AccountContextImpl(sharedContext: sharedContext, account: account, limitsConfiguration: limitsConfigurationAndContentSettings.0._asLimits(), contentSettings: limitsConfigurationAndContentSettings.1, appConfiguration: limitsConfigurationAndContentSettings.2)
                     return (context, data.data, otherAccounts)
                 }
             }
@@ -367,25 +371,33 @@ public class ShareRootControllerImpl {
                                 let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
                                 return preparedShareItems(account: account, to: peerIds[0], dataItems: rawSignals, additionalText: additionalText)
                                 |> map(Optional.init)
-                                |> `catch` { _ -> Signal<PreparedShareItems?, NoError> in
-                                    return .single(nil)
+                                |> `catch` { error -> Signal<PreparedShareItems?, ShareControllerError> in
+                                    switch error {
+                                        case .generic:
+                                            return .single(nil)
+                                        case let .fileTooBig(size):
+                                            return .fail(.fileTooBig(size))
+                                    }
                                 }
-                                |> mapToSignal { state -> Signal<ShareControllerExternalStatus, NoError> in
+                                |> mapToSignal { state -> Signal<ShareControllerExternalStatus, ShareControllerError> in
                                     guard let state = state else {
                                         return .single(.done)
                                     }
                                     switch state {
-                                        case .preparing:
-                                            return .single(.preparing)
+                                        case let .preparing(long):
+                                            return .single(.preparing(long))
                                         case let .progress(value):
                                             return .single(.progress(value))
                                         case let .userInteractionRequired(value):
                                             return requestUserInteraction(value)
-                                            |> mapToSignal { contents -> Signal<ShareControllerExternalStatus, NoError> in
+                                            |> castError(ShareControllerError.self)
+                                            |> mapToSignal { contents -> Signal<ShareControllerExternalStatus, ShareControllerError> in
                                                 return sentItems(peerIds, contents, account, silently)
+                                                |> castError(ShareControllerError.self)
                                             }
                                         case let .done(contents):
                                             return sentItems(peerIds, contents, account, silently)
+                                            |> castError(ShareControllerError.self)
                                     }
                                 }
                             } else {

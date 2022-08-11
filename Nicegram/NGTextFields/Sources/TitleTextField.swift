@@ -63,7 +63,7 @@ open class TitleTextField: TextField {
 
     private let borderThickness: (active: CGFloat, inactive: CGFloat) = (active: 0.25, inactive: 0.25)
     private let placeholderInsets = CGPoint(x: 0, y: 6)
-    private let errorInsets = CGPoint(x: 0, y: 0)
+    private let errorInsets = CGPoint(x: 0, y: 18)
     private let textFieldInsets = CGPoint(x: 0, y: 12)
     private let inactiveBorderLayer = CALayer()
     private let activeBorderLayer = CALayer()
@@ -72,19 +72,24 @@ open class TitleTextField: TextField {
     // MARK: - TextFieldEffects
 
     override open func drawViewsForRect(_ rect: CGRect) {
+        if Locale.current.languageCode == "ar" {
+            if textAlignment == .natural {
+                textAlignment = .right
+            }
+        }
         let frame = CGRect(origin: CGPoint.zero, size: CGSize(width: rect.size.width, height: rect.size.height))
 
         placeholderLabel.frame = frame.insetBy(dx: placeholderInsets.x, dy: placeholderInsets.y)
         placeholderLabel.font = placeholderFontFromFont(font!)
 
-        errorLabel.frame = frame.insetBy(dx: placeholderInsets.x, dy: frame.maxY + 5.0)
+        errorLabel.frame = frame.insetBy(dx: placeholderInsets.x, dy: errorInsets.y)
         errorLabel.font = .systemFont(ofSize: 14.0)
         errorLabel.textColor = .ngRedAlert
         errorLabel.isHidden = !showError
 
+        updateError()
         updateBorder()
         updatePlaceholder()
-        updateError()
 
         layer.addSublayer(inactiveBorderLayer)
         layer.addSublayer(activeBorderLayer)
@@ -126,6 +131,25 @@ open class TitleTextField: TextField {
 
         }
     }
+    
+    // MARK: - Public
+    
+    public func togglePasswordVisibility() {
+        isSecureTextEntry.toggle()
+        
+        if let existingText = text, isSecureTextEntry {
+            deleteBackward()
+            
+            if let textRange = textRange(from: beginningOfDocument, to: endOfDocument) {
+                replace(textRange, withText: existingText)
+            }
+        }
+
+        if let existingSelectedTextRange = selectedTextRange {
+            selectedTextRange = nil
+            selectedTextRange = existingSelectedTextRange
+        }
+    }
 
     // MARK: - Private
 
@@ -152,6 +176,13 @@ open class TitleTextField: TextField {
         errorLabel.text = errorText
         errorLabel.isHidden = !showError
         errorLabel.sizeToFit()
+        
+        inactiveBorderLayer.frame = rectForBorder(borderThickness.inactive)
+        inactiveBorderLayer.backgroundColor = UIColor.ngRedAlert.cgColor
+        
+        activeBorderLayer.frame = rectForBorder(borderThickness.active)
+        activeBorderLayer.backgroundColor = UIColor.ngRedAlert.cgColor
+        
         layoutErrorInTextRect()
     }
 
@@ -189,9 +220,9 @@ open class TitleTextField: TextField {
         let originX = textRect.origin.x
         errorLabel.frame = CGRect(
             x: originX,
-            y: textRect.height / 2,
+            y: textRect.height / 2 + 34.0,
             width: errorLabel.bounds.width,
-            height: errorLabel.bounds.width
+            height: errorLabel.bounds.height
         )
     }
 
@@ -203,5 +234,11 @@ open class TitleTextField: TextField {
 
     override open func textRect(forBounds bounds: CGRect) -> CGRect {
         return bounds.offsetBy(dx: textFieldInsets.x, dy: textFieldInsets.y)
+    }
+    
+    open override func textFieldDidBeginEditing() {
+        super.textFieldDidBeginEditing()
+        
+        updateBorder()
     }
 }

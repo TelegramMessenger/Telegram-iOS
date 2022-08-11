@@ -2,8 +2,14 @@ load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 NGDEPS = [
     "//Nicegram/NGData:NGData",
-    "//Nicegram/NGAssistant:NGAssistant"
-    ]
+    "//Nicegram/NGAssistant:NGAssistant",
+    "//Nicegram/NGSpecialOffer:NGSpecialOffer",
+    "//Nicegram/NGTheme:NGTheme",
+    "//Nicegram/NGTransitions:NGTransitions",
+    "//Nicegram/NGEnv:NGEnv",
+    # Delete later
+    "//Nicegram/NGAuth:NGAuth"
+]
 
 swift_library(
     name = "ChatListUI",
@@ -57,6 +63,7 @@ swift_library(
         "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/GalleryData:GalleryData",
+        "//submodules/GalleryUI:GalleryUI",
         "//submodules/InstantPageUI:InstantPageUI",
         "//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
         "//submodules/ChatInterfaceState:ChatInterfaceState",
@@ -72,6 +79,11 @@ swift_library(
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/Components/ProgressIndicatorComponent:ProgressIndicatorComponent",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/PremiumUI:PremiumUI",
+        "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
+        "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        # Nicegram downloading feature
+        "//submodules/SaveToCameraRoll:SaveToCameraRoll",
     ] + NGDEPS,
     visibility = [
         "//visibility:public",

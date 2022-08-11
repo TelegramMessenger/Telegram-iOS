@@ -30,6 +30,7 @@ public final class SearchDisplayController {
     private let backgroundNode: BackgroundNode
     public let contentNode: SearchDisplayControllerContentNode
     private var hasSeparator: Bool
+    private let inline: Bool
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -37,8 +38,9 @@ public final class SearchDisplayController {
     
     private var isSearchingDisposable: Disposable?
     
-    public init(presentationData: PresentationData, mode: SearchDisplayControllerMode = .navigation, placeholder: String? = nil, hasBackground: Bool = false, hasSeparator: Bool = false, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasBackground: hasBackground, hasSeparator: hasSeparator), strings: presentationData.strings, fieldStyle: .modern, forceSeparator: hasSeparator, displayBackground: hasBackground)
+    public init(presentationData: PresentationData, mode: SearchDisplayControllerMode = .navigation, placeholder: String? = nil, hasBackground: Bool = false, hasSeparator: Bool = false, contentNode: SearchDisplayControllerContentNode, inline: Bool = false, cancel: @escaping () -> Void) {
+        self.inline = inline
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasBackground: hasBackground, hasSeparator: hasSeparator, inline: inline), strings: presentationData.strings, fieldStyle: .modern, forceSeparator: hasSeparator, displayBackground: hasBackground)
         self.backgroundNode = BackgroundNode()
         self.backgroundNode.backgroundColor = presentationData.theme.chatList.backgroundColor
         self.backgroundNode.allowsGroupOpacity = true
@@ -104,7 +106,7 @@ public final class SearchDisplayController {
     }
     
     public func updatePresentationData(_ presentationData: PresentationData) {
-        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: self.hasSeparator), strings: presentationData.strings)
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: self.hasSeparator, inline: self.inline), strings: presentationData.strings)
         self.contentNode.updatePresentationData(presentationData)
         
         if self.contentNode.hasDim {

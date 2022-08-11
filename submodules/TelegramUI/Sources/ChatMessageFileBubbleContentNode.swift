@@ -72,6 +72,10 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             
             item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
         }
+        
+        self.interactiveFileNode.updateIsTextSelectionActive = { [weak self] value in
+            self?.updateIsTextSelectionActive?(value)
+        }
     }
     
     override func accessibilityActivate() -> Bool {
@@ -85,7 +89,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let interactiveFileLayout = self.interactiveFileNode.asyncLayout()
         
         return { item, layoutConstants, preparePosition, selection, constrainedSize in
@@ -135,7 +139,9 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 dateAndStatusType: statusType,
                 displayReactions: true,
                 messageSelection: item.message.groupingKey != nil ? selection : nil,
-                constrainedSize: CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height)
+                layoutConstants: layoutConstants,
+                constrainedSize: CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height),
+                controllerInteraction: item.controllerInteraction
             ))
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
@@ -158,13 +164,13 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
-                    return (CGSize(width: fileSize.width + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, height: fileSize.height + layoutConstants.file.bubbleInsets.top + bottomInset), { [weak self] animation, synchronousLoads in
+                    return (CGSize(width: fileSize.width + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, height: fileSize.height + layoutConstants.file.bubbleInsets.top + bottomInset), { [weak self] animation, synchronousLoads, applyInfo in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
                             strongSelf.interactiveFileNode.frame = CGRect(origin: CGPoint(x: layoutConstants.file.bubbleInsets.left, y: layoutConstants.file.bubbleInsets.top), size: fileSize)
                             
-                            fileApply(synchronousLoads, animation)
+                            fileApply(synchronousLoads, animation, applyInfo)
                         }
                     })
                 })
@@ -196,6 +202,14 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         self.interactiveFileNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
+    override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+        self.interactiveFileNode.willUpdateIsExtractedToContextPreview(value)
+    }
+    
+    override func updateIsExtractedToContextPreview(_ value: Bool) {
+        self.interactiveFileNode.updateIsExtractedToContextPreview(value)
+    }
+    
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.interactiveFileNode.dateAndStatusNode.supernode != nil, let _ = self.interactiveFileNode.dateAndStatusNode.hitTest(self.view.convert(point, to: self.interactiveFileNode.dateAndStatusNode.view), with: nil) {
             return .ignore
@@ -204,6 +218,13 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             return .ignore
         }
         return super.tapActionAtPoint(point, gesture: gesture, isEstimating: isEstimating)
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let result = self.interactiveFileNode.hitTest(self.view.convert(point, to: self.interactiveFileNode.view), with: event) {
+            return result
+        }
+        return super.hitTest(point, with: event)
     }
     
     override func reactionTargetView(value: String) -> UIView? {

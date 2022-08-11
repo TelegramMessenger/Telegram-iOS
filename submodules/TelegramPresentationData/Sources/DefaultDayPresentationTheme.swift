@@ -447,7 +447,9 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     
     let list = PresentationThemeList(
         blocksBackgroundColor: UIColor(rgb: 0xefeff4),
+        modalBlocksBackgroundColor: UIColor(rgb: 0xefeff4),
         plainBackgroundColor: UIColor(rgb: 0xffffff),
+        modalPlainBackgroundColor: UIColor(rgb: 0xffffff),
         itemPrimaryTextColor: UIColor(rgb: 0x000000),
         itemSecondaryTextColor: UIColor(rgb: 0x8e8e93),
         itemDisabledTextColor: UIColor(rgb: 0x8e8e93),
@@ -456,6 +458,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         itemDestructiveColor: UIColor(rgb: 0xff3b30),
         itemPlaceholderTextColor: UIColor(rgb: 0xc8c8ce),
         itemBlocksBackgroundColor: UIColor(rgb: 0xffffff),
+        itemModalBlocksBackgroundColor: UIColor(rgb: 0xffffff),
         itemHighlightedBackgroundColor: UIColor(rgb: 0xe5e5ea),
         itemBlocksSeparatorColor: UIColor(rgb: 0xc8c7cc),
         itemPlainSeparatorColor: UIColor(rgb: 0xc8c7cc),
@@ -1220,7 +1223,7 @@ public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32]
                 datacenterId: data.datacenterId,
                 fileId: data.fileId,
                 accessHash: data.fileAccessHash,
-                size: data.fileSize,
+                size: Int64(data.fileSize),
                 fileReference: Data(),
                 fileName: "pattern.tgv"
             ),
@@ -1241,7 +1244,7 @@ public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32]
             videoThumbnails: [],
             immediateThumbnailData: nil,
             mimeType: "application/x-tgwallpattern",
-            size: data.fileSize,
+            size: Int64(data.fileSize),
             attributes: [
                 .ImageSize(size: PixelDimensions(width: 1440, height: 2960)),
                 .FileName(fileName: "pattern.tgv")

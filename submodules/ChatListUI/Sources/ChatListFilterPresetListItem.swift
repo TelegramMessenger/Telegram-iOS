@@ -23,6 +23,8 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
     let editing: ChatListFilterPresetListItemEditing
     let canBeReordered: Bool
     let canBeDeleted: Bool
+    let isAllChats: Bool
+    let isDisabled: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     let setItemWithRevealedOptions: (Int32?, Int32?) -> Void
@@ -36,6 +38,8 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
         editing: ChatListFilterPresetListItemEditing,
         canBeReordered: Bool,
         canBeDeleted: Bool,
+        isAllChats: Bool,
+        isDisabled: Bool,
         sectionId: ItemListSectionId,
         action: @escaping () -> Void,
         setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void,
@@ -48,6 +52,8 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
         self.editing = editing
         self.canBeReordered = canBeReordered
         self.canBeDeleted = canBeDeleted
+        self.isAllChats = isAllChats
+        self.isDisabled = isDisabled
         self.sectionId = sectionId
         self.action = action
         self.setItemWithRevealedOptions = setItemWithRevealedOptions
@@ -92,7 +98,9 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
         }
     }
     
-    var selectable: Bool = true
+    var selectable: Bool  {
+        return !self.isAllChats
+    }
     
     func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
@@ -192,9 +200,13 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
             var updatedTheme: PresentationTheme?
             var updateArrowImage: UIImage?
             
-            if currentItem?.presentationData.theme !== item.presentationData.theme {
+            if currentItem?.presentationData.theme !== item.presentationData.theme || currentItem?.isDisabled != item.isDisabled {
                 updatedTheme = item.presentationData.theme
-                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
+                if item.isDisabled {
+                    updateArrowImage = PresentationResourcesItemList.disclosureLockedImage(item.presentationData.theme)
+                } else {
+                    updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
+                }
             }
             
             let peerRevealOptions: [ItemListRevealOption]
@@ -205,7 +217,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
             }
             
             let titleAttributedString = NSMutableAttributedString()
-            titleAttributedString.append(NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor))
+            titleAttributedString.append(NSAttributedString(string: item.isAllChats ? item.presentationData.strings.ChatList_FolderAllChats : item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor))
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
@@ -264,6 +276,23 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                         transition = .immediate
                     }
                     
+                    if let reorderControlSizeAndApply = reorderControlSizeAndApply {
+                        if strongSelf.reorderControlNode == nil {
+                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
+                            strongSelf.reorderControlNode = reorderControlNode
+                            strongSelf.controlsContainer.addSubnode(reorderControlNode)
+                            reorderControlNode.alpha = 0.0
+                            transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
+                        }
+                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0, y: 0.0), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
+                        strongSelf.reorderControlNode?.frame = reorderControlFrame
+                    } else if let reorderControlNode = strongSelf.reorderControlNode {
+                        strongSelf.reorderControlNode = nil
+                        transition.updateAlpha(node: reorderControlNode, alpha: 0.0, completion: { [weak reorderControlNode] _ in
+                            reorderControlNode?.removeFromSupernode()
+                        })
+                    }
+                    
                     if let editableControlSizeAndApply = editableControlSizeAndApply {
                         let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: layout.contentSize.height))
                         if strongSelf.editableControlNode == nil {
@@ -293,24 +322,8 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                             editableControlNode?.removeFromSupernode()
                         })
                     }
-                    
-                    if let reorderControlSizeAndApply = reorderControlSizeAndApply {
-                        if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
-                            strongSelf.reorderControlNode = reorderControlNode
-                            strongSelf.addSubnode(reorderControlNode)
-                            reorderControlNode.alpha = 0.0
-                            transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
-                        }
-                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0, y: 0.0), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
-                        strongSelf.reorderControlNode?.frame = reorderControlFrame
-                    } else if let reorderControlNode = strongSelf.reorderControlNode {
-                        strongSelf.reorderControlNode = nil
-                        transition.updateAlpha(node: reorderControlNode, alpha: 0.0, completion: { [weak reorderControlNode] _ in
-                            reorderControlNode?.removeFromSupernode()
-                        })
-                    }
-                    
+                    strongSelf.editableControlNode?.isHidden = !item.canBeDeleted
+                                        
                     let _ = titleApply()
                     let _ = labelApply()
                     
@@ -372,8 +385,13 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     }
                     
                     if let arrowImage = strongSelf.arrowNode.image {
-                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width + revealOffset, y: floorToScreenPixels((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
+                        var rightArrowInset = 0.0
+                        if item.isDisabled == true {
+                            rightArrowInset -= 3.0
+                        }
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width + rightArrowInset + revealOffset, y: floorToScreenPixels((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
                     }
+                    strongSelf.arrowNode.isHidden = item.isAllChats
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 0.0), size: CGSize(width: params.width - params.rightInset - 56.0 - (leftInset + revealOffset + editingOffset), height: layout.contentSize.height))
                     
@@ -442,8 +460,10 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         }
         
         let leftInset: CGFloat = 16.0 + params.leftInset
-        let rightArrowInset: CGFloat = 34.0 + params.rightInset
-        
+        var rightArrowInset: CGFloat = 34.0 + params.rightInset
+        if self.item?.isDisabled == true {
+            rightArrowInset -= 3.0
+        }
         let editingOffset: CGFloat
         if let editableControlNode = self.editableControlNode {
             editingOffset = editableControlNode.bounds.size.width

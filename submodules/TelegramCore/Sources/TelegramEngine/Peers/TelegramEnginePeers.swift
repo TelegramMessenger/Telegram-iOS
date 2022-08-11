@@ -74,8 +74,11 @@ public extension TelegramEngine {
             }
         }
 
-        public func findChannelById(channelId: Int64) -> Signal<Peer?, NoError> {
+        public func findChannelById(channelId: Int64) -> Signal<EnginePeer?, NoError> {
             return _internal_findChannelById(postbox: self.account.postbox, network: self.account.network, channelId: channelId)
+            |> map { peer in
+                return peer.flatMap(EnginePeer.init)
+            }
         }
 
         public func supportPeerId() -> Signal<PeerId?, NoError> {
@@ -491,7 +494,7 @@ public extension TelegramEngine {
         }
 
         public func toggleItemPinned(location: TogglePeerChatPinnedLocation, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
-            return _internal_toggleItemPinned(postbox: self.account.postbox, location: location, itemId: itemId)
+            return _internal_toggleItemPinned(postbox: self.account.postbox, accountPeerId: self.account.peerId, location: location, itemId: itemId)
         }
 
         public func getPinnedItemIds(location: TogglePeerChatPinnedLocation) -> Signal<[PinnedItemId], NoError> {
@@ -585,8 +588,10 @@ public extension TelegramEngine {
                     sortedFilters.append(contentsOf: filters[index...])
                     sortedFilters.append(contentsOf: filters[0 ..< index])
                     for i in 0 ..< sortedFilters.count {
-                        if let value = getForFilter(predicate: getFilterPredicate(sortedFilters[i].data), isArchived: false) {
-                            return (peer: value.peer, unreadCount: value.unreadCount, location: i == 0 ? .same : .folder(id: sortedFilters[i].id, title: sortedFilters[i].title))
+                        if case let .filter(id, title, _, data) = sortedFilters[i] {
+                            if let value = getForFilter(predicate: getFilterPredicate(data), isArchived: false) {
+                                return (peer: value.peer, unreadCount: value.unreadCount, location: i == 0 ? .same : .folder(id: id, title: title))
+                            }
                         }
                     }
                     return nil
@@ -717,6 +722,55 @@ public extension TelegramEngine {
         
         public func deleteNotificationSound(fileId: Int64) -> Signal<Never, DeleteNotificationSoundError> {
             return _internal_deleteNotificationSound(account: self.account, fileId: fileId)
+        }
+        
+        public func ensurePeerIsLocallyAvailable(peer: EnginePeer) -> Signal<EnginePeer.Id, NoError> {
+            return _internal_storedMessageFromSearchPeer(account: self.account, peer: peer._asPeer())
+        }
+        
+        public func ensurePeersAreLocallyAvailable(peers: [EnginePeer]) -> Signal<Never, NoError> {
+            return _internal_storedMessageFromSearchPeers(account: self.account, peers: peers.map { $0._asPeer() })
+        }
+        
+        public func mostRecentSecretChat(id: EnginePeer.Id) -> Signal<EnginePeer.Id?, NoError> {
+            return self.account.postbox.transaction { transaction -> EnginePeer.Id? in
+                let filteredPeerIds = Array(transaction.getAssociatedPeerIds(id)).filter { $0.namespace == Namespaces.Peer.SecretChat }
+                var activeIndices: [ChatListIndex] = []
+                for associatedId in filteredPeerIds {
+                    if let state = (transaction.getPeer(associatedId) as? TelegramSecretChat)?.embeddedState {
+                        switch state {
+                        case .active, .handshake:
+                            if let (_, index) = transaction.getPeerChatListIndex(associatedId) {
+                                activeIndices.append(index)
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+                activeIndices.sort()
+                if let index = activeIndices.last {
+                    return index.messageIndex.id.peerId
+                } else {
+                    return nil
+                }
+            }
+        }
+        
+        public func updatePeersGroupIdInteractively(peerIds: [EnginePeer.Id], groupId: EngineChatList.Group) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    _internal_updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: groupId._asGroup())
+                }
+            }
+            |> ignoreValues
+        }
+        
+        public func resetAllPeerNotificationSettings() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.resetAllPeerNotificationSettings(TelegramPeerNotificationSettings.defaultSettings)
+            }
+            |> ignoreValues
         }
     }
 }

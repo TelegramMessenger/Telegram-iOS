@@ -169,6 +169,14 @@
     return self.backingItem.asset;
 }
 
+- (SSignal *)avAsset
+{
+    if ([self.asset isKindOfClass:[TGCameraCapturedVideo class]])
+        return ((TGCameraCapturedVideo *)self.asset).avAsset;
+    
+    return nil;
+}
+
 - (NSString *)uniqueId
 {
     if (self.asset != nil)

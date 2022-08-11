@@ -1,3 +1,4 @@
+import Foundation
 import SwiftSignalKit
 import Postbox
 
@@ -12,17 +13,21 @@ public extension TelegramEngine {
         public func getBankCardInfo(cardNumber: String) -> Signal<BankCardInfo?, NoError> {
             return _internal_getBankCardInfo(account: self.account, cardNumber: cardNumber)
         }
-
-        public func fetchBotPaymentForm(messageId: MessageId, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
-            return _internal_fetchBotPaymentForm(postbox: self.account.postbox, network: self.account.network, messageId: messageId, themeParams: themeParams)
+        
+        public func fetchBotPaymentInvoice(source: BotPaymentInvoiceSource) -> Signal<TelegramMediaInvoice, BotPaymentFormRequestError> {
+            return _internal_fetchBotPaymentInvoice(postbox: self.account.postbox, network: self.account.network, source: source)
+        }
+        
+        public func fetchBotPaymentForm(source: BotPaymentInvoiceSource, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
+            return _internal_fetchBotPaymentForm(postbox: self.account.postbox, network: self.account.network, source: source, themeParams: themeParams)
+        }
+        
+        public func validateBotPaymentForm(saveInfo: Bool, source: BotPaymentInvoiceSource, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> {
+            return _internal_validateBotPaymentForm(account: self.account, saveInfo: saveInfo, source: source, formInfo: formInfo)
         }
 
-        public func validateBotPaymentForm(saveInfo: Bool, messageId: MessageId, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> {
-            return _internal_validateBotPaymentForm(account: self.account, saveInfo: saveInfo, messageId: messageId, formInfo: formInfo)
-        }
-
-        public func sendBotPaymentForm(messageId: MessageId, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
-            return _internal_sendBotPaymentForm(account: self.account, messageId: messageId, formId: formId, validatedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, tipAmount: tipAmount, credentials: credentials)
+        public func sendBotPaymentForm(source: BotPaymentInvoiceSource, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
+            return _internal_sendBotPaymentForm(account: self.account, formId: formId, source: source, validatedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, tipAmount: tipAmount, credentials: credentials)
         }
 
         public func requestBotPaymentReceipt(messageId: MessageId) -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> {
@@ -31,6 +36,14 @@ public extension TelegramEngine {
 
         public func clearBotPaymentInfo(info: BotPaymentInfo) -> Signal<Void, NoError> {
             return _internal_clearBotPaymentInfo(network: self.account.network, info: info)
+        }
+        
+        public func sendAppStoreReceipt(receipt: Data, restore: Bool) -> Signal<Never, AssignAppStoreTransactionError> {
+            return _internal_sendAppStoreReceipt(account: self.account, receipt: receipt, restore: restore)
+        }
+        
+        public func canPurchasePremium() -> Signal<Bool, NoError> {
+            return _internal_canPurchasePremium(account: self.account)
         }
     }
 }

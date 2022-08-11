@@ -30,8 +30,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "Pokaż przypiętą";
 "ChatFilter.Admin" = "Administrator";
-"NiceFeatures.Notifications.HideNotifyAccount" = "Ukryj konto w powiadomieniu";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "Zamiast «Użytkownik → Konto» zobaczysz tylko «Użytkownik». Tylko dla wielu kont.";
 "NiceFeatures.Notifications.Fix" = "Wyłącz niechciane powiadomienia";
 "NiceFeatures.Notifications.FixNotice" = "Przydatne, jeśli otrzymujesz powiadomienia z czatów z wyłączonymi powiadomieniami.\nOpcja „Odpowiedz” nie będzie dostępna dla powiadomień, etykiet kont i podglądów multimediów.";
 "NiceFeatures.Filters.Header" = "FILTRY (ZAKŁADKI)";

@@ -2,9 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-
-private let cachedSentMediaCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 10000, highWaterItemCount: 20000)
-
 enum CachedSentMediaReferenceKey {
     case image(hash: Data)
     case file(hash: Data)
@@ -39,5 +36,5 @@ func cachedSentMediaReference(postbox: Postbox, key: CachedSentMediaReferenceKey
 }
 
 func storeCachedSentMediaReference(transaction: Transaction, key: CachedSentMediaReferenceKey, media: Media) {
-    //transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSentMediaReferences, key: key.key), entry: media, collectionSpec: cachedSentMediaCollectionSpec)
+    //transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSentMediaReferences, key: key.key), entry: media)
 }

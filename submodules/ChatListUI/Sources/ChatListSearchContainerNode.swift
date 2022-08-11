@@ -32,6 +32,9 @@ import TextFormat
 import Postbox
 import TelegramAnimatedStickerNode
 
+// MARK: Nicegram downloading feature
+import SaveToCameraRoll
+
 private enum ChatListTokenId: Int32 {
     case archive
     case filter
@@ -47,14 +50,14 @@ final class ChatListSearchInteraction {
     let clearRecentSearch: () -> Void
     let addContact: (String) -> Void
     let toggleMessageSelection: (EngineMessage.Id, Bool) -> Void
-    let messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int, isFirstInList: Bool)?) -> Void)
+    let messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int64, isFirstInList: Bool)?) -> Void)
     let mediaMessageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)
     let peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
     let present: (ViewController, Any?) -> Void
     let dismissInput: () -> Void
     let getSelectedMessageIds: () -> Set<EngineMessage.Id>?
     
-    init(openPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int, isFirstInList: Bool)?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?) {
+    init(openPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int64, isFirstInList: Bool)?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?) {
         self.openPeer = openPeer
         self.openDisabledPeer = openDisabledPeer
         self.openMessage = openMessage
@@ -492,7 +495,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         var options = options
         var tokens: [SearchBarToken] = []
         if self.groupId == .archive {
-            tokens.append(SearchBarToken(id: ChatListTokenId.archive.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Archive"), title: self.presentationData.strings.ChatList_Archive, permanent: true))
+            tokens.append(SearchBarToken(id: ChatListTokenId.archive.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Archive"), iconOffset: -1.0, title: self.presentationData.strings.ChatList_Archive, permanent: true))
         }
         
         if options?.isEmpty ?? true {
@@ -566,7 +569,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         var tokens: [SearchBarToken] = []
         if self.groupId == .archive {
-            tokens.append(SearchBarToken(id: ChatListTokenId.archive.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Archive"), title: self.presentationData.strings.ChatList_Archive, permanent: true))
+            tokens.append(SearchBarToken(id: ChatListTokenId.archive.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Archive"), iconOffset: -1.0, title: self.presentationData.strings.ChatList_Archive, permanent: true))
         }
         self.setQuery?(nil, tokens, query ?? "")
     }
@@ -614,11 +617,16 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     guard let strongSelf = self, let messageIds = strongSelf.stateValue.selectedMessageIds, !messageIds.isEmpty else {
                         return
                     }
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [EngineMessage] in
+                    let _ = (strongSelf.context.engine.data.get(EngineDataMap(
+                        messageIds.map { id -> TelegramEngine.EngineData.Item.Messages.Message in
+                            return TelegramEngine.EngineData.Item.Messages.Message(id: id)
+                        }
+                    ))
+                    |> map { messageMap -> [EngineMessage] in
                         var messages: [EngineMessage] = []
                         for id in messageIds {
-                            if let message = transaction.getMessage(id) {
-                                messages.append(EngineMessage(message))
+                            if let messageValue = messageMap[id], let message = messageValue {
+                                messages.append(message)
                             }
                         }
                         return messages
@@ -641,11 +649,16 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     guard let strongSelf = self, let messageIds = strongSelf.stateValue.selectedMessageIds, !messageIds.isEmpty else {
                         return
                     }
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [EngineMessage] in
+                    let _ = (strongSelf.context.engine.data.get(EngineDataMap(
+                        messageIds.map { id -> TelegramEngine.EngineData.Item.Messages.Message in
+                            return TelegramEngine.EngineData.Item.Messages.Message(id: id)
+                        }
+                    ))
+                    |> map { messageMap -> [EngineMessage] in
                         var messages: [EngineMessage] = []
                         for id in messageIds {
-                            if let message = transaction.getMessage(id) {
-                                messages.append(EngineMessage(message))
+                            if let messageValue = messageMap[id], let message = messageValue {
+                                messages.append(message)
                             }
                         }
                         return messages
@@ -656,11 +669,16 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                 case group
                                 case channel
                                 case bot
+                                case user
                             }
                             var type: PeerType = .group
                             for message in messages {
-                                if let user = message.author?._asPeer() as? TelegramUser, user.botInfo != nil {
-                                    type = .bot
+                                if let user = message.author?._asPeer() as? TelegramUser {
+                                    if user.botInfo != nil {
+                                        type = .bot
+                                    } else {
+                                        type = .user
+                                    }
                                     break
                                 } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                                     type = .channel
@@ -676,6 +694,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                 text = save ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledChannel : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledChannel
                             case .bot:
                                 text = save ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledBot : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledBot
+                            case .user:
+                                text = save ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledSecret : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledSecret
                             }
                             
                             strongSelf.copyProtectionTooltipController?.dismiss()
@@ -702,7 +722,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     }
 
                     let (peers, messages) = strongSelf.currentMessages
-                    return strongSelf.context.sharedContext.chatAvailableMessageActions(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
+                    return strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
                 }
                 self.selectionPanelNode = selectionPanelNode
                 self.addSubnode(selectionPanelNode)
@@ -771,7 +791,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let _ = self.paneContainerNode.scrollToTop()
     }
     
-    private func messageContextAction(_ message: EngineMessage, node: ASDisplayNode?, rect: CGRect?, gesture anyRecognizer: UIGestureRecognizer?, paneKey: ChatListSearchPaneKey, downloadResource: (id: String, size: Int, isFirstInList: Bool)?) {
+    private func messageContextAction(_ message: EngineMessage, node: ASDisplayNode?, rect: CGRect?, gesture anyRecognizer: UIGestureRecognizer?, paneKey: ChatListSearchPaneKey, downloadResource: (id: String, size: Int64, isFirstInList: Bool)?) {
         guard let node = node as? ContextExtractedContentContainingNode else {
             return
         }
@@ -808,7 +828,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
             
             let items = combineLatest(queue: .mainQueue(),
-                context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: [message.id], messages: [message.id: message], peers: [:]),
+                context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: [message.id], messages: [message.id: message], peers: [:]),
                 isCachedValue |> take(1)
             )
             |> deliverOnMainQueue
@@ -818,6 +838,32 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 }
                 
                 var items: [ContextMenuItem] = []
+
+                // MARK: Nicegram downloading feature
+                if isCachedValue {
+                    var mediaReference: AnyMediaReference?
+                    for media in message.media {
+                        if let file = media as? TelegramMediaFile, file.isVideo {
+                            mediaReference = FileMediaReference.standalone(media: file).abstract
+                            break
+                        }
+                    }
+                    if let mediaReference = mediaReference {
+                        items.append(.action(ContextMenuActionItem(text: "Save Video", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            let _ = (saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: mediaReference)
+                                     |> deliverOnMainQueue).start(completed: {
+                                Queue.mainQueue().after(0.2) {
+                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                    self?.present?(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: presentationData.strings.Gallery_VideoSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
+                                }
+                            })
+                            f(.default)
+                        })))
+                    }
+   
+                }
                 
                 if isCachedValue {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_DeleteFromCache, textColor: .primary, icon: { theme in
@@ -891,43 +937,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     })))
                 }
                 
-                /*if !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
-                    if !items.isEmpty {
-                        items.append(.separator)
-                    }
-                    
-                    if actions.options.contains(.deleteLocally) {
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe, textColor: .destructive, icon: { _ in
-                            return nil
-                        }, action: { controller, f in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forLocalPeer).start()
-                            f(.dismissWithoutContent)
-                        })))
-                    }
-                    
-                    if actions.options.contains(.deleteGlobally) {
-                        let text: String
-                        if let mainPeer = message.peers[message.id.peerId] {
-                            if mainPeer is TelegramUser {
-                                text = strongSelf.presentationData.strings.ChatList_DeleteForEveryone(EnginePeer(mainPeer).compactDisplayTitle).string
-                            } else {
-                                text = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
-                            }
-                        } else {
-                            text = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
-                        }
-                        items.append(.action(ContextMenuActionItem(text: text, textColor: .destructive, icon: { _ in
-                            return nil
-                        }, action: { controller, f in
-                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).start()
-                            f(.dismissWithoutContent)
-                        })))
-                    }
-                }*/
-                
                 return items
             }
             
@@ -937,7 +946,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             return
         }
         
-        let _ = storedMessageFromSearch(account: self.context.account, message: message._asMessage()).start()
+        self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: [message])
         
         var linkForCopying: String?
         var currentSupernode: ASDisplayNode? = node
@@ -954,7 +963,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         let context = self.context
         let (peers, messages) = self.currentMessages
-        let items = context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: [message.id], messages: messages, peers: peers)
+        let items = context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: [message.id], messages: messages, peers: peers)
         |> map { [weak self] actions -> [ContextMenuItem] in
             guard let strongSelf = self else {
                 return []
@@ -1020,7 +1029,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     let strings = strongSelf.presentationData.strings
                     
                     let (peers, messages) = strongSelf.currentMessages
-                    let items = context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: [message.id], messages: messages, peers: peers)
+                    let items = context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: [message.id], messages: messages, peers: peers)
                     |> map { actions -> [ContextMenuItem] in
                         var items: [ContextMenuItem] = []
                         
@@ -1086,8 +1095,19 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         if let messageIds = messageIds ?? self.stateValue.selectedMessageIds, !messageIds.isEmpty {
             if isDownloads {
-                let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
-                    return messageIds.compactMap(transaction.getMessage)
+                let _ = (self.context.engine.data.get(EngineDataMap(
+                    messageIds.map { id -> TelegramEngine.EngineData.Item.Messages.Message in
+                        return TelegramEngine.EngineData.Item.Messages.Message(id: id)
+                    }
+                ))
+                |> map { messageMap -> [EngineMessage] in
+                    var messages: [EngineMessage] = []
+                    for id in messageIds {
+                        if let messageValue = messageMap[id], let message = messageValue {
+                            messages.append(message)
+                        }
+                    }
+                    return messages
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] messages in
                     guard let strongSelf = self else {
@@ -1135,15 +1155,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 })
             } else {
                 let (peers, messages) = self.currentMessages
-                let _ = (self.context.account.postbox.transaction { transaction -> Void in
-                    for id in messageIds {
-                        if transaction.getMessage(id) == nil, let message = messages[id] {
-                            storeMessageFromSearch(transaction: transaction, message: message._asMessage())
-                        }
-                    }
-                }).start()
                 
-                self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
+                self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: messages.values.filter { messageIds.contains($0.id) })
+                
+                self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(engine: self.context.engine, accountPeerId: self.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
                 |> deliverOnMainQueue).start(next: { [weak self] actions in
                     if let strongSelf = self, !actions.options.isEmpty {
                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
@@ -1204,13 +1219,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let messageIds = messageIds ?? self.stateValue.selectedMessageIds
         if let messageIds = messageIds, !messageIds.isEmpty {
             let messages = self.paneContainerNode.allCurrentMessages()
-            let _ = (self.context.account.postbox.transaction { transaction -> Void in
-                for id in messageIds {
-                    if transaction.getMessage(id) == nil, let message = messages[id] {
-                        storeMessageFromSearch(transaction: transaction, message: message._asMessage())
-                    }
-                }
-            }).start()
+            
+            self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: messages.values.filter { messageIds.contains($0.id) })
             
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true))
             peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, forwardOptions in
@@ -1406,7 +1416,7 @@ private final class MessageContextExtractedContentSource: ContextExtractedConten
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
@@ -1486,7 +1496,7 @@ final class ActionSheetAnimationAndTextItemNode: ActionSheetItemNode {
         self.theme = theme
         self.defaultFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ClearDownloadList"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         

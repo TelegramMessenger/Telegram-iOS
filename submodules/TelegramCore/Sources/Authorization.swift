@@ -494,7 +494,7 @@ public enum AccountResetError {
 }
 
 public func performAccountReset(account: UnauthorizedAccount) -> Signal<Void, AccountResetError> {
-    return account.network.request(Api.functions.account.deleteAccount(reason: ""))
+    return account.network.request(Api.functions.account.deleteAccount(flags: 0, reason: "", password: nil))
     |> map { _ -> Int32? in return nil }
     |> `catch` { error -> Signal<Int32?, AccountResetError> in
         if error.errorDescription.hasPrefix("2FA_CONFIRM_WAIT_") {

@@ -1,0 +1,684 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.5.1 (swiftlang-1300.0.31.4 clang-1300.0.29.6)
+// swift-module-flags: -target arm64-apple-ios10.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -module-name ecommpaySDK
+import ecommpaySDK.CardIO
+import CommonCrypto
+import CoreFoundation
+import CoreLocation
+import CoreTelephony
+import Foundation
+import PassKit
+import SafariServices
+import Security
+import Swift
+import UIKit
+import WebKit
+import _Concurrency
+@_exported import ecommpaySDK
+import zlib
+@objc public class ECPPaymentResult : ObjectiveC.NSObject {
+  @objc final public let status: ecommpaySDK.ECPPaymentStatus
+  @objc final public let error: Swift.Error?
+  @objc final public let token: Swift.String?
+  public init(status: ecommpaySDK.ECPPaymentStatus, error: Swift.Error?, token: Swift.String?)
+  public init(status: ecommpaySDK.ECPPaymentStatus, error: Swift.Error?)
+  @objc deinit
+}
+@objc public protocol ECMPCallback {
+  @objc(onPaymentResult:) func onPaymentResult(paymentData: ecommpaySDK.ECMPPaymentData?)
+}
+@objc @_inheritsConvenienceInitializers @objcMembers public class ECMPPaymentData : ObjectiveC.NSObject, Swift.Codable {
+  @objc public var payment: ecommpaySDK.Payment?
+  @objc override dynamic public init()
+  @objc deinit
+  public func encode(to encoder: Swift.Encoder) throws
+  required public init(from decoder: Swift.Decoder) throws
+}
+@objc @_inheritsConvenienceInitializers @objcMembers public class Payment : ObjectiveC.NSObject, Swift.Codable {
+  @objc public var status: Swift.String?
+  @objc public var type: Swift.String?
+  @objc public var id: Swift.String?
+  @objc public var date: Swift.String?
+  @objc public var method: Swift.String?
+  @objc public var sum: Swift.String?
+  @objc public var currency: Swift.String?
+  @objc override dynamic public init()
+  @objc deinit
+  public func encode(to encoder: Swift.Encoder) throws
+  required public init(from decoder: Swift.Decoder) throws
+}
+@objc @_hasMissingDesignatedInitializers public class AdditionalField : ObjectiveC.NSObject {
+  @objc public var type: ecommpaySDK.AdditionalFieldType
+  @objc public var value: Swift.String
+  @objc public var serverName: Swift.String
+  @objc(initWithType:value:) public init(type: ecommpaySDK.AdditionalFieldType, value: Swift.String)
+  @objc(initWithCustomName:value:) public init(customName: Swift.String, value: Swift.String)
+  @objc deinit
+}
+public let WebsocketDidConnectNotification: Swift.String
+public let WebsocketDidDisconnectNotification: Swift.String
+public let WebsocketDisconnectionErrorKeyName: Swift.String
+public enum CloseCode : Swift.UInt16 {
+  case normal
+  case goingAway
+  case protocolError
+  case protocolUnhandledType
+  case noStatusReceived
+  case encoding
+  case policyViolated
+  case messageTooBig
+  public init?(rawValue: Swift.UInt16)
+  public typealias RawValue = Swift.UInt16
+  public var rawValue: Swift.UInt16 {
+    get
+  }
+}
+public enum ErrorType : Swift.Error {
+  case outputStreamWriteError
+  case compressionError
+  case invalidSSLError
+  case writeTimeoutError
+  case protocolError
+  case upgradeError
+  case closeError
+  public static func == (a: ecommpaySDK.ErrorType, b: ecommpaySDK.ErrorType) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public struct WSError : Swift.Error {
+  public let type: ecommpaySDK.ErrorType
+  public let message: Swift.String
+  public let code: Swift.Int
+}
+public protocol WebSocketClient : AnyObject {
+  var delegate: ecommpaySDK.WebSocketDelegate? { get set }
+  var pongDelegate: ecommpaySDK.WebSocketPongDelegate? { get set }
+  var disableSSLCertValidation: Swift.Bool { get set }
+  var overrideTrustHostname: Swift.Bool { get set }
+  var desiredTrustHostname: Swift.String? { get set }
+  var sslClientCertificate: ecommpaySDK.SSLClientCertificate? { get set }
+  var security: ecommpaySDK.SSLTrustValidator? { get set }
+  var enabledSSLCipherSuites: [Security.SSLCipherSuite]? { get set }
+  var isConnected: Swift.Bool { get }
+  func connect()
+  func disconnect(forceTimeout: Foundation.TimeInterval?, closeCode: Swift.UInt16)
+  func write(string: Swift.String, completion: (() -> Swift.Void)?)
+  func write(data: Foundation.Data, completion: (() -> Swift.Void)?)
+  func write(ping: Foundation.Data, completion: (() -> Swift.Void)?)
+  func write(pong: Foundation.Data, completion: (() -> Swift.Void)?)
+}
+extension ecommpaySDK.WebSocketClient {
+  public func write(string: Swift.String)
+  public func write(data: Foundation.Data)
+  public func write(ping: Foundation.Data)
+  public func write(pong: Foundation.Data)
+  public func disconnect()
+}
+public struct SSLSettings {
+  public let useSSL: Swift.Bool
+  public let disableCertValidation: Swift.Bool
+  public var overrideTrustHostname: Swift.Bool
+  public var desiredTrustHostname: Swift.String?
+  public let sslClientCertificate: ecommpaySDK.SSLClientCertificate?
+  public let cipherSuites: [Security.SSLCipherSuite]?
+}
+public protocol WSStreamDelegate : AnyObject {
+  func newBytesInStream()
+  func streamDidError(error: Swift.Error?)
+}
+public protocol WSStream {
+  var delegate: ecommpaySDK.WSStreamDelegate? { get set }
+  func connect(url: Foundation.URL, port: Swift.Int, timeout: Foundation.TimeInterval, ssl: ecommpaySDK.SSLSettings, completion: @escaping ((Swift.Error?) -> Swift.Void))
+  func write(data: Foundation.Data) -> Swift.Int
+  func read() -> Foundation.Data?
+  func cleanup()
+  func sslTrust() -> (trust: Security.SecTrust?, domain: Swift.String?)
+}
+@objc @_inheritsConvenienceInitializers open class FoundationStream : ObjectiveC.NSObject, ecommpaySDK.WSStream, Foundation.StreamDelegate {
+  weak public var delegate: ecommpaySDK.WSStreamDelegate?
+  public var enableSOCKSProxy: Swift.Bool
+  public func connect(url: Foundation.URL, port: Swift.Int, timeout: Foundation.TimeInterval, ssl: ecommpaySDK.SSLSettings, completion: @escaping ((Swift.Error?) -> Swift.Void))
+  public func write(data: Foundation.Data) -> Swift.Int
+  public func read() -> Foundation.Data?
+  public func cleanup()
+  public func sslTrust() -> (trust: Security.SecTrust?, domain: Swift.String?)
+  @objc open func stream(_ aStream: Foundation.Stream, handle eventCode: Foundation.Stream.Event)
+  @objc override dynamic public init()
+  @objc deinit
+}
+public protocol WebSocketDelegate : AnyObject {
+  func websocketDidConnect(socket: ecommpaySDK.WebSocketClient)
+  func websocketDidDisconnect(socket: ecommpaySDK.WebSocketClient, error: Swift.Error?)
+  func websocketDidReceiveMessage(socket: ecommpaySDK.WebSocketClient, text: Swift.String)
+  func websocketDidReceiveData(socket: ecommpaySDK.WebSocketClient, data: Foundation.Data)
+}
+public protocol WebSocketPongDelegate : AnyObject {
+  func websocketDidReceivePong(socket: ecommpaySDK.WebSocketClient, data: Foundation.Data?)
+}
+public protocol WebSocketAdvancedDelegate : AnyObject {
+  func websocketDidConnect(socket: ecommpaySDK.WebSocket)
+  func websocketDidDisconnect(socket: ecommpaySDK.WebSocket, error: Swift.Error?)
+  func websocketDidReceiveMessage(socket: ecommpaySDK.WebSocket, text: Swift.String, response: ecommpaySDK.WebSocket.WSResponse)
+  func websocketDidReceiveData(socket: ecommpaySDK.WebSocket, data: Foundation.Data, response: ecommpaySDK.WebSocket.WSResponse)
+  func websocketHttpUpgrade(socket: ecommpaySDK.WebSocket, request: Swift.String)
+  func websocketHttpUpgrade(socket: ecommpaySDK.WebSocket, response: Swift.String)
+}
+@objc open class WebSocket : ObjectiveC.NSObject, Foundation.StreamDelegate, ecommpaySDK.WebSocketClient, ecommpaySDK.WSStreamDelegate {
+  public enum OpCode : Swift.UInt8 {
+    case continueFrame
+    case textFrame
+    case binaryFrame
+    case connectionClose
+    case ping
+    case pong
+    public init?(rawValue: Swift.UInt8)
+    public typealias RawValue = Swift.UInt8
+    public var rawValue: Swift.UInt8 {
+      get
+    }
+  }
+  public static let ErrorDomain: Swift.String
+  public var callbackQueue: Dispatch.DispatchQueue
+  @_hasMissingDesignatedInitializers public class WSResponse {
+    public var code: ecommpaySDK.WebSocket.OpCode
+    public var frameCount: Swift.Int
+    public var buffer: Foundation.NSMutableData?
+    final public let firstFrame: Foundation.Date
+    @objc deinit
+  }
+  weak public var delegate: ecommpaySDK.WebSocketDelegate?
+  weak public var advancedDelegate: ecommpaySDK.WebSocketAdvancedDelegate?
+  weak public var pongDelegate: ecommpaySDK.WebSocketPongDelegate?
+  public var onConnect: (() -> Swift.Void)?
+  public var onDisconnect: ((Swift.Error?) -> Swift.Void)?
+  public var onText: ((Swift.String) -> Swift.Void)?
+  public var onData: ((Foundation.Data) -> Swift.Void)?
+  public var onPong: ((Foundation.Data?) -> Swift.Void)?
+  public var onHttpResponseHeaders: (([Swift.String : Swift.String]) -> Swift.Void)?
+  public var disableSSLCertValidation: Swift.Bool
+  public var overrideTrustHostname: Swift.Bool
+  public var desiredTrustHostname: Swift.String?
+  public var sslClientCertificate: ecommpaySDK.SSLClientCertificate?
+  public var enableCompression: Swift.Bool
+  public var security: ecommpaySDK.SSLTrustValidator?
+  public var enabledSSLCipherSuites: [Security.SSLCipherSuite]?
+  public var isConnected: Swift.Bool {
+    get
+  }
+  public var request: Foundation.URLRequest
+  public var currentURL: Foundation.URL {
+    get
+  }
+  public var respondToPingWithPong: Swift.Bool
+  public init(request: Foundation.URLRequest, protocols: [Swift.String]? = nil, stream: ecommpaySDK.WSStream = FoundationStream())
+  convenience public init(url: Foundation.URL, protocols: [Swift.String]? = nil)
+  convenience public init(url: Foundation.URL, writeQueueQOS: Foundation.QualityOfService, protocols: [Swift.String]? = nil)
+  open func connect()
+  open func disconnect(forceTimeout: Foundation.TimeInterval? = nil, closeCode: Swift.UInt16 = CloseCode.normal.rawValue)
+  open func write(string: Swift.String, completion: (() -> Swift.Void)? = nil)
+  open func write(data: Foundation.Data, completion: (() -> Swift.Void)? = nil)
+  open func write(ping: Foundation.Data, completion: (() -> Swift.Void)? = nil)
+  open func write(pong: Foundation.Data, completion: (() -> Swift.Void)? = nil)
+  public func newBytesInStream()
+  public func streamDidError(error: Swift.Error?)
+  @objc deinit
+}
+extension UIKit.UIViewController {
+  @objc override dynamic open func awakeFromNib()
+}
+@objc public enum AdditionalFieldType : Swift.Int, Swift.CaseIterable, Swift.CustomStringConvertible {
+  @objc(customer_first_name) case customer_first_name
+  @objc(customer_middle_name) case customer_middle_name
+  @objc(customer_last_name) case customer_last_name
+  @objc(customer_phone) case customer_phone
+  @objc(customer_email) case customer_email
+  @objc(customer_country) case customer_country
+  @objc(customer_state) case customer_state
+  @objc(customer_city) case customer_city
+  @objc(customer_address) case customer_address
+  @objc(customer_zip) case customer_zip
+  @objc(customer_day_of_birth) case customer_day_of_birth
+  @objc(customer_birthplace) case customer_birthplace
+  @objc(customer_ssn) case customer_ssn
+  @objc(customer_domain) case customer_domain
+  @objc(customer_mir) case customer_mir
+  @objc(customer_account_id) case customer_account_id
+  @objc(customer_language) case customer_language
+  @objc(customer_screen_res) case customer_screen_res
+  @objc(customer_save) case customer_save
+  @objc(billing_postal) case billing_postal
+  @objc(billing_country) case billing_country
+  @objc(billing_region) case billing_region
+  @objc(billing_city) case billing_city
+  @objc(billing_address) case billing_address
+  @objc(identify_doc_number) case identify_doc_number
+  @objc(identify_doc_type) case identify_doc_type
+  @objc(identify_doc_issue_date) case identify_doc_issue_date
+  @objc(identify_doc_issue_by) case identify_doc_issue_by
+  @objc(custom) case custom
+  @objc(doku_customer_first_name) case doku_customer_first_name
+  @objc(doku_customer_email) case doku_customer_email
+  @objc(neteller_account_number) case neteller_account_number
+  @objc(qiwi_account_number) case qiwi_account_number
+  @objc(webmoney_classic_account_number) case webmoney_classic_account_number
+  @objc(webmoney_classic_account_type) case webmoney_classic_account_type
+  public var description: Swift.String {
+    get
+  }
+  public init?(rawValue: Swift.Int)
+  public typealias AllCases = [ecommpaySDK.AdditionalFieldType]
+  public typealias RawValue = Swift.Int
+  public static var allCases: [ecommpaySDK.AdditionalFieldType] {
+    get
+  }
+  public var rawValue: Swift.Int {
+    get
+  }
+}
+public enum ServerType {
+  case text
+  case tel
+  case password
+  case file
+  case textarea
+  case number
+  case search
+  case url
+  case email
+  case date
+  public static func == (a: ecommpaySDK.ServerType, b: ecommpaySDK.ServerType) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public enum AdditionalFieldValidator {
+  case email
+  case birthDay
+  case aboveZero
+  case country
+  case string15
+  case string30
+  case string100
+  case string255
+  case string512
+  case date
+  case fxcmAccountNumber
+  case mobilePhone
+  case minAge
+  case month
+  case postalCode
+  case year
+  case pan
+  case avsPostCode
+  case streetAddress
+  public static func == (a: ecommpaySDK.AdditionalFieldValidator, b: ecommpaySDK.AdditionalFieldValidator) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+@objc public enum ECPPaymentStatus : Swift.Int {
+  case Success = 0
+  case Decline = 100
+  case Cancelled = 301
+  case Error = 501
+  case Unknown = 20000
+  public init?(rawValue: Swift.Int)
+  public typealias RawValue = Swift.Int
+  public var rawValue: Swift.Int {
+    get
+  }
+}
+@objc @_inheritsConvenienceInitializers public class ECPTheme : ObjectiveC.NSObject {
+  @objc public var overlayColor: UIKit.UIColor
+  @objc public var backgroundColor: UIKit.UIColor
+  @objc public var headingTextColor: UIKit.UIColor
+  @objc public var menuTextColor: UIKit.UIColor
+  @objc public var fieldTextColor: UIKit.UIColor
+  @objc public var supportiveTextColor: UIKit.UIColor
+  @objc public var fieldPlaceholderTextColor: UIKit.UIColor
+  @objc public var fieldImageTintColor: UIKit.UIColor
+  @objc public var fieldTextCorrectColor: UIKit.UIColor
+  @objc public var fieldTextWrongColor: UIKit.UIColor
+  @objc public var fieldBackgroundColor: UIKit.UIColor
+  @objc public var selectorColor: UIKit.UIColor
+  @objc public var selectorBackgroundColor: UIKit.UIColor
+  @objc public var primaryTintColor: UIKit.UIColor
+  @objc public var secondaryTintColor: UIKit.UIColor
+  @objc public var lineColor: UIKit.UIColor
+  @objc public var actionButtonDisableBackgroundColor: UIKit.UIColor
+  @objc public var actionButtonDisableTextColor: UIKit.UIColor
+  @objc public var actionButtonTextColor: UIKit.UIColor
+  @objc public var showShadow: Swift.Bool
+  @objc public var showDarkKeyboard: Swift.Bool
+  @objc public var showDarkNavigationBar: Swift.Bool
+  @objc public var showLightLogo: Swift.Bool
+  @objc public var apsLogoOnly: Swift.Bool
+  @objc public var showLightAPSLogos: Swift.Bool
+  @objc public static func getLightTheme() -> ecommpaySDK.ECPTheme
+  @objc public static func getDarkTheme() -> ecommpaySDK.ECPTheme
+  @objc override dynamic public init()
+  @objc deinit
+}
+public protocol SSLTrustValidator {
+  func isValid(_ trust: Security.SecTrust, domain: Swift.String?) -> Swift.Bool
+}
+open class SSLCert {
+  public init(data: Foundation.Data)
+  public init(key: Security.SecKey)
+  @objc deinit
+}
+open class SSLSecurity : ecommpaySDK.SSLTrustValidator {
+  public var validatedDN: Swift.Bool
+  public var validateEntireChain: Swift.Bool
+  convenience public init(usePublicKeys: Swift.Bool = false)
+  public init(certs: [ecommpaySDK.SSLCert], usePublicKeys: Swift.Bool)
+  open func isValid(_ trust: Security.SecTrust, domain: Swift.String?) -> Swift.Bool
+  public func extractPublicKey(_ data: Foundation.Data) -> Security.SecKey?
+  public func extractPublicKey(_ cert: Security.SecCertificate, policy: Security.SecPolicy) -> Security.SecKey?
+  public func certificateChain(_ trust: Security.SecTrust) -> [Foundation.Data]
+  public func publicKeyChain(_ trust: Security.SecTrust) -> [Security.SecKey]
+  @objc deinit
+}
+@objc @_inheritsConvenienceInitializers public class ThreeDSecureInfo : ObjectiveC.NSObject {
+  public var threeDSecurePaymentInfo: ecommpaySDK.ThreeDSecurePaymentInfo?
+  public var threeDSecureCustomerInfo: ecommpaySDK.ThreeDSecureCustomerInfo?
+  @objc(init) override dynamic public init()
+  @objc(threeDSecurePaymentInfo:threeDSecureCustomerInfo:) public init(_ threeDSecurePaymentInfo: ecommpaySDK.ThreeDSecurePaymentInfo?, _ threeDSecureCustomerInfo: ecommpaySDK.ThreeDSecureCustomerInfo?)
+  @objc(setThreeDSecurePaymentInfo:) public func setThreeDSecurePaymentInfo(threeDSecurePaymentInfo: ecommpaySDK.ThreeDSecurePaymentInfo)
+  @objc(setThreeDSecureCustomerInfo:) public func setThreeDSecureCustomerInfo(threeDSecureCustomerInfo: ecommpaySDK.ThreeDSecureCustomerInfo)
+  @objc deinit
+}
+@objc @_inheritsConvenienceInitializers public class ThreeDSecurePaymentInfo : ObjectiveC.NSObject {
+  public var reorder: Swift.String?
+  public var preorderPurchase: Swift.String?
+  public var preorderDate: Swift.String?
+  public var challengeIndicator: Swift.String?
+  public var challengeWindow: Swift.String?
+  public var giftCard: ecommpaySDK.ThreeDSecureGiftCardInfo?
+  @objc(setReorder:) public func setReorder(reorder: Swift.String)
+  @objc(setPreorderPurchase:) public func setPreorderPurchase(preorderPurchase: Swift.String)
+  @objc(setPreorderDate:) public func setPreorderDate(preorderDate: Swift.String)
+  @objc(setChallengeIndicator:) public func setChallengeIndicator(challengeIndicator: Swift.String)
+  @objc(setChallengeWindow:) public func setChallengeWindow(challengeWindow: Swift.String)
+  @objc(setGiftCard:) public func setGiftCard(giftCard: ecommpaySDK.ThreeDSecureGiftCardInfo)
+  @objc override dynamic public init()
+  @objc deinit
+}
+@objc @_inheritsConvenienceInitializers public class ThreeDSecureGiftCardInfo : ObjectiveC.NSObject {
+  public var amount: Swift.Int?
+  public var currency: Swift.String?
+  public var count: Swift.Int?
+  @objc(setAmount:) public func setAmount(amount: Swift.Int)
+  @objc(setCurrency:) public func setCurrency(currency: Swift.String)
+  @objc(setCount:) public func setCount(count: Swift.Int)
+  @objc override dynamic public init()
+  @objc deinit
+}
+@objc @_inheritsConvenienceInitializers public class ThreeDSecureCustomerInfo : ObjectiveC.NSObject {
+  public var addressMatch: Swift.String?
+  public var homePhone: Swift.String?
+  public var workPhone: Swift.String?
+  public var billingRegionCode: Swift.String?
+  public var accountInfo: ecommpaySDK.ThreeDSecureAccountInfo?
+  public var shippingInfo: ecommpaySDK.ThreeDSecureShippingInfo?
+  public var mpiResultInfo: ecommpaySDK.ThreeDSecureMpiResultInfo?
+  @objc(setAddressMatch:) public func setAddressMatch(addressMatch: Swift.String)
+  @objc(setHomePhone:) public func setHomePhone(homePhone: Swift.String)
+  @objc(setWorkPhone:) public func setWorkPhone(workPhone: Swift.String)
+  @objc(setBillingRegionCode:) public func setBillingRegionCode(billingRegionCode: Swift.String)
+  @objc(setAccountInfo:) public func setAccountInfo(accountInfo: ecommpaySDK.ThreeDSecureAccountInfo)
+  @objc(setShippingInfo:) public func setShippingInfo(shippingInfo: ecommpaySDK.ThreeDSecureShippingInfo)
+  @objc(setMpiResultInfo:) public func setMpiResultInfo(mpiResultInfo: ecommpaySDK.ThreeDSecureMpiResultInfo)
+  @objc override dynamic public init()
+  @objc deinit
+}
+@objc @_inheritsConvenienceInitializers public class ThreeDSecureAccountInfo : ObjectiveC.NSObject {
+  public var additional: Swift.String?
+  public var ageIndicator: Swift.String?
+  public var date: Swift.String?
+  public var changeIndicator: Swift.String?
+  public var changeDate: Swift.String?
+  public var passChangeIndicator: Swift.String?
+  public var passChangeDate: Swift.String?
+  public var purchaseNumber: Swift.Int?
+  public var provisionAttempts: Swift.Int?
+  public var activityDay: Swift.Int?
+  public var activityYear: Swift.Int?
+  public var paymentAgeIndicator: Swift.String?
+  public var paymentAge: Swift.String?
+  public var suspiciousActivity: Swift.String?
+  public var authMethod: Swift.String?
+  public var authTime: Swift.String?
+  public var authData: Swift.String?
+  @objc(setAdditional:) public func setAdditional(additional: Swift.String)
+  @objc(setAgeIndicator:) public func setAgeIndicator(ageIndicator: Swift.String)
+  @objc(setDate:) public func setDate(date: Swift.String)
+  @objc(setChangeIndicator:) public func setChangeIndicator(changeIndicator: Swift.String)
+  @objc(setChangeDate:) public func setChangeDate(changeDate: Swift.String)
+  @objc(setPassChangeIndicator:) public func setPassChangeIndicator(passChangeIndicator: Swift.String)
+  @objc(setPassChangeDate:) public func setPassChangeDate(passChangeDate: Swift.String)
+  @objc(setPurchaseNumber:) public func setPurchaseNumber(purchaseNumber: Swift.Int)
+  @objc(setProvisionAttempts:) public func setProvisionAttempts(provisionAttempts: Swift.Int)
+  @objc(setActivityDay:) public func setActivityDay(activityDay: Swift.Int)
+  @objc(setActivityYear:) public func setActivityYear(activityYear: Swift.Int)
+  @objc(setPaymentAgeIndicator:) public func setPaymentAgeIndicator(paymentAgeIndicator: Swift.String)
+  @objc(setPaymentAge:) public func setPaymentAge(paymentAge: Swift.String)
+  @objc(setSuspiciousActivity:) public func setSuspiciousActivity(suspiciousActivity: Swift.String)
+  @objc(setAuthMethod:) public func setAuthMethod(authMethod: Swift.String)
+  @objc(setAuthTime:) public func setAuthTime(authTime: Swift.String)
+  @objc(setAuthData:) public func setAuthData(authData: Swift.String)
+  @objc override dynamic public init()
+  @objc deinit
+}
+@objc @_inheritsConvenienceInitializers public class ThreeDSecureShippingInfo : ObjectiveC.NSObject {
+  public var type: Swift.String?
+  public var deliveryTime: Swift.String?
+  public var deliveryEmail: Swift.String?
+  public var addressUsageIndicator: Swift.String?
+  public var addressUsage: Swift.String?
+  public var city: Swift.String?
+  public var country: Swift.String?
+  public var address: Swift.String?
+  public var postal: Swift.String?
+  public var regionCode: Swift.String?
+  public var nameIndicator: Swift.String?
+  @objc(setType:) public func setType(type: Swift.String)
+  @objc(setDeliveryTime:) public func setDeliveryTime(deliveryTime: Swift.String)
+  @objc(setDeliveryEmail:) public func setDeliveryEmail(deliveryEmail: Swift.String)
+  @objc(setAddressUsageIndicator:) public func setAddressUsageIndicator(addressUsageIndicator: Swift.String)
+  @objc(setAddressUsage:) public func setAddressUsage(addressUsage: Swift.String)
+  @objc(setCity:) public func setCity(city: Swift.String)
+  @objc(setCountry:) public func setCountry(country: Swift.String)
+  @objc(setAddress:) public func setAddress(address: Swift.String)
+  @objc(setPostal:) public func setPostal(postal: Swift.String)
+  @objc(setRegionCode:) public func setRegionCode(regionCode: Swift.String)
+  @objc(setNameIndicator:) public func setNameIndicator(nameIndicator: Swift.String)
+  @objc override dynamic public init()
+  @objc deinit
+}
+@objc @_inheritsConvenienceInitializers public class ThreeDSecureMpiResultInfo : ObjectiveC.NSObject {
+  public var acsOperationId: Swift.String?
+  public var authenticationFlow: Swift.String?
+  public var authenticationTimestamp: Swift.String?
+  @objc(setAcsOperationId:) public func setAcsOperationId(acsOperationId: Swift.String)
+  @objc(setAuthenticationFlow:) public func setAuthenticationFlow(authenticationFlow: Swift.String)
+  @objc(setAuthenticationTimestamp:) public func setAuthenticationTimestamp(authenticationTimestamp: Swift.String)
+  @objc override dynamic public init()
+  @objc deinit
+}
+@_hasMissingDesignatedInitializers public class CardScannerHelper {
+  @objc deinit
+}
+@objc @_inheritsConvenienceInitializers public class EcommpaySDK : ObjectiveC.NSObject {
+  @objc public static let sdkVersion: Swift.String
+  @objc deinit
+  @objc(setTheme:) public func setTheme(theme: ecommpaySDK.ECPTheme)
+  @objc(setPKPaymentRequest:) public func setPKPaymentRequest(request: PassKit.PKPaymentRequest)
+  @objc(presentPaymentAt:paymentInfo:completionHandler:) public func presentPayment(at viewController: UIKit.UIViewController, paymentInfo: ecommpaySDK.PaymentInfo, completion: ((_ result: ecommpaySDK.ECPPaymentResult) -> Swift.Void)?)
+  @objc override dynamic public init()
+}
+@objc public class RecurrentInfoSchedule : ObjectiveC.NSObject {
+  @objc final public let date: Swift.String
+  @objc final public let amount: Swift.Int
+  @objc public init(date: Swift.String, amount: Swift.Int)
+  @objc deinit
+}
+@objc public class RecurrentInfo : ObjectiveC.NSObject, Swift.Codable {
+  final public let type: ecommpaySDK.RecurrentType
+  final public let expiryDay: Swift.String?
+  final public let expiryMonth: Swift.String?
+  final public let expiryYear: Swift.String?
+  final public let period: ecommpaySDK.RecurrentPeriod?
+  final public let time: Swift.String?
+  final public let startDate: Swift.String?
+  final public let scheduledPaymentID: Swift.String?
+  public var amount: Swift.Int?
+  public var schedule: [ecommpaySDK.RecurrentInfoSchedule]?
+  @objc(initWithRecurrentType:expiryDay:expiryMonth:expiryYear:period:time:startDate:scheduledPaymentID:) public init(type: ecommpaySDK.RecurrentType, expiryDay: Swift.String, expiryMonth: Swift.String, expiryYear: Swift.String, period: ecommpaySDK.RecurrentPeriod, time: Swift.String, startDate: Swift.String, scheduledPaymentID: Swift.String)
+  @objc(initWithRecurrentType:) public init(type: ecommpaySDK.RecurrentType)
+  @objc(setAmount:) public func setAmount(amount: Swift.Int)
+  @objc(setSchedule:) public func setSchedule(schedule: [ecommpaySDK.RecurrentInfoSchedule])
+  @objc(dictionaryRepresentation) public func dictionaryRepresentation() -> [Swift.String : Any]?
+  @objc deinit
+  public func encode(to encoder: Swift.Encoder) throws
+  required public init(from decoder: Swift.Decoder) throws
+}
+@objc public enum RecurrentType : Swift.Int, Swift.RawRepresentable, Swift.Codable {
+  case Regular
+  case OneClick
+  case Autopayment
+  public typealias RawValue = Swift.String
+  public var rawValue: ecommpaySDK.RecurrentType.RawValue {
+    get
+  }
+  public init?(rawValue: ecommpaySDK.RecurrentType.RawValue)
+}
+@objc public enum RecurrentPeriod : Swift.Int, Swift.RawRepresentable, Swift.Codable {
+  case Day
+  case Week
+  case Month
+  case Quarter
+  case Year
+  public typealias RawValue = Swift.String
+  public var rawValue: ecommpaySDK.RecurrentPeriod.RawValue {
+    get
+  }
+  public init?(rawValue: ecommpaySDK.RecurrentPeriod.RawValue)
+}
+@objc public enum ECMPScreenDisplayMode : Swift.Int, Swift.CaseIterable, Swift.CustomStringConvertible, Swift.RawRepresentable {
+  @objc(hide_success_final_page) case hide_success_final_page
+  @objc(hide_decline_final_page) case hide_decline_final_page
+  public var description: Swift.String {
+    get
+  }
+  public init?(rawValue: Swift.Int)
+  public typealias AllCases = [ecommpaySDK.ECMPScreenDisplayMode]
+  public typealias RawValue = Swift.Int
+  public static var allCases: [ecommpaySDK.ECMPScreenDisplayMode] {
+    get
+  }
+  public var rawValue: Swift.Int {
+    get
+  }
+}
+public struct SSLClientCertificateError : Foundation.LocalizedError {
+  public var errorDescription: Swift.String?
+}
+public class SSLClientCertificate {
+  convenience public init(pkcs12Path: Swift.String, password: Swift.String) throws
+  public init(identity: Security.SecIdentity, identityCertificate: Security.SecCertificate)
+  convenience public init(pkcs12Url: Foundation.URL, password: Swift.String) throws
+  public init(pkcs12Url: Foundation.URL, importOptions: CoreFoundation.CFDictionary) throws
+  @objc deinit
+}
+@objc @_hasMissingDesignatedInitializers public class PaymentInfo : ObjectiveC.NSObject, Swift.Codable {
+  @objc public enum ActionType : Swift.Int, Swift.Decodable {
+    case Sale = 1
+    case Auth = 2
+    case Tokenize = 3
+    case Verify = 4
+    public init?(rawValue: Swift.Int)
+    public typealias RawValue = Swift.Int
+    public var rawValue: Swift.Int {
+      get
+    }
+  }
+  final public let projectID: Swift.Int
+  final public let paymentID: Swift.String?
+  final public let paymentAmount: Swift.Int
+  final public let paymentCurrency: Swift.String
+  final public let paymentDescription: Swift.String?
+  final public let customerID: Swift.String?
+  final public let regionCode: Swift.String?
+  public var action: ecommpaySDK.PaymentInfo.ActionType?
+  public var recurrentInfo: ecommpaySDK.RecurrentInfo?
+  public var applePayMerchantID: Swift.String?
+  public var applePayDescription: Swift.String?
+  public var token: Swift.String?
+  public var additionalFields: [ecommpaySDK.AdditionalField]?
+  public var languageCode: Swift.String?
+  public var forcePaymentMethod: Swift.String?
+  public var receiptData: Swift.String?
+  public var hideSavedWallets: Swift.Bool?
+  public var screenDisplayModes: [ecommpaySDK.ECMPScreenDisplayMode]?
+  @objc(initWithProjectID:paymentID:paymentAmount:paymentCurrency:paymentDescription:customerID:regionCode:) public init(projectID: Swift.Int, paymentID: Swift.String?, paymentAmount: Swift.Int, paymentCurrency: Swift.String, paymentDescription: Swift.String?, customerID: Swift.String?, regionCode: Swift.String?)
+  @objc(initWithProjectID:paymentID:paymentAmount:paymentCurrency:) public init(projectID: Swift.Int, paymentID: Swift.String?, paymentAmount: Swift.Int, paymentCurrency: Swift.String)
+  @objc(initWithProjectID:paymentAmount:paymentCurrency:) public init(projectID: Swift.Int, paymentAmount: Swift.Int, paymentCurrency: Swift.String)
+  @objc(setSignature:) public func setSignature(value: Swift.String)
+  @objc(setReceiptData:) public func setReceiptData(value: Swift.String)
+  @objc(setToken:) public func setToken(value: Swift.String)
+  @objc(setAction:) public func setAction(action: ecommpaySDK.PaymentInfo.ActionType)
+  @objc(setRecurret:) public func setRecurrent(recurrent: ecommpaySDK.RecurrentInfo)
+  @objc(setApplePayMerchantID:) public func setApplePayMerchantID(merchantID: Swift.String)
+  @objc(setApplePayDescription:) public func setApplePayDescription(description: Swift.String)
+  @objc(setAdditionalFields:) public func setAdditionalFields(additionalFields: [ecommpaySDK.AdditionalField])
+  @objc(setLanguageCode:) public func setLanguageCode(value: Swift.String)
+  @objc(setSecureInfo:) public func setSecureInfo(secureInfo: ecommpaySDK.ThreeDSecureInfo)
+  @objc(setHideSavedWallets:) public func setHideSavedWallets(value: Swift.Bool)
+  @objc(setForcePaymentMethod:) public func setForcePaymentMethod(value: Swift.String)
+  @objc(addEcmpScreenDisplayMode:) public func addScreenDisplayMode(screenDisplayMode: ecommpaySDK.ECMPScreenDisplayMode) -> ecommpaySDK.PaymentInfo
+  @objc(addScreenDisplayModeString:) public func addScreenDisplayMode(value: Swift.String) -> ecommpaySDK.PaymentInfo
+  public func setScreenDisplayModes(screenDisplayModes: [ecommpaySDK.ECMPScreenDisplayMode])
+  @objc(dictionaryRepresentation) public func dictionaryRepresentation() -> [Swift.String : Any]?
+  @objc(getParamsForSignature) public func getParamsForSignature() -> Swift.String
+  @objc deinit
+  public func encode(to encoder: Swift.Encoder) throws
+  required public init(from decoder: Swift.Decoder) throws
+}
+@objc @_inheritsConvenienceInitializers @_Concurrency.MainActor(unsafe) open class CollectionViewCenteredFlowLayout : UIKit.UICollectionViewFlowLayout {
+  @_Concurrency.MainActor(unsafe) @objc override dynamic open func layoutAttributesForElements(in rect: CoreGraphics.CGRect) -> [UIKit.UICollectionViewLayoutAttributes]?
+  @objc override dynamic public init()
+  @_Concurrency.MainActor(unsafe) @objc required dynamic public init?(coder: Foundation.NSCoder)
+  @objc deinit
+}
+extension ecommpaySDK.CloseCode : Swift.Equatable {}
+extension ecommpaySDK.CloseCode : Swift.Hashable {}
+extension ecommpaySDK.CloseCode : Swift.RawRepresentable {}
+extension ecommpaySDK.ErrorType : Swift.Equatable {}
+extension ecommpaySDK.ErrorType : Swift.Hashable {}
+extension ecommpaySDK.WebSocket.OpCode : Swift.Equatable {}
+extension ecommpaySDK.WebSocket.OpCode : Swift.Hashable {}
+extension ecommpaySDK.WebSocket.OpCode : Swift.RawRepresentable {}
+extension ecommpaySDK.AdditionalFieldType : Swift.Equatable {}
+extension ecommpaySDK.AdditionalFieldType : Swift.Hashable {}
+extension ecommpaySDK.AdditionalFieldType : Swift.RawRepresentable {}
+extension ecommpaySDK.ServerType : Swift.Equatable {}
+extension ecommpaySDK.ServerType : Swift.Hashable {}
+extension ecommpaySDK.AdditionalFieldValidator : Swift.Equatable {}
+extension ecommpaySDK.AdditionalFieldValidator : Swift.Hashable {}
+extension ecommpaySDK.ECPPaymentStatus : Swift.Equatable {}
+extension ecommpaySDK.ECPPaymentStatus : Swift.Hashable {}
+extension ecommpaySDK.ECPPaymentStatus : Swift.RawRepresentable {}
+extension ecommpaySDK.RecurrentType : Swift.Equatable {}
+extension ecommpaySDK.RecurrentType : Swift.Hashable {}
+extension ecommpaySDK.RecurrentPeriod : Swift.Equatable {}
+extension ecommpaySDK.RecurrentPeriod : Swift.Hashable {}
+extension ecommpaySDK.ECMPScreenDisplayMode : Swift.Equatable {}
+extension ecommpaySDK.ECMPScreenDisplayMode : Swift.Hashable {}
+extension ecommpaySDK.PaymentInfo.ActionType : Swift.Equatable {}
+extension ecommpaySDK.PaymentInfo.ActionType : Swift.Hashable {}
+extension ecommpaySDK.PaymentInfo.ActionType : Swift.RawRepresentable {}

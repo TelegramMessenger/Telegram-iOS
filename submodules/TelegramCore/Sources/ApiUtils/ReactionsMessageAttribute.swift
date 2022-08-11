@@ -68,7 +68,10 @@ public func mergedMessageReactionsAndPeers(message: Message) -> (reactions: [Mes
     return (attribute.reactions, recentPeers)
 }
 
+// MARK: Nicegram changes
 public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsMessageAttribute? {
+    guard !UserDefaults.standard.bool(forKey: "hideReactions") else { return nil }
+    
     var current: ReactionsMessageAttribute?
     var pending: PendingReactionsMessageAttribute?
     for attribute in attributes {

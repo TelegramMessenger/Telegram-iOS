@@ -2,6 +2,7 @@
 
 #import <Stripe/STPAddress.h>
 #import <Stripe/STPPaymentCardTextField.h>
+#import <Stripe/STPFormTextField.h>
 #import <Stripe/STPAPIClient.h>
 #import <Stripe/STPAPIClient+ApplePay.h>
 #import <Stripe/STPAPIResponseDecodable.h>

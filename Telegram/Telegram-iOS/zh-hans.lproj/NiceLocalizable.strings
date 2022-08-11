@@ -30,8 +30,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "显示置顶";
 "ChatFilter.Admin" = "管理员";
-"NiceFeatures.Notifications.HideNotifyAccount" = "在通知中隐藏帐户";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "当您在设置添加了多个账户时，通知中就不会显示你的账户信息。";
 "NiceFeatures.Notifications.Fix" = "禁用多余通知";
 "NiceFeatures.Notifications.FixNotice" = "如果在已关闭通知群组/频道仍然会收到通知，那开启此功能可以禁用此通知.\n开启此功能，在通知界面回复消息，帐户标签和媒体预览将会被禁用。";
 "NiceFeatures.Filters.Header" = "标签过滤";
@@ -105,6 +103,10 @@
 "Messages.Translate" = "翻译";
 "Messages.UndoTranslate" = "撤消翻译";
 "Messages.TranslateError" = "抱歉，翻译不可用。";
+"Messages.SpeechToText" = "语音转文本";
+"Messages.UndoSpeechToText" = "撤销语音转文本";
+"Messages.SpeechToText.LowAccuracyError" = "语音识别失败。\n\n这可能是由于录音质量太差或应用程序的语言与录音中的语言不同造成的。";
+"Messages.SelectAllFromUser" = "选择来自该用户的所有消息";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "获取注册日期";
@@ -144,6 +146,18 @@
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "您的电話号码只会在设置介面中隐藏，要对其他使用者隐藏，请使用隐私设置。";
 "NicegramSettings.Other.showProfileId" = "显示 ID";
 "NicegramSettings.Other.showRegDate" = "显示注册日期";
+"NicegramSettings.Unblock.Header" = "解封";
+"NicegramSettings.Unblock.Button" = "解封指南";
+"NicegramSettings.Other.hideReactions" = "隐藏反应";
+"NicegramSettings.RoundVideos.DownloadVideos" = "将视频下载到图库";
 "Premium.OnetapTranslate.LowPower" = "低电量时禁用";
-"Premium.OnetapTranslate.LowPower.Notice" = "应用会检测您设备上每条消息的语言。这是一项耗能的任务，会影响您的电池寿命。";
+"Premium.OnetapTranslate.LowPower.Notice" = "应用会检测您设备上每条消息使用的语言。这一功能需要很高的性能，可能会影响电池寿命。";
 "Premium.rememberFolderOnExit" = "退出时记住当前分组";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "早于";
+"NiceFeatures.RegDate.Approximately" = "大约";
+"NiceFeatures.RegDate.NewerThan" = "晚于";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "遗憾的是，您无法在登录 Nicegram 应用后获取 **Telegram 高级功能**。请前往官方 Telegram 应用并订阅 **Telegram 高级版**。在您返回 Nicegram 后，所有**高级功能**将可用。";

@@ -17,6 +17,7 @@ public protocol GridItem {
     var aspectRatio: CGFloat { get }
     var fillsRowWithHeight: (CGFloat, Bool)? { get }
     var fillsRowWithDynamicHeight: ((CGFloat) -> CGFloat)? { get }
+    var customItemSize: CGSize? { get }
 }
 
 public extension GridItem {
@@ -29,6 +30,10 @@ public extension GridItem {
     }
     
     var fillsRowWithDynamicHeight: ((CGFloat) -> CGFloat)? {
+        return nil
+    }
+    
+    var customItemSize: CGSize? {
         return nil
     }
 }

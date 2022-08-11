@@ -241,6 +241,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.installationActionBackgroundNode.displayWithoutProcessing = true
         self.installationActionBackgroundNode.isLayerBacked = true
         self.installationActionNode = HighlightableButtonNode()
+        self.installationActionNode.hitTestSlop = UIEdgeInsets(top: -16.0, left: -16.0, bottom: -16.0, right: -16.0)
         
         self.installTextNode = TextNode()
         self.installTextNode.isUserInteractionEnabled = false
@@ -666,12 +667,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.installationActionBackgroundNode.image = backgroundImage
                             }
                         
-                            let installationActionFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: 0.0), size: CGSize(width: 50.0, height: layout.contentSize.height))
+                            let installationActionFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: 0.0), size: CGSize(width: installWidth, height: layout.contentSize.height))
                             strongSelf.installationActionNode.frame = installationActionFrame
                         
                             let buttonFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: installationActionFrame.minY + floor((installationActionFrame.size.height - 28.0) / 2.0)), size: CGSize(width: installWidth, height: 28.0))
                             strongSelf.installationActionBackgroundNode.frame = buttonFrame
-                            strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
+                            strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floorToScreenPixels((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floorToScreenPixels((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
                         case .selection:
                             strongSelf.installationActionNode.isHidden = true
                             strongSelf.installationActionBackgroundNode.isHidden = true
@@ -760,14 +761,14 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                 if let current = strongSelf.animationNode {
                                     animationNode = current
                                 } else {
-                                    animationNode = AnimatedStickerNode()
+                                    animationNode = DefaultAnimatedStickerNodeImpl()
                                     animationNode.started = { [weak self] in
                                         self?.removePlaceholder(animated: false)
                                     }
                                     strongSelf.animationNode = animationNode
                                     strongSelf.addSubnode(animationNode)
                                     
-                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource, isVideo: isVideo), width: 80, height: 80, mode: .cached)
+                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource, isVideo: isVideo), width: 80, height: 80, playbackMode: .loop, mode: .cached)
                                 }
                                 animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
                                 animationNode.isHidden = !item.playAnimatedStickers

@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-
 private final class ManagedSynchronizeInstalledStickerPacksOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]
     
@@ -345,8 +344,7 @@ private func synchronizeInstalledStickerPacks(transaction: Transaction, postbox:
     
     var fetchSignals: [Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError>] = []
     for info in locallyAddedInfos {
-        fetchSignals.append(fetchStickerPack(network: network, info: info)
-        )
+        fetchSignals.append(fetchStickerPack(network: network, info: info))
     }
     let fetchedPacks = combineLatest(fetchSignals)
     
@@ -374,6 +372,61 @@ private func synchronizeInstalledStickerPacks(transaction: Transaction, postbox:
         |> switchToLatest
     }
 }
+
+/*#if DEBUG
+
+func debugFetchAllStickers(account: Account) -> Signal<Never, NoError> {
+    let orderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers]
+    let namespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
+    let stickerItems: Signal<[TelegramMediaFile], NoError> = account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: namespaces, aroundIndex: nil, count: 10000000)
+    |> map { view -> [TelegramMediaFile] in
+        var files: [TelegramMediaFile] = []
+        for entry in view.entries {
+            guard let item = entry.item as? StickerPackItem else {
+                continue
+            }
+            if !item.file.isAnimatedSticker {
+                continue
+            }
+            files.append(item.file)
+        }
+        return files
+    }
+    |> take(1)
+    
+    return stickerItems
+    |> mapToSignal { files -> Signal<Never, NoError> in
+        var loadFileSignals: [Signal<Never, NoError>] = []
+        
+        let tempDir = TempBox.shared.tempDirectory()
+        print("debugFetchAllStickers into \(tempDir.path)")
+        
+        for file in files {
+            loadFileSignals.append(Signal { subscriber in
+                let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: stickerPackFileReference(file).resourceReference(file.resource)).start()
+                let data = (account.postbox.mediaBox.resourceData(file.resource)
+                |> filter { $0.complete }
+                |> take(1)).start(next: { data in
+                    if let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let unpackedData = TGGUnzipData(dataValue, 5 * 1024 * 1024) {
+                        let filePath = tempDir.path + "/\(file.fileId.id).json"
+                        let _ = try? unpackedData.write(to: URL(fileURLWithPath: filePath), options: .atomic)
+                        subscriber.putCompletion()
+                    }
+                })
+                
+                return ActionDisposable {
+                    fetch.dispose()
+                    data.dispose()
+                }
+            })
+        }
+        
+        return combineLatest(loadFileSignals)
+        |> ignoreValues
+    }
+}
+
+#endif*/
 
 private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, namespace: SynchronizeInstalledStickerPacksOperationNamespace, operation: SynchronizeInstalledStickerPacksOperation) -> Signal<Void, NoError> {
     let collectionNamespace: ItemCollectionId.Namespace
@@ -479,10 +532,26 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                                 }
                             }
                             
+
+                            let storePremiumSignal: Signal<Void, SynchronizeInstalledStickerPacksError> = postbox.transaction { transaction -> Void in
+                                var premiumStickers: [OrderedItemListEntry] = []
+                                for (id, _) in remoteInfos {
+                                    let items = transaction.getItemCollectionItems(collectionId: id)
+                                    for item in items {
+                                        if let stickerItem = item as? StickerPackItem, stickerItem.file.isPremiumSticker,
+                                           let entry = CodableEntry(RecentMediaItem(stickerItem.file)) {
+                                            premiumStickers.append(OrderedItemListEntry(id: RecentMediaItemId(stickerItem.file.fileId).rawValue, contents: entry))
+                                        }
+                                    }
+                                }
+                                transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.PremiumStickers, items: premiumStickers)
+                            } |> castError(SynchronizeInstalledStickerPacksError.self)
+                            
                             return (
                                 storeSignal
                                 |> mapError { _ -> SynchronizeInstalledStickerPacksError in }
                             )
+                            |> then(storePremiumSignal)
                             |> then(.fail(.done))
                         }
                         |> castError(SynchronizeInstalledStickerPacksError.self)
@@ -585,6 +654,18 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                         for id in localCollectionIds.subtracting(resultingCollectionIds).union(archivedOrRemovedIds) {
                             transaction.replaceItemCollectionItems(collectionId: id, items: [])
                         }
+                        
+                        var premiumStickers: [OrderedItemListEntry] = []
+                        for id in resultingCollectionIds {
+                            let items = transaction.getItemCollectionItems(collectionId: id)
+                            for item in items {
+                                if let stickerItem = item as? StickerPackItem, stickerItem.file.isPremiumSticker,
+                                   let entry = CodableEntry(RecentMediaItem(stickerItem.file)) {
+                                    premiumStickers.append(OrderedItemListEntry(id: RecentMediaItemId(stickerItem.file.fileId).rawValue, contents: entry))
+                                }
+                            }
+                        }
+                        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.PremiumStickers, items: premiumStickers)
                         
                         return .complete()
                     }

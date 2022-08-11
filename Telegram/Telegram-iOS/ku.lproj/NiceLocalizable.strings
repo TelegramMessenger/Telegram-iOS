@@ -30,8 +30,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "نیشاندانی هەڵواسراو";
 "ChatFilter.Admin" = "بەڕێوەبەر";
-"NiceFeatures.Notifications.HideNotifyAccount" = "شاردنەوەی هەژمار لە ئاگادارکردنەوە";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "لە جیاتیی «بەکارهێنەر ← هەژمار» تەنها «بەکارهێنەر» دەبینیت. تەنها بۆ چەند هەژمارێک.";
 "NiceFeatures.Notifications.Fix" = "ناچالاککردنی ئاگادارکردنەوە نەویستراوەکان";
 "NiceFeatures.Notifications.FixNotice" = "سوودبەخشە ئەگەر ئاگادارکردنەوەت لە چاتە بێدەنگکراوەکانەوە بۆ بێت. وەڵامدانەوە لە ئاگادارکردنەوەکانەوە، لە باجی هەژمارەکانەوە، و پێشبینییەکانی میدیا بەردەستنابن.";
 "NiceFeatures.Filters.Header" = "پاڵاوتنەکان (تابەکان)";

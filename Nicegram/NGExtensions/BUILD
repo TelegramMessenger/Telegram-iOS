@@ -7,7 +7,7 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-	"//Vendor/SnapKit:SnapKit",
+        "//Vendor/SnapKit:SnapKit",
     ],
     visibility = ["//visibility:public"],
 

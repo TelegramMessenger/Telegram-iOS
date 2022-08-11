@@ -19,6 +19,7 @@ swift_library(
         "//submodules/FFMpegBinding:FFMpegBinding",
         "//submodules/RingBuffer:RingBuffer",
         "//submodules/YuvConversion:YuvConversion",
+        "//submodules/Utils/RangeSet:RangeSet",
     ],
     visibility = [
         "//visibility:public",

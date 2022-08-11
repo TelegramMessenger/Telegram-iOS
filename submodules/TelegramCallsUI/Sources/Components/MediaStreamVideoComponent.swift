@@ -286,7 +286,7 @@ final class MediaStreamVideoComponent: Component {
                     let noSignalSize = noSignalView.update(
                         transition: transition,
                         component: AnyComponent(MultilineTextComponent(
-                            text: NSAttributedString(string: component.isAdmin ? presentationData.strings.LiveStream_NoSignalAdminText :  presentationData.strings.LiveStream_NoSignalUserText(component.peerTitle).string, font: Font.regular(16.0), textColor: .white, paragraphAlignment: .center),
+                            text: .plain(NSAttributedString(string: component.isAdmin ? presentationData.strings.LiveStream_NoSignalAdminText :  presentationData.strings.LiveStream_NoSignalUserText(component.peerTitle).string, font: Font.regular(16.0), textColor: .white, paragraphAlignment: .center)),
                             horizontalAlignment: .center,
                             maximumNumberOfLines: 0
                         )),

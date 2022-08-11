@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 import TelegramUIPreferences
 
@@ -34,42 +35,34 @@ public final class RecentWallpaperSearchQueryItem: Codable {
     }
 }
 
-func addRecentWallpaperSearchQuery(postbox: Postbox, string: String) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction in
-        if let itemId = WallpaperSearchRecentQueryItemId(string) {
-            if let entry = CodableEntry(RecentWallpaperSearchQueryItem()) {
-                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries, item: OrderedItemListEntry(id: itemId.rawValue, contents: entry), removeTailIfCountExceeds: 100)
-            }
+func addRecentWallpaperSearchQuery(engine: TelegramEngine, string: String) -> Signal<Never, NoError> {
+    if let itemId = WallpaperSearchRecentQueryItemId(string) {
+        return engine.orderedLists.addOrMoveToFirstPosition(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries, id: itemId.rawValue, item: RecentWallpaperSearchQueryItem(), removeTailIfCountExceeds: 100)
+    } else {
+        return .complete()
+    }
+}
+
+func removeRecentWallpaperSearchQuery(engine: TelegramEngine, string: String) -> Signal<Never, NoError> {
+    if let itemId = WallpaperSearchRecentQueryItemId(string) {
+        return engine.orderedLists.removeItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries, id: itemId.rawValue)
+    } else {
+        return .complete()
+    }
+}
+
+func clearRecentWallpaperSearchQueries(engine: TelegramEngine) -> Signal<Never, NoError> {
+    return engine.orderedLists.clear(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries)
+}
+
+func wallpaperSearchRecentQueries(engine: TelegramEngine) -> Signal<[String], NoError> {
+    return engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries))
+    |> map { items -> [String] in
+        var result: [String] = []
+        for item in items {
+            let value = WallpaperSearchRecentQueryItemId(item.id).value
+            result.append(value)
         }
-    }
-}
-
-func removeRecentWallpaperSearchQuery(postbox: Postbox, string: String) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        if let itemId = WallpaperSearchRecentQueryItemId(string) {
-            transaction.removeOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries, itemId: itemId.rawValue)
-        }
-    }
-}
-
-func clearRecentWallpaperSearchQueries(postbox: Postbox) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.replaceOrderedItemListItems(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries, items: [])
-    }
-}
-
-func wallpaperSearchRecentQueries(postbox: Postbox) -> Signal<[String], NoError> {
-    return postbox.combinedView(keys: [.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries)])
-        |> mapToSignal { view -> Signal<[String], NoError> in
-            return postbox.transaction { transaction -> [String] in
-                var result: [String] = []
-                if let view = view.views[.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries)] as? OrderedItemListView {
-                    for item in view.items {
-                        let value = WallpaperSearchRecentQueryItemId(item.id).value
-                        result.append(value)
-                    }
-                }
-                return result
-            }
+        return result
     }
 }

@@ -1,3 +1,6 @@
+// MARK: Nicegram imports
+import NGData
+//
 import Foundation
 import UIKit
 import Display
@@ -12,10 +15,10 @@ import CallListUI
 import ChatListUI
 import SettingsUI
 import AppBundle
-import NGData
 import DatePickerNode
 import DebugSettingsUI
 import TabBarUI
+import PremiumUI
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
@@ -30,6 +33,8 @@ public final class TelegramRootController: NavigationController {
     private var permissionsDisposable: Disposable?
     private var presentationDataDisposable: Disposable?
     private var presentationData: PresentationData
+    
+    private var applicationInFocusDisposable: Disposable?
         
     public init(context: AccountContext) {
         self.context = context
@@ -71,6 +76,15 @@ public final class TelegramRootController: NavigationController {
                 }
             }
         })
+        
+        self.applicationInFocusDisposable = (context.sharedContext.applicationBindings.applicationIsActive
+        |> distinctUntilChanged
+        |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.setForceBadgeHidden(!value)
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -80,9 +94,11 @@ public final class TelegramRootController: NavigationController {
     deinit {
         self.permissionsDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
+        self.applicationInFocusDisposable?.dispose()
     }
     
     public func addRootControllers(showCallsTab: Bool) {
+        // MARK: Nicegram (showTabNames)
         let tabBarController = TabBarControllerImpl(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), showTabNames: NGSettings.showTabNames)
         tabBarController.navigationPresentation = .master
         let chatListController = self.context.sharedContext.makeChatListController(context: self.context, groupId: .root, controlsHistoryPreload: true, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
@@ -97,9 +113,11 @@ public final class TelegramRootController: NavigationController {
         contactsController.switchToChatsController = {  [weak self] in
             self?.openChatsController(activateSearch: false)
         }
+        // MARK: Nicegram
         if NGSettings.showContactsTab {
             controllers.append(contactsController)
         }
+        //
         
         if showCallsTab {
             controllers.append(callListController)
@@ -139,9 +157,11 @@ public final class TelegramRootController: NavigationController {
             return
         }
         var controllers: [ViewController] = []
+        // MARK: Nicegram
         if NGSettings.showContactsTab {
             controllers.append(self.contactsController!)
         }
+        //
         if showCallsTab {
             controllers.append(self.callListController!)
         }

@@ -63,12 +63,16 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     private var backgroundMaskButtons: [String: UIView] = [:]
     
     var reactionSelected: ((String) -> Void)?
-    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingNode, String) -> Void)?
+    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, String) -> Void)?
     
     override init() {
         self.container = ReactionButtonsAsyncLayoutContainer()
         
         super.init()
+    }
+    
+    deinit {
+        
     }
     
     func update() {
@@ -304,23 +308,24 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                         strongSelf.backgroundMaskButtons[item.value] = itemMaskView
                     }
                     
-                    if item.node.supernode == nil {
-                        strongSelf.addSubnode(item.node)
+                    if item.node.view.superview != strongSelf.view {
+                        assert(item.node.view.superview == nil)
+                        strongSelf.view.addSubview(item.node.view)
                         if animation.isAnimated {
-                            item.node.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-                            item.node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            item.node.view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                            item.node.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         }
-                        item.node.frame = itemFrame
+                        item.node.view.frame = itemFrame
                     } else {
-                        animation.animator.updateFrame(layer: item.node.layer, frame: itemFrame, completion: nil)
+                        animation.animator.updateFrame(layer: item.node.view.layer, frame: itemFrame, completion: nil)
                     }
                     
                     let itemValue = item.value
                     let itemNode = item.node
-                    item.node.isGestureEnabled = true
+                    item.node.view.isGestureEnabled = true
                     let canViewReactionList = canViewMessageReactionList(message: message)
-                    item.node.activateAfterCompletion = !canViewReactionList
-                    item.node.activated = { [weak itemNode] gesture, _ in
+                    item.node.view.activateAfterCompletion = !canViewReactionList
+                    item.node.view.activated = { [weak itemNode] gesture, _ in
                         guard let strongSelf = self, let itemNode = itemNode else {
                             gesture.cancel()
                             return
@@ -328,19 +333,22 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                         if !canViewReactionList {
                             return
                         }
-                        strongSelf.openReactionPreview?(gesture, itemNode.containerNode, itemValue)
+                        strongSelf.openReactionPreview?(gesture, itemNode.view.containerView, itemValue)
                     }
-                    item.node.additionalActivationProgressLayer = itemMaskView.layer
+                    item.node.view.additionalActivationProgressLayer = itemMaskView.layer
                     
-                    if itemMaskView.superview == nil {
-                        strongSelf.backgroundMaskView?.addSubview(itemMaskView)
-                        if animation.isAnimated {
-                            itemMaskView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-                            itemMaskView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    if let backgroundMaskView = strongSelf.backgroundMaskView {
+                        if itemMaskView.superview != backgroundMaskView {
+                            assert(itemMaskView.superview == nil)
+                            backgroundMaskView.addSubview(itemMaskView)
+                            if animation.isAnimated {
+                                itemMaskView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                                itemMaskView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
+                            itemMaskView.frame = itemMaskFrame
+                        } else {
+                            animation.animator.updateFrame(layer: itemMaskView.layer, frame: itemMaskFrame, completion: nil)
                         }
-                        itemMaskView.frame = itemMaskFrame
-                    } else {
-                        animation.animator.updateFrame(layer: itemMaskView.layer, frame: itemMaskFrame, completion: nil)
                     }
                 }
                 
@@ -351,6 +359,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                         if animation.isAnimated {
                             view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                             view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] _ in
+                                view?.layer.removeAllAnimations()
                                 view?.removeFromSuperview()
                             })
                         } else {
@@ -364,12 +373,12 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 
                 for node in reactionButtons.removedNodes {
                     if animation.isAnimated {
-                        node.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
-                        node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
-                            node?.removeFromSupernode()
+                        node.view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                        node.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                            node.view.removeFromSuperview()
                         })
                     } else {
-                        node.removeFromSupernode()
+                        node.view.removeFromSuperview()
                     }
                 }
             })
@@ -409,7 +418,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     func reactionTargetView(value: String) -> UIView? {
         for (key, button) in self.container.buttons {
             if key == value {
-                return button.iconView
+                return button.view.iconView
             }
         }
         return nil
@@ -417,20 +426,20 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     
     func animateIn(animation: ListViewItemUpdateAnimation) {
         for (_, button) in self.container.buttons {
-            animation.animator.animateScale(layer: button.layer, from: 0.01, to: 1.0, completion: nil)
+            animation.animator.animateScale(layer: button.view.layer, from: 0.01, to: 1.0, completion: nil)
         }
     }
     
     func animateOut(animation: ListViewItemUpdateAnimation) {
         for (_, button) in self.container.buttons {
-            animation.animator.updateScale(layer: button.layer, scale: 0.01, completion: nil)
+            animation.animator.updateScale(layer: button.view.layer, scale: 0.01, completion: nil)
         }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         for (_, button) in self.container.buttons {
-            if button.frame.contains(point) {
-                if let result = button.hitTest(self.view.convert(point, to: button.view), with: event) {
+            if button.view.frame.contains(point) {
+                if let result = button.view.hitTest(self.view.convert(point, to: button.view), with: event) {
                     return result
                 }
             }
@@ -471,7 +480,7 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let buttonsNode = self.buttonsNode
         
         return { item, layoutConstants, preparePosition, _, constrainedSize in
@@ -505,7 +514,7 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
                     boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                     boundingSize.height += topOffset + 2.0
                     
-                    return (boundingSize, { [weak self] animation, synchronousLoad in
+                    return (boundingSize, { [weak self] animation, synchronousLoad, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
@@ -600,7 +609,7 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
     private let buttonsNode: MessageReactionButtonsNode
     
     var reactionSelected: ((String) -> Void)?
-    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingNode, String) -> Void)?
+    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, String) -> Void)?
     
     override init() {
         self.buttonsNode = MessageReactionButtonsNode()

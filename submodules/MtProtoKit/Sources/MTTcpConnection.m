@@ -885,9 +885,10 @@ struct ctr_state {
                             int greaseCount = 8;
                             NSMutableData *greaseData = [[NSMutableData alloc] initWithLength:greaseCount];
                             uint8_t *greaseBytes = (uint8_t *)greaseData.mutableBytes;
-                            int result;
-                            result = SecRandomCopyBytes(nil, greaseData.length, greaseData.mutableBytes);
-                            assert(result == errSecSuccess);
+                            int result = SecRandomCopyBytes(nil, greaseData.length, greaseData.mutableBytes);
+                            if (result != errSecSuccess) {
+                                assert(false);
+                            }
                             
                             for (int i = 0; i < greaseData.length; i++) {
                                 uint8_t c = greaseBytes[i];

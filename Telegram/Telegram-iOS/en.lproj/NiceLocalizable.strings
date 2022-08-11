@@ -30,8 +30,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "Show Pin";
 "ChatFilter.Admin" = "Admin";
-"NiceFeatures.Notifications.HideNotifyAccount" = "Hide account in notification";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "Instead of «User → Account» you will see only «User». For multiple accounts only.";
 "NiceFeatures.Notifications.Fix" = "Disable Unwanted Notifications";
 "NiceFeatures.Notifications.FixNotice" = "Useful if you get notifications from muted chats.\nReply from notifications, account labels, and media previews will be unavailable.";
 "NiceFeatures.Filters.Header" = "FILTERS (TABS)";
@@ -105,6 +103,10 @@
 "Messages.Translate" = "Translate";
 "Messages.UndoTranslate" = "Undo Translate";
 "Messages.TranslateError" = "Sorry, translation unavailable.";
+"Messages.SpeechToText" = "Speech2Text";
+"Messages.UndoSpeechToText" = "Undo Speech2Text";
+"Messages.SpeechToText.LowAccuracyError" = "Speech recognition failed.\n\nThis could happen due to the poor quality of the audio recording or differences between the language of the application and of the audio recording.";
+"Messages.SelectAllFromUser" = "Select All From This User";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Get Registration Date";
@@ -144,6 +146,10 @@
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "Your number will be hidden in the UI only. To hide it from others, please use Privacy settings.";
 "NicegramSettings.Other.showProfileId" = "Show Profile ID";
 "NicegramSettings.Other.showRegDate" = "Show Registration Date";
+"NicegramSettings.Unblock.Header" = "Unblock";
+"NicegramSettings.Unblock.Button" = "Unblock Guide";
+"NicegramSettings.Other.hideReactions" = "Hide Reactions";
+"NicegramSettings.RoundVideos.DownloadVideos" = "Download videos to Gallery";
 "Premium.OnetapTranslate.LowPower" = "Recognition on Low Power";
 "Premium.OnetapTranslate.LowPower.Notice" = "App detects language of each message on your device. It's a high-performance task which can affect your battery life.";
 "Premium.rememberFolderOnExit" = "Remember current folder on exit";
@@ -152,4 +158,7 @@
 "NiceFeatures.RegDate.OlderThan" = "Older than";
 "NiceFeatures.RegDate.Approximately" = "Approximately";
 "NiceFeatures.RegDate.NewerThan" = "Newer than";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "Unfortunately, you can’t get **Telegram Premium Features** while being logged in to the Nicegram app. Please go to the official Telegram app and subscribe to **Telegram Premium**. As you go back to Nicegram, all **Premium Features** will be available to use.";
 

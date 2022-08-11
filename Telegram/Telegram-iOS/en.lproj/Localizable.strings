@@ -515,7 +515,7 @@
 "Conversation.Contact" = "Contact";
 "Conversation.BlockUser" = "Block User";
 "Conversation.UnblockUser" = "Unblock User";
-"Conversation.UnsupportedMedia" = "This message is not supported on your version of Nicegram. Update the app to view:\nhttps://itunes.apple.com/app/id1457369322";
+"Conversation.UnsupportedMedia" = "This message is not supported on your version of Nicegram. Update the app to view:\nhttps://apps.apple.com/app/id1608870673";
 "Conversation.EncryptionWaiting" = "Waiting for %@ to get online...";
 "Conversation.EncryptionProcessing" = "Exchanging encryption keys...";
 "Conversation.EmptyPlaceholder" = "No messages here yet...";
@@ -868,7 +868,6 @@
 "MessageTimer.Years_2" = "%@ years";
 "MessageTimer.Years_3_10" = "%@ years";
 "MessageTimer.Years_any" = "%@ years";
-"MessageTimer.Months_many" = "%@ years";
 
 "MessageTimer.ShortSeconds_1" = "%@s";
 "MessageTimer.ShortSeconds_2" = "%@s";
@@ -1184,10 +1183,10 @@
 
 "SharedMedia.EmptyTitle" = "No media files yet";
 "SharedMedia.EmptyText" = "Share photos and videos in this chat\n — or this paperclip stays unhappy.";
-"SharedMedia.EmptyFilesText" = "You can send and receive\nfiles of any type up to 1.5 GB each\nand access them anywhere.";
+"SharedMedia.EmptyFilesText" = "You can send and receive\nfiles of any type up to 1.5 GB each\nand access them anywhere.";
 
 "ShareFileTip.Title" = "Sharing Files";
-"ShareFileTip.Text" = "You can share **uncompressed** media files from your Camera Roll here.\n\nTo share files of any other type, open them on your %@ (e.g. in your browser), tap **Open in...** or the action button and choose Nicegram.";
+"ShareFileTip.Text" = "You can share **uncompressed** media files from your Camera Roll here.\n\nTo share files of any other type, open them on your %@ (e.g. in your browser), tap **Open in...** or the action button and choose Nicegram.";
 "ShareFileTip.CloseTip" = "Close Tip";
 
 "DialogList.SearchSectionDialogs" = "Chats and Contacts";
@@ -1408,7 +1407,7 @@
 "Conversation.FileDropbox" = "Dropbox";
 
 "Conversation.FileOpenIn" = "Open in...";
-"Conversation.FileHowToText" = "To share files of any type, open them on your %@ (e.g. in your browser), tap **Open in...** or the action button and choose Nicegram.";
+"Conversation.FileHowToText" = "To share files of any type, open them on your %@ (e.g. in your browser), tap **Open in...** or the action button and choose Nicegram.";
 
 "Map.LocationTitle" = "Location";
 "Map.OpenInMaps" = "Open in Maps";
@@ -2240,7 +2239,7 @@ Unused sets are archived when you add more.";
 
 "Widget.AuthRequired" = "Log in to Nicegram";
 "Widget.NoUsers" = "Start messaging to see your friends here";
-"Widget.GalleryTitle" = "Telegram";
+"Widget.GalleryTitle" = "Nicegram";
 "Widget.GalleryDescription" = "Select chats";
 
 "ShareMenu.CopyShareLinkGame" = "Copy link to game";
@@ -2494,6 +2493,13 @@ Unused sets are archived when you add more.";
 
 "Message.PaymentSent" = "Payment: %@";
 "Notification.PaymentSent" = "You have just successfully transferred {amount} to {name} for {title}";
+"Notification.PaymentSentNoTitle" = "You have just successfully transferred {amount} to {name}";
+
+"Notification.PaymentSentRecurringInit" = "You have just successfully transferred {amount} to {name} for {title} and allowed future reccurrent payments";
+"Notification.PaymentSentRecurringInitNoTitle" = "You have just successfully transferred {amount} to {name} and allowed future reccurrent payments";
+
+"Notification.PaymentSentRecurringUsed" = "You have just successfully transferred {amount} to {name} for {title} via recurrent payments";
+"Notification.PaymentSentRecurringUsedNoTitle" = "You have just successfully transferred {amount} to {name} via recurrent payments";
 
 "Common.NotNow" = "Not Now";
 
@@ -2864,7 +2870,7 @@ Unused sets are archived when you add more.";
 "SocksProxySetup.UseForCalls" = "Use for calls";
 "SocksProxySetup.UseForCallsHelp" = "Proxy servers may degrade the quality of your calls.";
 
-"InviteText.URL" = "https://itunes.apple.com/app/id1457369322";
+"InviteText.URL" = "https://apps.apple.com/app/id1608870673";
 "InviteText.SingleContact" = "Hey, I'm using Nicegram to chat. Join me! Download it here: %@";
 "InviteText.ContactsCountText_1" = "Hey, I'm using Nicegram to chat. Join me! Download it here: {url}";
 "InviteText.ContactsCountText_2" = "Hey, I'm using Nicegram to chat – and so are 2 of our other contacts. Join us! Download it here: {url}";
@@ -4078,7 +4084,7 @@ Unused sets are archived when you add more.";
 "Undo.DeletedChannel" = "Deleted channel";
 "Undo.DeletedGroup" = "Deleted group";
 
-"AccessDenied.Wallpapers" = "Telegram needs access to your photo library to set a custom chat background.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
+"AccessDenied.Wallpapers" = "Nicegram needs access to your photo library to set a custom chat background.\n\nPlease go to Settings > Privacy > Photos and set Nicegram to ON.";
 
 "Conversation.ChatBackground" = "Chat Background";
 "Conversation.ViewBackground" = "VIEW BACKGROUND";
@@ -4363,7 +4369,7 @@ Unused sets are archived when you add more.";
 
 "Undo.ChatDeletedForBothSides" = "Chat deleted for both sides";
 
-"AppUpgrade.Running" = "Optimizing Telegram...
+"AppUpgrade.Running" = "Optimizing Nicegram...
 This may take a while, depending on the size of the database. Please keep the app open until the process is finished.
 
 Sorry for the inconvenience.";
@@ -5605,9 +5611,9 @@ Sorry for the inconvenience.";
 "Call.Audio" = "audio";
 "Call.AudioRouteMute" = "Mute Yourself";
 
-"AccessDenied.VideoCallCamera" = "Telegram needs access to your camera to make video calls.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
+"AccessDenied.VideoCallCamera" = "Nicegram needs access to your camera to make video calls.\n\nPlease go to Settings > Privacy > Camera and set Nicegram to ON.";
 
-"Call.AccountIsLoggedOnCurrentDevice" = "Sorry, you can't call %@ because that account is logged in to Telegram on the device you're using for the call.";
+"Call.AccountIsLoggedOnCurrentDevice" = "Sorry, you can't call %@ because that account is logged in to Nicegram on the device you're using for the call.";
 
 "ChatList.Search.FilterChats" = "Chats";
 "ChatList.Search.FilterMedia" = "Media";
@@ -5761,7 +5767,7 @@ Sorry for the inconvenience.";
 "Conversation.TextCopied" = "Text copied to clipboard";
 
 "Media.LimitedAccessTitle" = "Limited Access to Media";
-"Media.LimitedAccessText" = "You've given Telegram access only to select number of photos.";
+"Media.LimitedAccessText" = "You've given Nicegram access only to select number of photos.";
 "Media.LimitedAccessManage" = "Manage";
 "Media.LimitedAccessSelectMore" = "Select More Photos...";
 "Media.LimitedAccessChangeSettings" = "Change Settings";
@@ -6101,7 +6107,7 @@ Sorry for the inconvenience.";
 "Message.ImportedDateFormat" = "%1$@, %2$@ Imported %3$@";
 
 "ChatImportActivity.Title" = "Importing Chat";
-"ChatImportActivity.OpenApp" = "Open Telegram";
+"ChatImportActivity.OpenApp" = "Open Nicegram";
 "ChatImportActivity.Retry" = "Retry";
 "ChatImportActivity.InProgress" = "Please keep this window open\nuntil the import is completed.";
 "ChatImportActivity.ErrorNotAdmin" = "You need to be an admin in the group to import messages.";
@@ -6249,7 +6255,7 @@ Sorry for the inconvenience.";
 "Widget.UpdatedAt" = "Updated {}";
 
 "Intents.ErrorLockedTitle" = "Locked";
-"Intents.ErrorLockedText" = "Open Telegram and enter passcode to edit widget.";
+"Intents.ErrorLockedText" = "Open Nicegram and enter passcode to edit widget.";
 
 "Conversation.GigagroupDescription" = "Only admins can send messages in this group.";
 
@@ -6861,6 +6867,7 @@ Sorry for the inconvenience.";
 "Chat.NavigationNoChannels" = "You have no unread channels";
 
 "Message.SponsoredLabel" = "sponsored";
+"Message.RecommendedLabel" = "recommended";
 
 "Stickers.Favorites" = "Favorites";
 "Stickers.Recent" = "Recent";
@@ -7217,8 +7224,8 @@ Sorry for the inconvenience.";
 "Contacts.QrCode.MyCode" = "My QR Code";
 "Contacts.QrCode.NoCodeFound" = "No valid QR code found in the image. Please try again.";
 
-"AccessDenied.QrCode" = "Telegram needs access to your photo library to scan QR codes.\n\nOpen your device's Settings > Privacy > Photos and set Telegram to ON.";
-"AccessDenied.QrCamera" = "Telegram needs access to your camera to scan QR codes.\n\nOpen your device's Settings > Privacy > Camera and set Telegram to ON.";
+"AccessDenied.QrCode" = "Nicegram needs access to your photo library to scan QR codes.\n\nOpen your device's Settings > Privacy > Photos and set Nicegram to ON.";
+"AccessDenied.QrCamera" = "Nicegram needs access to your camera to scan QR codes.\n\nOpen your device's Settings > Privacy > Camera and set Nicegram to ON.";
 
 "Share.ShareToInstagramStories" = "Share to Instagram Stories";
 
@@ -7319,8 +7326,8 @@ Sorry for the inconvenience.";
 "Attachment.MediaAccessTitle" = "Access Your Photos and Videos";
 "Attachment.MediaAccessText" = "Share an unlimited number of photos and videos of up to 2 GB each.";
 
-"Attachment.LimitedMediaAccessText" = "You have limited Telegram from accessing all of your photos.";
-"Attachment.CameraAccessText" = "Telegram needs camera access so that you can take photos and videos.";
+"Attachment.LimitedMediaAccessText" = "You have limited Nicegram from accessing all of your photos.";
+"Attachment.CameraAccessText" = "Nicegram needs camera access so that you can take photos and videos.";
 "Attachment.Manage" = "Manage";
 
 "Attachment.OpenSettings" = "Go to Settings";
@@ -7335,7 +7342,7 @@ Sorry for the inconvenience.";
 "Attachment.DeselectedItems_1" = "%@ item deselected";
 "Attachment.DeselectedItems_any" = "%@ items deselected";
 
-"PrivacyPhoneNumberSettings.CustomPublicLink" = "Users who have your number saved in their contacts will also see it on Telegram.\n\nThis public link opens a chat with you:\n[https://t.me/%@]()";
+"PrivacyPhoneNumberSettings.CustomPublicLink" = "Users who have your number saved in their contacts will also see it on Nicegram.\n\nThis public link opens a chat with you:\n[https://t.me/%@]()";
 
 "DownloadList.DownloadingHeader" = "Downloading";
 "DownloadList.DownloadedHeader" = "Recently Downloaded";
@@ -7355,7 +7362,7 @@ Sorry for the inconvenience.";
 "DownloadList.RemoveFileAlertRemove" = "Remove";
 
 "DownloadList.ClearAlertTitle" = "Downloaded Files";
-"DownloadList.ClearAlertText" = "Telegram allows to store all received and sent\ndocuments in the cloud and save storage\nspace on your device.";
+"DownloadList.ClearAlertText" = "Nicegram allows to store all received and sent\ndocuments in the cloud and save storage\nspace on your device.";
 
 "ChatList.Search.FilterDownloads" = "Downloads";
 
@@ -7363,8 +7370,8 @@ Sorry for the inconvenience.";
 "LiveStream.ViewerCount_1" = "1 viewer";
 "LiveStream.ViewerCount_any" = "%@ viewers";
 
-"LiveStream.NoSignalAdminText" = "Oops! Telegram doesn't see any stream\ncoming from your streaming app.\n\nPlease make sure you entered the right Server\nURL and Stream Key in your app.";
-"LiveStream.NoSignalUserText" = "%@ is currently not broadcasting live\nstream data to Telegram.";
+"LiveStream.NoSignalAdminText" = "Oops! Nicegram doesn't see any stream\ncoming from your streaming app.\n\nPlease make sure you entered the right Server\nURL and Stream Key in your app.";
+"LiveStream.NoSignalUserText" = "%@ is currently not broadcasting live\nstream data to Nicegram.";
 
 "LiveStream.ViewCredentials" = "View Stream Key";
 
@@ -7410,13 +7417,13 @@ Sorry for the inconvenience.";
 "Bot.AddToChat.Add.AddAsMember" = "Add Bot as Member";
 
 "Bot.AddToChat.Add.AdminAlertTitle" = "Add Bot as Admin?";
-"Bot.AddToChat.Add.AdminAlertTextGroup" = "Are you sure you want to add the bot as an admin in the group **%@**?";
-"Bot.AddToChat.Add.AdminAlertTextChannel" = "Are you sure you want to add the bot as an admin in the channel **%@**?";
+"Bot.AddToChat.Add.AdminAlertTextGroup" = "Are you sure you want to add the bot as an admin in **%@**?";
+"Bot.AddToChat.Add.AdminAlertTextChannel" = "Are you sure you want to add the bot as an admin in **%@**?";
 "Bot.AddToChat.Add.AdminAlertAdd" = "Add as Admin";
 
 "Bot.AddToChat.Add.MemberAlertTitle" = "Add Bot as Member?";
-"Bot.AddToChat.Add.MemberAlertTextGroup" = "Are you sure you want to add the bot as a member in the group **%@**?";
-"Bot.AddToChat.Add.MemberAlertTextChannel" = "Are you sure you want to add the bot as a member in the channel **%@**?";
+"Bot.AddToChat.Add.MemberAlertTextGroup" = "Are you sure you want to add the bot as a member in **%@**?";
+"Bot.AddToChat.Add.MemberAlertTextChannel" = "Are you sure you want to add the bot as a member in **%@**?";
 "Bot.AddToChat.Add.MemberAlertAdd" = "Add as Member";
 
 "PeerInfo.ButtonStop" = "Stop";
@@ -7455,7 +7462,7 @@ Sorry for the inconvenience.";
 "Notifications.UploadError.TooLong.Title" = "%@ is too long.";
 "Notifications.UploadError.TooLong.Text" = "Duration must be less than %@.";
 "Notifications.UploadSuccess.Title" = "Sound Added";
-"Notifications.UploadSuccess.Text" = "The sound **%@** was added to your Telegram tones.";
+"Notifications.UploadSuccess.Text" = "The sound **%@** was added to your Nicegram tones.";
 "Notifications.SaveSuccess.Text" = "You can now use this sound as a notification tone in your [custom notification settings]().";
 
 "Conversation.DeleteTimer.SetupTitle" = "Auto-Delete After...";
@@ -7526,3 +7533,269 @@ Sorry for the inconvenience.";
 
 "Share.UploadProgress" = "Uploading • %d%";
 "Share.UploadDone" = "Done";
+
+"StickerPack.Share" = "Share Stickers";
+"StickerPack.CopyLink" = "Copy Link";
+
+"Stickers.PremiumStickers" = "Premium Stickers";
+
+"Channel.AddUserKickedError" = "Sorry, you can't add this user because they are on the list of Removed Users and you can't unban them.";
+"Channel.AddAdminKickedError" = "Sorry, you can't add this user as an admin because they are in the Removed Users list and you can't unban them.";
+
+"Premium.Stickers.Description" = "Unlock this sticker and more by subscribing to Telegram Premium.";
+"Premium.Stickers.Proceed" = "Unlock Premium Stickers";
+
+"Premium.Reactions.Proceed" = "Unlock Premium Reactions";
+
+"Premium.AppIcons.Proceed" = "Unlock Premium Icons";
+
+"Premium.NoAds.Proceed" = "About Telegram Premium";
+
+"AccessDenied.LocationPreciseDenied" = "To share your specific location in this chat, please go to Settings > Privacy > Location Services > Nicegram and set Precise Location to On.";
+
+"Chat.MultipleTypingPair" = "%@ and %@";
+"Chat.MultipleTypingMore" = "%@ and %@ others";
+
+"Group.Username.RemoveExistingUsernamesOrExtendInfo" = "You have reserved too many public links. Try revoking a link from an older group or channel, or upgrade to **Telegram Premium** to double the limit to **%@** public links.";
+"Group.Username.RemoveExistingUsernamesNoPremiumInfo" = "You have reserved too many public links. Try revoking the link from an older group or channel. We are working to let you increase this limit in the future.";
+"Group.Username.RemoveExistingUsernamesFinalInfo" = "You have reserved too many public links. Try revoking the link from an older group or channel, or create a private one instead.";
+
+"OldChannels.TooManyCommunitiesText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
+"OldChannels.TooManyCommunitiesNoPremiumText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one. We are working to let you increase this limit in the future.";
+"OldChannels.TooManyCommunitiesFinalText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one.";
+
+"OldChannels.TooManyCommunitiesCreateText" = "You are a member of **%@** groups and channels. Please leave some before creating a new one or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
+"OldChannels.TooManyCommunitiesCreateNoPremiumText" = "You are a member of **%@** groups and channels. Please leave some before creating a new one. We are working to let you increase this limit in the future.";
+"OldChannels.TooManyCommunitiesCreateFinalText" = "You are a member of **%@** groups and channels. Please leave some before creating a new one.";
+
+"OldChannels.TooManyCommunitiesUpgradeText" = "You are a member of **%@** groups and channels. For technical reasons, you need to leave some first before changing this setting in your groups or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
+"OldChannels.TooManyCommunitiesUpgradeNoPremiumText" = "You are a member of **%@** groups and channels. For technical reasons, you need to leave some first before changing this setting in your groups. We are working to let you increase this limit in the future.";
+"OldChannels.TooManyCommunitiesUpgradeFinalText" = "You are a member of **%@** groups and channels. For technical reasons, you need to leave some first before changing this setting in your groups.";
+
+"OldChannels.LeaveCommunities_1" = "Leave %@ Community";
+"OldChannels.LeaveCommunities_any" = "Leave %@ Communities";
+
+"Premium.FileTooLarge" = "File Too Large";
+"Premium.LimitReached" = "Limit Reached";
+"Premium.IncreaseLimit" = "Increase Limit";
+
+"Premium.MaxFoldersCountText" = "You have reached the limit of **%1$@** folders. You can double the limit to **%2$@** folders by subscribing to **Telegram Premium**.";
+"Premium.MaxFoldersCountNoPremiumText" = "You have reached the limit of **%1$@** folders. We are working to let you increase this limit in the future.";
+"Premium.MaxFoldersCountFinalText" = "Sorry, you can't create more than **%1$@** folders.";
+
+"Premium.MaxChatsInFolderText" = "Sorry, you can't add more than **%1$@** chats to a folder. You can increase this limit to **%2$@** by upgrading to **Telegram Premium**.";
+"Premium.MaxChatsInFolderNoPremiumText" = "Sorry, you can't add more than **%1$@** chats to a folder. We are working to let you increase this limit in the future.";
+"Premium.MaxChatsInFolderFinalText" = "Sorry, you can't add more than **%@** chats to a folder.";
+
+"Premium.MaxFileSizeText" = "Double this limit to %@ per file by subscribing to **Telegram Premium**.";
+"Premium.MaxFileSizeNoPremiumText" = "The document can't be sent, because it is larger than **%@**. We are working to let you increase this limit in the future.";
+"Premium.MaxFileSizeFinalText" = "The document can't be sent, because it is larger than **%@**.";
+
+"Premium.MaxPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
+"Premium.MaxPinsNoPremiumText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some of the currently pinned ones.";
+"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some of the currently pinned ones.";
+
+"Premium.MaxFavedStickersTitle" = "The Limit of %@ Stickers Reached";
+"Premium.MaxFavedStickersText" = "An older sticker was replaced with this one. You can [increase the limit]() to %@ stickers.";
+"Premium.MaxFavedStickersFinalText" = "An older sticker was replaced with this one.";
+
+"Premium.MaxSavedGifsTitle" = "The Limit of %@ GIFs Reached";
+"Premium.MaxSavedGifsText" = "An older GIF was replaced with this one. You can [increase the limit]() to %@ GIFS.";
+"Premium.MaxSavedGifsFinalText" = "An older GIF was replaced with this one.";
+
+"Premium.MaxAccountsText" = "You have reached the limit of **%@** connected accounts. You can free one place by subscribing to **Telegram Premium**.";
+"Premium.MaxAccountsNoPremiumText" = "You have reached the limit of **%@** connected accounts.";
+"Premium.MaxAccountsFinalText" = "You have reached the limit of **%@** connected accounts.";
+
+"Premium.Free" = "Free";
+"Premium.Premium" = "Premium";
+
+"Premium.Title" = "Telegram Premium";
+"Premium.Description" = "Go **beyond the limits**, get **exclusive features** and support us by subscribing to **Telegram Premium**.";
+
+"Premium.PersonalTitle" = "[%@]() is a subscriber\nof Telegram Premium";
+"Premium.PersonalDescription" = "Owners of **Telegram Premium** accounts have exclusive access to multiple additional features.";
+
+"Premium.SubscribedTitle" = "You are all set!";
+"Premium.SubscribedDescription" = "Thank you for subsribing to **Telegram Premium**. Here's what is now unlocked.";
+
+"Premium.DoubledLimits" = "Doubled Limits";
+"Premium.DoubledLimitsInfo" = "Up to 1000 channels, 20 folders, 10 pins, 20 public links, 4 accounts and more.";
+
+"Premium.UploadSize" = "4 GB Upload Size";
+"Premium.UploadSizeInfo" = "Increased upload size from 2 GB to 4 GB per document, unlimited storage overall.";
+
+"Premium.FasterSpeed" = "Faster Download Speed";
+"Premium.FasterSpeedInfo" = "No more limits on the speed with which media and documents are downloaded.";
+
+"Premium.VoiceToText" = "Voice-to-Text Conversion";
+"Premium.VoiceToTextInfo" = "Ability to read the transcript of any incoming voice message.";
+
+"Premium.NoAds" = "No Ads";
+"Premium.NoAdsInfo" = "No more ads in public channels where Telegram sometimes shows ads.";
+
+"Premium.NoAdsStandaloneInfo" = "Remove ads such as this by subscribing to **Telegram Premium**.";
+
+"Premium.Reactions" = "Unique Reactions";
+"Premium.ReactionsInfo" = "Additional animated reactions on messages, available only to the Premium subscribers.";
+
+"Premium.ReactionsStandalone" = "Additional Reactions";
+"Premium.ReactionsStandaloneInfo" = "Unlock a wider range of reactions on messages by subscribing to **Telegram Premium**.";
+
+"Premium.Stickers" = "Premium Stickers";
+"Premium.StickersInfo" = "Exclusive enlarged stickers featuring additional effects, updated monthly.";
+
+"Premium.ChatManagement" = "Advanced Chat Management";
+"Premium.ChatManagementInfo" = "Tools to set default folder, auto-archive and hide new chats.";
+
+"Premium.Badge" = "Profile Badge";
+"Premium.BadgeInfo" = "A badge next to your name showing that you are helping support Telegram.";
+
+"Premium.Avatar" = "Animated Profile Pictures";
+"Premium.AvatarInfo" = "Video avatars animated in chat lists and chats to allow for additional self-expression.";
+
+"Premium.AppIcon" = "Telegram App Icon";
+"Premium.AppIconInfo" = "Choose from a selection of Telegram app icons for your homescreen.";
+
+"Premium.AppIconStandalone" = "Additional App Icons";
+"Premium.AppIconStandaloneInfo" = "Unlock a wider range of app icons by subscribing to **Telegram Premium**.";
+
+"Premium.SubscribeFor" = "Subscribe for %@ / month";
+
+"Premium.AboutTitle" = "ABOUT TELEGRAM PREMIUM";
+"Premium.AboutText" = "While the free version of Telegram already gives its users more than any other messaging application, **Telegram Premium** pushes its capabilities even further.\n\n**Telegram Premium** is a paid option, because most Premium Features require additional expenses from Telegram to third parties such as data center providers and server manufacturers. Contributions from **Telegram Premium** users allow us to cover such costs and also help Telegram stay free for everyone.";
+
+"Premium.Terms" = "By purchasing a Premium subscription, you agree to our [Terms of Service](terms) and [Privacy Policy](privacy).";
+
+"Conversation.CopyProtectionSavingDisabledSecret" = "Saving is restricted";
+"Conversation.CopyProtectionForwardingDisabledSecret" = "Forwards are restricted";
+
+"Settings.Terms_URL" = "https://telegram.org/tos";
+"Settings.PrivacyPolicy_URL" = "https://telegram.org/privacy";
+
+"Stickers.PremiumPackInfoText" = "This pack contains premium stickers like this one.";
+"Stickers.PremiumPackView" = "View";
+
+"Conversation.PremiumUploadFileTooLarge" = "File could not be sent, because it is larger than 4 GB.\n\nYou can send as many files as you like, but each must be smaller than 4 GB.";
+
+"SponsoredMessageMenu.Hide" = "Hide";
+
+"Conversation.SaveGif" = "Save GIF";
+
+"Premium.Limits.Title" = "Doubled Limits";
+"Premium.Limits.GroupsAndChannels" = "Groups and Channels";
+"Premium.Limits.PinnedChats" = "Pinned Chats";
+"Premium.Limits.PublicLinks" = "Public Links";
+"Premium.Limits.SavedGifs" = "Saved GIFs";
+"Premium.Limits.FavedStickers" = "Favorite Stickers";
+"Premium.Limits.Bio" = "Bio";
+"Premium.Limits.Captions" = "Captions";
+"Premium.Limits.Folders" = "Folders";
+"Premium.Limits.ChatsPerFolder" = "Chats per Folder";
+"Premium.Limits.Accounts" = "Connected Accounts";
+
+"Premium.Limits.GroupsAndChannelsInfo" = "Join up to 1000 channels and large groups";
+"Premium.Limits.PinnedChatsInfo" = "Pin up to 10 chats in your main chat list";
+"Premium.Limits.PublicLinksInfo" = "Reserve up to 20 [t.me/name]() links";
+"Premium.Limits.SavedGifsInfo" = "Save up to 400 GIFs in your Favorite GIFs";
+"Premium.Limits.FavedStickersInfo" = "Save up to 10 stickers in your Favorite stickers";
+"Premium.Limits.BioInfo" = "Add more symbols and use links in your bio";
+"Premium.Limits.CaptionsInfo" = "Use longer descriptions for your photos and videos";
+"Premium.Limits.FoldersInfo" = "Organize your chats into 20 folders";
+"Premium.Limits.ChatsPerFolderInfo" = "Add up to 200 chats into each of your folders";
+"Premium.Limits.AccountsInfo" = "Connect 4 accounts with different mobile numbers";
+
+"WebApp.Settings" = "Settings";
+
+"Bot.AccepRecurrentInfo" = "I accept [Terms of Service]() of **%1$@**";
+
+"Chat.AudioTranscriptionRateAction" = "Rate Transcription";
+"Chat.AudioTranscriptionFeedbackTip" = "Thank you for your feedback.";
+"Message.AudioTranscription.ErrorEmpty" = "No speech detected";
+"Message.AudioTranscription.ErrorTooLong" = "This voice message is too long to transcribe";
+
+"WebApp.SelectChat" = "Select Chat";
+
+"Premium.Purchase.ErrorUnknown" = "An error occurred. Please try again.";
+"Premium.Purchase.ErrorNetwork" = "Please check your internet connection and try again.";
+"Premium.Purchase.ErrorNotAllowed" = "The device is not not allowed to make the payment.";
+"Premium.Purchase.ErrorCantMakePayments" = "In-app purchases are not allowed on this device.";
+
+"Premium.Restore.Success" = "Done";
+"Premium.Restore.ErrorUnknown" = "An error occurred. Please try again.";
+
+"Settings.Premium" = "Telegram Premium";
+
+"Settings.AddAnotherAccount.PremiumHelp" = "You can add up to four accounts with different phone numbers.";
+
+"Stickers.TrendingPremiumStickers" = "Trending Premium Stickers";
+
+"Appearance.AppIconPremium" = "Premium";
+"Appearance.AppIconBlack" = "Black";
+"Appearance.AppIconTurbo" = "Turbo";
+
+"PrivacySettings.DeleteAccountNow" = "Delete Account Now";
+
+"DeleteAccount.AlternativeOptionsTitle" = "Alternative Options";
+
+"DeleteAccount.Options.ChangePhoneNumberTitle" = "Change Phone Number";
+"DeleteAccount.Options.ChangePhoneNumberText" = "Move your contacts, chats and media to a new number.";
+
+"DeleteAccount.Options.AddAccountTitle" = "Add Another Account";
+"DeleteAccount.Options.AddAccountText" = "You can use up to 3 accounts in one app at the same time.";
+"DeleteAccount.Options.AddAccountPremiumText" = "You can use up to 4 accounts in one app at the same time.";
+
+"DeleteAccount.Options.ChangePrivacyTitle" = "Change Your Privacy Settings";
+"DeleteAccount.Options.ChangePrivacyText" = "Choose who exactly can see which of your info.";
+
+"DeleteAccount.Options.SetTwoStepAuthTitle" = "Enable Two-Step Verification";
+"DeleteAccount.Options.SetTwoStepAuthText" = "Set a password that will be required each time you log in.";
+
+"DeleteAccount.Options.SetPasscodeTitle" = "Set a Passcode";
+"DeleteAccount.Options.SetPasscodeText" = "Lock the app with a passcode so that others can't open it.";
+
+"DeleteAccount.Options.ClearCacheTitle" = "Clear Cache";
+"DeleteAccount.Options.ClearCacheText" = "Free up disk space on your device; your media will stay in the cloud.";
+
+"DeleteAccount.Options.ClearSyncedContactsTitle" = "Clear Synced Contacts";
+"DeleteAccount.Options.ClearSyncedContactsText" = "Remove any unnecessary contacts you may have synced.";
+
+"DeleteAccount.Options.DeleteChatsTitle" = "Quickly Delete Your Chats";
+"DeleteAccount.Options.DeleteChatsText" = "Learn how to remove any info you don’t need in a few taps.";
+
+"DeleteAccount.Options.ContactSupportTitle" = "Contact Support";
+"DeleteAccount.Options.ContactSupportText" = "Tell us about any issues; deleting account doesn't usually help.";
+
+"DeleteAccount.DeleteMyAccountTitle" = "Delete My Account";
+"DeleteAccount.DeleteMyAccount" = "Delete My Account";
+
+"DeleteAccount.SavedMessages" = "Saved";
+
+"DeleteAccount.ComeBackLater" = "Come Back Later";
+"DeleteAccount.Continue" = "Continue";
+
+"DeleteAccount.CloudStorageTitle" = "Your Free Cloud Storage";
+"DeleteAccount.CloudStorageText" = "You will lose access to all your Saved Messages as well as all messages, media and files from your chats.";
+
+"DeleteAccount.GroupsAndChannelsTitle" = "Your Groups and Channels";
+"DeleteAccount.GroupsAndChannelsText" = "The groups and channels you created will either get new admins or become orphaned.";
+"DeleteAccount.GroupsAndChannelsInfo" = "You can transfer group and channel ownership to other users via Chat Info > Edit > Admins.";
+
+"DeleteAccount.MessageHistoryTitle" = "Your Message History";
+"DeleteAccount.MessageHistoryText" = "Your chat partners will keep their message history with you, including the messages you shared in secret chats.\n\nYou can remove any messages for both sides at any time, but this will not be possible if you delete your account.";
+
+"DeleteAccount.DeleteMessagesURL" = "https://telegram.org/faq#q-can-i-delete-my-messages";
+
+"DeleteAccount.EnterPhoneNumber" = "Enter Your Phone Number";
+"DeleteAccount.InvalidPhoneNumberError" = "Invalid phone number. Please try again.";
+
+"DeleteAccount.EnterPassword" = "Enter Your Password";
+"DeleteAccount.InvalidPasswordError" = "Invalid password. Please try again.";
+
+"DeleteAccount.ConfirmationAlertTitle" = "Proceed to Delete Your Account?";
+"DeleteAccount.ConfirmationAlertText" = "Deleting your account will permanently delete your data!\n\nIt is imposible to reverse this action!";
+"DeleteAccount.ConfirmationAlertDelete" = "Delete My Account";
+
+"DeleteAccount.Success" = "The account has been successfully deleted.";
+
+"SettingsSearch.DeleteAccount.DeleteMyAccount" = " ";

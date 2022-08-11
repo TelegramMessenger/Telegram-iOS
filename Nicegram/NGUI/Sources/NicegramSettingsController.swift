@@ -27,6 +27,7 @@ import NGEnv
 import NGWebUtils
 import NGAppCache
 import NGLoadingIndicator
+import NGRemoteConfig
 
 fileprivate let LOGTAG = extractNameFromPath(#file)
 
@@ -51,7 +52,7 @@ private final class NicegramSettingsControllerArguments {
 // MARK: Sections
 
 private enum NicegramSettingsControllerSection: Int32 {
-    case Notifications
+    case Unblock
     case Tabs
     case Folders
     case RoundVideos
@@ -64,16 +65,13 @@ private enum EasyToggleType {
     case sendWithEnter
     case showProfileId
     case showRegDate
+    case hideReactions
 }
 
 
 // MARK: ItemListNodeEntry
 
 private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
-    case NotificationsHeader(String)
-    case hideAccountInNotification(String, Bool)
-    case hideAccountInNotificationNotice(String)
-
     case TabsHeader(String)
     case showContactsTab(String, Bool)
     case showCallsTab(String, Bool)
@@ -85,6 +83,7 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
 
     case RoundVideosHeader(String)
     case startWithRearCam(String, Bool)
+    case shouldDownloadVideo(String, Bool)
 
     case OtherHeader(String)
     case hidePhoneInSettings(String, Bool)
@@ -92,23 +91,26 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
     
     case easyToggle(Int32, EasyToggleType, String, Bool)
     case restorePremium(String, String)
+    
+    case unblockHeader(String)
+    case unblock(String, URL)
 
     // MARK: Section
 
     var section: ItemListSectionId {
         switch self {
-        case .NotificationsHeader, .hideAccountInNotification, .hideAccountInNotificationNotice:
-            return NicegramSettingsControllerSection.Notifications.rawValue
         case .TabsHeader, .showContactsTab, .showCallsTab, .showTabNames:
             return NicegramSettingsControllerSection.Tabs.rawValue
         case .FoldersHeader, .foldersAtBottom, .foldersAtBottomNotice:
             return NicegramSettingsControllerSection.Folders.rawValue
-        case .RoundVideosHeader, .startWithRearCam:
+        case .RoundVideosHeader, .startWithRearCam, .shouldDownloadVideo:
             return NicegramSettingsControllerSection.RoundVideos.rawValue
         case .OtherHeader, .hidePhoneInSettings, .hidePhoneInSettingsNotice, .easyToggle:
             return NicegramSettingsControllerSection.Other.rawValue
         case .restorePremium:
             return NicegramSettingsControllerSection.Premium.rawValue
+        case .unblockHeader, .unblock:
+            return NicegramSettingsControllerSection.Unblock.rawValue
         }
     }
 
@@ -116,15 +118,12 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
 
     var stableId: Int32 {
         switch self {
-        case .NotificationsHeader:
-            return 1000
-
-        case .hideAccountInNotification:
-            return 1100
-
-        case .hideAccountInNotificationNotice:
-            return 1200
-
+        case .unblockHeader:
+            return 800
+            
+        case .unblock:
+            return 900
+            
         case .TabsHeader:
             return 1300
 
@@ -151,7 +150,10 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
 
         case .startWithRearCam:
             return 2100
-
+            
+        case .shouldDownloadVideo:
+            return 2101
+            
         case .OtherHeader:
             return 2200
 
@@ -173,27 +175,6 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
 
     static func == (lhs: NicegramSettingsControllerEntry, rhs: NicegramSettingsControllerEntry) -> Bool {
         switch lhs {
-        case let .NotificationsHeader(lhsText):
-            if case let .NotificationsHeader(rhsText) = rhs, lhsText == rhsText {
-                return true
-            } else {
-                return false
-            }
-
-        case let .hideAccountInNotification(lhsText, lhsVar0Bool):
-            if case let .hideAccountInNotification(rhsText, rhsVar0Bool) = rhs, lhsText == rhsText, lhsVar0Bool == rhsVar0Bool {
-                return true
-            } else {
-                return false
-            }
-
-        case let .hideAccountInNotificationNotice(lhsText):
-            if case let .hideAccountInNotificationNotice(rhsText) = rhs, lhsText == rhsText {
-                return true
-            } else {
-                return false
-            }
-
         case let .TabsHeader(lhsText):
             if case let .TabsHeader(rhsText) = rhs, lhsText == rhsText {
                 return true
@@ -256,7 +237,14 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-
+        
+        case let .shouldDownloadVideo(lhsText, lhsVar0Bool):
+            if case let .shouldDownloadVideo(rhsText, rhsVar0Bool) = rhs, lhsText == rhsText, lhsVar0Bool == rhsVar0Bool {
+                return true
+            } else {
+                return false
+            }
+            
         case let .OtherHeader(lhsText):
             if case let .OtherHeader(rhsText) = rhs, lhsText == rhsText {
                 return true
@@ -289,6 +277,18 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             } else {
                 return false
             }
+        case let .unblockHeader(lhsText):
+            if case let .unblockHeader(rhsText) = rhs, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .unblock(lhsText, lhsUrl):
+            if case let .unblock(rhsText, rhsUrl) = rhs, lhsText == rhsText, lhsUrl == rhsUrl {
+                return true
+            } else {
+                return false
+            }
         }
     }
 
@@ -303,18 +303,6 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! NicegramSettingsControllerArguments
         switch self {
-        case let .NotificationsHeader(text):
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: section)
-            
-        case let .hideAccountInNotification(text, value):
-            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: section, style: .blocks, updated: { value in
-                ngLog("[hideAccountInNotification] invoked with \(value)", LOGTAG)
-                VarNGSharedSettings.hideNotifyAccountName = value
-            })
-            
-        case let .hideAccountInNotificationNotice(text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: section)
-            
         case let .TabsHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: section)
             
@@ -374,7 +362,11 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
                 ngLog("[startWithRearCam] invoked with \(value)", LOGTAG)
                 NGSettings.useRearCamTelescopy = value
             })
-
+            
+        case let .shouldDownloadVideo(text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: section, style: .blocks) { value in
+                NGSettings.shouldDownloadVideo = value
+            }
         case let .OtherHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: section)
             
@@ -397,6 +389,8 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
                     NGSettings.showProfileId = value
                 case .showRegDate:
                     NGSettings.showRegDate = value
+                case .hideReactions:
+                    VarSystemNGSettings.hideReactions = value
                 }
             })
 
@@ -466,6 +460,12 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
                 }
                 task.resume()
             }
+        case let .unblockHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: section)
+        case let .unblock(text, url):
+            return ItemListActionItem(presentationData: presentationData, title: text, kind: .neutral, alignment: .natural, sectionId: section, style: .blocks) {
+                UIApplication.shared.openURL(url)
+            }
         }
         
     }
@@ -477,16 +477,12 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
     var entries: [NicegramSettingsControllerEntry] = []
 
     let locale = presentationData.strings.baseLanguageCode
-
-    entries.append(.NotificationsHeader(
-        presentationData.strings.Notifications_Title.uppercased()))
-    entries.append(.hideAccountInNotification(
-        l("NicegramSettings.Notifications.hideAccountInNotification", locale),
-        VarNGSharedSettings.hideNotifyAccountName
-    ))
-    entries.append(.hideAccountInNotificationNotice(
-        l("NicegramSettings.Notifications.hideAccountInNotificationNotice", locale)
-    ))
+    
+    if !hideUnblock,
+       let url = URL(string: "https://my.nicegram.app") {
+        entries.append(.unblockHeader(l("NicegramSettings.Unblock.Header", locale).uppercased()))
+        entries.append(.unblock(l("NicegramSettings.Unblock.Button", locale), url))
+    }
 
     entries.append(.TabsHeader(l("NicegramSettings.Tabs",
                                  locale)))
@@ -519,6 +515,10 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
         l("NicegramSettings.RoundVideos.startWithRearCam", locale),
         NGSettings.useRearCamTelescopy
     ))
+    entries.append(.shouldDownloadVideo(
+        l("NicegramSettings.RoundVideos.DownloadVideos", locale), 
+        NGSettings.shouldDownloadVideo
+    ))
 
     entries.append(.OtherHeader(
         presentationData.strings.ChatSettings_Other.uppercased()))
@@ -541,7 +541,9 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
     
     entries.append(.easyToggle(toggleIndex, .showRegDate, l("NicegramSettings.Other.showRegDate", locale), NGSettings.showRegDate))
     toggleIndex += 1
-
+    
+    entries.append(.easyToggle(toggleIndex, .hideReactions, l("NicegramSettings.Other.hideReactions", locale), VarSystemNGSettings.hideReactions))
+    toggleIndex += 1
 
     return entries
 }

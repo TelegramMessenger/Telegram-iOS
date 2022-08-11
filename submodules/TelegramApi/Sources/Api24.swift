@@ -1,4 +1,40 @@
 public extension Api.messages {
+    enum CheckedHistoryImportPeer: TypeConstructorDescription {
+        case checkedHistoryImportPeer(confirmText: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .checkedHistoryImportPeer(let confirmText):
+                    if boxed {
+                        buffer.appendInt32(-1571952873)
+                    }
+                    serializeString(confirmText, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .checkedHistoryImportPeer(let confirmText):
+                return ("checkedHistoryImportPeer", [("confirmText", String(describing: confirmText))])
+    }
+    }
+    
+        public static func parse_checkedHistoryImportPeer(_ reader: BufferReader) -> CheckedHistoryImportPeer? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.messages.CheckedHistoryImportPeer.checkedHistoryImportPeer(confirmText: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum DhConfig: TypeConstructorDescription {
         case dhConfig(g: Int32, p: Buffer, version: Int32, random: Buffer)
         case dhConfigNotModified(random: Buffer)
@@ -512,15 +548,16 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum FeaturedStickers: TypeConstructorDescription {
-        case featuredStickers(hash: Int64, count: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
+        case featuredStickers(flags: Int32, hash: Int64, count: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
         case featuredStickersNotModified(count: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .featuredStickers(let hash, let count, let sets, let unread):
+                case .featuredStickers(let flags, let hash, let count, let sets, let unread):
                     if boxed {
-                        buffer.appendInt32(-2067782896)
+                        buffer.appendInt32(-1103615738)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(hash, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -545,32 +582,35 @@ public extension Api.messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .featuredStickers(let hash, let count, let sets, let unread):
-                return ("featuredStickers", [("hash", String(describing: hash)), ("count", String(describing: count)), ("sets", String(describing: sets)), ("unread", String(describing: unread))])
+                case .featuredStickers(let flags, let hash, let count, let sets, let unread):
+                return ("featuredStickers", [("flags", String(describing: flags)), ("hash", String(describing: hash)), ("count", String(describing: count)), ("sets", String(describing: sets)), ("unread", String(describing: unread))])
                 case .featuredStickersNotModified(let count):
                 return ("featuredStickersNotModified", [("count", String(describing: count))])
     }
     }
     
         public static func parse_featuredStickers(_ reader: BufferReader) -> FeaturedStickers? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: [Api.StickerSetCovered]?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: [Api.StickerSetCovered]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
             }
-            var _4: [Int64]?
+            var _5: [Int64]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+                _5 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.messages.FeaturedStickers.featuredStickers(hash: _1!, count: _2!, sets: _3!, unread: _4!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.FeaturedStickers.featuredStickers(flags: _1!, hash: _2!, count: _3!, sets: _4!, unread: _5!)
             }
             else {
                 return nil

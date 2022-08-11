@@ -1,6 +1,10 @@
 import Foundation
 import UIKit
 
+// Incuding at least one Objective-C class in a swift file ensures that it doesn't get stripped by the linker
+private final class LinkHelperClass: NSObject {
+}
+
 public extension CALayer {
     func addShakeAnimation(amplitude: CGFloat = 3.0, duration: Double = 0.3, count: Int = 4, decay: Bool = false) {
         let k = Float(UIView.animationDurationFactor())

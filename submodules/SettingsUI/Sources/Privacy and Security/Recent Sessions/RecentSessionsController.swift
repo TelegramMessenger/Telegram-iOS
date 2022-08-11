@@ -11,7 +11,6 @@ import PresentationDataUtils
 import AccountContext
 import AuthTransferUI
 import ItemListPeerActionItem
-import NGData
 import DeviceAccess
 import QrCodeUI
 
@@ -800,9 +799,6 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     
     let enableQRLogin = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> map { view -> Bool in
-        if VarGNGSettings.qr_login_camera {
-            return true
-        }
         guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
             return false
         }

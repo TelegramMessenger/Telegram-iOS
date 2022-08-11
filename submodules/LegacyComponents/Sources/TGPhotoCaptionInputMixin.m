@@ -49,7 +49,10 @@
     
     UIView *parentView = [self _parentView];
     
-    id<TGCaptionPanelView> inputPanel = _stickersContext.captionPanelView();
+    id<TGCaptionPanelView> inputPanel = nil;
+    if (_stickersContext) {
+        inputPanel = _stickersContext.captionPanelView();
+    }
     _inputPanel = inputPanel;
     
     __weak TGPhotoCaptionInputMixin *weakSelf = self;

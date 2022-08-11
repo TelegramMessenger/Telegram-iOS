@@ -936,6 +936,7 @@ public final class MessageHistoryView {
     public let entries: [MessageHistoryEntry]
     public let maxReadIndex: MessageIndex?
     public let fixedReadStates: MessageHistoryViewReadState?
+    public let transientReadStates: MessageHistoryViewReadState?
     public let topTaggedMessages: [Message]
     public let additionalData: [AdditionalMessageHistoryViewDataEntry]
     public let isLoading: Bool
@@ -952,6 +953,7 @@ public final class MessageHistoryView {
         self.entries = entries
         self.maxReadIndex = nil
         self.fixedReadStates = nil
+        self.transientReadStates = nil
         self.topTaggedMessages = []
         self.additionalData = []
         self.isLoading = isLoading
@@ -1053,6 +1055,7 @@ public final class MessageHistoryView {
         self.additionalData = mutableView.additionalDatas
         
         self.fixedReadStates = mutableView.combinedReadStates
+        self.transientReadStates = mutableView.transientReadStates
         
         switch mutableView.peerIds {
         case .single, .associated:
@@ -1118,7 +1121,7 @@ public final class MessageHistoryView {
                 self.maxReadIndex = nil
             }
         case let .external(input):
-            if let maxReadMesageId = input.maxReadIncomingMessageId {
+            if let maxReadMessageId = input.maxReadIncomingMessageId {
                 var maxIndex: MessageIndex?
                 
                 let hasUnread = true
@@ -1128,15 +1131,15 @@ public final class MessageHistoryView {
                         peerIds.insert(entry.index.id.peerId)
                     }
                     for peerId in peerIds {
-                        if peerId != maxReadMesageId.peerId {
+                        if peerId != maxReadMessageId.peerId {
                             continue
                         }
-                        let namespace = maxReadMesageId.namespace
+                        let namespace = maxReadMessageId.namespace
                         
                         var maxNamespaceIndex: MessageIndex?
                         var index = entries.count - 1
                         for entry in entries.reversed() {
-                            if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace && entry.index.id <= maxReadMesageId {
+                            if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace && entry.index.id <= maxReadMessageId {
                                 maxNamespaceIndex = entry.index
                                 break
                             }

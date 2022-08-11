@@ -171,7 +171,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                                             switch size {
                                                                 case let .videoSize(_, type, w, h, size, videoStartTs):
                                                                     let resource: TelegramMediaResource
-                                                                    resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, size: Int(size), fileReference: fileReference.makeData())
+                                                                    resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, size: Int64(size), fileReference: fileReference.makeData())
                                                                     
                                                                     videoRepresentations.append(TelegramMediaImage.VideoRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, startTimestamp: videoStartTs))
                                                             }
@@ -320,6 +320,17 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                     updatePeers(transaction: transaction, peers: [groupOrChannel], update: { _, updated in
                                         return updated
                                     })
+                                    
+                                    transaction.updatePeerCachedData(peerIds: Set([peer.id]), update: { _, current in
+                                        if let current = current as? CachedChannelData {
+                                            return current.withUpdatedPhoto(nil)
+                                        } else if let current = current as? CachedGroupData {
+                                            return current.withUpdatedPhoto(nil)
+                                        } else {
+                                            return current
+                                        }
+                                    })
+                                    
                                     return .complete(groupOrChannel.profileImageRepresentations)
                                 }
                                 |> mapError { _ -> UploadPeerPhotoError in }

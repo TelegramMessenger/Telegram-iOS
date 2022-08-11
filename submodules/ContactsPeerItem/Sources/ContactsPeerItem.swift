@@ -319,6 +319,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let topSeparatorNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     private let extractedBackgroundImageNode: ASImageNode
 
@@ -332,7 +333,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
-    private var verificationIconNode: ASImageNode?
+    private var credibilityIconNode: ASImageNode?
     private let statusNode: TextNode
     private var badgeBackgroundNode: ASImageNode?
     private var badgeTextNode: TextNode?
@@ -378,6 +379,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.extractedBackgroundImageNode.displaysAsynchronously = false
         self.extractedBackgroundImageNode.alpha = 0.0
         
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
+        
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         
@@ -408,6 +412,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.offsetContainerNode.addSubnode(self.avatarNode)
         self.offsetContainerNode.addSubnode(self.titleNode)
         self.offsetContainerNode.addSubnode(self.statusNode)
+        
+        self.addSubnode(self.maskNode)
         
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
@@ -556,11 +562,21 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            var verificationIconImage: UIImage?
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
+            
+            var currentCredibilityIconImage: UIImage?
             switch item.peer {
             case let .peer(peer, _):
-                if let peer = peer, peer.isVerified {
-                    verificationIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                if let peer = peer, peer.id != item.context.account.peerId {
+                    if peer.isScam {
+                        currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                    } else if peer.isFake {
+                        currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                    } else if peer.isVerified {
+                        currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                    } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                        currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                    }
                 }
             case .deviceContact:
                 break
@@ -720,8 +736,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             }
             
             var additionalTitleInset: CGFloat = 0.0
-            if let verificationIconImage = verificationIconImage {
-                additionalTitleInset += 3.0 + verificationIconImage.size.width
+            if let currentCredibilityIconImage = currentCredibilityIconImage {
+                additionalTitleInset += 3.0 + currentCredibilityIconImage.size.width
             }
             if let actionButtons = actionButtons {
                 additionalTitleInset += 3.0
@@ -867,6 +883,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                             }
                             
+                            let hasCorners = itemListHasRoundedBlockLayout(params)
+                            var hasTopCorners = false
+                            var hasBottomCorners = false
                             switch item.style {
                             case .plain:
                                 strongSelf.topSeparatorNode.isHidden = true
@@ -875,14 +894,24 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 case .sameSection(false):
                                     strongSelf.topSeparatorNode.isHidden = true
                                 default:
-                                    strongSelf.topSeparatorNode.isHidden = false
+                                    hasTopCorners = true
+                                    strongSelf.topSeparatorNode.isHidden = hasCorners
                                 }
+                            }
+                            
+                            switch neighbors.bottom {
+                            case .sameSection(false):
+                                strongSelf.separatorNode.isHidden = false
+                            default:
+                                hasBottomCorners = true
+                                strongSelf.separatorNode.isHidden = hasCorners
                             }
                             
                             transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter)))
                             
                             let _ = titleApply()
-                            transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame.offsetBy(dx: revealOffset, dy: 0.0))
+                            let titleFrame = titleFrame.offsetBy(dx: revealOffset, dy: 0.0)
+                            transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
                             
                             strongSelf.titleNode.alpha = item.enabled ? 1.0 : 0.4
                             strongSelf.statusNode.alpha = item.enabled ? 1.0 : 1.0
@@ -894,23 +923,23 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.statusNode.frame = statusFrame
                             transition.animatePositionAdditive(node: strongSelf.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
                             
-                            if let verificationIconImage = verificationIconImage {
-                                if strongSelf.verificationIconNode == nil {
-                                    let verificationIconNode = ASImageNode()
-                                    verificationIconNode.isLayerBacked = true
-                                    verificationIconNode.displayWithoutProcessing = true
-                                    verificationIconNode.displaysAsynchronously = false
-                                    strongSelf.verificationIconNode = verificationIconNode
-                                    strongSelf.offsetContainerNode.addSubnode(verificationIconNode)
+                            if let currentCredibilityIconImage = currentCredibilityIconImage {
+                                let iconNode: ASImageNode
+                                if let current = strongSelf.credibilityIconNode {
+                                    iconNode = current
+                                } else {
+                                    iconNode = ASImageNode()
+                                    iconNode.isLayerBacked = true
+                                    iconNode.displaysAsynchronously = false
+                                    iconNode.displayWithoutProcessing = true
+                                    strongSelf.offsetContainerNode.addSubnode(iconNode)
+                                    strongSelf.credibilityIconNode = iconNode
                                 }
-                                if let verificationIconNode = strongSelf.verificationIconNode {
-                                    verificationIconNode.image = verificationIconImage
-                                    
-                                    transition.updateFrame(node: verificationIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + titleFrame.maxX + 3.0, y: titleFrame.minY + 3.0 + UIScreenPixel), size: verificationIconImage.size))
-                                }
-                            } else if let verificationIconNode = strongSelf.verificationIconNode {
-                                strongSelf.verificationIconNode = nil
-                                verificationIconNode.removeFromSupernode()
+                                iconNode.image = currentCredibilityIconImage
+                                transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - currentCredibilityIconImage.size.height / 2.0) - UIScreenPixel), size: currentCredibilityIconImage.size))
+                            } else if let credibilityIconNode = strongSelf.credibilityIconNode {
+                                strongSelf.credibilityIconNode = nil
+                                credibilityIconNode.removeFromSupernode()
                             }
                             
                             if let actionButtons = actionButtons {
@@ -1043,8 +1072,11 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             
                             let separatorHeight = UIScreenPixel
                             
+                            strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                            
                             let topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
+                            strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                             strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
                             strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(nodeLayout.insets.top, separatorHeight)), size: CGSize(width: nodeLayout.contentSize.width, height: separatorHeight))
                             strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - leftInset), height: separatorHeight))
@@ -1107,10 +1139,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             self.statusNode.frame = statusFrame
             transition.animatePositionAdditive(node: self.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
             
-            if let verificationIconNode = self.verificationIconNode {
-                var iconFrame = verificationIconNode.frame
-                iconFrame.origin.x = titleFrame.maxX + 3.0
-                transition.updateFrame(node: verificationIconNode, frame: iconFrame)
+            if let credibilityIconNode = self.credibilityIconNode {
+                var iconFrame = credibilityIconNode.frame
+                iconFrame.origin.x = titleFrame.maxX + 4.0
+                transition.updateFrame(node: credibilityIconNode, frame: iconFrame)
             }
             
             if let badgeBackgroundNode = self.badgeBackgroundNode, let badgeTextNode = self.badgeTextNode {

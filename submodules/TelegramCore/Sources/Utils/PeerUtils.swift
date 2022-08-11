@@ -15,6 +15,7 @@ public extension Peer {
         }
     }
     
+    // MARK: Nicegram (extractReason)
     func restrictionText(platform: String, contentSettings: ContentSettings, extractReason: Bool = false) -> String? {
         var restrictionInfo: PeerAccessRestrictionInfo?
         switch self {
@@ -30,9 +31,11 @@ public extension Peer {
             for rule in restrictionInfo.rules {
                 if rule.platform == "all" || rule.platform == platform {
                     if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
+                        // MARK: Nicegram
                         if extractReason {
                             return rule.reason
                         }
+                        //
                         return rule.text
                     }
                 }
@@ -157,7 +160,21 @@ public extension Peer {
         }
     }
     
+    var isPremium: Bool {
+        switch self {
+        case let user as TelegramUser:
+            return user.flags.contains(.isPremium)
+        default:
+            return false
+        }
+    }
+    
     var isCopyProtectionEnabled: Bool {
+        //  MARK: - Nicegram (allow saving+forwarding content when copy protected)
+        if canCopyProtectedContent() {
+            return false
+        }
+        
         switch self {
         case let group as TelegramGroup:
             return group.flags.contains(.copyProtectionEnabled)

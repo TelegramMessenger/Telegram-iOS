@@ -30,8 +30,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "핀 표시";
 "ChatFilter.Admin" = "관리자";
-"NiceFeatures.Notifications.HideNotifyAccount" = "알림에서 계정 숨기기";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "«사용자→계정»대신 «사용자»만 표시됩니다. 멀티계정에만 해당됩니다.";
 "NiceFeatures.Notifications.Fix" = "원치 않는 알림 비활성화";
 "NiceFeatures.Notifications.FixNotice" = "음소거 된 채팅에서 알림을 받는 경우 유용합니다.\n알림, 계정 라벨 및 미디어 미리보기에서는 답장을 보낼 수 없습니다.";
 "NiceFeatures.Filters.Header" = "필터 (탭)";
@@ -105,6 +103,10 @@
 "Messages.Translate" = "번역";
 "Messages.UndoTranslate" = "번역 취소";
 "Messages.TranslateError" = "죄송합니다. 번역 할 수 없습니다.";
+"Messages.SpeechToText" = "음성-텍스트 변환";
+"Messages.UndoSpeechToText" = "음성-텍스트 변환 취소";
+"Messages.SpeechToText.LowAccuracyError" = "음성 인식 실패 \n\n이것은 오디오 녹음의 질이 좋지 않거나 앱 프로그램과 오디오 녹음의 언어 차이로 인해 발생할 수 있습니다.";
+"Messages.SelectAllFromUser" = "이 사용자에게서 온 모든 메시지 선택 \n\n";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "등록 날짜 확인";
@@ -144,6 +146,18 @@
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "전화 번호는 UI에서만 숨겨집니다. 다른 사람에게 숨기려면 개인 정보 설정을 사용하세요.";
 "NicegramSettings.Other.showProfileId" = "프로필 ID 표시";
 "NicegramSettings.Other.showRegDate" = "가입 날짜 표시";
+"NicegramSettings.Unblock.Header" = "차단 해제";
+"NicegramSettings.Unblock.Button" = "차단해제 가이드";
+"NicegramSettings.Other.hideReactions" = "반응 숨기기";
+"NicegramSettings.RoundVideos.DownloadVideos" = "갤러리로 동영상 다운로드";
 "Premium.OnetapTranslate.LowPower" = "저전력 인식";
 "Premium.OnetapTranslate.LowPower.Notice" = "앱은 장치에서 각 메시지의 언어를 감지합니다. 배터리 수명에 영향을 미칠 수있는 고성능 작업입니다.";
 "Premium.rememberFolderOnExit" = "종료시 현재 폴더 기억하기";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "더 나이 많은";
+"NiceFeatures.RegDate.Approximately" = "대략";
+"NiceFeatures.RegDate.NewerThan" = "더 새로운";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "죄송하지만 Nicegram 앱에 로그인된 상태로는 **Telegram 프리미엄 기능**을 구매하실 수 없습니다. 공식 Telegram 앱으로 이동해 **Telegram 프리미엄**을 구독하시기 바랍니다. Nicegram으로 돌아오시면 모든 **프리미엄 기능**을 이용하실 수 있게 됩니다.";

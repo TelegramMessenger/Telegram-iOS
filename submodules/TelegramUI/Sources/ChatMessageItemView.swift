@@ -684,7 +684,9 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     
     var awaitingAppliedReaction: (String?, () -> Void)?
     
+    // MARK: Nicegram
     public var wantTrButton: [(Bool, [String])] = [(false, [])]
+    //
     
     public required convenience init() {
         self.init(layerBacked: false)
@@ -725,12 +727,6 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    override public func layoutAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode, leftInset: CGFloat, rightInset: CGFloat) {
-        if let avatarNode = accessoryItemNode as? ChatMessageAvatarAccessoryItemNode {
-            avatarNode.frame = CGRect(origin: CGPoint(x: leftInset + 3.0, y: self.apparentFrame.height - 38.0 - self.insets.top - 2.0 - UIScreenPixel), size: CGSize(width: 38.0, height: 38.0))
-        }
-    }
-
     func cancelInsertionAnimations() {
     }
     
@@ -887,19 +883,26 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     private var attachedAvatarNodeOffset: CGFloat = 0.0
 
     override public func attachedHeaderNodesUpdated() {
-        self.updateAttachedAvatarNodeOffset(offset: self.attachedAvatarNodeOffset, transition: .immediate)
-        for headerNode in self.attachedHeaderNodes {
-            if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
-                headerNode.updateSelectionState(animated: false)
+        if !self.attachedAvatarNodeOffset.isZero {
+            self.updateAttachedAvatarNodeOffset(offset: self.attachedAvatarNodeOffset, transition: .immediate)
+        } else {
+            for headerNode in self.attachedHeaderNodes {
+                if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
+                    headerNode.updateSelectionState(animated: false)
+                }
             }
         }
     }
 
     func updateAttachedAvatarNodeOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.attachedAvatarNodeOffset = offset
         for headerNode in self.attachedHeaderNodes {
             if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
                 transition.updateSublayerTransformOffset(layer: headerNode.layer, offset: CGPoint(x: offset, y: 0.0))
             }
         }
+    }
+    
+    func unreadMessageRangeUpdated() {
     }
 }

@@ -147,9 +147,6 @@ public struct ChatListFilterIncludePeers: Equatable, Hashable {
             return false
         }
         
-        if self.peers.count + self.pinnedPeers.count >= 100 {
-            return false
-        }
         self.peers.insert(peerId, at: 0)
         return true
     }
@@ -231,66 +228,78 @@ public struct ChatListFilterData: Equatable, Hashable {
     }
 }
 
-public struct ChatListFilter: Codable, Equatable {
-    public var id: Int32
-    public var title: String
-    public var emoticon: String?
-    public var data: ChatListFilterData
+public enum ChatListFilter: Codable, Equatable {
+    case allChats
+    case filter(id: Int32, title: String, emoticon: String?, data: ChatListFilterData)
     
-    public init(
-        id: Int32,
-        title: String,
-        emoticon: String?,
-        data: ChatListFilterData
-    ) {
-        self.id = id
-        self.title = title
-        self.emoticon = emoticon
-        self.data = data
+    public var id: Int32 {
+        switch self {
+            case .allChats:
+                return 0
+            case let .filter(id, _, _, _):
+                return id
+        }
     }
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
-
-        self.id = try container.decode(Int32.self, forKey: "id")
-        self.title = try container.decode(String.self, forKey: "title")
-        self.emoticon = try container.decodeIfPresent(String.self, forKey: "emoticon")
-
-        self.data = ChatListFilterData(
-            categories: ChatListFilterPeerCategories(rawValue: try container.decode(Int32.self, forKey: "categories")),
-            excludeMuted: (try container.decode(Int32.self, forKey: "excludeMuted")) != 0,
-            excludeRead: (try container.decode(Int32.self, forKey: "excludeRead")) != 0,
-            excludeArchived: (try container.decode(Int32.self, forKey: "excludeArchived")) != 0,
-            includePeers: ChatListFilterIncludePeers(
-                peers: (try container.decode([Int64].self, forKey: "includePeers")).map(PeerId.init),
-                pinnedPeers: (try container.decode([Int64].self, forKey: "pinnedPeers")).map(PeerId.init)
-            ),
-            excludePeers: (try container.decode([Int64].self, forKey: "excludePeers")).map(PeerId.init)
-        )
+        
+        let type = try container.decodeIfPresent(Int32.self, forKey: "t") ?? 1
+        if type == 0 {
+            self = .allChats
+        } else {
+            let id = try container.decode(Int32.self, forKey: "id")
+            let title = try container.decode(String.self, forKey: "title")
+            let emoticon = try container.decodeIfPresent(String.self, forKey: "emoticon")
+            
+            let data = ChatListFilterData(
+                categories: ChatListFilterPeerCategories(rawValue: try container.decode(Int32.self, forKey: "categories")),
+                excludeMuted: (try container.decode(Int32.self, forKey: "excludeMuted")) != 0,
+                excludeRead: (try container.decode(Int32.self, forKey: "excludeRead")) != 0,
+                excludeArchived: (try container.decode(Int32.self, forKey: "excludeArchived")) != 0,
+                includePeers: ChatListFilterIncludePeers(
+                    peers: (try container.decode([Int64].self, forKey: "includePeers")).map(PeerId.init),
+                    pinnedPeers: (try container.decode([Int64].self, forKey: "pinnedPeers")).map(PeerId.init)
+                ),
+                excludePeers: (try container.decode([Int64].self, forKey: "excludePeers")).map(PeerId.init)
+            )
+            self = .filter(id: id, title: title, emoticon: emoticon, data: data)
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        try container.encode(self.id, forKey: "id")
-        try container.encode(self.title, forKey: "title")
-        try container.encodeIfPresent(self.emoticon, forKey: "emoticon")
-
-        try container.encode(self.data.categories.rawValue, forKey: "categories")
-        try container.encode((self.data.excludeMuted ? 1 : 0) as Int32, forKey: "excludeMuted")
-        try container.encode((self.data.excludeRead ? 1 : 0) as Int32, forKey: "excludeRead")
-        try container.encode((self.data.excludeArchived ? 1 : 0) as Int32, forKey: "excludeArchived")
-        try container.encode(self.data.includePeers.peers.map { $0.toInt64() }, forKey: "includePeers")
-        try container.encode(self.data.includePeers.pinnedPeers.map { $0.toInt64() }, forKey: "pinnedPeers")
-        try container.encode(self.data.excludePeers.map { $0.toInt64() }, forKey: "excludePeers")
+        switch self {
+            case .allChats:
+                let type: Int32 = 0
+                try container.encode(type, forKey: "t")
+            case let .filter(id, title, emoticon, data):
+                let type: Int32 = 1
+                try container.encode(type, forKey: "t")
+               
+                try container.encode(id, forKey: "id")
+                try container.encode(title, forKey: "title")
+                try container.encodeIfPresent(emoticon, forKey: "emoticon")
+            
+                try container.encode(data.categories.rawValue, forKey: "categories")
+                try container.encode((data.excludeMuted ? 1 : 0) as Int32, forKey: "excludeMuted")
+                try container.encode((data.excludeRead ? 1 : 0) as Int32, forKey: "excludeRead")
+                try container.encode((data.excludeArchived ? 1 : 0) as Int32, forKey: "excludeArchived")
+                try container.encode(data.includePeers.peers.map { $0.toInt64() }, forKey: "includePeers")
+                try container.encode(data.includePeers.pinnedPeers.map { $0.toInt64() }, forKey: "pinnedPeers")
+                try container.encode(data.excludePeers.map { $0.toInt64() }, forKey: "excludePeers")
+        }
     }
 }
 
 extension ChatListFilter {
     init(apiFilter: Api.DialogFilter) {
         switch apiFilter {
+        case .dialogFilterDefault:
+            self = .allChats
         case let .dialogFilter(flags, id, title, emoticon, pinnedPeers, includePeers, excludePeers):
-            self.init(
+            self = .filter(
                 id: id,
                 title: title,
                 emoticon: emoticon,
@@ -339,31 +348,36 @@ extension ChatListFilter {
         }
     }
     
-    func apiFilter(transaction: Transaction) -> Api.DialogFilter {
-        var flags: Int32 = 0
-        if self.data.excludeMuted {
-            flags |= 1 << 11
-        }
-        if self.data.excludeRead {
-            flags |= 1 << 12
-        }
-        if self.data.excludeArchived {
-            flags |= 1 << 13
-        }
-        flags |= self.data.categories.apiFlags
-        if self.emoticon != nil {
-            flags |= 1 << 25
-        }
-        return .dialogFilter(flags: flags, id: self.id, title: self.title, emoticon: self.emoticon, pinnedPeers: self.data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
-            return transaction.getPeer(peerId).flatMap(apiInputPeer)
-        }, includePeers: self.data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
-            if self.data.includePeers.pinnedPeers.contains(peerId) {
+    func apiFilter(transaction: Transaction) -> Api.DialogFilter? {
+        switch self {
+            case .allChats:
                 return nil
-            }
-            return transaction.getPeer(peerId).flatMap(apiInputPeer)
-        }, excludePeers: self.data.excludePeers.compactMap { peerId -> Api.InputPeer? in
-            return transaction.getPeer(peerId).flatMap(apiInputPeer)
-        })
+            case let .filter(id, title, emoticon, data):
+                var flags: Int32 = 0
+                if data.excludeMuted {
+                    flags |= 1 << 11
+                }
+                if data.excludeRead {
+                    flags |= 1 << 12
+                }
+                if data.excludeArchived {
+                    flags |= 1 << 13
+                }
+                flags |= data.categories.apiFlags
+                if emoticon != nil {
+                    flags |= 1 << 25
+                }
+                return .dialogFilter(flags: flags, id: id, title: title, emoticon: emoticon, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                }, includePeers: data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
+                    if data.includePeers.pinnedPeers.contains(peerId) {
+                        return nil
+                    }
+                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                }, excludePeers: data.excludePeers.compactMap { peerId -> Api.InputPeer? in
+                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                })
+        }
     }
 }
 
@@ -425,6 +439,8 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                 let filter = ChatListFilter(apiFilter: apiFilter)
                 filters.append(filter)
                 switch apiFilter {
+                case .dialogFilterDefault:
+                    break
                 case let .dialogFilter(_, _, _, _, pinnedPeers, includePeers, excludePeers):
                     for peer in pinnedPeers + includePeers + excludePeers {
                         var peerId: PeerId?
@@ -978,11 +994,15 @@ func _internal_updateChatListFeaturedFilters(postbox: Postbox, network: Network)
         return postbox.transaction { transaction -> Void in
             transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFiltersFeaturedState, { entry in
                 var state = entry?.get(ChatListFiltersFeaturedState.self) ?? ChatListFiltersFeaturedState(filters: [], isSeen: false)
-                state.filters = result.map { item -> ChatListFeaturedFilter in
+                state.filters = result.compactMap { item -> ChatListFeaturedFilter? in
                     switch item {
                     case let .dialogFilterSuggested(filter, description):
                         let parsedFilter = ChatListFilter(apiFilter: filter)
-                        return ChatListFeaturedFilter(title: parsedFilter.title, description: description, data: parsedFilter.data)
+                        if case let .filter(_, title, _, data) = parsedFilter {
+                            return ChatListFeaturedFilter(title: title, description: description, data: data)
+                        } else {
+                            return nil
+                        }
                     }
                 }
                 return PreferencesEntry(state)

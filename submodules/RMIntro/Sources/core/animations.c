@@ -423,6 +423,7 @@ void on_surface_created() {
 
 
     // Telegram
+    // MARK: Nicegram change
     telegram_sphere = create_textured_rectangle(CSizeMake(148, 148), telegram_sphere_texture);
     telegram_plane = create_textured_rectangle(CSizeMake(64, 66), telegram_plane_texture);
     telegram_plane.params.anchor=xyzMake(0, 0, 0);

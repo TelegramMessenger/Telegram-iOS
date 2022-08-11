@@ -258,7 +258,9 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let effectiveAuthorId: PeerId?
     let additionalContent: ChatMessageItemAdditionalContent?
     
+    // MARK: Nicegram
     let wantTrButton: [(Bool, [String])]
+    //
     let dateHeader: ChatMessageDateHeader
     let avatarHeader: ChatMessageAvatarHeader?
 
@@ -282,6 +284,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
+    // MARK: Nicegram (wantTrButton)
     public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil, wantTrButton: [(Bool, [String])] = [(false, [])]) {
         self.presentationData = presentationData
         self.context = context
@@ -291,7 +294,9 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.content = content
         self.disableDate = disableDate
         self.additionalContent = additionalContent
+        // MARK: Nicegram
         self.wantTrButton = wantTrButton
+        //
         
         var avatarHeader: ChatMessageAvatarHeader?
         let incoming = content.effectivelyIncoming(self.context.account.peerId)
@@ -360,7 +365,6 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
             if !hasActionMedia && !isBroadcastChannel {
                 if let effectiveAuthor = effectiveAuthor {
-                    //accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, forwardInfo: message.forwardInfo, emptyColor: presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill, controllerInteraction: controllerInteraction)
                     avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), message: message, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction)
                 }
             }
@@ -453,7 +457,9 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         let configure = {
             let node = (viewClassName as! ChatMessageItemView.Type).init()
+            // MARK: Nicegram
             node.wantTrButton = self.wantTrButton
+            //
             node.setupItem(self, synchronousLoad: synchronousLoads)
             
             let nodeLayout = node.asyncLayout()

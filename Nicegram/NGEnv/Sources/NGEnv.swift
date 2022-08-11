@@ -2,6 +2,7 @@ import Foundation
 import BuildConfig
 
 public struct NGEnvObj: Decodable {
+    public let bundle_id: String
     public let premium_bundle: String
     public let ng_api_url: String
     public let validator_url: String
@@ -12,8 +13,6 @@ public struct NGEnvObj: Decodable {
     public let privacy_url: String
     public let terms_url: String
     public let restore_url: String
-    public let reg_date_url: String
-    public let reg_date_key: String
 }
 
 func parseNGEnv() -> NGEnvObj {

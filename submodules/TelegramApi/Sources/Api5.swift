@@ -390,18 +390,18 @@ public extension Api {
 }
 public extension Api {
     enum EncryptedFile: TypeConstructorDescription {
-        case encryptedFile(id: Int64, accessHash: Int64, size: Int32, dcId: Int32, keyFingerprint: Int32)
+        case encryptedFile(id: Int64, accessHash: Int64, size: Int64, dcId: Int32, keyFingerprint: Int32)
         case encryptedFileEmpty
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .encryptedFile(let id, let accessHash, let size, let dcId, let keyFingerprint):
                     if boxed {
-                        buffer.appendInt32(1248893260)
+                        buffer.appendInt32(-1476358952)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeInt32(size, buffer: buffer, boxed: false)
+                    serializeInt64(size, buffer: buffer, boxed: false)
                     serializeInt32(dcId, buffer: buffer, boxed: false)
                     serializeInt32(keyFingerprint, buffer: buffer, boxed: false)
                     break
@@ -428,8 +428,8 @@ public extension Api {
             _1 = reader.readInt64()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
             var _4: Int32?
             _4 = reader.readInt32()
             var _5: Int32?
@@ -541,6 +541,7 @@ public extension Api {
 public extension Api {
     enum ExportedChatInvite: TypeConstructorDescription {
         case chatInviteExported(flags: Int32, link: String, adminId: Int64, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, usage: Int32?, requested: Int32?, title: String?)
+        case chatInvitePublicJoinRequests
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -559,6 +560,12 @@ public extension Api {
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(requested!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     break
+                case .chatInvitePublicJoinRequests:
+                    if boxed {
+                        buffer.appendInt32(-317687113)
+                    }
+                    
+                    break
     }
     }
     
@@ -566,6 +573,8 @@ public extension Api {
         switch self {
                 case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let title):
                 return ("chatInviteExported", [("flags", String(describing: flags)), ("link", String(describing: link)), ("adminId", String(describing: adminId)), ("date", String(describing: date)), ("startDate", String(describing: startDate)), ("expireDate", String(describing: expireDate)), ("usageLimit", String(describing: usageLimit)), ("usage", String(describing: usage)), ("requested", String(describing: requested)), ("title", String(describing: title))])
+                case .chatInvitePublicJoinRequests:
+                return ("chatInvitePublicJoinRequests", [])
     }
     }
     
@@ -606,6 +615,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_chatInvitePublicJoinRequests(_ reader: BufferReader) -> ExportedChatInvite? {
+            return Api.ExportedChatInvite.chatInvitePublicJoinRequests
         }
     
     }
@@ -652,15 +664,15 @@ public extension Api {
 }
 public extension Api {
     enum FileHash: TypeConstructorDescription {
-        case fileHash(offset: Int32, limit: Int32, hash: Buffer)
+        case fileHash(offset: Int64, limit: Int32, hash: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .fileHash(let offset, let limit, let hash):
                     if boxed {
-                        buffer.appendInt32(1648543603)
+                        buffer.appendInt32(-207944868)
                     }
-                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt64(offset, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     serializeBytes(hash, buffer: buffer, boxed: false)
                     break
@@ -675,8 +687,8 @@ public extension Api {
     }
     
         public static func parse_fileHash(_ reader: BufferReader) -> FileHash? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: Int32?
             _2 = reader.readInt32()
             var _3: Buffer?
@@ -1362,46 +1374,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ImportedContact.importedContact(userId: _1!, clientId: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InlineBotSwitchPM: TypeConstructorDescription {
-        case inlineBotSwitchPM(text: String, startParam: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inlineBotSwitchPM(let text, let startParam):
-                    if boxed {
-                        buffer.appendInt32(1008755359)
-                    }
-                    serializeString(text, buffer: buffer, boxed: false)
-                    serializeString(startParam, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inlineBotSwitchPM(let text, let startParam):
-                return ("inlineBotSwitchPM", [("text", String(describing: text)), ("startParam", String(describing: startParam))])
-    }
-    }
-    
-        public static func parse_inlineBotSwitchPM(_ reader: BufferReader) -> InlineBotSwitchPM? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InlineBotSwitchPM.inlineBotSwitchPM(text: _1!, startParam: _2!)
             }
             else {
                 return nil

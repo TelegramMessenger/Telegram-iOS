@@ -62,7 +62,7 @@ final class AttachmentFileEmptyStateItemNode: ItemListControllerEmptyStateItemNo
     init(item: AttachmentFileEmptyStateItem) {
         self.item = item
         
-        self.animationNode = AnimatedStickerNode()
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Files"), width: 320, height: 320, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         
@@ -89,7 +89,7 @@ final class AttachmentFileEmptyStateItemNode: ItemListControllerEmptyStateItemNo
             case let .bannedSendMedia(banDescription):
                 text = banDescription
         }
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: text.replacingOccurrences(of: "\n", with: " "), font: Font.regular(15.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
     }
     
     override func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -98,7 +98,12 @@ final class AttachmentFileEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         insets.top += navigationBarHeight
 
         let imageSpacing: CGFloat = 12.0
-        let imageSize = CGSize(width: 144.0, height: 144.0)
+        
+        var imageSize = CGSize(width: 144.0, height: 144.0)
+        if layout.size.width == 320.0 {
+            imageSize = CGSize(width: 112.0, height: 112.0)
+        }
+        
         let imageHeight = layout.size.width < layout.size.height ? imageSize.height + imageSpacing : 0.0
         if !imageHeight.isZero {
             if case .intro = self.item.content {
@@ -106,7 +111,11 @@ final class AttachmentFileEmptyStateItemNode: ItemListControllerEmptyStateItemNo
             } else {
                 insets.top -= 160.0
             }
-        } 
+        }
+        
+        if layout.size.width == 320.0 {
+            insets.top += 110.0
+        }
          
         let textSize = self.textNode.measure(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - 70.0, height: max(1.0, layout.size.height - insets.top - insets.bottom)))
         

@@ -30,8 +30,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "Показать Пин";
 "ChatFilter.Admin" = "Админ";
-"NiceFeatures.Notifications.HideNotifyAccount" = "Скрыть аккаунт в уведомлении";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "Вместо «Пользователь → Аккаунт» вы будете видеть только «Пользователь». Только для нескольких аккаунтов.";
 "NiceFeatures.Notifications.Fix" = "Отключить нежелательные уведомления";
 "NiceFeatures.Notifications.FixNotice" = "Нужно, если вы получаете уведомления, даже если они отключены в чате. Ответ из уведомления, метки аккаунтов и предпросмотр медиа будут недоступны.";
 "NiceFeatures.Filters.Header" = "ФИЛЬТРЫ (ВКЛАДКИ)";
@@ -105,6 +103,10 @@
 "Messages.Translate" = "Перевод";
 "Messages.UndoTranslate" = "Отменить Перевод";
 "Messages.TranslateError" = "К сожалению, перевод недоступен.";
+"Messages.SpeechToText" = "Речь в текст";
+"Messages.UndoSpeechToText" = "Отменить «Речь в текст»";
+"Messages.SpeechToText.LowAccuracyError" = "Распознать речь не удалось.\n\nЭто может случаться из-за низкого качества звуковой записи или различий между языком приложения и звуковой записи.";
+"Messages.SelectAllFromUser" = "Выбрать все от этого пользователя";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Узнать дату регистрации";
@@ -112,6 +114,7 @@
 "NGLab.RegDate.Notice" = "Это примерная дата";
 "NGLab.RegDate.MenuItem" = "регистрация";
 "NGLab.RegDate.FetchError" = "К сожалению, дата регистрации недоступна.";
+"NGLab.BadDeviceToken" = "[iOS 11+] Не удалось проверить устройство.";
 
 /*Backup Settings*/
 "NiceFeatures.BackupIcloud" = "Синхронизация Настроек и Папок в iCloud";
@@ -143,6 +146,18 @@
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "Ваш номер будет скрыт только в интерфейсе. Чтобы скрыть его от других, пожалуйста, используйте настройки конфиденциальности.";
 "NicegramSettings.Other.showProfileId" = "Показывать ID профилей";
 "NicegramSettings.Other.showRegDate" = "Показывать дату регистрации";
+"NicegramSettings.Unblock.Header" = "Разблокировать";
+"NicegramSettings.Unblock.Button" = "Руководство по разблокировке";
+"NicegramSettings.Other.hideReactions" = "Скрыть реакции";
+"NicegramSettings.RoundVideos.DownloadVideos" = "Скачивать видео в галерею";
 "Premium.OnetapTranslate.LowPower" = "Распознавание в режиме энергосбережения";
-"Premium.OnetapTranslate.LowPower.Notice" = "Приложение определяет язык каждого сообщения с помощью вашего устройства. Это ресурсоёмкая задача, которая может повлиять на время работы аккумулятора.";
+"Premium.OnetapTranslate.LowPower.Notice" = "Приложение определяет язык для каждого сообщения на Вашем устройстве. Поскольку это высокопроизводительная задача, время работы аккумулятора может уменьшиться.";
 "Premium.rememberFolderOnExit" = "Запомнить текущую папку при выходе";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "Старше, чем";
+"NiceFeatures.RegDate.Approximately" = "Примерно";
+"NiceFeatures.RegDate.NewerThan" = "Новее, чем";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "К сожалению, вы не можете получить **функции Telegram Premium**, если вы вошли в приложение Nicegram. Перейдите в официальное приложение Telegram и подпишитесь на **Telegram Premium**. Когда вы вернетесь в Nicegram, все **функции Premium** будут доступны для использования. ";

@@ -271,7 +271,9 @@ public final class ChatInterfaceState: Codable, Equatable {
     public let historyScrollState: ChatInterfaceHistoryScrollState?
     public let mediaRecordingMode: ChatTextInputMediaRecordingButtonMode
     public let silentPosting: Bool
+    // MARK: Nicegram
     public let forwardAsCopy: Bool
+    //
     public let inputLanguage: String?
     
     public var synchronizeableInputState: SynchronizeableChatInputState? {
@@ -315,10 +317,13 @@ public final class ChatInterfaceState: Codable, Equatable {
         self.historyScrollState = nil
         self.mediaRecordingMode = .audio
         self.silentPosting = false
+        // MARK: Nicegram
         self.forwardAsCopy = false
+        //
         self.inputLanguage = nil
     }
     
+    // MARK: Nicegram (forwardAsCopy)
     public init(timestamp: Int32, composeInputState: ChatTextInputState, composeDisableUrlPreview: String?, replyMessageId: EngineMessage.Id?, forwardMessageIds: [EngineMessage.Id]?, forwardOptionsState: ChatInterfaceForwardOptionsState?, editMessage: ChatEditMessageState?, selectionState: ChatInterfaceSelectionState?, messageActionsState: ChatInterfaceMessageActionsState, historyScrollState: ChatInterfaceHistoryScrollState?, mediaRecordingMode: ChatTextInputMediaRecordingButtonMode, silentPosting: Bool, forwardAsCopy: Bool = false, inputLanguage: String?) {
         self.timestamp = timestamp
         self.composeInputState = composeInputState
@@ -332,7 +337,9 @@ public final class ChatInterfaceState: Codable, Equatable {
         self.historyScrollState = historyScrollState
         self.mediaRecordingMode = mediaRecordingMode
         self.silentPosting = silentPosting
+        // MARK: Nicegram
         self.forwardAsCopy = forwardAsCopy
+        //
         self.inputLanguage = inputLanguage
     }
     
@@ -390,7 +397,9 @@ public final class ChatInterfaceState: Codable, Equatable {
         self.mediaRecordingMode = ChatTextInputMediaRecordingButtonMode(rawValue: (try? container.decodeIfPresent(Int32.self, forKey: "mrm")) ?? 0) ?? .audio
         
         self.silentPosting = ((try? container.decode(Int32.self, forKey: "sip")) ?? 0) != 0
+        // MARK: Nicegram
         self.forwardAsCopy = ((try? container.decode(Int32.self, forKey: "fwdcpy")) ?? 0) != 0
+        //
         self.inputLanguage = try? container.decodeIfPresent(String.self, forKey: "inputLanguage")
     }
     
@@ -445,7 +454,9 @@ public final class ChatInterfaceState: Codable, Equatable {
         }
         try container.encode(self.mediaRecordingMode.rawValue, forKey: "mrm")
         try container.encode((self.silentPosting ? 1 : 0) as Int32, forKey: "sip")
+        // MARK: Nicegram
         try container.encode((self.forwardAsCopy ? 1 : 0) as Int32, forKey: "fwdcpy")
+        //
         if let inputLanguage = self.inputLanguage {
             try container.encode(inputLanguage, forKey: "inputLanguage")
         } else {
@@ -479,9 +490,11 @@ public final class ChatInterfaceState: Codable, Equatable {
         if lhs.silentPosting != rhs.silentPosting {
             return false
         }
+        // MARK: Nicegram
         if lhs.forwardAsCopy != rhs.forwardAsCopy {
             return false
         }
+        //
         if lhs.inputLanguage != rhs.inputLanguage {
             return false
         }
@@ -580,9 +593,11 @@ public final class ChatInterfaceState: Codable, Equatable {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, forwardAsCopy: self.forwardAsCopy, inputLanguage: inputLanguage)
     }
     
+    // MARK: Nicegram
     public func withUpdatedForwardAsCopy(_ forwardAsCopy: Bool) -> ChatInterfaceState {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, forwardAsCopy: forwardAsCopy, inputLanguage: self.inputLanguage)
     }
+    //
 
     public static func parse(_ state: OpaqueChatInterfaceState) -> ChatInterfaceState {
         guard let opaqueData = state.opaqueData else {

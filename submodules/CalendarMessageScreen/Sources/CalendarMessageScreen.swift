@@ -1428,7 +1428,7 @@ public final class CalendarMessageScreen: ViewController {
             struct ClearInfo {
                 var canClearForMyself: ClearType?
                 var canClearForEveryone: ClearType?
-                var mainPeer: Peer
+                var mainPeer: EnginePeer
             }
 
             let peerId = self.peerId
@@ -1436,8 +1436,10 @@ public final class CalendarMessageScreen: ViewController {
             } else {
                 return
             }
-            let _ = (self.context.account.postbox.transaction { transaction -> ClearInfo? in
-                guard let chatPeer = transaction.getPeer(peerId) else {
+            
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> map { chatPeer -> ClearInfo? in
+                guard let chatPeer = chatPeer else {
                     return nil
                 }
 
@@ -1447,10 +1449,10 @@ public final class CalendarMessageScreen: ViewController {
                 if peerId == self.context.account.peerId {
                     canClearForMyself = .savedMessages
                     canClearForEveryone = nil
-                } else if chatPeer is TelegramSecretChat {
+                } else if case .secretChat = chatPeer {
                     canClearForMyself = .secretChat
                     canClearForEveryone = nil
-                } else if let group = chatPeer as? TelegramGroup {
+                } else if case let .legacyGroup(group) = chatPeer {
                     switch group.role {
                     case .creator:
                         canClearForMyself = .group
@@ -1459,7 +1461,7 @@ public final class CalendarMessageScreen: ViewController {
                         canClearForMyself = .group
                         canClearForEveryone = nil
                     }
-                } else if let channel = chatPeer as? TelegramChannel {
+                } else if case let .channel(channel) = chatPeer {
                     if channel.hasPermission(.deleteAllMessages) {
                         if case .group = channel.info {
                             canClearForEveryone = .group
@@ -1473,7 +1475,7 @@ public final class CalendarMessageScreen: ViewController {
                 } else {
                     canClearForMyself = .user
 
-                    if let user = chatPeer as? TelegramUser, user.botInfo != nil {
+                    if case let .user(user) = chatPeer, user.botInfo != nil {
                         canClearForEveryone = nil
                     } else {
                         canClearForEveryone = .user
@@ -1511,7 +1513,7 @@ public final class CalendarMessageScreen: ViewController {
                         let confirmationText: String
                         switch canClearForEveryone {
                         case .user:
-                            text = strongSelf.presentationData.strings.ChatList_DeleteForEveryone(EnginePeer(info.mainPeer).compactDisplayTitle).string
+                            text = strongSelf.presentationData.strings.ChatList_DeleteForEveryone(info.mainPeer.compactDisplayTitle).string
                             confirmationText = strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationText
                         default:
                             text = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone

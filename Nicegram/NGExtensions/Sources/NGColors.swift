@@ -132,7 +132,7 @@ extension UIColor {
     }
 }
 
-extension Array where Element == UIColor {
+public extension Array where Element == UIColor {
     static let defaultGradient: [UIColor] = [
         UIColor(red: 0.744, green: 0.332, blue: 0.928, alpha: 1),
         UIColor(red: 0.306, green: 0.675, blue: 0.954, alpha: 1)

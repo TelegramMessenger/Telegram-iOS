@@ -5,11 +5,15 @@ import sys
 from BuildEnvironment import is_apple_silicon, resolve_executable, call_executable, BuildEnvironmentVersions
 
 def locate_bazel(base_path):
+    build_input_dir = '{}/build-input'.format(base_path)
+    if not os.path.isdir(build_input_dir):
+        os.mkdir(build_input_dir)
+
     versions = BuildEnvironmentVersions(base_path=os.getcwd())
     if is_apple_silicon():
         arch = 'darwin-arm64'
     else:
-        arch = 'x86_64'
+        arch = 'darwin-x86_64'
     bazel_name = 'bazel-{version}-{arch}'.format(version=versions.bazel_version, arch=arch)
     bazel_path = '{}/build-input/{}'.format(base_path, bazel_name)
 

@@ -58,7 +58,7 @@ final class ChannelAdminAddBotFooterItemNode: ItemListControllerFooterItemNode {
         self.backgroundNode = NavigationBackgroundNode(color: item.theme.rootController.tabBar.backgroundColor)
         self.separatorNode = ASDisplayNode()
         
-        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 12.0)
+        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 11.0)
         
         super.init()
         

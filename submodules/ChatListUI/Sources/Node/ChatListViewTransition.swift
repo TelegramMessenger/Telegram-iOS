@@ -188,9 +188,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                 }
             } else if fromView.filteredEntries.isEmpty || fromView.filter != toView.filter {
                 var updateEmpty = true
-                if !fromView.filteredEntries.isEmpty, let fromFilter = fromView.filter, let toFilter = toView.filter, fromFilter.data.includePeers.pinnedPeers != toFilter.data.includePeers.pinnedPeers {
-                    var fromData = fromFilter.data
-                    let toData = toFilter.data
+                if !fromView.filteredEntries.isEmpty, let fromFilter = fromView.filter, let toFilter = toView.filter, case var .filter(_, _, _, fromData) = fromFilter, case let .filter(_, _, _, toData) = toFilter, fromData.includePeers.pinnedPeers != toData.includePeers.pinnedPeers {
                     fromData.includePeers = toData.includePeers
                     if fromData == toData {
                         options.insert(.AnimateInsertion)
@@ -209,7 +207,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
         }
         
         var adjustScrollToFirstItem = false
-        if !previewing && !searchMode && fromEmptyView && scrollToItem == nil && toView.filteredEntries.count >= 1 {
+        if !previewing && !searchMode && fromEmptyView && scrollToItem == nil && toView.filteredEntries.count >= 2 {
             adjustScrollToFirstItem = true
         }
         

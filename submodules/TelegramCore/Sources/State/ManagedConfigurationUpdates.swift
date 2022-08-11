@@ -12,7 +12,7 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
         |> mapToSignal { result -> Signal<Void, NoError> in
             return postbox.transaction { transaction -> Signal<Void, NoError> in
                 switch result {
-                case let .config(flags, _, _, _, _, dcOptions, _, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, _, _, _, _, _, savedGifsLimit, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, _, stickersRecentLimit, _, _, _, pinnedDialogsCountMax, pinnedInfolderCountMax, _, _, _, _, _, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, _, captionLengthMax, _, webfileDcId, suggestedLangCode, langPackVersion, baseLangPackVersion):
+                case let .config(flags, _, _, _, _, dcOptions, _, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, _, _, _, _, _, savedGifsLimit, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, _, stickersRecentLimit, stickersFavedLimit, _, _, pinnedDialogsCountMax, pinnedInfolderCountMax, _, _, _, _, _, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, _, captionLengthMax, _, webfileDcId, suggestedLangCode, langPackVersion, baseLangPackVersion):
                         var addressList: [Int: [MTDatacenterAddress]] = [:]
                         for option in dcOptions {
                             switch option {
@@ -59,7 +59,7 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                             return entry
                         })
                         
-                        updateLimitsConfiguration(transaction: transaction, configuration: LimitsConfiguration(maxPinnedChatCount: pinnedDialogsCountMax, maxArchivedPinnedChatCount: pinnedInfolderCountMax, maxGroupMemberCount: chatSizeMax, maxSupergroupMemberCount: megagroupSizeMax, maxMessageForwardBatchSize: forwardedCountMax, maxSavedGifCount: savedGifsLimit, maxRecentStickerCount: stickersRecentLimit, maxMessageEditingInterval: editTimeLimit, maxMediaCaptionLength: captionLengthMax, canRemoveIncomingMessagesInPrivateChats: (flags & (1 << 6)) != 0, maxMessageRevokeInterval: revokeTimeLimit, maxMessageRevokeIntervalInPrivateChats: revokePmTimeLimit))
+                        updateLimitsConfiguration(transaction: transaction, configuration: LimitsConfiguration(maxPinnedChatCount: pinnedDialogsCountMax, maxArchivedPinnedChatCount: pinnedInfolderCountMax, maxGroupMemberCount: chatSizeMax, maxSupergroupMemberCount: megagroupSizeMax, maxMessageForwardBatchSize: forwardedCountMax, maxSavedGifCount: savedGifsLimit, maxRecentStickerCount: stickersRecentLimit, maxFavedStickerCount: stickersFavedLimit, maxMessageEditingInterval: editTimeLimit, maxMediaCaptionLength: captionLengthMax, canRemoveIncomingMessagesInPrivateChats: (flags & (1 << 6)) != 0, maxMessageRevokeInterval: revokeTimeLimit, maxMessageRevokeIntervalInPrivateChats: revokePmTimeLimit))
                         
                         updateSearchBotsConfiguration(transaction: transaction, configuration: SearchBotsConfiguration(imageBotUsername: imgSearchUsername, gifBotUsername: gifSearchUsername, venueBotUsername: venueSearchUsername))
                     

@@ -16,6 +16,12 @@ swift_library(
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/AccountContext:AccountContext",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/Utils/RangeSet:RangeSet",
+        
+        # Nicegram downloading feature
+        "//submodules/SaveToCameraRoll:SaveToCameraRoll",
+        "//Nicegram/NGToast:NGToast",
+        "//Nicegram/NGData:NGData",
     ],
     visibility = [
         "//visibility:public",

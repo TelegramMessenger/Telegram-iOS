@@ -15,6 +15,7 @@ export IS_INTERNAL_BUILD="false"
 export IS_APPSTORE_BUILD="true"
 export APPSTORE_ID="686449807"
 export APP_SPECIFIC_URL_SCHEME="tgapp"
+export PREMIUM_IAP_PRODUCT_ID="org.telegram.telegramPremium.monthly"
 
 if [ -z "$BUILD_NUMBER" ]; then
 	echo "BUILD_NUMBER is not defined"

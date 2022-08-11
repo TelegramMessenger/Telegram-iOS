@@ -7,6 +7,7 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
+		"@FirebaseSDK//:FirebaseAnalytics",
         "//submodules/TelegramCore:TelegramCore"
     ],
     visibility = [

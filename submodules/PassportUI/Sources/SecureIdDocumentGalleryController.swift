@@ -176,6 +176,7 @@ class SecureIdDocumentGalleryController: ViewController, StandalonePresentableCo
             if let strongSelf = self {
                 strongSelf.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
             }
+        }, pushController: { _ in
         }, dismissController: { [weak self] in
             self?.dismiss(forceAway: true)
         }, replaceRootController: { [weak self] controller, ready in

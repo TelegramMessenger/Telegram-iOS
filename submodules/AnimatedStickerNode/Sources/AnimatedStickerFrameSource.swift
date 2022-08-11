@@ -562,23 +562,23 @@ private final class AnimatedStickerDirectFrameSourceCache {
 }
 
 
-final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource {
+public final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource {
     private let queue: Queue
     private let data: Data
     private let width: Int
     private let height: Int
     private let cache: AnimatedStickerDirectFrameSourceCache?
     private let bytesPerRow: Int
-    let frameCount: Int
-    let frameRate: Int
+    public let frameCount: Int
+    public let frameRate: Int
     fileprivate var currentFrame: Int
     private let animation: LottieInstance
     
-    var frameIndex: Int {
+    public var frameIndex: Int {
         return self.currentFrame % self.frameCount
     }
     
-    init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?, useMetalCache: Bool = false, fitzModifier: EmojiFitzModifier?) {
+    public init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?, useMetalCache: Bool = false, fitzModifier: EmojiFitzModifier?) {
         self.queue = queue
         self.data = data
         self.width = width
@@ -588,6 +588,7 @@ final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource {
         let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
         
         guard let animation = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil, cacheKey: "") else {
+            print("Could not load sticker data")
             return nil
         }
         self.animation = animation
@@ -604,7 +605,7 @@ final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource {
         assert(self.queue.isCurrent())
     }
     
-    func takeFrame(draw: Bool) -> AnimatedStickerFrame? {
+    public func takeFrame(draw: Bool) -> AnimatedStickerFrame? {
         let frameIndex = self.currentFrame % self.frameCount
         self.currentFrame += 1
         if draw {
@@ -630,11 +631,11 @@ final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource {
         }
     }
     
-    func skipToEnd() {
+    public func skipToEnd() {
         self.currentFrame = self.frameCount - 1
     }
 
-    func skipToFrameIndex(_ index: Int) {
+    public func skipToFrameIndex(_ index: Int) {
         self.currentFrame = index
     }
 }

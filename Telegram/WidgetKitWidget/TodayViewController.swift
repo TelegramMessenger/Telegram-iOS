@@ -91,7 +91,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     
     TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
     
-    let logsPath = rootPath + "/widget-logs"
+    let logsPath = rootPath + "/logs/widget-logs"
     let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
     
     setupSharedLogger(rootPath: rootPath, path: logsPath)

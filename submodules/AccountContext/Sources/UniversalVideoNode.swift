@@ -8,11 +8,12 @@ import Display
 import TelegramAudio
 import UniversalMediaPlayer
 import AVFoundation
+import RangeSet
 
 public protocol UniversalVideoContentNode: AnyObject {
     var ready: Signal<Void, NoError> { get }
     var status: Signal<MediaPlayerStatus, NoError> { get }
-    var bufferingStatus: Signal<(IndexSet, Int)?, NoError> { get }
+    var bufferingStatus: Signal<(RangeSet<Int64>, Int64)?, NoError> { get }
         
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
     
@@ -63,10 +64,11 @@ public protocol UniversalVideoDecoration: AnyObject {
 }
 
 public enum UniversalVideoPriority: Int32, Comparable {
-    case secondaryOverlay = 0
-    case embedded = 1
-    case gallery = 2
-    case overlay = 3
+    case minimal = 0
+    case secondaryOverlay = 1
+    case embedded = 2
+    case gallery = 3
+    case overlay = 4
     
     public static func <(lhs: UniversalVideoPriority, rhs: UniversalVideoPriority) -> Bool {
         return lhs.rawValue < rhs.rawValue
@@ -104,8 +106,8 @@ public final class UniversalVideoNode: ASDisplayNode {
         return self._status.get()
     }
     
-    private let _bufferingStatus = Promise<(IndexSet, Int)?>()
-    public var bufferingStatus: Signal<(IndexSet, Int)?, NoError> {
+    private let _bufferingStatus = Promise<(RangeSet<Int64>, Int64)?>()
+    public var bufferingStatus: Signal<(RangeSet<Int64>, Int64)?, NoError> {
         return self._bufferingStatus.get()
     }
     

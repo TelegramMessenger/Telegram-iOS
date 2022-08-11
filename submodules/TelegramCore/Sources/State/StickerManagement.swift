@@ -43,7 +43,7 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
                 switch result {
                 case .featuredStickersNotModified:
                     break
-                case let .featuredStickers(_, _, sets, unread):
+                case let .featuredStickers(flags, _, _, sets, unread):
                     let unreadIds = Set(unread)
                     var updatedPacks: [FeaturedStickerPackItem] = []
                     for set in sets {
@@ -62,6 +62,11 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
                             return nil
                         }
                     })
+                    
+                    let isPremium = flags & (1 << 0) != 0
+                    if let entry = CodableEntry(FeaturedStickersConfiguration(isPremium: isPremium)) {
+                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.featuredStickersConfiguration, key: ValueBoxKey(length: 0)), entry: entry)
+                    }
                 }
             }
         }
@@ -75,7 +80,7 @@ public func requestOldFeaturedStickerPacks(network: Network, postbox: Postbox, o
         switch result {
         case .featuredStickersNotModified:
             return []
-        case let .featuredStickers(_, _, sets, unread):
+        case let .featuredStickers(_, _, _, sets, unread):
             let unreadIds = Set(unread)
             var updatedPacks: [FeaturedStickerPackItem] = []
             for set in sets {

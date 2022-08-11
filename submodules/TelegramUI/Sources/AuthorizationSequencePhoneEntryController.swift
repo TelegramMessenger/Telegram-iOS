@@ -186,7 +186,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 actions.append(TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {}))
                 self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Login_PhoneNumberAlreadyAuthorized, actions: actions), in: .window(.root))
             } else {
-                // App Review Reasons, thanks Apple <3
+                // MARK: Nicegram. App Review Reasons, thanks Apple <3
                 if (number == "0000000000") {
                     self.sharedContext.beginNewAuth(testingEnvironment: true)
                     return

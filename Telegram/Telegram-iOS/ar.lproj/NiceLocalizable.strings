@@ -30,8 +30,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "عرض المثبت";
 "ChatFilter.Admin" = "مدير";
-"NiceFeatures.Notifications.HideNotifyAccount" = "إخفاء الحساب من الاشعارات";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "بدلًا من «المستخدم← الحساب» سترى فقط «المستخدم» للحسابات المتعددة فقط.";
 "NiceFeatures.Notifications.Fix" = "تعطيل الأشعارات غير المرغوب فيها";
 "NiceFeatures.Notifications.FixNotice" = "مفيد إذا حصلت على إشعارات من دردشات صامتة.\nالرد من الإشعارات، تسميات الحساب، ومعاينات الوسائط لن تكون متاحة.";
 "NiceFeatures.Filters.Header" = "الفلاتر (التبويبات)";
@@ -86,6 +84,7 @@
 "Common.FAQ.Intro" = "يرجى أن يكون في علمك بأن دعم Nicegram يتم بواسطة المطور والمجتمع فقط.\n\nأولًا، ألقى نظرة على الأسئلة الشاسعة بخصوص Nicegram يتضمن نصائح مهمة في استكشاف الأخطاء وإجابات على معظم الأسئلة.";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "ميزات فريدة لا يمكنك رفضها!";
+"IAP.Premium.Features" = "مترجم الرسالة السريع\n\nتذكر المجلد المحدد عند الخروج";
 "IAP.Premium.Activated" = "تم تفعيل Premium!";
 "IAP.Common.Restore" = "استعادة عمليات الشراء";
 "IAP.Common.CantPay" = "عفوًا، ولكنك لا تستطيع القيام بعمليات الشراء بسبب قيود في جهازك أو حسابك.";
@@ -104,6 +103,10 @@
 "Messages.Translate" = "ترجمة";
 "Messages.UndoTranslate" = "التراجع عن الترجمة";
 "Messages.TranslateError" = "عفوًا، الترجمة غير متوفرة.";
+"Messages.SpeechToText" = "نص البيان2";
+"Messages.UndoSpeechToText" = "إلغاء نص البيان2";
+"Messages.SpeechToText.LowAccuracyError" = "فشل التعرّف على الحديث.\n\nيُمكن أن يحدث ذلك نتيجة لجودة التسجيل الصوتي الرديئة أو بسبب الاختلاف بين لغة التطبيق ولغة التسجيل الصوتي.";
+"Messages.SelectAllFromUser" = "حدد كافة الرسائل الواردة من هذا المستخدم";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "الحصول على تاريخ التسجيل";
@@ -111,6 +114,7 @@
 "NGLab.RegDate.Notice" = "هذا تاريخ تقريبي";
 "NGLab.RegDate.MenuItem" = "مسجّل";
 "NGLab.RegDate.FetchError" = "عذرًا، لا يمكن الحصول على تاريخ التسجيل.";
+"NGLab.BadDeviceToken" = "[iOS 11+] غير قادر على التحقق من الجهاز.";
 
 /*Backup Settings*/
 "NiceFeatures.BackupIcloud" = "مزامنة الإعدادت والمجلدات مع iCloud";
@@ -140,5 +144,20 @@
 "Gmod.DisableBtn" = "تعطيل التحذيرات";
 
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "سيتم اخفاء رقمك من التطبيق فقط. لأخفاءهُ من المستخدمين الآخرين، يرجى استخدام إعدادات الخصوصية.";
+"NicegramSettings.Other.showProfileId" = "إظهار معرف الملف الشخصي ID";
+"NicegramSettings.Other.showRegDate" = "إظهار تاريخ التسجيل";
+"NicegramSettings.Unblock.Header" = "فتح";
+"NicegramSettings.Unblock.Button" = "دليل الفتح";
+"NicegramSettings.Other.hideReactions" = "إخفاء ردود الفعل";
+"NicegramSettings.RoundVideos.DownloadVideos" = "نزّل الفيديوهات إلى المعرض";
 "Premium.OnetapTranslate.LowPower" = "التعرف واطئ الإستهلاك";
 "Premium.OnetapTranslate.LowPower.Notice" = "التطبيق يحدد لغات كل رسالة في جهازك. ويتطلب اداء عالي من الجهاز و بالتالي إستهلاك البطارية.";
+"Premium.rememberFolderOnExit" = "تذكر المجلد الحالي عند الخروج";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "أقدم من";
+"NiceFeatures.RegDate.Approximately" = "تقريباً";
+"NiceFeatures.RegDate.NewerThan" = "أحدث من";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "للأسف، لا يمكنك الحصول على**ميزات تيليجرام المُميّز** أثناء تسجيلك الدخول في تطبيق Nicegram. يرجى الانتقال إلى تطبيق تيليجرام الرسمي والاشتراك في **تيليجرام المُميّز**. وعندما تعود إلى تطبيق Nicegram، ستجد جميع **ميزات تيليجرام المُميّز** متاحة للاستخدام.";

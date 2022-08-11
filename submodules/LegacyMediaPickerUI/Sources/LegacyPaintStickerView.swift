@@ -62,7 +62,8 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
         if let dimensions = self.file.dimensions {
             if self.file.isAnimatedSticker || self.file.isVideoSticker {
                 if self.animationNode == nil {
-                    let animationNode = AnimatedStickerNode()
+                    let animationNode = DefaultAnimatedStickerNodeImpl()
+                    animationNode.autoplay = false
                     self.animationNode = animationNode
                     animationNode.started = { [weak self, weak animationNode] in
                         self?.imageNode.isHidden = true
@@ -79,7 +80,6 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
                 }
                 let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                 self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, file: self.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))))
-                self.updateVisibility()
                 self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, fileReference: stickerPackFileReference(self.file), resource: self.file.resource).start())
             } else {
                 if let animationNode = self.animationNode {
@@ -110,17 +110,17 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             
-            self.animationNode?.visibility = isPlaying
             if isPlaying && !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
                 let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                 let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
                 let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource, isVideo: self.file.isVideoSticker)
-                self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
             
                 self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
                 |> deliverOn(Queue.concurrentDefaultQueue())).start())
             }
+            self.animationNode?.visibility = isPlaying
         }
     }
     
@@ -132,8 +132,7 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
     
     func play() {
         self.isVisible = true
-        self.isPlaying = true
-        self.animationNode?.play()
+        self.updateVisibility()
     }
     
     func pause() {
@@ -146,6 +145,21 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
         self.isVisible = false
         self.isPlaying = false
         self.animationNode?.seekTo(.timestamp(0.0))
+    }
+    
+    func play(fromFrame frameIndex: Int) {
+        self.isVisible = true
+        self.updateVisibility()
+        self.animationNode?.play(firstFrame: false, fromIndex: frameIndex)
+    }
+    
+    func copyStickerView(_ view: TGPhotoPaintStickerRenderView!) {
+        guard let view = view as? LegacyPaintStickerView, let animationNode = view.animationNode else {
+            return
+        }
+        self.animationNode?.cloneCurrentFrame(from: animationNode)
+        self.animationNode?.play(firstFrame: false, fromIndex: animationNode.currentFrameIndex)
+        self.updateVisibility()
     }
     
     override func layoutSubviews() {

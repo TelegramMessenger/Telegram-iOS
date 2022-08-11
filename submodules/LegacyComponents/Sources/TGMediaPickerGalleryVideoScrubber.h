@@ -43,7 +43,7 @@
 
 - (void)updateThumbnails;
 
-- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)timestamp index:(NSInteger)index isSummaryThubmnail:(bool)isSummaryThumbnail;
+- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)timestamp index:(NSInteger)index isSummaryThubmnail:(bool)isSummaryThumbnail last:(bool)last;
 
 - (CGPoint)scrubberPositionForPosition:(NSTimeInterval)position;
 

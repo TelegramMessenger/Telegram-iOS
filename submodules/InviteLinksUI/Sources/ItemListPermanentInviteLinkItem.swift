@@ -452,7 +452,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         } else {
                             buttonTheme = SolidRoundedButtonTheme(theme: item.presentationData.theme)
                         }
-                        shareButtonNode = SolidRoundedButtonNode(theme: buttonTheme, height: 50.0, cornerRadius: 10.0)
+                        shareButtonNode = SolidRoundedButtonNode(theme: buttonTheme, height: 50.0, cornerRadius: 11.0)
                         if let invite = item.invite, invitationAvailability(invite).isZero {
                             shareButtonNode.title = item.presentationData.strings.InviteLink_ReactivateLink
                         } else {

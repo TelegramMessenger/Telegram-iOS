@@ -54,8 +54,11 @@ public enum ChatPanelRestrictionInfoDisplayType {
 }
 
 public final class ChatPanelInterfaceInteraction {
+    // MARK: Nicegram
     public let cloudMessages: ([Message]?) -> Void
     public let copyForwardMessages:  ([Message]?) -> Void
+    public let copySelectedMessages: () -> Void
+    //
     public let setupReplyMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     public let setupEditMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     public let beginMessageSelection: ([MessageId], @escaping (ContainedViewLayoutTransition) -> Void) -> Void
@@ -150,8 +153,11 @@ public final class ChatPanelInterfaceInteraction {
     public let statuses: ChatPanelInterfaceInteractionStatuses?
     
     public init(
+        // MARK: Nicegram
         cloudMessages: @escaping ([Message]?) -> Void,
         copyForwardMessages: @escaping ([Message]?) -> Void,
+        copySelectedMessages: @escaping () -> Void,
+        //
         setupReplyMessage: @escaping (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         setupEditMessage: @escaping (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         beginMessageSelection: @escaping ([MessageId], @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
@@ -245,8 +251,11 @@ public final class ChatPanelInterfaceInteraction {
         chatController: @escaping () -> ViewController?,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
+        // MARK: Nicegram
         self.cloudMessages = cloudMessages
         self.copyForwardMessages = copyForwardMessages
+        self.copySelectedMessages = copySelectedMessages
+        //
         self.setupReplyMessage = setupReplyMessage
         self.setupEditMessage = setupEditMessage
         self.beginMessageSelection = beginMessageSelection
@@ -346,8 +355,10 @@ public final class ChatPanelInterfaceInteraction {
         updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void,
         openLinkEditing: @escaping () -> Void
     ) {
+        // MARK: Nicegram (cloudMessages + copyForwardMessages + copySelectedMessages)
         self.init(cloudMessages: { _ in
         }, copyForwardMessages: { _ in
+        }, copySelectedMessages: {
         }, setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
         }, beginMessageSelection: { _, _ in

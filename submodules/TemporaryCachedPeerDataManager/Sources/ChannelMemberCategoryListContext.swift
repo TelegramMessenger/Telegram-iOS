@@ -132,7 +132,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                     return ranks
                 }
                 if ranks != previousRanks {
-                    let _ = updateCachedChannelAdminRanks(postbox: self.postbox, peerId: self.peerId, ranks: ranks).start()
+                    let _ = updateCachedChannelAdminRanks(engine: self.engine, peerId: self.peerId, ranks: ranks).start()
                 }
             }
         }

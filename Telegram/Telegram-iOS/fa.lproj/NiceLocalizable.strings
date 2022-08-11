@@ -27,7 +27,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "نشان دادن سنجاق";
 "ChatFilter.Admin" = "مدیر";
-"NiceFeatures.Notifications.HideNotifyAccount" = "پنهان کردن اکانت در اطلاع";
 "NiceFeatures.Notifications.Fix" = "غیرفعال کردن اعلان های ناخواسته";
 "NiceFeatures.Notifications.FixNotice" = "در صورت دریافت اعلان از گپ های بیصدا مفید است.\nپاسخ از اعلان ها، برچسب های حساب و پیش نمایش رسانه ها در دسترس نخواهد بود.";
 "NiceFeatures.Filters.Header" = "فیلترها (برگه ها)";

@@ -785,23 +785,35 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                     controller?.dismiss()
                     return
                 }
-                let _ = (context.account.postbox.transaction { transaction -> [PeerId: SelectivePrivacyPeer] in
+                let filteredIds = peerIds.compactMap { peerId -> EnginePeer.Id? in
+                    if case let .peer(value) = peerId {
+                        return value
+                    } else {
+                        return nil
+                    }
+                }
+                
+                let _ = (context.engine.data.get(
+                    EngineDataMap(filteredIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
+                    EngineDataMap(filteredIds.map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
+                )
+                |> map { peerMap, participantCountMap -> [PeerId: SelectivePrivacyPeer] in
                     var updatedPeers: [PeerId: SelectivePrivacyPeer] = [:]
                     var existingIds = Set(updatedPeers.values.map { $0.peer.id })
                     for peerId in peerIds {
                         guard case let .peer(peerId) = peerId else {
                             continue
                         }
-                        if let peer = transaction.getPeer(peerId), !existingIds.contains(peerId) {
+                        if let maybePeer = peerMap[peerId], let peer = maybePeer, !existingIds.contains(peerId) {
                             existingIds.insert(peerId)
                             var participantCount: Int32?
-                            if let channel = peer as? TelegramChannel, case .group = channel.info {
-                                if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData {
-                                    participantCount = cachedData.participantsSummary.memberCount
+                            if case let .channel(channel) = peer, case .group = channel.info {
+                                if let maybeParticipantCount = participantCountMap[peerId], let participantCountValue = maybeParticipantCount {
+                                    participantCount = Int32(participantCountValue)
                                 }
                             }
                             
-                            updatedPeers[peer.id] = SelectivePrivacyPeer(peer: peer, participantCount: participantCount)
+                            updatedPeers[peer.id] = SelectivePrivacyPeer(peer: peer._asPeer(), participantCount: participantCount)
                         }
                     }
                     return updatedPeers
@@ -945,14 +957,15 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     })
     
-    let peer = context.account.postbox.transaction { transaction -> Peer? in
-        return transaction.getPeer(context.account.peerId) as? TelegramUser
-    }
+    let peer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peer) |> deliverOnMainQueue
     |> map { presentationData, state, peer -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let peerName = peer.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-        let phoneNumber = (peer as? TelegramUser)?.phone ?? ""
+        let peerName = peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        var phoneNumber = ""
+        if case let .user(user) = peer {
+            phoneNumber = user.phone ?? ""
+        }
         
         let title: String
         switch kind {

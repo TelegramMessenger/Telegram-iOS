@@ -30,8 +30,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "Sabiti Göster";
 "ChatFilter.Admin" = "Yönetici";
-"NiceFeatures.Notifications.HideNotifyAccount" = "Hesabı bildirimde gizle";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "«Kullanıcı → Hesap» yerine sadece «Kullanıcı» göreceksiniz. Yalnızca çoklu hesaplar için.";
 "NiceFeatures.Notifications.Fix" = "İstenmeyen Bildirimleri Devre Dışı Bırak";
 "NiceFeatures.Notifications.FixNotice" = "Sessiz sohbetlerden bildirimler alıyorsanız kullanışlıdır.\nBildirimlerden yanıtlama, hesap etiketleri ve medya önizlemeleri kullanılamaz olacak.";
 "NiceFeatures.Filters.Header" = "FİLTRELER (SEKMELER)";
@@ -105,6 +103,10 @@
 "Messages.Translate" = "Çevir";
 "Messages.UndoTranslate" = "Çeviriyi Geri Al";
 "Messages.TranslateError" = "Üzgünüz, çeviri kullanılamıyor.";
+"Messages.SpeechToText" = "Konuşmadan Metne";
+"Messages.UndoSpeechToText" = "Konuşmadan Metne Özelliğini Geri Al";
+"Messages.SpeechToText.LowAccuracyError" = "Konuşma tanıma başarısız oldu.\n\nBu, ses kaydının kalitesizliğinden ya da uygulamanın dili ile ses kaydının dili arasındaki farklılıklardan kaynaklanabilir.";
+"Messages.SelectAllFromUser" = "Bu Kullanıcıdan Olan Bütün Mesajları Seç";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Kayıt Tarihini Göster";
@@ -144,6 +146,18 @@
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "Numaranız sadece arayüzde gizlenecek. Diğerlerinden gizlemek için, lütfen Gizlilik ayarlarını kullanın.";
 "NicegramSettings.Other.showProfileId" = "Profil ID'sini Göster";
 "NicegramSettings.Other.showRegDate" = "Kayıt Tarihini Göster";
+"NicegramSettings.Unblock.Header" = "Engeli Kaldır";
+"NicegramSettings.Unblock.Button" = "Rehberin Engelini Kaldır";
+"NicegramSettings.Other.hideReactions" = "Tepkileri Gizle";
+"NicegramSettings.RoundVideos.DownloadVideos" = "Videoları galeriye indir";
 "Premium.OnetapTranslate.LowPower" = "Düşük Güçte Tanıma";
 "Premium.OnetapTranslate.LowPower.Notice" = "Uygulama, cihazınızdaki her mesajın dilini algılar. Bu, pil ömrünüzü etkileyebilecek yüksek öncelikli bir görevdir.";
 "Premium.rememberFolderOnExit" = "Çıkışta şu anki klasörü hatırla";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "Şundan daha eski:";
+"NiceFeatures.RegDate.Approximately" = "Yaklaşık olarak";
+"NiceFeatures.RegDate.NewerThan" = "Şundan daha yeni:";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "Ne yazık ki, Nicegram uygulamasında oturum açarken **Telegram Premium Özellikleri**'ni alamazsınız. Lütfen resmi Telegram uygulamasına gidin ve **Telegram Premium**'a abone olun. Nicegram'a geri döndüğünüzde, tüm **Premium Özellikler** kullanıma hazır olacaktır.";

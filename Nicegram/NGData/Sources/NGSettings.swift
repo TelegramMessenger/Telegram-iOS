@@ -80,7 +80,6 @@ public struct NGSettings {
     
     @NGStorage(key: "showTabNames", defaultValue: true)
     public static var showTabNames: Bool
-
     
     @NGStorage(key: "showGmodIcon", defaultValue: true)
     public static var showGmodIcon: Bool
@@ -90,6 +89,12 @@ public struct NGSettings {
     
     @NGStorage(key: "showRegDate", defaultValue: true)
     public static var showRegDate: Bool
+    
+    @NGStorage(key: "showAssistantHint", defaultValue: true)
+    public static var showAssistantHint: Bool
+    
+    @NGStorage(key: "shouldDownloadVideo", defaultValue: false)
+    public static var shouldDownloadVideo: Bool
 }
 
 public struct NGWebSettings {
@@ -112,18 +117,7 @@ public struct NGWebSettings {
 public struct NGSharedSettings {
     let UD = UserDefaults(suiteName: "group.\(Bundle.main.bundleIdentifier!)")
 
-    public init() {
-        UD?.register(defaults: ["hideNotifyAccountName": false])
-    }
-
-    public var hideNotifyAccountName: Bool {
-        get {
-            return UD?.bool(forKey: "hideNotifyAccountName") ?? false
-        }
-        set {
-            UD?.set(newValue, forKey: "hideNotifyAccountName")
-        }
-    }
+    public init() {}
 }
 
 public var VarNGSharedSettings = NGSharedSettings()
@@ -158,6 +152,14 @@ public class SystemNGSettings {
         }
     }
     
+    public var hideReactions: Bool {
+        get {
+            return UD.bool(forKey: "hideReactions")
+        }
+        set {
+            UD.set(newValue, forKey: "hideReactions")
+        }
+    }
 }
 
 public var VarSystemNGSettings = SystemNGSettings()

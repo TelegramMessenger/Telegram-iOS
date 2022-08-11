@@ -7,7 +7,7 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-
+        "//submodules/libphonenumber:libphonenumber",
     ],
     visibility = ["//visibility:public"],
 

@@ -636,7 +636,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
                             if let file = selectedMedia as? TelegramMediaFile {
-                                strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
+                                // MARK: Nicegram downloading feature
+                                strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true, shouldSave: true).start())
                             } else if let image = selectedMedia as? TelegramMediaImage, let representation = image.representations.last {
                                 strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, userInitiated: true, storeToDownloadsPeerType: nil).start())
                             }
@@ -1067,8 +1068,12 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         let descriptionFrame = strongSelf.descriptionNode.frame
                         shapes.append(.roundedRectLine(startPoint: CGPoint(x: descriptionFrame.minX, y: descriptionFrame.minY + floor((descriptionFrame.height - lineDiameter) / 2.0)), width: descriptionLineWidth, diameter: lineDiameter))
                         
-                        shapes.append(.roundedRect(rect: iconFrame, cornerRadius: 6.0))
-
+                        if let media = selectedMedia as? TelegramMediaFile, media.isInstantVideo {
+                            shapes.append(.circle(iconFrame))
+                        } else {
+                            shapes.append(.roundedRect(rect: iconFrame, cornerRadius: 6.0))
+                        }
+                            
                         shimmerNode.update(backgroundColor: item.presentationData.theme.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: nodeLayout.contentSize)
                     } else if let shimmerNode = strongSelf.placeholderNode {
                         strongSelf.placeholderNode = nil

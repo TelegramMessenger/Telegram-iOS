@@ -1008,7 +1008,10 @@ public class GalleryController: ViewController, StandalonePresentableController 
             if let strongSelf = self {
                 strongSelf.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
             }
-        }, dismissController: { [weak self] in
+        }, pushController: { [weak self] c in
+            self?.baseNavigationController?.pushViewController(c)
+            self?.dismiss(forceAway: true)
+        },  dismissController: { [weak self] in
             self?.dismiss(forceAway: true)
         }, replaceRootController: { [weak self] controller, ready in
             if let strongSelf = self {

@@ -456,6 +456,17 @@ extension Api.Updates {
 }
 
 extension Api.Updates {
+    var users: [Api.User] {
+        switch self {
+            case let .updates(_, users, _, _, _):
+                return users
+            case let .updatesCombined(_, users, _, _, _, _):
+               return users
+            default:
+                return []
+        }
+    }
+    
     var messages: [Api.Message] {
         switch self {
             case let .updates(updates, _, _, _, _):

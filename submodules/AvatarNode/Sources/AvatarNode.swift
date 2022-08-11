@@ -1,4 +1,6 @@
+// MARK: Nicegram Imports
 import NGWebUtils
+//
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -56,21 +58,6 @@ private class AvatarNodeParameters: NSObject {
     }
 }
 
-private func generateGradientFilledCircleImage(diameter: CGFloat, colors: NSArray) -> UIImage? {
-    return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        context.addEllipse(in: bounds)
-        context.clip()
-        
-        var locations: [CGFloat] = [0.0, 1.0]
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
-        
-        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())
-    })
-}
-
 private let grayscaleColors: NSArray = [
     UIColor(rgb: 0xb1b1b1).cgColor, UIColor(rgb: 0xcdcdcd).cgColor
 ]
@@ -118,7 +105,7 @@ public enum AvatarNodeImageOverride: Equatable {
     case savedMessagesIcon
     case repliesIcon
     case archivedChatsIcon(hiddenByDefault: Bool)
-    case editAvatarIcon
+    case editAvatarIcon(forceNone: Bool)
     case deletedIcon
     case phoneIcon
 }
@@ -303,7 +290,8 @@ public final class AvatarNode: ASDisplayNode {
         self.imageNode.isHidden = true
     }
     
-    public func setPeer(context: AccountContext, theme: PresentationTheme, peer: EnginePeer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), storeUnrounded: Bool = false) {
+    // MARK: Nicegram changes
+    public func setPeer(context: AccountContext, theme: PresentationTheme, peer: EnginePeer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), storeUnrounded: Bool = false, nicegramImage: UIImage? = nil) {
         var synchronousLoad = synchronousLoad
         var representation: TelegramMediaImageRepresentation?
         var icon = AvatarNodeIcon.none
@@ -323,8 +311,8 @@ public final class AvatarNode: ASDisplayNode {
                 case let .archivedChatsIcon(hiddenByDefault):
                     representation = nil
                     icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
-                case .editAvatarIcon:
-                    representation = peer?.smallProfileImage
+                case let .editAvatarIcon(forceNone):
+                    representation = forceNone ? nil : peer?.smallProfileImage
                     icon = .editAvatarIcon
                 case .deletedIcon:
                     representation = nil
@@ -333,7 +321,9 @@ public final class AvatarNode: ASDisplayNode {
                     representation = nil
                     icon = .phoneIcon
             }
-        } else if peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer?._asPeer(), contentSettings: context.currentContentSettings.with { $0 }) {
+        }
+        // MARK: Nicegram (isAllowedChat)
+        else if peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer?._asPeer(), contentSettings: context.currentContentSettings.with { $0 }) {
             representation = peer?.smallProfileImage
         }
         let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? EnginePeer.Id(0), peer?.displayLetters ?? [], representation)
@@ -372,6 +362,21 @@ public final class AvatarNode: ASDisplayNode {
                 }
                 
                 parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
+                // MARK: Nicegram changes
+            } else if let signal = nicegramAvatarImage(nicegramImage: nicegramImage) {
+                self.contents = nil
+                self.displaySuspended = true
+                self.imageReady.set(self.imageNode.contentReady)
+                self.imageNode.setSignal(signal |> beforeNext { [weak self] next in
+                    Queue.mainQueue().async {
+                        self?.unroundedImage = next?.1
+                    }
+                }
+                |> map { next -> UIImage? in
+                    return next?.0
+                })
+                
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer?.id ?? EnginePeer.Id(0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
             } else {
                 self.imageReady.set(.single(true))
                 self.displaySuspended = false

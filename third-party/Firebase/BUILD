@@ -125,6 +125,28 @@ apple_static_xcframework_import(
 )
 
 apple_static_xcframework_import(
+    name = "FirebaseABTesting",
+    xcframework_imports = glob([
+        "Firebase/FirebaseRemoteConfig/FirebaseABTesting.xcframework/**",
+    ]),
+    deps = [
+        
+    ],
+    visibility = ["//visibility:public"],
+)
+
+apple_static_xcframework_import(
+    name = "FirebaseRemoteConfig",
+    xcframework_imports = glob([
+        "Firebase/FirebaseRemoteConfig/FirebaseRemoteConfig.xcframework/**",
+    ]),
+    deps = [
+        ":FirebaseABTesting"
+    ],
+    visibility = ["//visibility:public"],
+)
+
+apple_static_xcframework_import(
     name = "AppAuth",
     xcframework_imports = glob([
         "Firebase/GoogleSignIn/AppAuth.xcframework/**",

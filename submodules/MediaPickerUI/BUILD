@@ -40,6 +40,7 @@ swift_library(
         "//submodules/ChatMessageBackground:ChatMessageBackground",
         "//submodules/SparseItemGrid:SparseItemGrid",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/MoreButtonNode:MoreButtonNode",
     ],
     visibility = [
         "//visibility:public",

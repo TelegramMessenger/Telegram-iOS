@@ -176,6 +176,8 @@ public final class AccountStateManager {
     private let appliedQtsPromise = Promise<Int32?>(nil)
     private let appliedQtsDisposable = MetaDisposable()
     
+    var updateConfigRequested: (() -> Void)?
+    
     init(
         accountPeerId: PeerId,
         accountManager: AccountManager<TelegramAccountManagerTypes>,
@@ -779,6 +781,10 @@ public final class AccountStateManager {
                 
                 if !events.deletedMessageIds.isEmpty {
                     self.deletedMessagesPipe.putNext(events.deletedMessageIds)
+                }
+            
+                if events.updateConfig {
+                    self.updateConfigRequested?()
                 }
             case let .pollCompletion(pollId, preMessageIds, preSubscribers):
                 if self.operations.count > 1 {

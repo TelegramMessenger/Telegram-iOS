@@ -11,7 +11,7 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
-    deps = [
+    deps = NGDEPS + [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/TelegramCore:TelegramCore",
@@ -22,7 +22,7 @@ swift_library(
         "//submodules/Emoji:Emoji",
         "//submodules/TinyThumbnail:TinyThumbnail",
         "//submodules/FastBlur:FastBlur",
-    ] + NGDEPS,
+    ],
     visibility = [
         "//visibility:public",
     ],

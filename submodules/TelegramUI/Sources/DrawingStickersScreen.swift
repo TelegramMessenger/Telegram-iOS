@@ -144,6 +144,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: { _ in
+        }, displayPremiumStickerTooltip: { _, _ in
         }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
@@ -163,7 +164,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
-        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: true), presentationContext: ChatPresentationContext(backgroundNode: nil))
+        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: true), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         
         self.blurView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
         
@@ -325,9 +326,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 var items: [ActionSheetItem] = []
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
-                    let _ = (context.account.postbox.transaction { transaction in
-                        clearRecentlyUsedStickers(transaction: transaction)
-                    }).start()
+                    let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
                 }))
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -440,9 +439,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     var items: [ActionSheetItem] = []
                     items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        let _ = (context.account.postbox.transaction { transaction in
-                            clearRecentlyUsedStickers(transaction: transaction)
-                        }).start()
+                        let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
                     }))
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -597,7 +594,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             }
                         
             let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, strings: strings, hasGifs: false, hasSettings: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: [], installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: [], installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme, hasPremium: false, isPremiumDisabled: true, trendingIsPremium: false)
             
             let (previousPanelEntries, previousGridEntries) = previousStickerEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: stickersInputNodeInteraction, scrollToItem: nil), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: stickersInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
@@ -632,7 +629,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             }
             
             let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, strings: strings, hasGifs: false, hasSettings: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: [], installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: [], installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme, hasPremium: false, isPremiumDisabled: true, trendingIsPremium: false)
                         
             let (previousPanelEntries, previousGridEntries) = previousMaskEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: masksInputNodeInteraction, scrollToItem: nil), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: masksInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)

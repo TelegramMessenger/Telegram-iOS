@@ -10,17 +10,18 @@ open class NGLoadingIndicator: UIView {
     public static let shared = NGLoadingIndicator()
     private var isAnimating = false
 
-    private let nicegramAnimationView: LOTAnimationView = {
+    private let nicegramAnimationView: AnimationView = {
         let jsonName = "NicegramLoader"
-        let animationView = LOTAnimationView(name: jsonName)
+        let animationView = AnimationView(name: jsonName)
 
-        animationView.loopAnimation = true
+        animationView.loopMode = .loop
         return animationView
     }()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .clear
+        isUserInteractionEnabled = false
 
         addSubview(nicegramAnimationView)
         nicegramAnimationView.snp.makeConstraints {
@@ -40,17 +41,19 @@ open class NGLoadingIndicator: UIView {
             return
         }
         guard let containerView = view else { return }
-        let containerFrame = view?.bounds
-
-        frame = containerFrame ?? UIScreen.main.bounds
+        
         isHidden = false
         containerView.addSubview(self)
-
+        snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        self.isAnimating = true
         UIView.animate(withDuration: 0.3) {
             self.backgroundColor = .black.withAlphaComponent(0.5)
-        } completion: { _ in
-            self.isAnimating = true
-            self.nicegramAnimationView.play()
+        } completion: { completed in
+            if completed {
+                self.nicegramAnimationView.play()
+            }
         }
     }
 
@@ -58,13 +61,13 @@ open class NGLoadingIndicator: UIView {
         if !isAnimating {
             return
         }
+        self.isAnimating = false
         nicegramAnimationView.stop()
-        UIView.animate(withDuration: 0.2) { [weak self] in
+        UIView.animate(withDuration: 0.2, delay: 0, options: [.beginFromCurrentState]) { [weak self] in
             guard let self = self else { return }
             self.backgroundColor = .clear
         } completion: { [weak self] _ in
             guard let self = self else { return }
-            self.isAnimating = false
             self.isHidden = true
         }
     }

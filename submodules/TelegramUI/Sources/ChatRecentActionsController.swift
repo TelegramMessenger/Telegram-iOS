@@ -59,7 +59,9 @@ final class ChatRecentActionsController: TelegramBaseController {
             }
         })
         
-        self.panelInteraction = ChatPanelInterfaceInteraction(cloudMessages: { _ in }, copyForwardMessages: { _ in }, setupReplyMessage: { _, _ in
+        // MARK: Nicegram (cloudMessages + copyForwardMessages + copySelectedMessages)
+        self.panelInteraction = ChatPanelInterfaceInteraction(cloudMessages: { _ in }, copyForwardMessages: { _ in }, copySelectedMessages: {
+        }, setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
         }, beginMessageSelection: { _, _ in
         }, deleteSelectedMessages: {

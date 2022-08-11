@@ -4,7 +4,7 @@ import UIKit
 private let controlStartCharactersSet = CharacterSet(charactersIn: "[*")
 private let controlCharactersSet = CharacterSet(charactersIn: "[]()*_-\\")
 
-public final class MarkdownAttributeSet {
+public final class MarkdownAttributeSet: Equatable {
     public let font: UIFont
     public let textColor: UIColor
     public let additionalAttributes: [String: Any]
@@ -14,9 +14,19 @@ public final class MarkdownAttributeSet {
         self.textColor = textColor
         self.additionalAttributes = additionalAttributes
     }
+    
+    public static func ==(lhs: MarkdownAttributeSet, rhs: MarkdownAttributeSet) -> Bool {
+        if !lhs.font.isEqual(rhs.font) {
+            return false
+        }
+        if lhs.textColor != rhs.textColor {
+            return false
+        }
+        return true
+    }
 }
 
-public final class MarkdownAttributes {
+public final class MarkdownAttributes: Equatable {
     public let body: MarkdownAttributeSet
     public let bold: MarkdownAttributeSet
     public let link: MarkdownAttributeSet
@@ -27,6 +37,19 @@ public final class MarkdownAttributes {
         self.link = link
         self.bold = bold
         self.linkAttribute = linkAttribute
+    }
+    
+    public static func ==(lhs: MarkdownAttributes, rhs: MarkdownAttributes) -> Bool {
+        if lhs.body != rhs.body {
+            return false
+        }
+        if lhs.bold != rhs.bold {
+            return false
+        }
+        if lhs.link != rhs.link {
+            return false
+        }
+        return true
     }
 }
 

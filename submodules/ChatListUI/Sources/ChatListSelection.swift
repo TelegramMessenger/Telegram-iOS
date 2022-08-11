@@ -29,39 +29,26 @@ func chatListSelectionOptions(context: AccountContext, peerIds: Set<PeerId>, fil
             }
             |> distinctUntilChanged
         } else {
-            let key = PostboxViewKey.unreadCounts(items: [.total(nil)])
-            return context.account.postbox.combinedView(keys: [key])
-            |> map { view -> ChatListSelectionOptions in
+            return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.TotalReadCounters())
+            |> map { readCounters -> ChatListSelectionOptions in
                 var hasUnread = false
-                if let unreadCounts = view.views[key] as? UnreadMessageCountsView, let total = unreadCounts.total() {
-                    for (_, counter) in total.1.absoluteCounters {
-                        if counter.messageCount != 0 {
-                            hasUnread = true
-                            break
-                        }
-                    }
+                if readCounters.count(for: .filtered, in: .chats, with: .all) != 0 {
+                    hasUnread = true
                 }
                 return ChatListSelectionOptions(read: .all(enabled: hasUnread), delete: false)
             }
             |> distinctUntilChanged
         }
     } else {
-        let items: [UnreadMessageCountsItem] = peerIds.map(UnreadMessageCountsItem.peer)
-        let key = PostboxViewKey.unreadCounts(items: items)
-        return context.account.postbox.combinedView(keys: [key])
-        |> map { view -> ChatListSelectionOptions in
+        return context.engine.data.subscribe(EngineDataList(
+            peerIds.map(TelegramEngine.EngineData.Item.Messages.PeerReadCounters.init)
+        ))
+        |> map { readCounters -> ChatListSelectionOptions in
             var hasUnread = false
-            if let unreadCounts = view.views[key] as? UnreadMessageCountsView {
-                loop: for entry in unreadCounts.entries {
-                    switch entry {
-                        case let .peer(_, state):
-                            if let state = state, state.isUnread {
-                                hasUnread = true
-                                break loop
-                            }
-                        default:
-                            break
-                    }
+            for counters in readCounters {
+                if counters.isUnread {
+                    hasUnread = true
+                    break
                 }
             }
             return ChatListSelectionOptions(read: .selective(enabled: hasUnread), delete: true)

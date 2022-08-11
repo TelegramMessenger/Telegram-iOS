@@ -131,6 +131,14 @@ public func peerAvatarCompleteImage(account: Account, peer: EnginePeer, size: CG
     return iconSignal
 }
 
+// MARK: Nicegram changes
+public func nicegramAvatarImage(nicegramImage: UIImage?) -> Signal<(UIImage, UIImage)?, NoError>? {
+    if let nicegramImage = nicegramImage {
+        return .single((nicegramImage, nicegramImage))
+    }
+    return nil
+}
+
 public func peerAvatarImage(account: Account, peerReference: PeerReference?, authorOfMessage: MessageReference?, representation: TelegramMediaImageRepresentation?, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), round: Bool = true, blurred: Bool = false, inset: CGFloat = 0.0, emptyColor: UIColor? = nil, synchronousLoad: Bool = false, provideUnrounded: Bool = false) -> Signal<(UIImage, UIImage)?, NoError>? {
     if let imageData = peerAvatarImageData(account: account, peerReference: peerReference, authorOfMessage: authorOfMessage, representation: representation, synchronousLoad: synchronousLoad) {
         return imageData

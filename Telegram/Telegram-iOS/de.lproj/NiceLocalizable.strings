@@ -30,8 +30,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "Pin anzeigen";
 "ChatFilter.Admin" = "Administrator";
-"NiceFeatures.Notifications.HideNotifyAccount" = "Konto in Benachrichtigung ausblenden";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "Anstelle von «Benutzer → Konto» sehen Sie nur «Benutzer».";
 "NiceFeatures.Notifications.Fix" = "Ungewünschte Benachrichtigungen deaktivieren";
 "NiceFeatures.Notifications.FixNotice" = "Nützlich, wenn du Benachrichtigungen von stummgeschalteten Chats erhältst.\nDas Antworten von Benachrichtigungen, Kontobezeichnungen sowie Medienvorschauen werden nicht verfügbar sein.";
 "NiceFeatures.Filters.Header" = "Filter (Tabs)";
@@ -105,6 +103,10 @@
 "Messages.Translate" = "Übersetzen";
 "Messages.UndoTranslate" = "Rückgängig übersetzen";
 "Messages.TranslateError" = "Die Übersetzung ist leider nicht verfügbar.";
+"Messages.SpeechToText" = "Sprache zu Text";
+"Messages.UndoSpeechToText" = "Sprache zu Text rückgängig machen";
+"Messages.SpeechToText.LowAccuracyError" = "Spracherkennung fehlgeschlagen.\n\nDies könnte an der schlechten Qualität der Audioaufnahme oder an Unterschieden zwischen der Sprache der Anwendung und der der Audioaufnahme liegen.";
+"Messages.SelectAllFromUser" = "Alle von diesem Benutzer auswählen";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Anmeldedatum";
@@ -144,6 +146,18 @@
 "NicegramSettings.Other.hidePhoneInSettingsNotice" = "Deine Nummer wird nur in der Benutzeroberfläche versteckt. Um sie vor anderen zu verbergen, verwende bitte die Privatsphäre-Einstellungen.";
 "NicegramSettings.Other.showProfileId" = "Profil-ID anzeigen";
 "NicegramSettings.Other.showRegDate" = "Registrierungsdatum anzeigen";
+"NicegramSettings.Unblock.Header" = "Blockierung aufheben";
+"NicegramSettings.Unblock.Button" = "Anleitung zum Aufheben einer Blockierung";
+"NicegramSettings.Other.hideReactions" = "Reaktionen verbergen";
+"NicegramSettings.RoundVideos.DownloadVideos" = "Videos in die Galerie herunterladen";
 "Premium.OnetapTranslate.LowPower" = "Erkennung bei geringer Leistung";
 "Premium.OnetapTranslate.LowPower.Notice" = "Die App erkennt die Sprache jeder Nachricht auf deinem Gerät. Das ist eine Aufgabe mit hoher Priorität, die sich auf die Akkulaufzeit auswirken kann.";
 "Premium.rememberFolderOnExit" = "Aktuellen Ordner beim Beenden merken";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "Älter als";
+"NiceFeatures.RegDate.Approximately" = "Ungefähr";
+"NiceFeatures.RegDate.NewerThan" = "Neuer als";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "Leider können Sie **Telegram Premium Features** nicht nutzen, solange Sie in der Nicegram-App eingeloggt sind. Gehen Sie bitte zur offiziellen Telegram-App und abonnieren Sie **Telegram Premium**. Wenn Sie zu Nicegram zurückkehren, stehen Ihnen alle **Premium-Funktionen** zur Verfügung.";

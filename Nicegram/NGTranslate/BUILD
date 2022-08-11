@@ -7,9 +7,15 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
+        "//submodules/AccountContext:AccountContext",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/TelegramCore:TelegramCore",
         "//Nicegram/NGLogging:NGLogging",
-        "//Nicegram/NGData:NGData"
+        "//Nicegram/NGData:NGData",
+        "//Nicegram/NGExtensions:NGExtensions",
+        "//Nicegram/NGLocalization:NGLocalization",
+        "//Nicegram/NGModels:NGModels",
+        "//Nicegram/NGStrings:NGStrings",
     ],
     visibility = [
         "//visibility:public",

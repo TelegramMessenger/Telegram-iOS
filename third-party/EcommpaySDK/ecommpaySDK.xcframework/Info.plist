@@ -6,23 +6,25 @@
 	<array>
 		<dict>
 			<key>LibraryIdentifier</key>
-			<string>ios-arm64</string>
+			<string>ios-arm64_armv7</string>
 			<key>LibraryPath</key>
 			<string>ecommpaySDK.framework</string>
 			<key>SupportedArchitectures</key>
 			<array>
 				<string>arm64</string>
+				<string>armv7</string>
 			</array>
 			<key>SupportedPlatform</key>
 			<string>ios</string>
 		</dict>
 		<dict>
 			<key>LibraryIdentifier</key>
-			<string>ios-x86_64-simulator</string>
+			<string>ios-i386_x86_64-simulator</string>
 			<key>LibraryPath</key>
 			<string>ecommpaySDK.framework</string>
 			<key>SupportedArchitectures</key>
 			<array>
+				<string>i386</string>
 				<string>x86_64</string>
 			</array>
 			<key>SupportedPlatform</key>

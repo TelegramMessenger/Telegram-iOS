@@ -11,6 +11,8 @@ import AccountContext
 import StickerPackPreviewUI
 import ContextUI
 import ChatPresentationInterfaceState
+import PremiumUI
+import UndoUI
 
 private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollViewDelegate {
     private final class DisplayItem {
@@ -97,9 +99,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                 }
                 
                 if let itemNode = selectedNode, let item = itemNode.stickerItem {
-                    return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                        return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-                    }
+                    return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                     |> deliverOnMainQueue
                     |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                         if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
@@ -134,15 +134,36 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                             })))
                             
                             menuItems.append(
-                                .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                     f(.default)
                                     
                                     if let strongSelf = self {
-                                        if isStarred {
-                                            let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-                                        } else {
-                                            let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-                                        }
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                        |> deliverOnMainQueue).start(next: { result in
+                                            switch result {
+                                                case .generic:
+                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                case let .limitExceeded(limit, premiumLimit):
+                                                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
+                                                    let text: String
+                                                    if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
+                                                        text = strongSelf.strings.Premium_MaxFavedStickersFinalText
+                                                    } else {
+                                                        text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
+                                                    }
+                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                        if let strongSelf = self {
+                                                            if case .info = action {
+                                                                let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
+                                                                strongSelf.getControllerInteraction?()?.navigationController()?.pushViewController(controller)
+                                                                return true
+                                                            }
+                                                        }
+                                                        return false
+                                                    }), nil)
+                                            }
+                                        })
                                     }
                                 }))
                             )
@@ -175,7 +196,13 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                     }
                                 }))
                             )
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
+                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems, openPremiumIntro: { [weak self] in
+                                guard let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() else {
+                                    return
+                                }
+                                let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                controllerInteraction.navigationController()?.pushViewController(controller)
+                            }))
                         } else {
                             return nil
                         }
@@ -353,9 +380,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     private func updateItemsLayout(width: CGFloat) {
         self.displayItems.removeAll()
         
-        let itemsPerRow = min(8, max(4, Int(width / 80)))
-        let sideInset: CGFloat = 4.0
-        let itemSpacing: CGFloat = 4.0
+        let itemsPerRow = min(8, max(5, Int(width / 80)))
+        let sideInset: CGFloat = 2.0
+        let itemSpacing: CGFloat = 2.0
         let itemSize = floor((width - sideInset * 2.0 - itemSpacing * (CGFloat(itemsPerRow) - 1.0)) / CGFloat(itemsPerRow))
         
         var columnIndex = 0

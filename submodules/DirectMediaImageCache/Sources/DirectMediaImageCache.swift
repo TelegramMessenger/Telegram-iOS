@@ -184,7 +184,7 @@ public final class DirectMediaImageCache {
         return self.account.postbox.mediaBox.cachedRepresentationPathForId(resourceId.stringRepresentation, representationId: representationId, keepDuration: .general)
     }
 
-    private func getLoadSignal(width: Int, resource: MediaResourceReference, resourceSizeLimit: Int) -> Signal<UIImage?, NoError>? {
+    private func getLoadSignal(width: Int, resource: MediaResourceReference, resourceSizeLimit: Int64) -> Signal<UIImage?, NoError>? {
         return Signal { subscriber in
             let cachePath = self.getCachePath(resourceId: resource.resource.id, imageType: .square(width: width))
 
@@ -199,7 +199,7 @@ public final class DirectMediaImageCache {
             ).start()
 
             let dataSignal: Signal<Data?, NoError>
-            if resourceSizeLimit < Int(Int32.max) {
+            if resourceSizeLimit < Int64.max {
                 dataSignal = self.account.postbox.mediaBox.resourceData(resource.resource, size: resourceSizeLimit, in: 0 ..< resourceSizeLimit)
                 |> map { data, _ -> Data? in
                     return data
@@ -239,44 +239,44 @@ public final class DirectMediaImageCache {
         }
     }
 
-    private func getProgressiveSize(mediaReference: AnyMediaReference, width: Int, representations: [TelegramMediaImageRepresentation]) -> (resource: MediaResourceReference, size: Int)? {
+    private func getProgressiveSize(mediaReference: AnyMediaReference, width: Int, representations: [TelegramMediaImageRepresentation]) -> (resource: MediaResourceReference, size: Int64)? {
         if let representation = representations.first(where: { !$0.progressiveSizes.isEmpty }) {
-            let selectedSize: Int32
+            let selectedSize: Int64
             let progressiveSizes = representation.progressiveSizes
             if progressiveSizes.count > 0 && width <= 64 {
-                selectedSize = progressiveSizes[0]
+                selectedSize = Int64(progressiveSizes[0])
             } else if progressiveSizes.count > 2 && width <= 160 {
-                selectedSize = progressiveSizes[2]
+                selectedSize = Int64(progressiveSizes[2])
             } else if progressiveSizes.count > 4 && width <= 400 {
-                selectedSize = progressiveSizes[4]
+                selectedSize = Int64(progressiveSizes[4])
             } else {
-                selectedSize = Int32.max
+                selectedSize = Int64.max
             }
-            return (mediaReference.resourceReference(representation.resource), Int(selectedSize))
+            return (mediaReference.resourceReference(representation.resource), selectedSize)
         } else {
             for representation in representations.sorted(by: { $0.dimensions.width < $1.dimensions.width }) {
                 if Int(Float(representation.dimensions.width) * 1.2) >= width {
-                    return (mediaReference.resourceReference(representation.resource), Int(Int32.max))
+                    return (mediaReference.resourceReference(representation.resource), Int64.max)
                 }
             }
             if let representation = representations.last {
-                return (mediaReference.resourceReference(representation.resource), Int(Int32.max))
+                return (mediaReference.resourceReference(representation.resource), Int64.max)
             }
             return nil
         }
     }
 
-    private func getResource(message: Message, image: TelegramMediaImage, width: Int) -> (resource: MediaResourceReference, size: Int)? {
+    private func getResource(message: Message, image: TelegramMediaImage, width: Int) -> (resource: MediaResourceReference, size: Int64)? {
         return self.getProgressiveSize(mediaReference: MediaReference.message(message: MessageReference(message), media: image).abstract, width: width, representations: image.representations)
     }
 
-    private func getResource(message: Message, file: TelegramMediaFile, width: Int) -> (resource: MediaResourceReference, size: Int)? {
+    private func getResource(message: Message, file: TelegramMediaFile, width: Int) -> (resource: MediaResourceReference, size: Int64)? {
         return self.getProgressiveSize(mediaReference: MediaReference.message(message: MessageReference(message), media: file).abstract, width: width, representations: file.previewRepresentations)
     }
 
     private func getImageSynchronous(message: Message, media: Media, width: Int, possibleWidths: [Int]) -> GetMediaResult? {
         var immediateThumbnailData: Data?
-        var resource: (resource: MediaResourceReference, size: Int)?
+        var resource: (resource: MediaResourceReference, size: Int64)?
         if let image = media as? TelegramMediaImage {
             immediateThumbnailData = image.immediateThumbnailData
             resource = self.getResource(message: message, image: image, width: width)

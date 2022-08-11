@@ -9,7 +9,7 @@ import LegacyComponents
 import ItemListUI
 import PresentationDataUtils
 
-private let autodownloadSizeValues: [(CGFloat, Int32)] = [
+private let autodownloadSizeValues: [(CGFloat, Int64)] = [
     (0.000, 512 * 1024),
     (0.257, 1024 * 1024),
     (0.520, 10 * 1024 * 1024),
@@ -17,7 +17,7 @@ private let autodownloadSizeValues: [(CGFloat, Int32)] = [
     (1.000, 1536 * 1024 * 1024)
 ]
 
-private func sliderValue(for size: Int32) -> CGFloat {
+private func sliderValue(for size: Int64) -> CGFloat {
     for i in 1 ..< autodownloadSizeValues.count {
         let (previousValue, previousValueSize) = autodownloadSizeValues[i - 1]
         let (value, valueSize) = autodownloadSizeValues[i]
@@ -32,13 +32,13 @@ private func sliderValue(for size: Int32) -> CGFloat {
     return 0.0
 }
 
-private func sizeValue(for sliderValue: CGFloat) -> Int32 {
+private func sizeValue(for sliderValue: CGFloat) -> Int64 {
     for i in 1 ..< autodownloadSizeValues.count {
         let (previousValue, previousValueSize) = autodownloadSizeValues[i - 1]
         let (value, valueSize) = autodownloadSizeValues[i]
         if value > sliderValue {
             let delta = (sliderValue - previousValue) / (value - previousValue) * CGFloat(valueSize - previousValueSize)
-            return previousValueSize + Int32(delta)
+            return previousValueSize + Int64(delta)
         } else if previousValue == sliderValue {
             return previousValueSize
         } else if value == sliderValue || i == autodownloadSizeValues.count - 1 {
@@ -53,11 +53,11 @@ final class AutodownloadSizeLimitItem: ListViewItem, ItemListItem {
     let strings: PresentationStrings
     let decimalSeparator: String
     let text: String
-    let value: Int32
+    let value: Int64
     let sectionId: ItemListSectionId
-    let updated: (Int32) -> Void
+    let updated: (Int64) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, decimalSeparator: String, text: String, value: Int32, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, decimalSeparator: String, text: String, value: Int64, sectionId: ItemListSectionId, updated: @escaping (Int64) -> Void) {
         self.theme = theme
         self.strings = strings
         self.decimalSeparator = decimalSeparator
@@ -299,4 +299,3 @@ private final class AutodownloadSizeLimitItemNode: ListViewItemNode {
         self.item?.updated(value)
     }
 }
-

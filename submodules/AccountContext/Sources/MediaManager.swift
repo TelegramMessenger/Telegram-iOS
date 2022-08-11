@@ -6,6 +6,7 @@ import UIKit
 import AsyncDisplayKit
 import TelegramAudio
 import UniversalMediaPlayer
+import RangeSet
 
 public enum PeerMessagesMediaPlaylistId: Equatable, SharedMediaPlaylistId {
     case peer(PeerId)
@@ -200,7 +201,7 @@ public protocol UniversalVideoManager: AnyObject {
     func addPlaybackCompleted(id: AnyHashable, _ f: @escaping () -> Void) -> Int
     func removePlaybackCompleted(id: AnyHashable, index: Int)
     func statusSignal(content: UniversalVideoContent) -> Signal<MediaPlayerStatus?, NoError>
-    func bufferingStatusSignal(content: UniversalVideoContent) -> Signal<(IndexSet, Int)?, NoError>
+    func bufferingStatusSignal(content: UniversalVideoContent) -> Signal<(RangeSet<Int64>, Int64)?, NoError>
 }
 
 public enum AudioRecordingState: Equatable {

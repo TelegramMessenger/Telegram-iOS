@@ -49,13 +49,13 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
         }
         
-        self.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
+        self.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceView, value in
             guard let strongSelf = self, let item = strongSelf.item else {
                 gesture?.cancel()
                 return
             }
             
-            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceView, gesture, value)
         }
     }
     
@@ -75,7 +75,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
@@ -296,7 +296,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
-                    return (layoutSize, { [weak self] animation, synchronousLoads in
+                    return (layoutSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             strongSelf.contact = selectedContact

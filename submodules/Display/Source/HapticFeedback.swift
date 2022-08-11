@@ -121,6 +121,14 @@ private final class HapticFeedbackImpl {
         }
     }
     
+    func warning() {
+        if let notificationGenerator = self.notificationGenerator {
+            notificationGenerator.notificationOccurred(.warning)
+        } else {
+
+        }
+    }
+    
     @objc dynamic func f() {
     }
 }
@@ -202,6 +210,14 @@ public final class HapticFeedback {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.withImpl { impl in
                 impl.error()
+            }
+        }
+    }
+    
+    public func warning() {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            self.withImpl { impl in
+                impl.warning()
             }
         }
     }

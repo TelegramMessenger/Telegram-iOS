@@ -749,6 +749,37 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateBackgroundColor(layer: CALayer, color: UIColor, completion: ((Bool) -> Void)? = nil) {
+        if let nodeColor = layer.backgroundColor, nodeColor == color.cgColor {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            layer.backgroundColor = color.cgColor
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            if let nodeColor = layer.backgroundColor {
+                layer.backgroundColor = color.cgColor
+                layer.animate(from: nodeColor, to: color.cgColor, keyPath: "backgroundColor", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+            } else {
+                layer.backgroundColor = color.cgColor
+                if let completion = completion {
+                    completion(true)
+                }
+            }
+        }
+    }
+    
     func updateCornerRadius(node: ASDisplayNode, cornerRadius: CGFloat, completion: ((Bool) -> Void)? = nil) {
         if node.cornerRadius.isEqual(to: cornerRadius) {
             if let completion = completion {
@@ -792,6 +823,31 @@ public extension ContainedViewLayoutTransition {
             let previousCornerRadius = layer.cornerRadius
             layer.cornerRadius = cornerRadius
             layer.animate(from: NSNumber(value: Float(previousCornerRadius)), to: NSNumber(value: Float(cornerRadius)), keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
+    
+    func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)? = nil) {
+        if layer.contentsRect == contentsRect {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            layer.contentsRect = contentsRect
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let previousContentsRect = layer.contentsRect
+            layer.contentsRect = contentsRect
+            layer.animate(from: NSValue(cgRect: previousContentsRect), to: NSValue(cgRect: contentsRect), keyPath: "contentsRect", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {
                     completion(result)
                 }
@@ -1481,6 +1537,7 @@ public protocol ControlledTransitionAnimator: AnyObject {
     func updateBounds(layer: CALayer, bounds: CGRect, completion: ((Bool) -> Void)?)
     func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)?)
     func updateCornerRadius(layer: CALayer, cornerRadius: CGFloat, completion: ((Bool) -> Void)?)
+    func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)?)
 }
 
 protocol AnyValueProviding {
@@ -1877,6 +1934,21 @@ public final class ControlledTransition {
                 completion: completion
             ))
         }
+        
+        public func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)?) {
+            if layer.contentsRect == contentsRect {
+                return
+            }
+            let fromValue = layer.presentation()?.contentsRect ?? layer.contentsRect
+            layer.contentsRect = contentsRect
+            self.add(animation: ControlledTransitionProperty(
+                layer: layer,
+                path: "contentsRect",
+                fromValue: fromValue,
+                toValue: contentsRect,
+                completion: completion
+            ))
+        }
     }
 
     public final class LegacyAnimator: ControlledTransitionAnimator {
@@ -1931,6 +2003,10 @@ public final class ControlledTransition {
         
         public func updateCornerRadius(layer: CALayer, cornerRadius: CGFloat, completion: ((Bool) -> Void)?) {
             self.transition.updateCornerRadius(layer: layer, cornerRadius: cornerRadius, completion: completion)
+        }
+        
+        public func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)?) {
+            self.transition.updateContentsRect(layer: layer, contentsRect: contentsRect, completion: completion)
         }
     }
     

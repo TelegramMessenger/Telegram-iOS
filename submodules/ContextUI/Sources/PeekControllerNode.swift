@@ -27,6 +27,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
     private var contentNodeHasValidLayout = false
     
     private var topAccessoryNode: ASDisplayNode?
+    private var fullScreenAccessoryNode: (PeekControllerAccessoryNode & ASDisplayNode)?
 
     private var actionsContainerNode: ContextActionsContainerNode
     
@@ -43,8 +44,10 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.controller = controller
         
         self.dimNode = ASDisplayNode()
-        self.blurView = UIVisualEffectView(effect: UIBlurEffect(style: self.theme.isDark ? .dark : .light))
-        self.blurView.isUserInteractionEnabled = false
+        
+        let blurView = UIVisualEffectView(effect: UIBlurEffect(style: self.theme.isDark ? .dark : .light))
+        blurView.isUserInteractionEnabled = false
+        self.blurView = blurView
         
         self.darkDimNode = ASDisplayNode()
         self.darkDimNode.alpha = 0.0
@@ -69,6 +72,8 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.content = content
         self.contentNode = content.node()
         self.topAccessoryNode = content.topAccessoryNode()
+        self.fullScreenAccessoryNode = content.fullScreenAccessoryNode(blurView: blurView)
+        self.fullScreenAccessoryNode?.alpha = 0.0
         
         var feedbackTapImpl: (() -> Void)?
         var activatedActionImpl: (() -> Void)?
@@ -106,8 +111,15 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.darkDimNode)
         self.containerNode.addSubnode(self.contentNode)
         
-        self.addSubnode(self.actionsContainerNode)
         self.addSubnode(self.containerNode)
+        self.addSubnode(self.actionsContainerNode)
+        
+        if let fullScreenAccessoryNode = self.fullScreenAccessoryNode {
+            self.fullScreenAccessoryNode?.dismiss = { [weak self] in
+                self?.requestDismiss()
+            }
+            self.addSubnode(fullScreenAccessoryNode)
+        }
         
         activatedActionImpl = { [weak self] in
             self?.requestDismiss()
@@ -176,12 +188,17 @@ final class PeekControllerNode: ViewControllerTracingNode {
                 case .freeform:
                     containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 3.0)), size: contentSize)
             }
-            actionsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - actionsSize.width) / 2.0), y: containerFrame.maxY + 32.0), size: actionsSize)
+            actionsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - actionsSize.width) / 2.0), y: containerFrame.maxY + 64.0), size: actionsSize)
         }
         transition.updateFrame(node: self.containerNode, frame: containerFrame)
-        
+                
         self.actionsContainerNode.updateSize(containerSize: actionsSize, contentSize: actionsSize)
         transition.updateFrame(node: self.actionsContainerNode, frame: actionsFrame)
+        
+        if let fullScreenAccessoryNode = self.fullScreenAccessoryNode {
+            fullScreenAccessoryNode.updateLayout(size: layout.size, transition: transition)
+            transition.updateFrame(node: fullScreenAccessoryNode, frame: CGRect(origin: .zero, size: layout.size))
+        }
         
         self.contentNodeHasValidLayout = true
     }
@@ -200,7 +217,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
             topAccessoryNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, initialVelocity: 0.0, damping: 110.0)
             topAccessoryNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         }
-        
+                
         if case .press = self.content.menuActivation() {
             self.hapticFeedback.tap()
         } else {
@@ -209,6 +226,8 @@ final class PeekControllerNode: ViewControllerTracingNode {
     }
     
     func animateOut(to rect: CGRect, completion: @escaping () -> Void) {
+        self.isUserInteractionEnabled = false
+        
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.blurView.layer.animateAlpha(from: self.blurView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
         self.darkDimNode.layer.animateAlpha(from: self.darkDimNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
@@ -228,6 +247,10 @@ final class PeekControllerNode: ViewControllerTracingNode {
             self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false)
             self.actionsContainerNode.layer.animateSpring(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping, removeOnCompletion: false)
             self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint()), to: NSValue(cgPoint: actionsOffset), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+        }
+        
+        if let fullScreenAccessoryNode = self.fullScreenAccessoryNode, !fullScreenAccessoryNode.alpha.isZero {
+            fullScreenAccessoryNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false)
         }
     }
     
@@ -288,6 +311,14 @@ final class PeekControllerNode: ViewControllerTracingNode {
     
     func activateMenu() {
         if self.content.menuItems().isEmpty {
+            if let fullScreenAccessoryNode = self.fullScreenAccessoryNode {
+                fullScreenAccessoryNode.alpha = 1.0
+                fullScreenAccessoryNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                
+                let previousBlurAlpha = self.blurView.alpha
+                self.blurView.alpha = 1.0
+                self.blurView.layer.animateAlpha(from: previousBlurAlpha, to: self.blurView.alpha, duration: 0.3)
+            }
             return
         }
         if case .press = self.content.menuActivation() {
@@ -324,7 +355,10 @@ final class PeekControllerNode: ViewControllerTracingNode {
                 highlightedActionNode.performAction()
             }
         } else if self.actionsContainerNode.alpha.isZero {
-            self.requestDismiss()
+            if let fullScreenAccessoryNode = self.fullScreenAccessoryNode, !fullScreenAccessoryNode.alpha.isZero {
+            } else {
+                self.requestDismiss()
+            }
         }
     }
     

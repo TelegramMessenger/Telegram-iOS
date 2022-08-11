@@ -139,17 +139,25 @@ public func setCachedRegDate(_ userId: Int64, _ ts: String) -> Void {
 }
 
 public func makeNiceRegDateStr(_ date: String) -> String {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "yyyy-MM"
-
-    guard let oldDate = dateFormatter.date(from: date) else {
+    let monthDateFormatter = DateFormatter()
+    monthDateFormatter.dateFormat = "yyyy-MM"
+    
+    let dayDateFormatter = DateFormatter()
+    dayDateFormatter.dateFormat = "yyyy-MM-dd"
+    
+    var convertDateFormatter = DateFormatter()
+    
+    if let monthDate = monthDateFormatter.date(from: date) {
+        convertDateFormatter.dateFormat = "~ MMMM yyyy"
+        
+        return convertDateFormatter.string(from: monthDate)
+    } else if let dayDate = dayDateFormatter.date(from: date) {
+        convertDateFormatter.dateFormat = "dd MMMM yyyy"
+        
+        return convertDateFormatter.string(from: dayDate)
+    }  else {
         return ""
     }
-
-    let convertDateFormatter = DateFormatter()
-    convertDateFormatter.dateFormat = "MMMM yyyy"
-
-    return convertDateFormatter.string(from: oldDate)
 }
 
 

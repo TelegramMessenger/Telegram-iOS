@@ -1,4 +1,60 @@
 public extension Api {
+    enum InputDocument: TypeConstructorDescription {
+        case inputDocument(id: Int64, accessHash: Int64, fileReference: Buffer)
+        case inputDocumentEmpty
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputDocument(let id, let accessHash, let fileReference):
+                    if boxed {
+                        buffer.appendInt32(448771445)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeBytes(fileReference, buffer: buffer, boxed: false)
+                    break
+                case .inputDocumentEmpty:
+                    if boxed {
+                        buffer.appendInt32(1928391342)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputDocument(let id, let accessHash, let fileReference):
+                return ("inputDocument", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("fileReference", String(describing: fileReference))])
+                case .inputDocumentEmpty:
+                return ("inputDocumentEmpty", [])
+    }
+    }
+    
+        public static func parse_inputDocument(_ reader: BufferReader) -> InputDocument? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputDocument.inputDocument(id: _1!, accessHash: _2!, fileReference: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputDocumentEmpty(_ reader: BufferReader) -> InputDocument? {
+            return Api.InputDocument.inputDocumentEmpty
+        }
+    
+    }
+}
+public extension Api {
     enum InputEncryptedChat: TypeConstructorDescription {
         case inputEncryptedChat(chatId: Int32, accessHash: Int64)
     
@@ -736,6 +792,68 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputGroupCall.inputGroupCall(id: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum InputInvoice: TypeConstructorDescription {
+        case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
+        case inputInvoiceSlug(slug: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputInvoiceMessage(let peer, let msgId):
+                    if boxed {
+                        buffer.appendInt32(-977967015)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    break
+                case .inputInvoiceSlug(let slug):
+                    if boxed {
+                        buffer.appendInt32(-1020867857)
+                    }
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputInvoiceMessage(let peer, let msgId):
+                return ("inputInvoiceMessage", [("peer", String(describing: peer)), ("msgId", String(describing: msgId))])
+                case .inputInvoiceSlug(let slug):
+                return ("inputInvoiceSlug", [("slug", String(describing: slug))])
+    }
+    }
+    
+        public static func parse_inputInvoiceMessage(_ reader: BufferReader) -> InputInvoice? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputInvoice.inputInvoiceMessage(peer: _1!, msgId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputInvoiceSlug(_ reader: BufferReader) -> InputInvoice? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputInvoice.inputInvoiceSlug(slug: _1!)
             }
             else {
                 return nil

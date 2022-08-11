@@ -58,7 +58,7 @@
       [_textStorage setAttributedString:attributedString];
     }
     
-    _textContainer = [[NSTextContainer alloc] initWithSize:constrainedSize];
+    _textContainer = [[ASCustomTextContainer alloc] initWithSize:constrainedSize];
     // We want the text laid out up to the very edges of the container.
     _textContainer.lineFragmentPadding = 0;
     _textContainer.lineBreakMode = lineBreakMode;

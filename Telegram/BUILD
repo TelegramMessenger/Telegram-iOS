@@ -222,7 +222,12 @@ filegroup(
         "Telegram-iOS/en.lproj/Localizable.strings",
     ] + [
         "{}.lproj/Localizable.strings".format(language) for language in empty_languages
-    ] + glob(["Telegram-iOS/*.lproj/NiceLocalizable.strings"])
+    ] + glob(
+        [
+            "Telegram-iOS/*.lproj/NiceLocalizable.strings",
+            "Telegram-iOS/*.lproj/NicegramLocalizable.strings"
+        ]
+    )
 )
 
 filegroup(
@@ -230,6 +235,7 @@ filegroup(
     srcs = glob([
         "Telegram-iOS/*.lproj/Localizable.strings",
         "Telegram-iOS/*.lproj/NiceLocalizable.strings",
+        "Telegram-iOS/*.lproj/NicegramLocalizable.strings",
     ], exclude = ["Telegram-iOS/*.lproj/**/.*"]),
 )
 
@@ -307,6 +313,9 @@ alternate_icon_folders = [
     "New1",
     "New2",
     "New3",
+    "Premium",
+    "PremiumBlack",
+    "PremiumTurbo",
 ]
 
 [
@@ -341,6 +350,7 @@ swift_library(
         "Telegram-iOS/Application.swift",
     ]),
     data = [
+        ":Icons",
         ":AppResources",
         ":AppIntentVocabularyResources",
         ":InfoPlistStringResources",
@@ -349,6 +359,7 @@ swift_library(
         "//submodules/OverlayStatusController:OverlayStatusControllerResources",
         "//submodules/PasswordSetupUI:PasswordSetupUIResources",
         "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
+        "//submodules/PremiumUI:PremiumUIResources",
         "//submodules/TelegramUI:TelegramUIResources",
         "//submodules/TelegramUI:TelegramUIAssets",
         ":GeneratedPresentationStrings/Resources/PresentationStrings.data",
@@ -398,6 +409,8 @@ plist_fragment(
                 <string>tg</string>
                 <string>ng</string>
                 <string>ngcn</string>
+                <string>ncg</string>
+                <string>{google_client_scheme}</string>
             </array>
         </dict>
     </array>
@@ -516,6 +529,13 @@ filtering_notifications_fragment = """
 <true/>
 """
 
+apple_sign_in_fragment = """
+<key>com.apple.developer.applesignin</key>
+<array>
+<string>Default</string>
+</array>
+"""
+
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
@@ -530,6 +550,7 @@ plist_fragment(
         carplay_fragment,
         communication_notifications_fragment,
         filtering_notifications_fragment,
+        apple_sign_in_fragment,
     ])
 )
 
@@ -1854,6 +1875,8 @@ plist_fragment(
     <string>We need this so that you can share photos and videos from your photo library.</string>
     <key>NSSiriUsageDescription</key>
     <string>You can use Siri to send messages.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>We need this to transcribe audio messages on your request.</string>
     <key>NSUserActivityTypes</key>
     <array>
         <string>INSendMessageIntent</string>
@@ -1999,23 +2022,6 @@ ios_application(
         ":Main",
         ":Lib",
     ],
-)
-
-swift_library(
-    name = "UITestsLib",
-    module_name = "UITestsLib",
-    srcs = glob(["UITests/**/*.swift"]),
-    deps = [
-        "//submodules/TelegramUI:TelegramUI",
-    ],
-)
-
-ios_ui_test(
-    name = "UITests",
-    minimum_os_version = "9.0",
-    deps = [":UITestsLib"],
-    infoplists = [":UITestsLib/Info.plist"],
-    test_host = ":Telegram",
 )
 
 # Temporary targets used to simplify webrtc build tests

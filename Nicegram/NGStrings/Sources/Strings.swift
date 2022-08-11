@@ -58,10 +58,6 @@ public func getLangFallback(_ lang: String) -> String {
 
 func getFallbackKey(_ key: String) -> String {
     switch (key) {
-    case "NicegramSettings.Notifications.hideAccountInNotification":
-        return "NiceFeatures.Notifications.HideNotifyAccount"
-    case "NicegramSettings.Notifications.hideAccountInNotificationNotice":
-        return "NiceFeatures.Notifications.HideNotifyAccountNotice"
     case "NicegramSettings.Tabs":
         return "NiceFeatures.Tabs.Header"
     case "NicegramSettings.Tabs.showContactsTab":

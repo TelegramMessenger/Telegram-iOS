@@ -1,7 +1,9 @@
 import Foundation
+import EsimKeychainWrapper
 
 public final class AppCache {
-    @UserDefaultsBacked(key: "appLaunchCount", storage: .standard, defaultValue: 0)
+    // Old key 'appLaunchCount'
+    @UserDefaultsBacked(key: "appLaunchCount_v2", storage: .standard, defaultValue: 0)
     public static var appLaunchCount: Int
 
     @UserDefaultsBacked(key: "firstAppLaunchDate", storage: .standard, defaultValue: nil)
@@ -33,6 +35,16 @@ public final class AppCache {
 
     public static var haveValidSubscription: Bool {
         return currentProductID != nil || hasUnlimPremium
+    }
+    
+    public static var mobileIdentifier: String {
+        if let identifier = KeychainWrapper.standard.string(forKey: "ng_mobileIdentifier", withAccessibility: .afterFirstUnlock),
+           !identifier.isEmpty {
+            return identifier
+        }
+        let newIdentifier = UUID().uuidString
+        KeychainWrapper.standard.set(newIdentifier, forKey: "ng_mobileIdentifier", withAccessibility: .afterFirstUnlock)
+        return newIdentifier
     }
 
     private init() {}

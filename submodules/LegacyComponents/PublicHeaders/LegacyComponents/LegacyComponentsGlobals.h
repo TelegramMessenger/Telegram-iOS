@@ -60,7 +60,7 @@ typedef enum {
 
 - (id<LegacyComponentsAccessChecker>)accessChecker;
 
-- (id<SDisposable>)requestAudioSession:(TGAudioSessionType)type interrupted:(void (^)())interrupted;
+- (id<SDisposable>)requestAudioSession:(TGAudioSessionType)type activated:(void (^)())activated interrupted:(void (^)())interrupted;
 
 - (SThreadPool *)sharedMediaImageProcessingThreadPool;
 - (TGMemoryImageCache *)sharedMediaMemoryImageCache;

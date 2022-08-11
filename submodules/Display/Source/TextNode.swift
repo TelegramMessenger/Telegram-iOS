@@ -25,6 +25,19 @@ private final class TextNodeSpoiler {
     }
 }
 
+
+private final class TextNodeEmbeddedItem {
+    let range: NSRange
+    let frame: CGRect
+    let item: AnyHashable
+    
+    init(range: NSRange, frame: CGRect, item: AnyHashable) {
+        self.range = range
+        self.frame = frame
+        self.item = item
+    }
+}
+
 public struct TextRangeRectEdge: Equatable {
     public var x: CGFloat
     public var y: CGFloat
@@ -45,8 +58,9 @@ private final class TextNodeLine {
     let strikethroughs: [TextNodeStrikethrough]
     let spoilers: [TextNodeSpoiler]
     let spoilerWords: [TextNodeSpoiler]
+    let embeddedItems: [TextNodeEmbeddedItem]
     
-    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler]) {
+    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler], embeddedItems: [TextNodeEmbeddedItem]) {
         self.line = line
         self.frame = frame
         self.range = range
@@ -54,6 +68,7 @@ private final class TextNodeLine {
         self.strikethroughs = strikethroughs
         self.spoilers = spoilers
         self.spoilerWords = spoilerWords
+        self.embeddedItems = embeddedItems
     }
 }
 
@@ -153,6 +168,31 @@ public final class TextNodeLayoutArguments {
 }
 
 public final class TextNodeLayout: NSObject {
+    public final class EmbeddedItem: Equatable {
+        public let range: NSRange
+        public let rect: CGRect
+        public let value: AnyHashable
+        
+        public init(range: NSRange, rect: CGRect, value: AnyHashable) {
+            self.range = range
+            self.rect = rect
+            self.value = value
+        }
+        
+        public static func ==(lhs: EmbeddedItem, rhs: EmbeddedItem) -> Bool {
+            if lhs.range != rhs.range {
+                return false
+            }
+            if lhs.rect != rhs.rect {
+                return false
+            }
+            if lhs.value != rhs.value {
+                return false
+            }
+            return true
+        }
+    }
+    
     public let attributedString: NSAttributedString?
     fileprivate let maximumNumberOfLines: Int
     fileprivate let truncationType: CTLineTruncationType
@@ -163,7 +203,7 @@ public final class TextNodeLayout: NSObject {
     fileprivate let verticalAlignment: TextVerticalAlignment
     fileprivate let lineSpacing: CGFloat
     fileprivate let cutout: TextNodeCutout?
-    fileprivate let insets: UIEdgeInsets
+    public let insets: UIEdgeInsets
     public let size: CGSize
     public let rawTextSize: CGSize
     public let truncated: Bool
@@ -177,6 +217,7 @@ public final class TextNodeLayout: NSObject {
     public let hasRTL: Bool
     public let spoilers: [(NSRange, CGRect)]
     public let spoilerWords: [(NSRange, CGRect)]
+    public let embeddedItems: [TextNodeLayout.EmbeddedItem]
     
     fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, explicitAlignment: NSTextAlignment, resolvedAlignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, rawTextSize: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool) {
         self.attributedString = attributedString
@@ -203,6 +244,7 @@ public final class TextNodeLayout: NSObject {
         var hasRTL = false
         var spoilers: [(NSRange, CGRect)] = []
         var spoilerWords: [(NSRange, CGRect)] = []
+        var embeddedItems: [TextNodeLayout.EmbeddedItem] = []
         for line in lines {
             if line.isRTL {
                 hasRTL = true
@@ -218,10 +260,14 @@ public final class TextNodeLayout: NSObject {
             
             spoilers.append(contentsOf: line.spoilers.map { ( $0.range, $0.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)) })
             spoilerWords.append(contentsOf: line.spoilerWords.map { ( $0.range, $0.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)) })
+            for embeddedItem in line.embeddedItems {
+                embeddedItems.append(TextNodeLayout.EmbeddedItem(range: embeddedItem.range, rect: embeddedItem.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY), value: embeddedItem.item))
+            }
         }
         self.hasRTL = hasRTL
         self.spoilers = spoilers
         self.spoilerWords = spoilerWords
+        self.embeddedItems = embeddedItems
     }
     
     public func areLinesEqual(to other: TextNodeLayout) -> Bool {
@@ -892,7 +938,6 @@ public class TextNode: ASDisplayNode {
     
     static func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool) -> TextNodeLayout {
         if let attributedString = attributedString {
-            
             let stringLength = attributedString.length
             
             let font: CTFont
@@ -945,7 +990,7 @@ public class TextNode: ASDisplayNode {
             
             var bottomCutoutEnabled = false
             var bottomCutoutSize = CGSize()
-            
+                        
             if let topLeft = cutout?.topLeft {
                 cutoutMinY = -fontLineSpacing
                 cutoutMaxY = topLeft.height + fontLineSpacing
@@ -972,6 +1017,7 @@ public class TextNode: ASDisplayNode {
                 var strikethroughs: [TextNodeStrikethrough] = []
                 var spoilers: [TextNodeSpoiler] = []
                 var spoilerWords: [TextNodeSpoiler] = []
+                var embeddedItems: [TextNodeEmbeddedItem] = []
                 
                 var lineConstrainedWidth = constrainedSize.width
                 var lineConstrainedWidthDelta: CGFloat = 0.0
@@ -1027,6 +1073,24 @@ public class TextNode: ASDisplayNode {
                     }
                     
                     spoilerWords.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent)))
+                }
+                
+                func addEmbeddedItem(item: AnyHashable, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+                    var secondaryLeftOffset: CGFloat = 0.0
+                    let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
+                    var leftOffset = floor(rawLeftOffset)
+                    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+                        leftOffset = floor(secondaryLeftOffset)
+                    }
+                    
+                    var secondaryRightOffset: CGFloat = 0.0
+                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
+                    var rightOffset = ceil(rawRightOffset)
+                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+                        rightOffset = ceil(secondaryRightOffset)
+                    }
+                    
+                    embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
                 }
                 
                 var isLastLine = false
@@ -1117,6 +1181,12 @@ public class TextNode: ASDisplayNode {
                                 }
                                 
                                 addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            } else if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
+                                var ascent: CGFloat = 0.0
+                                var descent: CGFloat = 0.0
+                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                                
+                                addEmbeddedItem(item: embeddedItem, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                             } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
                                 let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
                                 let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
@@ -1124,7 +1194,6 @@ public class TextNode: ASDisplayNode {
                                 strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
                             } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
                                 headIndent = paragraphStyle.headIndent
-                                
                             }
                         }
                     }
@@ -1147,7 +1216,7 @@ public class TextNode: ASDisplayNode {
                         }
                     }
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords))
+                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems))
                     break
                 } else {
                     if lineCharacterCount > 0 {
@@ -1199,6 +1268,12 @@ public class TextNode: ASDisplayNode {
                                 }
                                 
                                 addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            } else if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
+                                var ascent: CGFloat = 0.0
+                                var descent: CGFloat = 0.0
+                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                                
+                                addEmbeddedItem(item: embeddedItem, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                             } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
                                 let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
                                 let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
@@ -1227,7 +1302,7 @@ public class TextNode: ASDisplayNode {
                             }
                         }
                         
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords))
+                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems))
                     } else {
                         if !lines.isEmpty {
                             layoutSize.height += fontLineSpacing
@@ -1334,10 +1409,13 @@ public class TextNode: ASDisplayNode {
                 
                 if alignment == .center {
                     lineFrame.origin.x = offset.x + floor((bounds.size.width - lineFrame.width) / 2.0)
-                } else if alignment == .natural, line.isRTL {
-                    lineFrame.origin.x = offset.x + floor(bounds.size.width - lineFrame.width)
-                    
-                    lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: bounds.size), cutout: layout.cutout)
+                } else if alignment == .natural {
+                    if line.isRTL {
+                        lineFrame.origin.x = offset.x + floor(bounds.size.width - lineFrame.width)
+                        lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: bounds.size), cutout: layout.cutout)
+                    } else {
+                        lineFrame.origin.x += offset.x
+                    }
                 }
                 context.textPosition = CGPoint(x: lineFrame.minX, y: lineFrame.minY)
                 
@@ -1543,7 +1621,6 @@ open class TextView: UIView {
     
     private class func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool) -> TextNodeLayout {
         if let attributedString = attributedString {
-            
             let stringLength = attributedString.length
             
             let font: CTFont
@@ -1798,7 +1875,7 @@ open class TextView: UIView {
                         }
                     }
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords))
+                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: []))
                     break
                 } else {
                     if lineCharacterCount > 0 {
@@ -1878,7 +1955,7 @@ open class TextView: UIView {
                             }
                         }
                         
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords))
+                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: []))
                     } else {
                         if !lines.isEmpty {
                             layoutSize.height += fontLineSpacing

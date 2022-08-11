@@ -376,7 +376,9 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
 
     let list = PresentationThemeList(
         blocksBackgroundColor: UIColor(rgb: 0x000000),
+        modalBlocksBackgroundColor: UIColor(rgb: 0x1c1c1d),
         plainBackgroundColor: UIColor(rgb: 0x000000),
+        modalPlainBackgroundColor: UIColor(rgb: 0x1c1c1d),
         itemPrimaryTextColor: UIColor(rgb: 0xffffff),
         itemSecondaryTextColor: UIColor(rgb: 0x98989e),
         itemDisabledTextColor: UIColor(rgb: 0x8f8f8f),
@@ -385,6 +387,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         itemDestructiveColor: UIColor(rgb: 0xeb5545),
         itemPlaceholderTextColor: UIColor(rgb: 0x4d4d4d),
         itemBlocksBackgroundColor: UIColor(rgb: 0x1c1c1d),
+        itemModalBlocksBackgroundColor: UIColor(rgb: 0x2c2c2e),
         itemHighlightedBackgroundColor: UIColor(rgb: 0x313135),
         itemBlocksSeparatorColor: UIColor(rgb: 0x3d3d40),
         itemPlainSeparatorColor: UIColor(rgb: 0x3d3d40),

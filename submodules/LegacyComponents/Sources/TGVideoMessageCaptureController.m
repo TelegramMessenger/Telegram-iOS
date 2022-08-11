@@ -150,6 +150,7 @@ typedef enum
 @implementation TGVideoMessageCaptureController
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)(void))transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface pallete:(TGModernConversationInputMicPallete *)pallete slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView canSendSilently:(bool)canSendSilently canSchedule:(bool)canSchedule reminder:(bool)reminder useRearCamTelescopy:(bool)useRearCamTelescopy
+// MARK: Nicegram (useRearCamTelescopy)
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -170,12 +171,13 @@ typedef enum
         _queue = [[SQueue alloc] init];
         
         _previousDuration = 0.0;
-        // MARK: Nicegram useRearCamTelescopy
+        // MARK: Nicegram
         if (useRearCamTelescopy) {
             _preferredPosition = AVCaptureDevicePositionBack;
         } else {
             _preferredPosition = AVCaptureDevicePositionFront;
         }
+        //
         
         self.isImportant = true;
         _controlsFrame = controlsFrame;
@@ -264,7 +266,7 @@ typedef enum
     if (bottomOffset > 44.0) {
         bottomOffset = 0.0f;
     }
-    CGRect wrapperFrame = TGIsPad() ? CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMaxY(_controlsFrame) + bottomOffset): CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMinY(_controlsFrame));
+    CGRect wrapperFrame = TGIsPad() ? CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMaxY(_controlsFrame) + bottomOffset) : CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMinY(_controlsFrame));
     
     _wrapperView = [[UIView alloc] initWithFrame:wrapperFrame];
     _wrapperView.clipsToBounds = true;
@@ -306,7 +308,8 @@ typedef enum
     }
     
     CGFloat minSide = MIN(_wrapperView.frame.size.width, _wrapperView.frame.size.height);
-    CGFloat diameter = minSide == 320.0 ? 216.0 : MIN(404.0, minSide - 24.0f);
+    bool isSE = _wrapperView.frame.size.width == 320.0 || _wrapperView.frame.size.height == 320.0;
+    CGFloat diameter = isSE ? 216.0 : MIN(404.0, minSide - 24.0f);
     CGFloat shadowSize = 21.0f;
     
     CGFloat circleWrapperViewLength = diameter + shadowSize * 2.0;
@@ -576,10 +579,6 @@ typedef enum
     [self _transitionIn];
     
     [self _beginAudioSession:false];
-    [_queue dispatch:^
-    {
-        [_capturePipeline startRunning];
-    }];
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -610,7 +609,12 @@ typedef enum
             if (self.view.frame.size.height > self.view.frame.size.width && fabs(_wrapperView.frame.size.height - self.view.frame.size.height) < 50.0f)
                 targetPosition.y = _wrapperView.frame.size.height / 3.0f - 20.0f;
             
-            targetPosition.y = MAX(_circleWrapperView.bounds.size.height / 2.0f + 40.0f, targetPosition.y);
+            CGFloat minY = _circleWrapperView.bounds.size.height / 2.0f + 40.0f;
+            if (fabs(_wrapperView.frame.size.height - self.view.frame.size.height) > 50.0 && _wrapperView.frame.size.width == 320.0) {
+                minY = _circleWrapperView.bounds.size.height / 2.0f + 4.0;
+            }
+            
+            targetPosition.y = MAX(minY, targetPosition.y);
             break;
     }
 #pragma clang diagnostic pop
@@ -1307,7 +1311,16 @@ typedef enum
         _otherAudioPlaying = [[AVAudioSession sharedInstance] isOtherAudioPlaying];
         
         __weak TGVideoMessageCaptureController *weakSelf = self;
-        id<SDisposable> disposable = [[LegacyComponentsGlobals provider] requestAudioSession:speaker ? TGAudioSessionTypePlayAndRecordHeadphones : TGAudioSessionTypePlayAndRecord interrupted:^
+        id<SDisposable> disposable = [[LegacyComponentsGlobals provider] requestAudioSession:speaker ? TGAudioSessionTypePlayAndRecordHeadphones : TGAudioSessionTypePlayAndRecord
+        activated:^{
+            __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
+            if (strongSelf != nil) {
+                [strongSelf->_queue dispatch:^
+                {
+                    [strongSelf->_capturePipeline startRunning];
+                }];
+            }
+        } interrupted:^
         {
             TGDispatchOnMainThread(^{
                 __strong TGVideoMessageCaptureController *strongSelf = weakSelf;

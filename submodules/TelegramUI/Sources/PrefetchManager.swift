@@ -172,7 +172,8 @@ private final class PrefetchManagerInnerImpl {
                             } else if let _ = media as? TelegramMediaWebFile {
                                 //strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, image: image).start())
                             } else if let file = media as? TelegramMediaFile {
-                                let fetchSignal = messageMediaFileInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.media.index.id, messageReference: MessageReference(peer: mediaItem.media.peer, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), file: file, userInitiated: false, priority: priority)
+                                // MARK: Nicegram downloading feature
+                                let fetchSignal = messageMediaFileInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.media.index.id, messageReference: MessageReference(peer: mediaItem.media.peer, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), file: file, userInitiated: false, priority: priority, accountContext: nil)
                                 context.fetchDisposable.set(fetchSignal.start())
                             }
                         } else if case .prefetch = automaticDownload, mediaItem.media.peer.id.namespace != Namespaces.Peer.SecretChat {
@@ -211,7 +212,8 @@ private final class PrefetchManagerInnerImpl {
                         let priority: FetchManagerPriority = .backgroundPrefetch(locationOrder: HistoryPreloadIndex(index: nil, hasUnread: false, isMuted: false, isPriority: true), localOrder: MessageIndex(id: MessageId(peerId: PeerId(0), namespace: 0, id: order), timestamp: 0))
                         
                         if case .full = automaticDownload {
-                            let fetchSignal = freeMediaFileInteractiveFetched(fetchManager: self.fetchManager, fileReference: .standalone(media: media), priority: priority)
+                            // MARK: Nicegram downloading feature
+                            let fetchSignal = freeMediaFileInteractiveFetched(fetchManager: self.fetchManager, fileReference: .standalone(media: media), priority: priority, accountContext: nil)
                             context.fetchDisposable.set(fetchSignal.start())
                         }
                         

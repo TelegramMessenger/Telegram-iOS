@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 import TelegramUIPreferences
 
@@ -35,42 +36,34 @@ public final class RecentWebSearchQueryItem: Codable {
     }
 }
 
-func addRecentWebSearchQuery(postbox: Postbox, string: String) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction in
-        if let itemId = WebSearchRecentQueryItemId(string) {
-            if let entry = CodableEntry(RecentWebSearchQueryItem()) {
-                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries, item: OrderedItemListEntry(id: itemId.rawValue, contents: entry), removeTailIfCountExceeds: 100)
-            }
+func addRecentWebSearchQuery(engine: TelegramEngine, string: String) -> Signal<Never, NoError> {
+    if let itemId = WebSearchRecentQueryItemId(string) {
+        return engine.orderedLists.addOrMoveToFirstPosition(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries, id: itemId.rawValue, item: RecentWebSearchQueryItem(), removeTailIfCountExceeds: 100)
+    } else {
+        return .complete()
+    }
+}
+
+func removeRecentWebSearchQuery(engine: TelegramEngine, string: String) -> Signal<Never, NoError> {
+    if let itemId = WebSearchRecentQueryItemId(string) {
+        return engine.orderedLists.removeItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries, id: itemId.rawValue)
+    } else {
+        return .complete()
+    }
+}
+
+func clearRecentWebSearchQueries(engine: TelegramEngine) -> Signal<Never, NoError> {
+    return engine.orderedLists.clear(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries)
+}
+
+func webSearchRecentQueries(engine: TelegramEngine) -> Signal<[String], NoError> {
+    return engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries))
+    |> map { items -> [String] in
+        var result: [String] = []
+        for item in items {
+            let value = WebSearchRecentQueryItemId(item.id).value
+            result.append(value)
         }
-    }
-}
-
-func removeRecentWebSearchQuery(postbox: Postbox, string: String) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        if let itemId = WebSearchRecentQueryItemId(string) {
-            transaction.removeOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries, itemId: itemId.rawValue)
-        }
-    }
-}
-
-func clearRecentWebSearchQueries(postbox: Postbox) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.replaceOrderedItemListItems(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries, items: [])
-    }
-}
-
-func webSearchRecentQueries(postbox: Postbox) -> Signal<[String], NoError> {
-    return postbox.combinedView(keys: [.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries)])
-        |> mapToSignal { view -> Signal<[String], NoError> in
-            return postbox.transaction { transaction -> [String] in
-                var result: [String] = []
-                if let view = view.views[.orderedItemList(id: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries)] as? OrderedItemListView {
-                    for item in view.items {
-                        let value = WebSearchRecentQueryItemId(item.id).value
-                        result.append(value)
-                    }
-                }
-                return result
-            }
+        return result
     }
 }

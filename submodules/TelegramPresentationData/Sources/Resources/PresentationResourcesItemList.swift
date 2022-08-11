@@ -33,6 +33,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func disclosureLockedImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListDisclosureLocked.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: theme.list.disclosureArrowColor)
+        })
+    }
+    
     public static func checkIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListCheckIcon.rawValue, { theme in
             return generateItemListCheckIcon(color: theme.list.itemAccentColor)
@@ -65,7 +71,25 @@ public struct PresentationResourcesItemList {
     
     public static func verifiedPeerIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListVerifiedPeerIcon.rawValue, { theme in
-            return UIImage(bundleImageName: "Item List/PeerVerifiedIcon")?.precomposed()
+            if let backgroundImage = UIImage(bundleImageName: "Chat List/PeerVerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Chat List/PeerVerifiedIconForeground") {
+                return generateImage(backgroundImage.size, contextGenerator: { size, context in
+                    if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.saveGState()
+                        context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
+
+                        context.setFillColor(theme.chatList.unreadBadgeActiveBackgroundColor.cgColor)
+                        context.fill(CGRect(origin: CGPoint(), size: size))
+                        context.restoreGState()
+                        
+                        context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
+                        context.setFillColor(theme.chatList.unreadBadgeActiveTextColor.cgColor)
+                        context.fill(CGRect(origin: CGPoint(), size: size))
+                    }
+                }, opaque: false)
+            } else {
+                return nil
+            }
         })
     }
     

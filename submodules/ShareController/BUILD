@@ -1,5 +1,9 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+NGDEPS = [
+    "//Nicegram/NGWebUtils:NGWebUtils",
+]
+        
 swift_library(
     name = "ShareController",
     module_name = "ShareController",
@@ -9,7 +13,7 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
-    deps = [
+    deps = NGDEPS + [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Postbox:Postbox",
@@ -34,6 +38,7 @@ swift_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
     ],
     visibility = [
         "//visibility:public",

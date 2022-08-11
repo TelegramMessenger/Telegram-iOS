@@ -185,6 +185,10 @@ API_AVAILABLE(ios(10))
     return @(APP_SPECIFIC_URL_SCHEME);
 }
 
+- (NSString *)premiumIAPProductId {
+    return @(APP_CONFIG_PREMIUM_IAP_PRODUCT_ID);
+}
+
 - (NSString *)ngEnv {
     return @(NG_ENV);
 }

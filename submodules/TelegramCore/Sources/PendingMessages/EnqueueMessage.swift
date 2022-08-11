@@ -10,6 +10,7 @@ public enum EnqueueMessageGrouping {
 
 public enum EnqueueMessage {
     case message(text: String, attributes: [MessageAttribute], mediaReference: AnyMediaReference?, replyToMessageId: MessageId?, localGroupingKey: Int64?, correlationId: Int64?)
+    // MARK: Nicegram (asCopy)
     case forward(source: MessageId, grouping: EnqueueMessageGrouping, attributes: [MessageAttribute], correlationId: Int64?, asCopy: Bool = false)
     
     public func withUpdatedReplyToMessageId(_ replyToMessageId: MessageId?) -> EnqueueMessage {
@@ -131,7 +132,7 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
     }
 }
 
-private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAttribute], forwardedMessageIds: Set<MessageId>? = nil) -> [MessageAttribute] {
+private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAttribute]) -> [MessageAttribute] {
     return attributes.filter { attribute in
         switch attribute {
             case _ as TextEntitiesMessageAttribute:
@@ -146,12 +147,6 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
                 return true
             case _ as SendAsMessageAttribute:
                 return true
-            case let attribute as ReplyMessageAttribute:
-                if let forwardedMessageIds = forwardedMessageIds {
-                    return forwardedMessageIds.contains(attribute.messageId)
-                } else {
-                    return false
-                }
             default:
                 return false
         }
@@ -163,8 +158,10 @@ func opportunisticallyTransformMessageWithMedia(network: Network, postbox: Postb
     |> timeout(2.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
 }
 
+// MARK: Nicegram (asCopy)
 private func forwardedMessageToBeReuploaded(transaction: Transaction, id: MessageId, asCopy: Bool = false) -> Message? {
     if let message = transaction.getMessage(id) {
+        // MARK: Nicegram (asCopy)
         if message.id.namespace != Namespaces.Message.Cloud || asCopy {
             return message
         } else {
@@ -285,13 +282,6 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
 }
 
 func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)], disableAutoremove: Bool = false, transformGroupingKeysWithPeerId: Bool = false) -> [MessageId?] {
-    var forwardedMessageIds = Set<MessageId>()
-    for (_, message) in messages {
-        if case let .forward(sourceId, _, _, _, _) = message {
-            forwardedMessageIds.insert(sourceId)
-        }
-    }
-    
     var updatedMessages: [(Bool, EnqueueMessage)] = []
     outer: for (transformedMedia, message) in messages {
         var updatedMessage = message
@@ -321,14 +311,17 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none, attributes: attributes, correlationId: nil)))
                     }
                 }
+            // MARK: Nicegram (asCopy)
             case let .forward(sourceId, _, _, _, asCopy):
                 if let sourceMessage = forwardedMessageToBeReuploaded(transaction: transaction, id: sourceId, asCopy: asCopy) {
                     var mediaReference: AnyMediaReference?
+                    // MARK: Nicegram (asCopy)
                     if sourceMessage.id.peerId.namespace == Namespaces.Peer.SecretChat || asCopy {
                         if let media = sourceMessage.media.first {
                             mediaReference = .standalone(media: media)
                         }
                     }
+                    // MARK: Nicegram
                     let localGroupingKey: Int64? = asCopy ? sourceMessage.groupingKey : nil
                     updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: localGroupingKey, correlationId: nil)))
                     continue outer
@@ -624,7 +617,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             }
                             
                             attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(requestedAttributes))
-                            attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes, forwardedMessageIds: forwardedMessageIds))
+                            attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes))
                             
                             var sourceReplyMarkup: ReplyMarkupMessageAttribute? = nil
                             var sourceSentViaBot = false

@@ -298,9 +298,12 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
         else
         {
             bool wasHidden = referenceView.isHidden;
+            CGRect previousFrame = referenceView.frame;
+            referenceView.frame = CGRectOffset(referenceView.frame, -1000.0, 0.0);
             referenceView.hidden = false;
             toTransitionView = [referenceView snapshotViewAfterScreenUpdates:true];
             referenceView.hidden = wasHidden;
+            referenceView.frame = previousFrame;
         }
         
         [parentView addSubview:toTransitionView];

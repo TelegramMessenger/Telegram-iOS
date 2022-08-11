@@ -16,6 +16,7 @@ import NotificationSoundSelectionUI
 import PresentationDataUtils
 import PhoneNumberFormat
 import AccountUtils
+import InstantPageCache
 
 enum SettingsSearchableItemIcon {
     case profile
@@ -34,6 +35,7 @@ enum SettingsSearchableItemIcon {
     case support
     case faq
     case chatFolders
+    case deleteAccount
 }
 
 public enum SettingsSearchableItemId: Hashable {
@@ -53,6 +55,7 @@ public enum SettingsSearchableItemId: Hashable {
     case support(Int32)
     case faq(Int32)
     case chatFolders(Int32)
+    case deleteAccount(Int32)
     
     private var namespace: Int32 {
         switch self {
@@ -88,6 +91,8 @@ public enum SettingsSearchableItemId: Hashable {
                 return 15
             case .chatFolders:
                 return 16
+            case .deleteAccount:
+                return 17
         }
     }
     
@@ -108,7 +113,8 @@ public enum SettingsSearchableItemId: Hashable {
                  let .wallet(id),
                  let .support(id),
                  let .faq(id),
-                 let .chatFolders(id):
+                 let .chatFolders(id),
+                 let .deleteAccount(id):
                 return id
         }
     }
@@ -153,6 +159,8 @@ public enum SettingsSearchableItemId: Hashable {
                 self = .faq(id)
             case 16:
                 self = .chatFolders(id)
+            case 17:
+                self = .deleteAccount(id)
             default:
                 return nil
         }
@@ -189,11 +197,13 @@ private func profileSearchableItems(context: AccountContext, canAddAccount: Bool
     
     var items: [SettingsSearchableItem] = []
     items.append(SettingsSearchableItem(id: .profile(2), title: strings.Settings_PhoneNumber, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_PhoneNumber), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
-        let _ = (context.account.postbox.transaction { transaction -> String in
-            return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone ?? ""
-        }
-        |> deliverOnMainQueue).start(next: { phoneNumber in
-            present(.push, PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber), proceedAction: {
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> deliverOnMainQueue).start(next: { peer in
+            var phoneNumber: String?
+            if case let .user(user) = peer {
+                phoneNumber = user.phone
+            }
+            present(.push, PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber ?? ""), proceedAction: {
                 present(.push, ChangePhoneNumberController(context: context))
             }))
         })
@@ -208,12 +218,14 @@ private func profileSearchableItems(context: AccountContext, canAddAccount: Bool
         }))
     }
     items.append(SettingsSearchableItem(id: .profile(5), title: strings.Settings_Logout, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Logout), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, navigationController, present in
-        let _ = (context.account.postbox.transaction { transaction -> String in
-            return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone ?? ""
-        }
-        |> deliverOnMainQueue).start(next: { phoneNumber in
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> deliverOnMainQueue).start(next: { peer in
+            var phoneNumber: String?
+            if case let .user(user) = peer {
+                phoneNumber = user.phone
+            }
             if let navigationController = navigationController {
-                present(.modal, logoutOptionsController(context: context, navigationController: navigationController, canAddAccounts: canAddAccount, phoneNumber: phoneNumber))
+                present(.modal, logoutOptionsController(context: context, navigationController: navigationController, canAddAccounts: canAddAccount, phoneNumber: phoneNumber ?? ""))
             }
         })
     }))
@@ -333,12 +345,6 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
         SettingsSearchableItem(id: .notifications(0), title: strings.Settings_NotificationsAndSounds, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_Title), icon: icon, breadcrumbs: [], present: { context, _, present in
             presentNotificationSettings(context, present, nil)
         }),
-//        SettingsSearchableItem(id: .notifications(1), title: strings.Notifications_MessageNotificationsAlert, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsAlert), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications], present: { context, _, present in
-//            presentNotificationSettings(context, present, .messageAlerts)
-//        }),
-//        SettingsSearchableItem(id: .notifications(2), title: strings.Notifications_MessageNotificationsPreview, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsPreview), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications], present: { context, _, present in
-//            presentNotificationSettings(context, present, .messagePreviews)
-//        }),
         SettingsSearchableItem(id: .notifications(3), title: strings.Notifications_MessageNotificationsSound, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsSound), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications], present: { context, _, present in
             
             let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: filteredGlobalSound(settings.privateChats.sound), defaultSound: nil, completion: { value in
@@ -353,12 +359,6 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
         SettingsSearchableItem(id: .notifications(4), title: strings.Notifications_MessageNotificationsExceptions, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsExceptions), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications], present: { context, _, present in
             present(.push, NotificationExceptionsController(context: context, mode: exceptions().0, updatedMode: { _ in}))
         }),
-//        SettingsSearchableItem(id: .notifications(5), title: strings.Notifications_GroupNotificationsAlert, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsAlert), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications], present: { context, _, present in
-//            presentNotificationSettings(context, present, .groupAlerts)
-//        }),
-//        SettingsSearchableItem(id: .notifications(6), title: strings.Notifications_GroupNotificationsPreview, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsPreview), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications], present: { context, _, present in
-//            presentNotificationSettings(context, present, .groupPreviews)
-//        }),
         SettingsSearchableItem(id: .notifications(7), title: strings.Notifications_GroupNotificationsSound, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsSound), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications], present: { context, _, present in
             let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: filteredGlobalSound(settings.groupChats.sound), defaultSound: nil, completion: { value in
                 let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
@@ -372,12 +372,6 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
         SettingsSearchableItem(id: .notifications(8), title: strings.Notifications_GroupNotificationsExceptions, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsExceptions), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications], present: { context, _, present in
             present(.push, NotificationExceptionsController(context: context, mode: exceptions().1, updatedMode: { _ in}))
         }),
-//        SettingsSearchableItem(id: .notifications(9), title: strings.Notifications_ChannelNotificationsAlert, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ChannelNotificationsAlert), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications], present: { context, _, present in
-//            presentNotificationSettings(context, present, .channelAlerts)
-//        }),
-//        SettingsSearchableItem(id: .notifications(10), title: strings.Notifications_ChannelNotificationsPreview, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ChannelNotificationsPreview), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications], present: { context, _, present in
-//            presentNotificationSettings(context, present, .channelPreviews)
-//        }),
         SettingsSearchableItem(id: .notifications(11), title: strings.Notifications_ChannelNotificationsSound, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ChannelNotificationsSound), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications], present: { context, _, present in
             let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: filteredGlobalSound(settings.channels.sound), defaultSound: nil, completion: { value in
                 let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
@@ -730,7 +724,7 @@ private func languageSearchableItems(context: AccountContext, localizations: [Lo
     return items
 }
 
-func settingsSearchableItems(context: AccountContext, notificationExceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasTwoStepAuth: Signal<Bool?, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
+func settingsSearchableItems(context: AccountContext, notificationExceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasTwoStepAuth: Signal<Bool?, NoError>, twoStepAuthData: Signal<TwoStepVerificationAccessConfiguration?, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
     let watchAppInstalled = (context.watchManager?.watchAppInstalled ?? .single(false))
     |> take(1)
 
@@ -770,11 +764,12 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         return settings.servers
     }
     
-    let localizationPreferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.localizationListState]))
-    let localizations = combineLatest(context.account.postbox.combinedView(keys: [localizationPreferencesKey]), context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings]))
-    |> map { view, sharedData -> [LocalizationInfo] in
-        if let localizationListState = (view.views[localizationPreferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState]?.get(LocalizationListState.self), !localizationListState.availableOfficialLocalizations.isEmpty {
-            
+    let localizations = combineLatest(
+        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.LocalizationList()),
+        context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings])
+    )
+    |> map { localizationListState, sharedData -> [LocalizationInfo] in
+        if !localizationListState.availableOfficialLocalizations.isEmpty {
             var existingIds = Set<String>()
             let availableSavedLocalizations = localizationListState.availableSavedLocalizations.filter({ info in !localizationListState.availableOfficialLocalizations.contains(where: { $0.languageCode == info.languageCode }) })
             
@@ -826,8 +821,8 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         }
     }
     
-    return combineLatest(watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasTwoStepAuth, activeSessionsContext, activeWebSessionsContext)
-    |> map { watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasTwoStepAuth, activeSessionsContext, activeWebSessionsContext in
+    return combineLatest(watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasTwoStepAuth, twoStepAuthData, activeSessionsContext, activeWebSessionsContext)
+    |> map { watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings, hasTwoStepAuth, twoStepAuthData, activeSessionsContext, activeWebSessionsContext in
         let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
         
         var allItems: [SettingsSearchableItem] = []
@@ -894,7 +889,6 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         allItems.append(support)
         
         let faq = SettingsSearchableItem(id: .faq(0), title: strings.Settings_FAQ, alternate: synonyms(strings.SettingsSearch_Synonyms_FAQ), icon: .faq, breadcrumbs: [], present: { context, navigationController, present in
-            
             let _ = (cachedFaqInstantPage(context: context)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
@@ -904,6 +898,13 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
             })
         })
         allItems.append(faq)
+        
+        allItems.append(SettingsSearchableItem(id: .deleteAccount(0), title: strings.DeleteAccount_DeleteMyAccount, alternate: synonyms(strings.SettingsSearch_DeleteAccount_DeleteMyAccount), icon: .deleteAccount, breadcrumbs: [], present: { context, navigationController, present in
+            if let navigationController = navigationController {
+                let controller = deleteAccountOptionsController(context: context, navigationController: navigationController, hasTwoStepAuth: hasTwoStepAuth ?? false, twoStepAuthData: twoStepAuthData)
+                present(.push, controller)
+            }
+        }))
     
         return allItems
     }

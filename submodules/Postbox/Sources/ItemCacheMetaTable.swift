@@ -2,16 +2,6 @@ import Foundation
 
 public typealias ItemCacheCollectionId = Int8
 
-public struct ItemCacheCollectionSpec {
-    public let lowWaterItemCount: Int32
-    public let highWaterItemCount: Int32
-    
-    public init(lowWaterItemCount: Int32, highWaterItemCount: Int32) {
-        self.lowWaterItemCount = lowWaterItemCount
-        self.highWaterItemCount = highWaterItemCount
-    }
-}
-
 struct ItemCacheCollectionState: PostboxCoding {
     let nextAccessIndex: Int32
     

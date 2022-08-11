@@ -51,10 +51,10 @@ public enum RequestWebViewError {
     case generic
 }
 
-private func keepWebViewSignal(network: Network, stateManager: AccountStateManager, flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, queryId: Int64, replyToMessageId: MessageId?) -> Signal<Never, KeepWebViewError> {
+private func keepWebViewSignal(network: Network, stateManager: AccountStateManager, flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, queryId: Int64, replyToMessageId: MessageId?, sendAs: Api.InputPeer?) -> Signal<Never, KeepWebViewError> {
     let signal = Signal<Never, KeepWebViewError> { subscriber in
         let poll = Signal<Never, KeepWebViewError> { subscriber in
-            let signal: Signal<Never, KeepWebViewError> = network.request(Api.functions.messages.prolongWebView(flags: flags, peer: peer, bot: bot, queryId: queryId, replyToMsgId: replyToMessageId?.id))
+            let signal: Signal<Never, KeepWebViewError> = network.request(Api.functions.messages.prolongWebView(flags: flags, peer: peer, bot: bot, queryId: queryId, replyToMsgId: replyToMessageId?.id, sendAs: sendAs))
             |> mapError { _ -> KeepWebViewError in
                 return .generic
             }
@@ -122,14 +122,17 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
         if fromMenu {
             flags |= (1 << 4)
         }
-        return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputBot, url: url, startParam: payload, themeParams: serializedThemeParams, replyToMsgId: replyToMsgId))
+//        if _ {
+//            flags |= (1 << 13)
+//        }
+        return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputBot, url: url, startParam: payload, themeParams: serializedThemeParams, replyToMsgId: replyToMsgId, sendAs: nil))
         |> mapError { _ -> RequestWebViewError in
             return .generic
         }
         |> mapToSignal { result -> Signal<RequestWebViewResult, RequestWebViewError> in
             switch result {
                 case let .webViewResultUrl(queryId, url):
-                    return .single(RequestWebViewResult(queryId: queryId, url: url, keepAliveSignal:  keepWebViewSignal(network: network, stateManager: stateManager, flags: flags, peer: inputPeer, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId)))
+                    return .single(RequestWebViewResult(queryId: queryId, url: url, keepAliveSignal: keepWebViewSignal(network: network, stateManager: stateManager, flags: flags, peer: inputPeer, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId, sendAs: nil)))
             }
         }
     }

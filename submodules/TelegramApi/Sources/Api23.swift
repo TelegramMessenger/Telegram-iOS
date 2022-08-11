@@ -211,6 +211,90 @@ public extension Api.help {
     }
 }
 public extension Api.help {
+    enum PremiumPromo: TypeConstructorDescription {
+        case premiumPromo(statusText: String, statusEntities: [Api.MessageEntity], videoSections: [String], videos: [Api.Document], currency: String, monthlyAmount: Int64, users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .premiumPromo(let statusText, let statusEntities, let videoSections, let videos, let currency, let monthlyAmount, let users):
+                    if boxed {
+                        buffer.appendInt32(-1974518743)
+                    }
+                    serializeString(statusText, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(statusEntities.count))
+                    for item in statusEntities {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(videoSections.count))
+                    for item in videoSections {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(videos.count))
+                    for item in videos {
+                        item.serialize(buffer, true)
+                    }
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(monthlyAmount, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .premiumPromo(let statusText, let statusEntities, let videoSections, let videos, let currency, let monthlyAmount, let users):
+                return ("premiumPromo", [("statusText", String(describing: statusText)), ("statusEntities", String(describing: statusEntities)), ("videoSections", String(describing: videoSections)), ("videos", String(describing: videos)), ("currency", String(describing: currency)), ("monthlyAmount", String(describing: monthlyAmount)), ("users", String(describing: users))])
+    }
+    }
+    
+        public static func parse_premiumPromo(_ reader: BufferReader) -> PremiumPromo? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [Api.MessageEntity]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            }
+            var _3: [String]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            var _4: [Api.Document]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+            }
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Int64?
+            _6 = reader.readInt64()
+            var _7: [Api.User]?
+            if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.help.PremiumPromo.premiumPromo(statusText: _1!, statusEntities: _2!, videoSections: _3!, videos: _4!, currency: _5!, monthlyAmount: _6!, users: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.help {
     enum PromoData: TypeConstructorDescription {
         case promoData(flags: Int32, expires: Int32, peer: Api.Peer, chats: [Api.Chat], users: [Api.User], psaType: String?, psaMessage: String?)
         case promoDataEmpty(expires: Int32)
@@ -1284,42 +1368,6 @@ public extension Api.messages {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.messages.Chats.chatsSlice(count: _1!, chats: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum CheckedHistoryImportPeer: TypeConstructorDescription {
-        case checkedHistoryImportPeer(confirmText: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .checkedHistoryImportPeer(let confirmText):
-                    if boxed {
-                        buffer.appendInt32(-1571952873)
-                    }
-                    serializeString(confirmText, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .checkedHistoryImportPeer(let confirmText):
-                return ("checkedHistoryImportPeer", [("confirmText", String(describing: confirmText))])
-    }
-    }
-    
-        public static func parse_checkedHistoryImportPeer(_ reader: BufferReader) -> CheckedHistoryImportPeer? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.CheckedHistoryImportPeer.checkedHistoryImportPeer(confirmText: _1!)
             }
             else {
                 return nil

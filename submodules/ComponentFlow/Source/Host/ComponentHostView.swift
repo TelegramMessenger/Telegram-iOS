@@ -17,11 +17,16 @@ private func findTaggedViewImpl(view: UIView, tag: Any) -> UIView? {
     return nil
 }
 
-public final class ComponentHostView<EnvironmentType: Equatable>: UIView {
+public final class ComponentHostViewSkipSettingFrame {
+    public init() {
+    }
+}
+
+public final class ComponentHostView<EnvironmentType>: UIView {
     private var currentComponent: AnyComponent<EnvironmentType>?
     private var currentContainerSize: CGSize?
     private var currentSize: CGSize?
-    private var componentView: UIView?
+    public private(set) var componentView: UIView?
     private(set) var isUpdating: Bool = false
     
     public init() {
@@ -43,9 +48,7 @@ public final class ComponentHostView<EnvironmentType: Equatable>: UIView {
         self.isUpdating = true
 
         precondition(containerSize.width.isFinite)
-        precondition(containerSize.width < .greatestFiniteMagnitude)
         precondition(containerSize.height.isFinite)
-        precondition(containerSize.height < .greatestFiniteMagnitude)
         
         let componentView: UIView
         if let current = self.componentView {
@@ -62,14 +65,13 @@ public final class ComponentHostView<EnvironmentType: Equatable>: UIView {
 
         if updateEnvironment {
             EnvironmentBuilder._environment = context.erasedEnvironment
-            let _ = maybeEnvironment()
+            let environmentResult = maybeEnvironment()
             EnvironmentBuilder._environment = nil
+            context.erasedEnvironment = environmentResult
         }
         
         let isEnvironmentUpdated = context.erasedEnvironment.calculateIsUpdated()
-        if isEnvironmentUpdated {
-            context.erasedEnvironment._isUpdated = false
-        }
+
         
         if !forceUpdate, !isEnvironmentUpdated, let currentComponent = self.currentComponent, let currentContainerSize = self.currentContainerSize, let currentSize = self.currentSize {
             if currentContainerSize == containerSize && currentComponent == component {
@@ -90,8 +92,14 @@ public final class ComponentHostView<EnvironmentType: Equatable>: UIView {
         }
 
         let updatedSize = component._update(view: componentView, availableSize: containerSize, environment: context.erasedEnvironment, transition: transition)
-        transition.setFrame(view: componentView, frame: CGRect(origin: CGPoint(), size: updatedSize))
+        if transition.userData(ComponentHostViewSkipSettingFrame.self) == nil {
+            transition.setFrame(view: componentView, frame: CGRect(origin: CGPoint(), size: updatedSize))
+        }
 
+        if isEnvironmentUpdated {
+            context.erasedEnvironment._isUpdated = false
+        }
+        
         self.isUpdating = false
 
         return updatedSize

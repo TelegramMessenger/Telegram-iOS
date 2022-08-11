@@ -52,6 +52,7 @@ public func notificationMuteSettingsController(presentationData: PresentationDat
         .interval(2 * 24 * 60 * 60),
         .disable
     ]
+
     var items: [ActionSheetItem] = []
     for option in options {
         let item: ActionSheetButtonItem

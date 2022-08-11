@@ -23,8 +23,6 @@
 /*Open Pin*/
 "Chat.OpenPin" = "Afișare Pin";
 "ChatFilter.Admin" = "Administratori";
-"NiceFeatures.Notifications.HideNotifyAccount" = "Ascundeți contul în notificare";
-"NiceFeatures.Notifications.HideNotifyAccountNotice" = "În loc de «Utilizator → Cont», veți vedea doar «Utilizator». Numai pentru mai multe conturi.";
 "NiceFeatures.Notifications.Fix" = "Dezactivare notificări standard";
 "NiceFeatures.Notifications.FixNotice" = "Este util dacă primiți notificări de la chat-urile dezactivate.\nRăspunsul de la notificări, etichetele contului și previzualizările media nu vor fi disponibile.";
 "NiceFeatures.Filters.Header" = "FILTRE (FERESTRE)";

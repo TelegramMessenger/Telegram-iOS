@@ -127,6 +127,8 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         return self.item?.tag
     }
     
+    private var exceededLimit = false
+    
     public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
@@ -197,6 +199,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
             var limitTextString: NSAttributedString?
             var rightInset: CGFloat = params.rightInset
             
+            var exceededLimit = false
             if let maxLength = item.maxLength, maxLength.display {
                 let textLength: Int
                 switch maxLength.mode {
@@ -210,6 +213,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                 if displayTextLimit {
                     limitTextString = NSAttributedString(string: "\(remainingCount)", font: Font.regular(13.0), textColor: remainingCount < 0 ? item.presentationData.theme.list.itemDestructiveColor : item.presentationData.theme.list.itemSecondaryTextColor)
                 }
+                exceededLimit = remainingCount < 0
                 
                 rightInset += 30.0 + 4.0
             }
@@ -254,6 +258,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
+                    strongSelf.exceededLimit = exceededLimit
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
@@ -468,6 +473,12 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
     
     public func animateError() {
         self.textNode.layer.addShakeAnimation()
+    }
+    
+    public func animateErrorIfNeeded() {
+        if self.exceededLimit {
+            self.animateError()
+        }
     }
     
     @objc private func inlineActionPressed() {

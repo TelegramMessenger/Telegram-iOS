@@ -124,12 +124,17 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     private let pendingControllerDisposable = MetaDisposable()
     
     private var theme: TabBarControllerTheme
+    // MARK: Nicegram
     private var showTabNames: Bool
-
+    //
+    
+    // MARK: Nicegram (showTabNames)
     public init(navigationBarPresentationData: NavigationBarPresentationData, theme: TabBarControllerTheme, showTabNames: Bool) {
         self.theme = theme
+        // MARK: Nicegram
         self.showTabNames = showTabNames
-
+        //
+        
         super.init(navigationBarPresentationData: nil)
         
         self.scrollToTop = { [weak self] in
@@ -192,6 +197,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     }
     
     override open func loadDisplayNode() {
+        // MARK: Nicegram (showTabNames)
         self.displayNode = TabBarControllerNode(theme: self.theme, showTabNames: self.showTabNames, itemSelected: { [weak self] index, longTap, itemNodes in
             if let strongSelf = self {
                 if longTap, let controller = strongSelf.controllers[index] as? TabBarContainedController {

@@ -79,6 +79,18 @@ public final class TelegramEngine {
     public lazy var orderedLists: OrderedLists = {
         return OrderedLists(account: self.account)
     }()
+    
+    public lazy var itemCache: ItemCache = {
+        return ItemCache(account: self.account)
+    }()
+
+    public lazy var notices: Notices = {
+        return Notices(account: self.account)
+    }()
+
+    public lazy var preferences: Preferences = {
+        return Preferences(account: self.account)
+    }()
 }
 
 public final class TelegramEngineUnauthorized {

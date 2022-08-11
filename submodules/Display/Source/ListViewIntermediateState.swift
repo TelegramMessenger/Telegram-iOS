@@ -812,7 +812,7 @@ struct ListViewState {
         for node in self.nodes {
             i += 1
             if node.index == itemIndex {
-                if isAnimated {
+                if !isAnimated {
                     let offsetDirection: ListViewInsertionOffsetDirection
                     if let direction = direction {
                         offsetDirection = ListViewInsertionOffsetDirection(direction)

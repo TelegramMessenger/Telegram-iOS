@@ -32,29 +32,23 @@ public final class CachedInstantPage: Codable {
     }
 }
 
-public func cachedInstantPage(postbox: Postbox, url: String) -> Signal<CachedInstantPage?, NoError> {
-    return postbox.transaction { transaction -> CachedInstantPage? in
-        let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: Int64(bitPattern: url.persistentHashValue))
-        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedInstantPages, key: key))?.get(CachedInstantPage.self) {
-            return entry
-        } else {
-            return nil
-        }
+public func cachedInstantPage(engine: TelegramEngine, url: String) -> Signal<CachedInstantPage?, NoError> {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: Int64(bitPattern: url.persistentHashValue))
+    
+    return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.cachedInstantPages, id: key))
+    |> map { entry -> CachedInstantPage? in
+        return entry?.get(CachedInstantPage.self)
     }
 }
 
-private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 5, highWaterItemCount: 10)
-
-public func updateCachedInstantPage(postbox: Postbox, url: String, webPage: TelegramMediaWebpage?) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        let key = ValueBoxKey(length: 8)
-        key.setInt64(0, value: Int64(bitPattern: url.persistentHashValue))
-        let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedInstantPages, key: key)
-        if let webPage = webPage, let entry = CodableEntry(CachedInstantPage(webPage: webPage, timestamp: Int32(CFAbsoluteTimeGetCurrent()))) {
-            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
-        } else {
-            transaction.removeItemCacheEntry(id: id)
-        }
+public func updateCachedInstantPage(engine: TelegramEngine, url: String, webPage: TelegramMediaWebpage?) -> Signal<Never, NoError> {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: Int64(bitPattern: url.persistentHashValue))
+    
+    if let webPage = webPage {
+        return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.cachedInstantPages, id: key, item: CachedInstantPage(webPage: webPage, timestamp: Int32(CFAbsoluteTimeGetCurrent())))
+    } else {
+        return engine.itemCache.remove(collectionId: ApplicationSpecificItemCacheCollectionId.cachedInstantPages, id: key)
     }
 }

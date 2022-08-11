@@ -9,7 +9,7 @@ enum PendingMessageUploadedContent {
     case media(Api.InputMedia, String)
     case forward(ForwardSourceInfoAttribute)
     case chatContextResult(OutgoingChatContextResultMessageAttribute)
-    case secretMedia(Api.InputEncryptedFile, Int32, SecretFileEncryptionKey)
+    case secretMedia(Api.InputEncryptedFile, Int64, SecretFileEncryptionKey)
     case messageScreenshot
 }
 
@@ -511,10 +511,6 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 attributes.append(.documentAttributeSticker(flags: flags, alt: displayText, stickerset: stickerSet, maskCoords: inputMaskCoords))
             case .HasLinkedStickers:
                 attributes.append(.documentAttributeHasStickers)
-            case .hintFileIsLarge:
-                break
-            case .hintIsValidated:
-                break
             case let .Video(duration, size, videoFlags):
                 var flags: Int32 = 0
                 if videoFlags.contains(.instantRoundVideo) {
@@ -542,6 +538,12 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                     waveformBuffer = Buffer(data: waveform)
                 }
                 attributes.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
+            case .hintFileIsLarge:
+                break
+            case .hintIsValidated:
+                break
+            case .NoPremium:
+                break
         }
     }
     return attributes
@@ -610,11 +612,11 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         }
         
         var hintFileIsLarge = false
-        var hintSize: Int?
+        var hintSize: Int64?
         if let size = file.size {
             hintSize = size
         } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
-            hintSize = Int(size)
+            hintSize = size
         }
         
         loop: for attribute in file.attributes {
@@ -783,7 +785,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                                 |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                     switch result {
                                         case let .messageMediaDocument(_, document, _):
-                                            if let document = document, let mediaFile = telegramMediaFileFromApiDocument(document), let resource = mediaFile.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
+                                        if let document = document, let mediaFile = telegramMediaFileFromApiDocument(document), let resource = mediaFile.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
                                                 return maybeCacheUploadedResource(postbox: postbox, key: referenceKey, result: .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaDocument(flags: 0, id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)), ttlSeconds: nil, query: nil), text), reuploadInfo: nil)), media: mediaFile)
                                             }
                                         default:

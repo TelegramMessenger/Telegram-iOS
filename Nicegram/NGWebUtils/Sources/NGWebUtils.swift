@@ -82,5 +82,11 @@ public func isAllowedMessage(restrictionReason: String?, contentSettings: Conten
     return isAllowed
 }
 
+public func isAllowedShare(restrictionReason: String?, contentSettings: ContentSettings) -> Bool {
+    return isAllowedMessage(restrictionReason: restrictionReason, contentSettings: contentSettings)
+}
 
+public func isAllowedPeerInfo(peer: Peer?, contentSettings: ContentSettings) -> Bool {
+    return isAllowedChat(peer: peer, contentSettings: contentSettings)
+}
 

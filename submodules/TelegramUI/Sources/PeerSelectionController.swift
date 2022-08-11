@@ -189,14 +189,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.peerSelectionNode.requestOpenPeerFromSearch = { [weak self] peer in
             if let strongSelf = self {
-                let storedPeer = strongSelf.context.account.postbox.transaction { transaction -> Void in
-                    if transaction.getPeer(peer.id) == nil {
-                        updatePeers(transaction: transaction, peers: [peer], update: { previousPeer, updatedPeer in
-                            return updatedPeer
-                        })
-                    }
-                }
-                strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
+                strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: EnginePeer(peer))
+                |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf, let peerSelected = strongSelf.peerSelected {
                         peerSelected(peer)
                     }

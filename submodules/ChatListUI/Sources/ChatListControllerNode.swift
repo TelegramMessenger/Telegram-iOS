@@ -431,7 +431,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     
     private var itemNodes: [ChatListFilterTabEntryId: ChatListContainerItemNode] = [:]
     private var pendingItemNode: (ChatListFilterTabEntryId, ChatListContainerItemNode, Disposable)?
-    private var availableFilters: [ChatListContainerNodeFilter] = [.all]
+    private(set) var availableFilters: [ChatListContainerNodeFilter] = [.all]
+    private var filtersLimit: Int32? = nil
     private var selectedId: ChatListFilterTabEntryId
     
     private(set) var transitionFraction: CGFloat = 0.0
@@ -446,6 +447,11 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let _ready = Promise<Bool>()
     var ready: Signal<Bool, NoError> {
         return _ready.get()
+    }
+    
+    private let _validLayoutReady = Promise<Bool>()
+    var validLayoutReady: Signal<Bool, NoError> {
+        return _validLayoutReady.get()
     }
     
     private var currentItemNodeValue: ChatListContainerItemNode?
@@ -468,6 +474,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             previousItemNode.listNode.activateSearch = nil
             previousItemNode.listNode.presentAlert = nil
             previousItemNode.listNode.present = nil
+            previousItemNode.listNode.push = nil
             previousItemNode.listNode.toggleArchivedFolderHiddenByDefault = nil
             previousItemNode.listNode.hidePsa = nil
             previousItemNode.listNode.deletePeerChat = nil
@@ -493,6 +500,9 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         itemNode.listNode.present = { [weak self] c in
             self?.present?(c)
+        }
+        itemNode.listNode.push = { [weak self] c in
+            self?.push?(c)
         }
         itemNode.listNode.toggleArchivedFolderHiddenByDefault = { [weak self] in
             self?.toggleArchivedFolderHiddenByDefault?()
@@ -557,6 +567,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var activateSearch: (() -> Void)?
     var presentAlert: ((String) -> Void)?
     var present: ((ViewController) -> Void)?
+    var push: ((ViewController) -> Void)?
     var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     var hidePsa: ((EnginePeer.Id) -> Void)?
     var deletePeerChat: ((EnginePeer.Id, Bool) -> Void)?
@@ -568,6 +579,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
+    var displayFilterLimit: (() -> Void)?
     
     init(context: AccountContext, groupId: EngineChatList.Group, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void) {
         self.context = context
@@ -639,6 +651,9 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        let filtersLimit = self.filtersLimit.flatMap({ $0 + 1 }) ?? Int32(self.availableFilters.count)
+        let maxFilterIndex = min(Int(filtersLimit), self.availableFilters.count) - 1
+        
         switch recognizer.state {
         case .began:
             self.onFilterSwitch?()
@@ -678,9 +693,18 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     let overscroll = translation.x
                     transitionFraction = rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
                 }
-                if selectedIndex >= self.availableFilters.count - 1 && translation.x < 0.0 {
+                
+                if selectedIndex >= maxFilterIndex && translation.x < 0.0 {
                     let overscroll = -translation.x
                     transitionFraction = -rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
+                    
+                    if let filtersLimit = self.filtersLimit, selectedIndex >= filtersLimit - 1 {
+                        transitionFraction = 0.0
+                        recognizer.isEnabled = false
+                        recognizer.isEnabled = true
+                        
+                        self.displayFilterLimit?()
+                    }
                 }
                 self.transitionFraction = transitionFraction + self.transitionFractionOffset
                 if let currentItemNode = self.currentItemNodeValue {
@@ -721,7 +745,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 if let directionIsToRight = directionIsToRight {
                     var updatedIndex = selectedIndex
                     if directionIsToRight {
-                        updatedIndex = min(updatedIndex + 1, self.availableFilters.count - 1)
+                        updatedIndex = min(updatedIndex + 1, maxFilterIndex)
                     } else {
                         updatedIndex = max(updatedIndex - 1, 0)
                     }
@@ -778,28 +802,33 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    func updateState(_ f: (ChatListNodeState) -> ChatListNodeState) {
+    func updateState(onlyCurrent: Bool = true, _ f: (ChatListNodeState) -> ChatListNodeState) {
         self.currentItemNode.updateState(f)
         let updatedState = self.currentItemNode.currentState
         for (id, itemNode) in self.itemNodes {
             if id != self.selectedId {
-                itemNode.listNode.updateState { state in
-                    var state = state
-                    state.editing = updatedState.editing
-                    state.selectedPeerIds = updatedState.selectedPeerIds
-                    return state
+                if onlyCurrent {
+                    itemNode.listNode.updateState { state in
+                        var state = state
+                        state.editing = updatedState.editing
+                        state.selectedPeerIds = updatedState.selectedPeerIds
+                        return state
+                    }
+                } else {
+                    itemNode.listNode.updateState(f)
                 }
             }
         }
     }
     
-    func updateAvailableFilters(_ availableFilters: [ChatListContainerNodeFilter]) {
+    func updateAvailableFilters(_ availableFilters: [ChatListContainerNodeFilter], limit: Int32?) {
         if self.availableFilters != availableFilters {
             let apply: () -> Void = { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
                 strongSelf.availableFilters = availableFilters
+                strongSelf.filtersLimit = limit
                 if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = strongSelf.validLayout {
                     strongSelf.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: isReorderingFilters, isEditing: isEditing, transition: .immediate)
                 }
@@ -824,13 +853,13 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    func switchToFilter(id: ChatListFilterTabEntryId, completion: (() -> Void)? = nil) {
-        guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout else {
-            return
-        }
+    func switchToFilter(id: ChatListFilterTabEntryId, animated: Bool = true, completion: (() -> Void)? = nil) {
         self.onFilterSwitch?()
         if id != self.selectedId, let index = self.availableFilters.firstIndex(where: { $0.id == id }) {
             if let itemNode = self.itemNodes[id] {
+                guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout else {
+                    return
+                }
                 self.selectedId = id
                 if let currentItemNode = self.currentItemNodeValue {
                     itemNode.listNode.adjustScrollOffsetForNavigation(isNavigationHidden: currentItemNode.listNode.isNavigationHidden)
@@ -850,20 +879,34 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 let disposable = MetaDisposable()
                 self.pendingItemNode = (id, itemNode, disposable)
                 
+                if !animated {
+                    self.selectedId = id
+                    self.applyItemNodeAsCurrent(id: id, itemNode: itemNode)
+                    self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, .immediate, false)
+                }
+                
                 disposable.set((itemNode.listNode.ready
-                |> filter { $0 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self, weak itemNode] _ in
                     guard let strongSelf = self, let itemNode = itemNode, itemNode === strongSelf.pendingItemNode?.1 else {
                         return
                     }
-                    guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = strongSelf.validLayout else {
-                        return
-                    }
+                    
                     strongSelf.pendingItemNode = nil
                     
-                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+                    guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = strongSelf.validLayout else {
+                        strongSelf.itemNodes[id] = itemNode
+                        strongSelf.addSubnode(itemNode)
+                        
+                        strongSelf.selectedId = id
+                        strongSelf.applyItemNodeAsCurrent(id: id, itemNode: itemNode)
+                        strongSelf.currentItemFilterUpdated?(strongSelf.currentItemFilter, strongSelf.transitionFraction, .immediate, false)
+                        
+                        completion?()
+                        return
+                    }
                     
+                    let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.35, curve: .spring) : .immediate
                     if let previousIndex = strongSelf.availableFilters.firstIndex(where: { $0.id == strongSelf.selectedId }), let index = strongSelf.availableFilters.firstIndex(where: { $0.id == id }) {
                         let previousId = strongSelf.selectedId
                         let offsetDirection: CGFloat = index < previousIndex ? 1.0 : -1.0
@@ -927,6 +970,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     
     func update(layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, isReorderingFilters: Bool, isEditing: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing)
+        
+        self._validLayoutReady.set(.single(true))
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight

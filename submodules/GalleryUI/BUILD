@@ -42,6 +42,7 @@ swift_library(
         "//submodules/UndoUI:UndoUI",
         "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
         "//submodules/TranslateUI:TranslateUI",
+        "//submodules/Utils/RangeSet:RangeSet",
     ] + NGDEPS,
     visibility = [
         "//visibility:public",

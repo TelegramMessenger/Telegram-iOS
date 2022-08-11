@@ -28,31 +28,36 @@ import LocalizedPeerData
 import PhoneNumberFormat
 import TelegramIntents
 
-private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<(Peer?, CachedPeerData?), NoError> {
-    return postbox.transaction { transaction -> (Peer?, CachedPeerData?) in
-        guard let peer = transaction.getPeer(peerId) else {
-            return (nil, nil)
-        }
-        var resultPeer: Peer?
-        if let peer = peer as? TelegramSecretChat {
-            resultPeer = transaction.getPeer(peer.regularPeerId)
+private func getUserPeer(engine: TelegramEngine, peerId: EnginePeer.Id) -> Signal<(EnginePeer?, EnginePeer.StatusSettings?), NoError> {
+    return engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+    |> mapToSignal { peer -> Signal<EnginePeer?, NoError> in
+        if case let .secretChat(secretChat) = peer {
+            return engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: secretChat.regularPeerId))
         } else {
-            resultPeer = peer
+            return .single(peer)
         }
-        return (resultPeer, resultPeer.flatMap({ transaction.getPeerCachedData(peerId: $0.id) }))
+    }
+    |> mapToSignal { peer -> Signal<(EnginePeer?, EnginePeer.StatusSettings?), NoError> in
+        guard let peer = peer else {
+            return .single((nil, nil))
+        }
+        return engine.data.get(TelegramEngine.EngineData.Item.Peer.StatusSettings(id: peer.id))
+        |> map { statusSettings -> (EnginePeer?, EnginePeer.StatusSettings?) in
+            return (peer, statusSettings)
+        }
     }
 }
 
-public func openAddPersonContactImpl(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-    let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
-    |> deliverOnMainQueue).start(next: { peer, cachedData in
-        guard let user = peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: user) else {
+public func openAddPersonContactImpl(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    let _ = (getUserPeer(engine: context.engine, peerId: peerId)
+    |> deliverOnMainQueue).start(next: { peer, statusSettings in
+        guard case let .user(user) = peer, let contactData = DeviceContactExtendedData(peer: user) else {
             return
         }
         
         var shareViaException = false
-        if let cachedData = cachedData as? CachedUserData, let peerStatusSettings = cachedData.peerStatusSettings {
-            shareViaException = peerStatusSettings.contains(.addExceptionWhenAddingContact)
+        if let statusSettings = statusSettings {
+            shareViaException = statusSettings.contains(.addExceptionWhenAddingContact)
         }
         
         pushController(deviceContactInfoController(context: context, updatedPresentationData: updatedPresentationData, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in

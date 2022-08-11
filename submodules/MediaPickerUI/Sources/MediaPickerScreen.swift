@@ -20,6 +20,7 @@ import WebSearchUI
 import SparseItemGrid
 import UndoUI
 import PresentationDataUtils
+import MoreButtonNode
 
 final class MediaPickerInteraction {
     let openMedia: (PHFetchResult<PHAsset>, Int, UIImage?) -> Void
@@ -462,7 +463,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 case let .assets(fetchResult, preload, mediaAccess, cameraAccess):
                     if let fetchResult = fetchResult {
                         let totalCount = fetchResult.count
-                        let count = preload ? min(10, totalCount) : totalCount
+                        let count = preload ? min(13, totalCount) : totalCount
                         
                         for i in 0 ..< count {
                             let index: Int
