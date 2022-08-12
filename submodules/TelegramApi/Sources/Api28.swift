@@ -894,11 +894,12 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
-                static func sendVerifyEmailCode(email: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.SentEmailCode>) {
+                static func sendVerifyEmailCode(purpose: Api.EmailVerifyPurpose, email: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.SentEmailCode>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1880182943)
+                    buffer.appendInt32(-1730136133)
+                    purpose.serialize(buffer, true)
                     serializeString(email, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "account.sendVerifyEmailCode", parameters: [("email", String(describing: email))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.SentEmailCode? in
+                    return (FunctionDescription(name: "account.sendVerifyEmailCode", parameters: [("purpose", String(describing: purpose)), ("email", String(describing: email))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.SentEmailCode? in
                         let reader = BufferReader(buffer)
                         var result: Api.account.SentEmailCode?
                         if let signature = reader.readInt32() {
@@ -1229,16 +1230,16 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
-                static func verifyEmail(email: String, code: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func verifyEmail(purpose: Api.EmailVerifyPurpose, verification: Api.EmailVerification) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.EmailVerified>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-323339813)
-                    serializeString(email, buffer: buffer, boxed: false)
-                    serializeString(code, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "account.verifyEmail", parameters: [("email", String(describing: email)), ("code", String(describing: code))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    buffer.appendInt32(53322959)
+                    purpose.serialize(buffer, true)
+                    verification.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.verifyEmail", parameters: [("purpose", String(describing: purpose)), ("verification", String(describing: verification))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.EmailVerified? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
+                        var result: Api.account.EmailVerified?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                            result = Api.parse(reader, signature: signature) as? Api.account.EmailVerified
                         }
                         return result
                     })
@@ -1541,13 +1542,15 @@ public extension Api.functions.auth {
                 }
 }
 public extension Api.functions.auth {
-                static func signIn(phoneNumber: String, phoneCodeHash: String, phoneCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.Authorization>) {
+                static func signIn(flags: Int32, phoneNumber: String, phoneCodeHash: String, phoneCode: String?, emailVerification: Api.EmailVerification?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.Authorization>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1126886015)
+                    buffer.appendInt32(-1923962543)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(phoneNumber, buffer: buffer, boxed: false)
                     serializeString(phoneCodeHash, buffer: buffer, boxed: false)
-                    serializeString(phoneCode, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "auth.signIn", parameters: [("phoneNumber", String(describing: phoneNumber)), ("phoneCodeHash", String(describing: phoneCodeHash)), ("phoneCode", String(describing: phoneCode))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.Authorization? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(phoneCode!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {emailVerification!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "auth.signIn", parameters: [("flags", String(describing: flags)), ("phoneNumber", String(describing: phoneNumber)), ("phoneCodeHash", String(describing: phoneCodeHash)), ("phoneCode", String(describing: phoneCode)), ("emailVerification", String(describing: emailVerification))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.Authorization? in
                         let reader = BufferReader(buffer)
                         var result: Api.auth.Authorization?
                         if let signature = reader.readInt32() {

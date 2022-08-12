@@ -260,8 +260,10 @@ public extension Api.auth {
     enum SentCodeType: TypeConstructorDescription {
         case sentCodeTypeApp(length: Int32)
         case sentCodeTypeCall(length: Int32)
+        case sentCodeTypeEmailCode(flags: Int32, emailPattern: String, length: Int32, nextPhoneLoginDate: Int32?)
         case sentCodeTypeFlashCall(pattern: String)
         case sentCodeTypeMissedCall(prefix: String, length: Int32)
+        case sentCodeTypeSetUpEmailRequired(flags: Int32)
         case sentCodeTypeSms(length: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -278,6 +280,15 @@ public extension Api.auth {
                     }
                     serializeInt32(length, buffer: buffer, boxed: false)
                     break
+                case .sentCodeTypeEmailCode(let flags, let emailPattern, let length, let nextPhoneLoginDate):
+                    if boxed {
+                        buffer.appendInt32(1511364673)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(emailPattern, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(nextPhoneLoginDate!, buffer: buffer, boxed: false)}
+                    break
                 case .sentCodeTypeFlashCall(let pattern):
                     if boxed {
                         buffer.appendInt32(-1425815847)
@@ -290,6 +301,12 @@ public extension Api.auth {
                     }
                     serializeString(prefix, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
+                    break
+                case .sentCodeTypeSetUpEmailRequired(let flags):
+                    if boxed {
+                        buffer.appendInt32(-1521934870)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     break
                 case .sentCodeTypeSms(let length):
                     if boxed {
@@ -306,10 +323,14 @@ public extension Api.auth {
                 return ("sentCodeTypeApp", [("length", String(describing: length))])
                 case .sentCodeTypeCall(let length):
                 return ("sentCodeTypeCall", [("length", String(describing: length))])
+                case .sentCodeTypeEmailCode(let flags, let emailPattern, let length, let nextPhoneLoginDate):
+                return ("sentCodeTypeEmailCode", [("flags", String(describing: flags)), ("emailPattern", String(describing: emailPattern)), ("length", String(describing: length)), ("nextPhoneLoginDate", String(describing: nextPhoneLoginDate))])
                 case .sentCodeTypeFlashCall(let pattern):
                 return ("sentCodeTypeFlashCall", [("pattern", String(describing: pattern))])
                 case .sentCodeTypeMissedCall(let prefix, let length):
                 return ("sentCodeTypeMissedCall", [("prefix", String(describing: prefix)), ("length", String(describing: length))])
+                case .sentCodeTypeSetUpEmailRequired(let flags):
+                return ("sentCodeTypeSetUpEmailRequired", [("flags", String(describing: flags))])
                 case .sentCodeTypeSms(let length):
                 return ("sentCodeTypeSms", [("length", String(describing: length))])
     }
@@ -337,6 +358,26 @@ public extension Api.auth {
                 return nil
             }
         }
+        public static func parse_sentCodeTypeEmailCode(_ reader: BufferReader) -> SentCodeType? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.auth.SentCodeType.sentCodeTypeEmailCode(flags: _1!, emailPattern: _2!, length: _3!, nextPhoneLoginDate: _4)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_sentCodeTypeFlashCall(_ reader: BufferReader) -> SentCodeType? {
             var _1: String?
             _1 = parseString(reader)
@@ -357,6 +398,17 @@ public extension Api.auth {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.auth.SentCodeType.sentCodeTypeMissedCall(prefix: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_sentCodeTypeSetUpEmailRequired(_ reader: BufferReader) -> SentCodeType? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.auth.SentCodeType.sentCodeTypeSetUpEmailRequired(flags: _1!)
             }
             else {
                 return nil
@@ -1244,64 +1296,6 @@ public extension Api.help {
         }
         public static func parse_countriesListNotModified(_ reader: BufferReader) -> CountriesList? {
             return Api.help.CountriesList.countriesListNotModified
-        }
-    
-    }
-}
-public extension Api.help {
-    enum Country: TypeConstructorDescription {
-        case country(flags: Int32, iso2: String, defaultName: String, name: String?, countryCodes: [Api.help.CountryCode])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .country(let flags, let iso2, let defaultName, let name, let countryCodes):
-                    if boxed {
-                        buffer.appendInt32(-1014526429)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(iso2, buffer: buffer, boxed: false)
-                    serializeString(defaultName, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(name!, buffer: buffer, boxed: false)}
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(countryCodes.count))
-                    for item in countryCodes {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .country(let flags, let iso2, let defaultName, let name, let countryCodes):
-                return ("country", [("flags", String(describing: flags)), ("iso2", String(describing: iso2)), ("defaultName", String(describing: defaultName)), ("name", String(describing: name)), ("countryCodes", String(describing: countryCodes))])
-    }
-    }
-    
-        public static func parse_country(_ reader: BufferReader) -> Country? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
-            var _5: [Api.help.CountryCode]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.help.CountryCode.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.help.Country.country(flags: _1!, iso2: _2!, defaultName: _3!, name: _4, countryCodes: _5!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

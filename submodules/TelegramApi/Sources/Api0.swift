@@ -190,6 +190,12 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[250621158] = { return Api.DocumentAttribute.parse_documentAttributeVideo($0) }
     dict[-40996577] = { return Api.DraftMessage.parse_draftMessage($0) }
     dict[453805082] = { return Api.DraftMessage.parse_draftMessageEmpty($0) }
+    dict[-1764723459] = { return Api.EmailVerification.parse_emailVerificationApple($0) }
+    dict[-1842457175] = { return Api.EmailVerification.parse_emailVerificationCode($0) }
+    dict[-611279166] = { return Api.EmailVerification.parse_emailVerificationGoogle($0) }
+    dict[1383932651] = { return Api.EmailVerifyPurpose.parse_emailVerifyPurposeLoginChange($0) }
+    dict[1128644211] = { return Api.EmailVerifyPurpose.parse_emailVerifyPurposeLoginSetup($0) }
+    dict[-1141565819] = { return Api.EmailVerifyPurpose.parse_emailVerifyPurposePassport($0) }
     dict[-709641735] = { return Api.EmojiKeyword.parse_emojiKeyword($0) }
     dict[594408994] = { return Api.EmojiKeyword.parse_emojiKeywordDeleted($0) }
     dict[1556570557] = { return Api.EmojiKeywordsDifference.parse_emojiKeywordsDifference($0) }
@@ -869,7 +875,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1275039392] = { return Api.account.Authorizations.parse_authorizations($0) }
     dict[1674235686] = { return Api.account.AutoDownloadSettings.parse_autoDownloadSettings($0) }
     dict[1474462241] = { return Api.account.ContentSettings.parse_contentSettings($0) }
-    dict[408623183] = { return Api.account.Password.parse_password($0) }
+    dict[731303195] = { return Api.account.EmailVerified.parse_emailVerified($0) }
+    dict[-507835039] = { return Api.account.EmailVerified.parse_emailVerifiedLogin($0) }
+    dict[-1787080453] = { return Api.account.Password.parse_password($0) }
     dict[-1036572727] = { return Api.account.PasswordInputSettings.parse_passwordInputSettings($0) }
     dict[-1705233435] = { return Api.account.PasswordSettings.parse_passwordSettings($0) }
     dict[1352683077] = { return Api.account.PrivacyRules.parse_privacyRules($0) }
@@ -903,8 +911,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1577067778] = { return Api.auth.SentCode.parse_sentCode($0) }
     dict[1035688326] = { return Api.auth.SentCodeType.parse_sentCodeTypeApp($0) }
     dict[1398007207] = { return Api.auth.SentCodeType.parse_sentCodeTypeCall($0) }
+    dict[1511364673] = { return Api.auth.SentCodeType.parse_sentCodeTypeEmailCode($0) }
     dict[-1425815847] = { return Api.auth.SentCodeType.parse_sentCodeTypeFlashCall($0) }
     dict[-2113903484] = { return Api.auth.SentCodeType.parse_sentCodeTypeMissedCall($0) }
+    dict[-1521934870] = { return Api.auth.SentCodeType.parse_sentCodeTypeSetUpEmailRequired($0) }
     dict[-1073693790] = { return Api.auth.SentCodeType.parse_sentCodeTypeSms($0) }
     dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
     dict[-541588713] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
@@ -1215,6 +1225,10 @@ public extension Api {
             case let _1 as Api.DocumentAttribute:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DraftMessage:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.EmailVerification:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.EmailVerifyPurpose:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EmojiKeyword:
                 _1.serialize(buffer, boxed)
@@ -1593,6 +1607,8 @@ public extension Api {
             case let _1 as Api.account.AutoDownloadSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.ContentSettings:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.account.EmailVerified:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.Password:
                 _1.serialize(buffer, boxed)

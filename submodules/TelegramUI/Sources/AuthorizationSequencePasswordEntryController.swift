@@ -121,7 +121,7 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
     
     @objc func nextPressed() {
         if self.controllerNode.currentPassword.isEmpty {
-            hapticFeedback.error()
+            self.hapticFeedback.error()
             self.controllerNode.animateError()
         } else {
             self.loginWithPassword?(self.controllerNode.currentPassword)

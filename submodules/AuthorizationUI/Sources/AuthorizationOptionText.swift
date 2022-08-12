@@ -22,6 +22,11 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, st
         return NSAttributedString(string: strings.Login_CodeSentCall, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
     case .flashCall:
         return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
+    case .emailSetupRequired:
+        return NSAttributedString(string: "", font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
+    case let .email(emailPattern, _, _, _, _):
+        //TODO: localize
+        return NSAttributedString(string: "Please enter the code we have sent to your email \(emailPattern).", font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
     }
 }
 

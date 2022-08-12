@@ -75,7 +75,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         if !otherAccountPhoneNumbers.1.isEmpty {
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         }
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+//        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -186,7 +186,14 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 actions.append(TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {}))
                 self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Login_PhoneNumberAlreadyAuthorized, actions: actions), in: .window(.root))
             } else {
-                self.loginWithNumber?(self.controllerNode.currentNumber, self.controllerNode.syncContacts)
+                var actions: [TextAlertAction] = []
+                actions.append(TextAlertAction(type: .genericAction, title: self.presentationData.strings.Login_Edit, action: {}))
+                actions.append(TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Login_Yes, action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.loginWithNumber?(strongSelf.controllerNode.currentNumber, strongSelf.controllerNode.syncContacts)
+                    }
+                }))
+                self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: logInNumber, text: self.presentationData.strings.Login_PhoneNumberConfirmation, actions: actions), in: .window(.root))
             }
         } else {
             self.hapticFeedback.error()

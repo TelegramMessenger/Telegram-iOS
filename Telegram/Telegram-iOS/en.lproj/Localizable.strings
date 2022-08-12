@@ -7961,3 +7961,7 @@ Sorry for the inconvenience.";
 
 "Premium.Annual" = "Annual";
 "Premium.Monthly" = "Monthly";
+
+"Login.PhoneNumberConfirmation" = "Is this the correct number?";
+"Login.Edit" = "Edit";
+"Login.Yes" = "Yes";

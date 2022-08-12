@@ -71,7 +71,7 @@ public struct SecureIdPrepareEmailVerificationPayload {
 }
 
 public func secureIdPrepareEmailVerification(network: Network, value: SecureIdEmailValue) -> Signal<SecureIdPrepareEmailVerificationPayload, SecureIdPrepareEmailVerificationError> {
-    return network.request(Api.functions.account.sendVerifyEmailCode(email: value.email), automaticFloodWait: false)
+    return network.request(Api.functions.account.sendVerifyEmailCode(purpose: .emailVerifyPurposePassport, email: value.email), automaticFloodWait: false)
         |> mapError { error -> SecureIdPrepareEmailVerificationError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                 return .flood
@@ -95,7 +95,7 @@ public enum SecureIdCommitEmailVerificationError {
 }
 
 public func secureIdCommitEmailVerification(postbox: Postbox, network: Network, context: SecureIdAccessContext, payload: SecureIdPrepareEmailVerificationPayload, code: String) -> Signal<SecureIdValueWithContext, SecureIdCommitEmailVerificationError> {
-    return network.request(Api.functions.account.verifyEmail(email: payload.email, code: code), automaticFloodWait: false)
+    return network.request(Api.functions.account.verifyEmail(purpose: .emailVerifyPurposePassport, verification: .emailVerificationCode(code: code)), automaticFloodWait: false)
     |> mapError { error -> SecureIdCommitEmailVerificationError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .flood
