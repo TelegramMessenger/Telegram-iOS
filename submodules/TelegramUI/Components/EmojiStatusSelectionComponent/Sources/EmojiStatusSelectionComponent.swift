@@ -19,17 +19,23 @@ public final class EmojiStatusSelectionComponent: Component {
     public let strings: PresentationStrings
     public let deviceMetrics: DeviceMetrics
     public let emojiContent: EmojiPagerContentComponent
+    public let backgroundColor: UIColor
+    public let separatorColor: UIColor
     
     public init(
         theme: PresentationTheme,
         strings: PresentationStrings,
         deviceMetrics: DeviceMetrics,
-        emojiContent: EmojiPagerContentComponent
+        emojiContent: EmojiPagerContentComponent,
+        backgroundColor: UIColor,
+        separatorColor: UIColor
     ) {
         self.theme = theme
         self.strings = strings
         self.deviceMetrics = deviceMetrics
         self.emojiContent = emojiContent
+        self.backgroundColor = backgroundColor
+        self.separatorColor = separatorColor
     }
     
     public static func ==(lhs: EmojiStatusSelectionComponent, rhs: EmojiStatusSelectionComponent) -> Bool {
@@ -45,11 +51,18 @@ public final class EmojiStatusSelectionComponent: Component {
         if lhs.emojiContent != rhs.emojiContent {
             return false
         }
+        if lhs.backgroundColor != rhs.backgroundColor {
+            return false
+        }
+        if lhs.separatorColor != rhs.separatorColor {
+            return false
+        }
         return true
     }
     
     public final class View: UIView {
         private let keyboardView: ComponentView<Empty>
+        private let keyboardClippingView: UIView
         private let panelHostView: PagerExternalTopPanelContainer
         private let panelBackgroundView: BlurredBackgroundView
         private let panelSeparatorView: UIView
@@ -58,15 +71,14 @@ public final class EmojiStatusSelectionComponent: Component {
         
         override init(frame: CGRect) {
             self.keyboardView = ComponentView<Empty>()
+            self.keyboardClippingView = UIView()
             self.panelHostView = PagerExternalTopPanelContainer()
             self.panelBackgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
             self.panelSeparatorView = UIView()
             
             super.init(frame: frame)
             
-            self.clipsToBounds = true
-            self.layer.cornerRadius = 24.0
-            
+            self.addSubview(self.keyboardClippingView)
             self.addSubview(self.panelBackgroundView)
             self.addSubview(self.panelSeparatorView)
             self.addSubview(self.panelHostView)
@@ -77,11 +89,10 @@ public final class EmojiStatusSelectionComponent: Component {
         }
         
         func update(component: EmojiStatusSelectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-            if self.component?.theme !== component.theme {
-                self.backgroundColor = component.theme.list.plainBackgroundColor
-                self.panelBackgroundView.updateColor(color: component.theme.list.plainBackgroundColor.withMultipliedAlpha(0.85), transition: .immediate)
-                self.panelSeparatorView.backgroundColor = component.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5)
-            }
+            self.backgroundColor = component.backgroundColor
+            let panelBackgroundColor = component.backgroundColor.withMultipliedAlpha(0.85)
+            self.panelBackgroundView.updateColor(color: panelBackgroundColor, transition: .immediate)
+            self.panelSeparatorView.backgroundColor = component.separatorColor
             
             self.component = component
             
@@ -114,9 +125,18 @@ public final class EmojiStatusSelectionComponent: Component {
             )
             if let keyboardComponentView = self.keyboardView.view {
                 if keyboardComponentView.superview == nil {
-                    self.insertSubview(keyboardComponentView, at: 0)
+                    self.keyboardClippingView.addSubview(keyboardComponentView)
                 }
-                transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(), size: keyboardSize))
+                
+                if panelBackgroundColor.alpha < 0.01 {
+                    self.keyboardClippingView.clipsToBounds = true
+                } else {
+                    self.keyboardClippingView.clipsToBounds = false
+                }
+                
+                transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0), size: CGSize(width: availableSize.width, height: availableSize.height - 41.0)))
+                
+                transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -41.0), size: keyboardSize))
                 transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0 - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
                 
                 transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: keyboardSize.width, height: 41.0)))
@@ -237,7 +257,8 @@ public final class EmojiStatusSelectionController: ViewController {
                         return nil
                     },
                     sendSticker: nil,
-                    chatPeerId: nil
+                    chatPeerId: nil,
+                    peekBehavior: nil
                 )
                 
                 strongSelf.refreshLayout(transition: .immediate)
@@ -285,7 +306,9 @@ public final class EmojiStatusSelectionController: ViewController {
                     theme: self.presentationData.theme,
                     strings: self.presentationData.strings,
                     deviceMetrics: layout.deviceMetrics,
-                    emojiContent: emojiContent
+                    emojiContent: emojiContent,
+                    backgroundColor: self.presentationData.theme.list.plainBackgroundColor,
+                    separatorColor: self.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5)
                 )),
                 environment: {},
                 containerSize: CGSize(width: layout.size.width - sideInset * 2.0, height: min(300.0, layout.size.height))
@@ -295,6 +318,9 @@ public final class EmojiStatusSelectionController: ViewController {
                 if componentView.superview == nil {
                     self.view.addSubview(componentView)
                     animateIn = true
+                    
+                    componentView.clipsToBounds = true
+                    componentView.layer.cornerRadius = 24.0
                 }
                 
                 let sourceOrigin: CGPoint
@@ -342,21 +368,38 @@ public final class EmojiStatusSelectionController: ViewController {
                 transition.setFrame(view: componentView, frame: CGRect(origin: componentFrame.origin, size: CGSize(width: componentFrame.width, height: componentFrame.height)))
                 
                 if animateIn {
-                    self.allowsGroupOpacity = true
-                    self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
+                    //self.allowsGroupOpacity = true
+                    self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { [weak self] _ in
                         self?.allowsGroupOpacity = false
                     })
                     
-                    //componentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.28)
-                    componentView.layer.animateScale(from: (componentView.bounds.width - 10.0) / componentView.bounds.width, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                    let contentDuration: Double = 0.25
+                    let contentDelay: Double = 0.14
+                    let initialContentFrame = CGRect(origin: CGPoint(x: cloudFrame0.midX - 24.0, y: componentFrame.minY), size: CGSize(width: 24.0 * 2.0, height: 24.0 * 2.0))
                     
-                    //self.cloudShadowLayer0.animateAlpha(from: 0.0, to: 1.0, duration: 0.28)
-                    //self.cloudLayer0.animateAlpha(from: 0.0, to: 1.0, duration: 0.28)
-                    self.cloudLayer0.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-                    self.cloudShadowLayer0.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                    if let emojiView = self.componentHost.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View {
+                        emojiView.animateIn(fromLocation: self.view.convert(initialContentFrame.center, to: emojiView))
+                    }
                     
-                    //self.cloudShadowLayer1.animateAlpha(from: 0.0, to: 1.0, duration: 0.28)
-                    //self.cloudLayer1.animateAlpha(from: 0.0, to: 1.0, duration: 0.28)
+                    componentView.layer.animatePosition(from: initialContentFrame.center, to: componentFrame.center, duration: contentDuration, delay: contentDelay, timingFunction: kCAMediaTimingFunctionSpring)
+                    componentView.layer.animateBounds(from: CGRect(origin: CGPoint(x: -(componentFrame.minX - initialContentFrame.minX), y: -(componentFrame.minY - initialContentFrame.minY)), size: initialContentFrame.size), to: CGRect(origin: CGPoint(), size: componentFrame.size), duration: contentDuration, delay: contentDelay, timingFunction: kCAMediaTimingFunctionSpring)
+                    self.componentShadowLayer.animateFrame(from: CGRect(origin: CGPoint(x: cloudFrame0.midX - 24.0, y: componentFrame.minY), size: CGSize(width: 24.0 * 2.0, height: 24.0 * 2.0)), to: componentView.frame, duration: contentDuration, delay: contentDelay, timingFunction: kCAMediaTimingFunctionSpring)
+                    componentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.04, delay: contentDelay)
+                    self.componentShadowLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.04, delay: contentDelay)
+                    
+                    //componentView.layer.animateScale(from: 0.5, to: 1.0, duration: contentDuration, delay: contentDelay, timingFunction: kCAMediaTimingFunctionSpring)
+                    //self.componentShadowLayer.animateScale(from: 0.5, to: 1.0, duration: contentDuration, delay: contentDelay, timingFunction: kCAMediaTimingFunctionSpring)
+                    
+                    let initialComponentShadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: initialContentFrame.size), cornerRadius: 24.0).cgPath
+                    self.componentShadowLayer.animate(from: initialComponentShadowPath, to: self.componentShadowLayer.shadowPath!, keyPath: "shadowPath", timingFunction: kCAMediaTimingFunctionSpring, duration: contentDuration, delay: contentDelay)
+                    
+                    //componentView.layer.animateScale(from: (componentView.bounds.width - 10.0) / componentView.bounds.width, to: 1.0, duration: 0.4, delay: 0.1, timingFunction: kCAMediaTimingFunctionSpring)
+                    //componentView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, delay: contentDelay)
+                    //self.componentShadowLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, delay: contentDelay)
+                    
+                    self.cloudLayer0.animateScale(from: 0.01, to: 1.0, duration: 0.4, delay: 0.05, timingFunction: kCAMediaTimingFunctionSpring)
+                    self.cloudShadowLayer0.animateScale(from: 0.01, to: 1.0, duration: 0.4, delay: 0.05, timingFunction: kCAMediaTimingFunctionSpring)
+                    
                     self.cloudLayer1.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
                     self.cloudShadowLayer1.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
                 }

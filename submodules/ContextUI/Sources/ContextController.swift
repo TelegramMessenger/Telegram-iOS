@@ -9,20 +9,22 @@ import TelegramCore
 import SwiftSignalKit
 import AccountContext
 import TextNodeWithEntities
+import EntityKeyboard
 
 private let animationDurationFactor: Double = 1.0
 
-public protocol ContextControllerProtocol: AnyObject {
+public protocol ContextControllerProtocol: ViewController {
     var useComplexItemsTransitionAnimation: Bool { get set }
     var immediateItemsTransitionAnimation: Bool { get set }
     var getOverlayViews: (() -> [UIView])? { get set }
 
+    func dismiss(completion: (() -> Void)?)
+    
     func getActionsMinHeight() -> ContextController.ActionsHeight?
     func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?)
     func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition)
     func pushItems(items: Signal<ContextController.Items, NoError>)
     func popItems()
-    func dismiss(completion: (() -> Void)?)
 }
 
 public enum ContextMenuActionItemTextLayout {
@@ -1517,7 +1519,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         if !items.reactionItems.isEmpty, let context = items.context {
-            let reactionContextNode = ReactionContextNode(context: context, theme: self.presentationData.theme, items: items.reactionItems)
+            let reactionContextNode = ReactionContextNode(context: context, presentationData: self.presentationData, items: items.reactionItems, getEmojiContent: items.getEmojiContent, requestLayout: { _ in })
             self.reactionContextNode = reactionContextNode
             self.addSubnode(reactionContextNode)
             
@@ -1902,7 +1904,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     if let reactionContextNode = self.reactionContextNode {
                         let insets = layout.insets(options: [.statusBar])
                         transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-                        reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX + contentParentNode.contentRect.minX, y: absoluteContentRect.minY + contentParentNode.contentRect.minY), size: contentParentNode.contentRect.size), transition: transition)
+                        reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX + contentParentNode.contentRect.minX, y: absoluteContentRect.minY + contentParentNode.contentRect.minY), size: contentParentNode.contentRect.size), isAnimatingOut: false, transition: transition)
                     }
                 }
             case let .controller(contentParentNode):
@@ -2040,7 +2042,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     if let reactionContextNode = self.reactionContextNode {
                         let insets = layout.insets(options: [.statusBar])
                         transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-                        reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX, y: absoluteContentRect.minY), size: contentSize), transition: transition)
+                        reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX, y: absoluteContentRect.minY), size: contentSize), isAnimatingOut: false, transition: transition)
                     }
                 }
             }
@@ -2372,13 +2374,15 @@ public final class ContextController: ViewController, StandalonePresentableContr
         public var content: Content
         public var context: AccountContext?
         public var reactionItems: [ReactionContextItem]
+        public var getEmojiContent: (() -> Signal<EmojiPagerContentComponent, NoError>)?
         public var disablePositionLock: Bool
         public var tip: Tip?
 
-        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], disablePositionLock: Bool = false, tip: Tip? = nil) {
+        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], getEmojiContent: (() -> Signal<EmojiPagerContentComponent, NoError>)? = nil, disablePositionLock: Bool = false, tip: Tip? = nil) {
             self.content = content
             self.context = context
             self.reactionItems = reactionItems
+            self.getEmojiContent = getEmojiContent
             self.disablePositionLock = disablePositionLock
             self.tip = tip
         }
@@ -2387,6 +2391,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.content = .list([])
             self.context = nil
             self.reactionItems = []
+            self.getEmojiContent = nil
             self.disablePositionLock = false
             self.tip = nil
         }

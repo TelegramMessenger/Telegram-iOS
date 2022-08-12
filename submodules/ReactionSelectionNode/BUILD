@@ -24,6 +24,10 @@ swift_library(
         "//submodules/lottie-ios:Lottie",
         "//submodules/AppBundle:AppBundle",
         "//submodules/AvatarNode:AvatarNode",
+        "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/TelegramUI/Components/EmojiStatusSelectionComponent:EmojiStatusSelectionComponent",
+        "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",
+        "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
     ],
     visibility = [
         "//visibility:public",

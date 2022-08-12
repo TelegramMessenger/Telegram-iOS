@@ -424,8 +424,22 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         var contentTopInset: CGFloat = topInset
         var removedReactionContextNode: ReactionContextNode?
         if let reactionItems = self.actionsStackNode.topReactionItems, !reactionItems.reactionItems.isEmpty {
-            if self.reactionContextNode == nil {
-                let reactionContextNode = ReactionContextNode(context: reactionItems.context, theme: presentationData.theme, items: reactionItems.reactionItems)
+            let reactionContextNode: ReactionContextNode
+            if let current = self.reactionContextNode {
+                reactionContextNode = current
+            } else {
+                reactionContextNode = ReactionContextNode(
+                    context: reactionItems.context,
+                    presentationData: presentationData,
+                    items: reactionItems.reactionItems,
+                    getEmojiContent: reactionItems.getEmojiContent,
+                    requestLayout: { [weak self] transition in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.requestUpdate(transition)
+                    }
+                )
                 self.reactionContextNode = reactionContextNode
                 self.addSubnode(reactionContextNode)
                 
@@ -440,7 +454,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     controller.reactionSelected?(reaction, isLarge)
                 }
             }
-            contentTopInset += 70.0
+            contentTopInset += reactionContextNode.currentContentHeight + 8.0
+            //if reactionContextNode.currentContentHeight > 100.0 {
+                contentTopInset += 10.0
+            //}
         } else if let reactionContextNode = self.reactionContextNode {
             self.reactionContextNode = nil
             removedReactionContextNode = reactionContextNode
@@ -534,7 +551,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 transition: transition
             )
             
+            var isAnimatingOut = false
             if case .animateOut = stateTransition {
+                isAnimatingOut = true
             } else {
                 if let topPositionLock = self.actionsStackNode.topPositionLock {
                     contentRect.origin.y = topPositionLock - contentActionsSpacing - contentRect.height
@@ -561,7 +580,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     reactionContextNodeTransition = .immediate
                 }
                 reactionContextNodeTransition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
-                reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0), anchorRect: contentRect.offsetBy(dx: contentParentGlobalFrame.minX, dy: 0.0), transition: reactionContextNodeTransition)
+                reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0), anchorRect: contentRect.offsetBy(dx: contentParentGlobalFrame.minX, dy: 0.0), isAnimatingOut: isAnimatingOut, transition: reactionContextNodeTransition)
             }
             if let removedReactionContextNode = removedReactionContextNode {
                 removedReactionContextNode.animateOut(to: contentRect, animatingOutToReaction: false)

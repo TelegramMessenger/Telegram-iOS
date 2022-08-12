@@ -2739,7 +2739,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 listAnimation: centerAnimation,
                                 largeListAnimation: reaction.activateAnimation,
                                 applicationAnimation: aroundAnimation,
-                                largeApplicationAnimation: reaction.effectAnimation
+                                largeApplicationAnimation: reaction.effectAnimation,
+                                isCustom: false
                             ),
                             avatarPeers: avatarPeers,
                             playHaptic: true,

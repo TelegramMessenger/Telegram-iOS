@@ -53,6 +53,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     private var animateInAnimationNode: AnimatedStickerNode?
     private let staticAnimationNode: AnimatedStickerNode
     private var stillAnimationNode: AnimatedStickerNode?
+    private var customContentsNode: ASDisplayNode?
     private var animationNode: AnimatedStickerNode?
     
     private var dismissedStillAnimationNodes: [AnimatedStickerNode] = []
@@ -125,6 +126,15 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     
     public var mainAnimationCompletion: (() -> Void)?
     
+    public func setCustomContents(contents: Any) {
+        if self.customContentsNode == nil {
+            let customContentsNode = ASDisplayNode()
+            self.customContentsNode = customContentsNode
+            self.addSubnode(customContentsNode)
+        }
+        self.customContentsNode?.contents = contents
+    }
+    
     public func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
         let intrinsicSize = size
         
@@ -193,6 +203,16 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                         animateInAnimationNode.removeFromSupernode()
                     })
                 }
+                /*if let customContentsNode = self.customContentsNode {
+                    customContentsNode.alpha = 0.0
+                    customContentsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                        guard let strongSelf = self, let customContentsNode = strongSelf.customContentsNode else {
+                            return
+                        }
+                        strongSelf.customContentsNode = nil
+                        customContentsNode.removeFromSupernode()
+                    })
+                }*/
                 
                 var referenceNode: ASDisplayNode?
                 if let animateInAnimationNode = self.animateInAnimationNode {
@@ -212,6 +232,15 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                     
                     self.staticAnimationNode.alpha = 0.0
                     self.staticAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                }
+                
+                
+                if let customContentsNode = self.customContentsNode, !customContentsNode.isHidden {
+                    transition.animateTransformScale(node: customContentsNode, from: customContentsNode.bounds.width / animationFrame.width)
+                    transition.animatePositionAdditive(node: customContentsNode, offset: CGPoint(x: customContentsNode.frame.midX - animationFrame.midX, y: customContentsNode.frame.midY - animationFrame.midY))
+                    
+                    customContentsNode.alpha = 0.0
+                    customContentsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 }
                 
                 animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
@@ -290,7 +319,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             }
         }
         
-        if !self.didSetupStillAnimation {
+        if !self.didSetupStillAnimation && self.customContentsNode == nil {
             if self.animationNode == nil {
                 self.didSetupStillAnimation = true
                 
@@ -319,6 +348,14 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                 transition.updatePosition(node: animateInAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
                 transition.updateTransformScale(node: animateInAnimationNode, scale: animationFrame.size.width / animateInAnimationNode.bounds.width, beginWithCurrentState: true)
             }
+        }
+        
+        if let customContentsNode = self.customContentsNode {
+            transition.updateFrame(node: customContentsNode, frame: animationFrame)
+            /*if customContentsNode.alpha != 0.0 {
+                customContentsNode.alpha = 0.0
+                customContentsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+            }*/
         }
     }
 }

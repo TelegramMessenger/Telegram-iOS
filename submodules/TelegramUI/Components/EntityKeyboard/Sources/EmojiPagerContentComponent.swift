@@ -18,9 +18,6 @@ import ShimmerEffect
 import PagerComponent
 import StickerResources
 import AppBundle
-import ContextUI
-import PremiumUI
-import StickerPeekUI
 import UndoUI
 import AudioToolbox
 import SolidRoundedButtonComponent
@@ -61,28 +58,31 @@ private final class WarpView: UIView {
     let contentView: PortalSourceView
     
     private let clippingView: UIView
-    private let overlayView: UIView
     
     private var warpViews: [WarpPartView] = []
+    private let warpMaskContainer: UIView
+    private let warpMaskGradientLayer: SimpleGradientLayer
     
     override init(frame: CGRect) {
         self.contentView = PortalSourceView()
         self.clippingView = UIView()
-        self.overlayView = UIView()
+        
+        self.warpMaskContainer = UIView()
+        self.warpMaskGradientLayer = SimpleGradientLayer()
+        self.warpMaskContainer.layer.mask = self.warpMaskGradientLayer
         
         super.init(frame: frame)
         
         self.clippingView.addSubview(self.contentView)
         
-        self.clippingView.clipsToBounds = false
+        self.clippingView.clipsToBounds = true
         self.addSubview(self.clippingView)
-        
-        self.addSubview(self.overlayView)
+        self.addSubview(self.warpMaskContainer)
         
         for _ in 0 ..< 8 {
             if let warpView = WarpPartView(contentView: self.contentView) {
                 self.warpViews.append(warpView)
-                self.addSubview(warpView)
+                self.warpMaskContainer.addSubview(warpView)
             }
         }
     }
@@ -93,10 +93,6 @@ private final class WarpView: UIView {
     
     func update(size: CGSize, topInset: CGFloat, warpHeight: CGFloat, theme: PresentationTheme, transition: Transition) {
         transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: size))
-        
-        let frame = CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: CGSize(width: size.width, height: size.height + topInset - warpHeight))
-        transition.setPosition(view: self.clippingView, position: frame.center)
-        transition.setBounds(view: self.clippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -topInset + (topInset - warpHeight) * 0.5), size: size))
         
         let allItemsHeight = warpHeight * 0.5
         for i in 0 ..< self.warpViews.count {
@@ -123,20 +119,38 @@ private final class WarpView: UIView {
             transform = CATransform3DTranslate(transform, 0.0, prevPt.x * allItemsHeight, (1.0 - prevPt.y) * allItemsHeight)
             transform = CATransform3DRotate(transform, angle, 1.0, 0.0, 0.0)
             
-            //self.warpViews[i].backgroundColor = UIColor(red: 0.0, green: 0.0, blue: CGFloat(i) / CGFloat(self.warpViews.count - 1), alpha: 1.0)
-            //self.warpViews[i].backgroundColor = UIColor(white: 0.0, alpha: 0.5)
-            //self.warpViews[i].backgroundColor = theme.list.plainBackgroundColor
-            
-            let positionY = size.height - allItemsHeight + 4.0 + /*warpHeight * cos(alpha)*/ CGFloat(i) * itemLength
+            let positionY = size.height - allItemsHeight + 4.0 + CGFloat(i) * itemLength
             let rect = CGRect(origin: CGPoint(x: 0.0, y: positionY), size: CGSize(width: size.width, height: itemLength))
-            transition.setPosition(view: self.warpViews[i], position: CGPoint(x: rect.midX, y: size.height - allItemsHeight + 4.0))
+            transition.setPosition(view: self.warpViews[i], position: CGPoint(x: rect.midX, y: 4.0))
             transition.setBounds(view: self.warpViews[i], bounds: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: itemLength)))
             transition.setTransform(view: self.warpViews[i], transform: transform)
             self.warpViews[i].update(containerSize: size, rect: rect, transition: transition)
         }
         
-        self.overlayView.backgroundColor = theme.list.plainBackgroundColor
-        transition.setFrame(view: self.overlayView, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - allItemsHeight + 4.0), size: CGSize(width: size.width, height: allItemsHeight)))
+        let frame = CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: CGSize(width: size.width, height: topInset + size.height - 21.0))
+        transition.setPosition(view: self.clippingView, position: frame.center)
+        transition.setBounds(view: self.clippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: frame.size))
+        
+        transition.setFrame(view: self.warpMaskContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - allItemsHeight), size: CGSize(width: size.width, height: allItemsHeight)))
+        
+        var locations: [NSNumber] = []
+        var colors: [CGColor] = []
+        let numStops = 6
+        for i in 0 ..< numStops {
+            let step = CGFloat(i) / CGFloat(numStops - 1)
+            locations.append(step as NSNumber)
+            colors.append(UIColor.black.withAlphaComponent(1.0 - step * step).cgColor)
+        }
+        
+        let gradientHeight: CGFloat = 6.0
+        self.warpMaskGradientLayer.startPoint = CGPoint(x: 0.0, y: (allItemsHeight - gradientHeight) / allItemsHeight)
+        self.warpMaskGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
+        
+        self.warpMaskGradientLayer.locations = locations
+        self.warpMaskGradientLayer.colors = colors
+        self.warpMaskGradientLayer.type = .axial
+        
+        transition.setFrame(layer: self.warpMaskGradientLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: allItemsHeight)))
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -172,16 +186,18 @@ public final class EntityKeyboardAnimationData: Equatable {
     public let resource: MediaResourceReference
     public let dimensions: CGSize
     public let immediateThumbnailData: Data?
+    public let isReaction: Bool
     
-    public init(id: Id, type: ItemType, resource: MediaResourceReference, dimensions: CGSize, immediateThumbnailData: Data?) {
+    public init(id: Id, type: ItemType, resource: MediaResourceReference, dimensions: CGSize, immediateThumbnailData: Data?, isReaction: Bool) {
         self.id = id
         self.type = type
         self.resource = resource
         self.dimensions = dimensions
         self.immediateThumbnailData = immediateThumbnailData
+        self.isReaction = isReaction
     }
     
-    public convenience init(file: TelegramMediaFile) {
+    public convenience init(file: TelegramMediaFile, isReaction: Bool = false) {
         let type: ItemType
         if file.isVideoSticker || file.isVideoEmoji {
             type = .video
@@ -190,7 +206,7 @@ public final class EntityKeyboardAnimationData: Equatable {
         } else {
             type = .still
         }
-        self.init(id: .file(file.fileId), type: type, resource: .standalone(resource: file.resource), dimensions: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), immediateThumbnailData: file.immediateThumbnailData)
+        self.init(id: .file(file.fileId), type: type, resource: .standalone(resource: file.resource), dimensions: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), immediateThumbnailData: file.immediateThumbnailData, isReaction: isReaction)
     }
     
     public static func ==(lhs: EntityKeyboardAnimationData, rhs: EntityKeyboardAnimationData) -> Bool {
@@ -208,6 +224,9 @@ public final class EntityKeyboardAnimationData: Equatable {
             return false
         }
         if lhs.immediateThumbnailData != rhs.immediateThumbnailData {
+            return false
+        }
+        if lhs.isReaction != rhs.isReaction {
             return false
         }
         
@@ -1425,6 +1444,10 @@ private final class GroupExpandActionButton: UIButton {
     }
 }
 
+public protocol EmojiContentPeekBehavior: AnyObject {
+    func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (EmojiPagerContentComponent.View.ItemLayer, TelegramMediaFile)?)
+}
+
 public final class EmojiPagerContentComponent: Component {
     public typealias EnvironmentType = (EntityKeyboardChildEnvironment, PagerComponentChildEnvironment)
     
@@ -1462,6 +1485,7 @@ public final class EmojiPagerContentComponent: Component {
         public let navigationController: () -> NavigationController?
         public let sendSticker: ((FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void)?
         public let chatPeerId: PeerId?
+        public let peekBehavior: EmojiContentPeekBehavior?
         
         public init(
             performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer) -> Void,
@@ -1475,7 +1499,8 @@ public final class EmojiPagerContentComponent: Component {
             presentGlobalOverlayController: @escaping (ViewController) -> Void,
             navigationController: @escaping () -> NavigationController?,
             sendSticker: ((FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void)?,
-            chatPeerId: PeerId?
+            chatPeerId: PeerId?,
+            peekBehavior: EmojiContentPeekBehavior?
         ) {
             self.performItemAction = performItemAction
             self.deleteBackwards = deleteBackwards
@@ -1489,6 +1514,7 @@ public final class EmojiPagerContentComponent: Component {
             self.navigationController = navigationController
             self.sendSticker = sendSticker
             self.chatPeerId = chatPeerId
+            self.peekBehavior = peekBehavior
         }
     }
     
@@ -2129,8 +2155,6 @@ public final class EmojiPagerContentComponent: Component {
                                         }
                                         
                                         strongSelf.updateDisplayPlaceholder(displayPlaceholder: true)
-                                    } else {
-                                        //self?.updateDisplayPlaceholder(displayPlaceholder: false)
                                     }
                                 }
                             })
@@ -2161,8 +2185,6 @@ public final class EmojiPagerContentComponent: Component {
                                     }
                                     
                                     strongSelf.updateDisplayPlaceholder(displayPlaceholder: true)
-                                } else {
-                                    //self?.updateDisplayPlaceholder(displayPlaceholder: false)
                                 }
                             }
                         })
@@ -2446,10 +2468,6 @@ public final class EmojiPagerContentComponent: Component {
         private var activeItemUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>?
         private var itemLayout: ItemLayout?
         
-        private var peekRecognizer: PeekControllerGestureRecognizer?
-        private var currentContextGestureItemKey: ItemLayer.Key?
-        private weak var peekController: PeekController?
-        
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: nil)
             
@@ -2501,157 +2519,6 @@ public final class EmojiPagerContentComponent: Component {
             self.scrollView.addSubview(self.placeholdersContainerView)
             
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-            
-            let peekRecognizer = PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point in
-                guard let strongSelf = self, let component = strongSelf.component else {
-                    return nil
-                }
-                guard let item = strongSelf.item(atPoint: point), let itemLayer = strongSelf.visibleItemLayers[item.1], let file = item.0.itemFile else {
-                    return nil
-                }
-                if itemLayer.displayPlaceholder {
-                    return nil
-                }
-                
-                let context = component.context
-                let accountPeerId = context.account.peerId
-                return combineLatest(
-                    context.engine.stickers.isStickerSaved(id: file.fileId),
-                    context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: accountPeerId)) |> map { peer -> Bool in
-                        var hasPremium = false
-                        if case let .user(user) = peer, user.isPremium {
-                            hasPremium = true
-                        }
-                        return hasPremium
-                    }
-                )
-                |> deliverOnMainQueue
-                |> map { [weak itemLayer] isStarred, hasPremium -> (UIView, CGRect, PeekControllerContent)? in
-                    guard let strongSelf = self, let component = strongSelf.component, let itemLayer = itemLayer else {
-                        return nil
-                    }
-                    var menuItems: [ContextMenuItem] = []
-                    
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    
-                    if let inputInteraction = component.inputInteractionHolder.inputInteraction, let sendSticker = inputInteraction.sendSticker, let chatPeerId = inputInteraction.chatPeerId {
-                        if chatPeerId != component.context.account.peerId && chatPeerId.namespace != Namespaces.Peer.SecretChat  {
-                            menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendSilently, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
-                            }, action: { _, f in
-                                if let strongSelf = self, let peekController = strongSelf.peekController {
-                                    if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                        sendSticker(.standalone(media: file), true, false, nil, false, animationNode.view, animationNode.bounds, nil)
-                                    } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                        sendSticker(.standalone(media: file), true, false, nil, false, imageNode.view, imageNode.bounds, nil)
-                                    }
-                                }
-                                f(.default)
-                            })))
-                        }
-                    
-                        menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { _, f in
-                            if let strongSelf = self, let peekController = strongSelf.peekController {
-                                if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                    let _ = sendSticker(.standalone(media: file), false, true, nil, false, animationNode.view, animationNode.bounds, nil)
-                                } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                    let _ = sendSticker(.standalone(media: file), false, true, nil, false, imageNode.view, imageNode.bounds, nil)
-                                }
-                            }
-                            f(.default)
-                        })))
-                    }
-                    
-                    menuItems.append(
-                        .action(ContextMenuActionItem(text: isStarred ? presentationData.strings.Stickers_RemoveFromFavorites : presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                            f(.default)
-                            
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let _ = (context.engine.stickers.toggleStickerSaved(file: file, saved: !isStarred)
-                            |> deliverOnMainQueue).start(next: { result in
-                                switch result {
-                                case .generic:
-                                    component.inputInteractionHolder.inputInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: !isStarred ? presentationData.strings.Conversation_StickerAddedToFavorites : presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }))
-                                case let .limitExceeded(limit, premiumLimit):
-                                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-                                    let text: String
-                                    if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
-                                        text = presentationData.strings.Premium_MaxFavedStickersFinalText
-                                    } else {
-                                        text = presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
-                                    }
-                                    component.inputInteractionHolder.inputInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { action in
-                                        if case .info = action {
-                                            let controller = PremiumIntroScreen(context: context, source: .savedStickers)
-                                            component.inputInteractionHolder.inputInteraction?.pushController(controller)
-                                            return true
-                                        }
-                                        return false
-                                    }))
-                                }
-                            })
-                        }))
-                    )
-                    menuItems.append(
-                        .action(ContextMenuActionItem(text: presentationData.strings.StickerPack_ViewPack, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { _, f in
-                            f(.default)
-                            
-                            loop: for attribute in file.attributes {
-                            switch attribute {
-                            case let .CustomEmoji(_, _, packReference), let .Sticker(_, packReference, _):
-                                if let packReference = packReference {
-                                    let controller = context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: component.inputInteractionHolder.inputInteraction?.navigationController(), sendSticker: { file, sourceView, sourceRect in
-                                        component.inputInteractionHolder.inputInteraction?.sendSticker?(file, false, false, nil, false, sourceView, sourceRect, nil)
-                                        return true
-                                    })
-                                    
-                                    component.inputInteractionHolder.inputInteraction?.navigationController()?.view.window?.endEditing(true)
-                                    component.inputInteractionHolder.inputInteraction?.presentController(controller)
-                                }
-                                break loop
-                            default:
-                                break
-                            }
-                        }
-                        }))
-                    )
-                    
-                    return (strongSelf, strongSelf.scrollView.convert(itemLayer.frame, to: strongSelf), StickerPreviewPeekContent(account: context.account, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: {
-                        let controller = PremiumIntroScreen(context: context, source: .stickers)
-                        component.inputInteractionHolder.inputInteraction?.pushController(controller)
-                    }))
-                }
-            }, present: { [weak self] content, sourceView, sourceRect in
-                guard let strongSelf = self, let component = strongSelf.component else {
-                    return nil
-                }
-                
-                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
-                    return (sourceView, sourceRect)
-                })
-                /*controller.visibilityUpdated = { [weak self] visible in
-                    self?.previewingStickersPromise.set(visible)
-                    self?.requestDisableStickerAnimations?(visible)
-                    self?.simulateUpdateLayout(isVisible: !visible)
-                }*/
-                strongSelf.peekController = controller
-                component.inputInteractionHolder.inputInteraction?.presentGlobalOverlayController(controller)
-                return controller
-            }, updateContent: { [weak self] content in
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                let _ = strongSelf
-            })
-            self.peekRecognizer = peekRecognizer
-            self.addGestureRecognizer(peekRecognizer)
-            self.peekRecognizer?.isEnabled = false
         }
         
         required init?(coder: NSCoder) {
@@ -2687,6 +2554,18 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             return false
+        }
+        
+        public func animateIn(fromLocation: CGPoint) {
+            let scrollLocation = self.convert(fromLocation, to: self.scrollView)
+            for (_, itemLayer) in self.visibleItemLayers {
+                let distanceVector = CGPoint(x: scrollLocation.x - itemLayer.position.x, y: scrollLocation.y - itemLayer.position.y)
+                let distance = sqrt(distanceVector.x * distanceVector.x + distanceVector.y + distanceVector.y)
+                
+                let distanceNorm = min(1.0, max(0.0, distance / self.bounds.width))
+                let delay = (distanceNorm) * 0.3
+                itemLayer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, delay: 1.05 * delay)
+            }
         }
         
         public func scrollToItemGroup(id supergroupId: AnyHashable, subgroupId: Int32?) {
@@ -3665,6 +3544,10 @@ public final class EmojiPagerContentComponent: Component {
                             } else {
                                 pointSize = itemPlaybackSize
                             }
+                            /*if case let .animation(animationData) = item.content, animationData.isReaction {
+                                pointSize.width += pointSize.width
+                                pointSize.height += pointSize.height
+                            }*/
                             
                             let placeholderColor = keyboardChildEnvironment.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1)
                             itemLayer = ItemLayer(
@@ -3986,36 +3869,6 @@ public final class EmojiPagerContentComponent: Component {
             }
             
             if itemLayout.curveNearBounds {
-                let scrollGradientLayer: SimpleGradientLayer
-                if let current = self.scrollGradientLayer {
-                    scrollGradientLayer = current
-                } else {
-                    scrollGradientLayer = SimpleGradientLayer()
-                    self.scrollGradientLayer = scrollGradientLayer
-                    
-                    var locations: [NSNumber] = []
-                    var colors: [CGColor] = []
-                    let numStops = 6
-                    for i in 0 ..< numStops {
-                        let step = CGFloat(i) / CGFloat(numStops - 1)
-                        locations.append(step as NSNumber)
-                        colors.append(keyboardChildEnvironment.theme.list.plainBackgroundColor.withAlphaComponent(step * step).cgColor)
-                    }
-                    
-                    scrollGradientLayer.locations = locations
-                    scrollGradientLayer.colors = colors
-                    scrollGradientLayer.type = .axial
-                    
-                    self.layer.addSublayer(scrollGradientLayer)
-                }
-                
-                let gradientHeight: CGFloat = 6.0
-                transition.setFrame(layer: scrollGradientLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveVisibleBounds.height - gradientHeight), size: CGSize(width: effectiveVisibleBounds.width, height: gradientHeight)))
-                //let fractionLength: CGFloat = 20.0
-                //transition.setAlpha(layer: scrollGradientLayer, alpha: max(0.0, min(1.0, (itemLayout.contentSize.height - effectiveVisibleBounds.maxY) / fractionLength)))
-                                    
-                scrollGradientLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
-                scrollGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
             } else {
                 if let scrollGradientLayer = self.scrollGradientLayer {
                     self.scrollGradientLayer = nil
@@ -4070,6 +3923,12 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             
+            if component.warpContentsOnEdges {
+                self.backgroundView.isHidden = true
+            } else {
+                self.backgroundView.isHidden = false
+            }
+            
             self.backgroundView.updateColor(color: keyboardChildEnvironment.theme.chat.inputMediaPanel.backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
@@ -4085,7 +3944,18 @@ public final class EmojiPagerContentComponent: Component {
             self.component = component
             self.state = state
             
-            self.peekRecognizer?.isEnabled = component.itemLayoutType == .detailed
+            component.inputInteractionHolder.inputInteraction?.peekBehavior?.setGestureRecognizerEnabled(view: self, isEnabled: component.itemLayoutType == .detailed, itemAtPoint: { [weak self] point in
+                guard let strongSelf = self else {
+                    return nil
+                }
+                guard let item = strongSelf.item(atPoint: point), let itemLayer = strongSelf.visibleItemLayers[item.1], let file = item.0.itemFile else {
+                    return nil
+                }
+                if itemLayer.displayPlaceholder {
+                    return nil
+                }
+                return (itemLayer, file)
+            })
             
             let keyboardChildEnvironment = environment[EntityKeyboardChildEnvironment.self].value
             let pagerEnvironment = environment[PagerComponentChildEnvironment.self].value

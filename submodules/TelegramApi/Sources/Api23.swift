@@ -1,4 +1,68 @@
 public extension Api.auth {
+    enum CodeType: TypeConstructorDescription {
+        case codeTypeCall
+        case codeTypeFlashCall
+        case codeTypeMissedCall
+        case codeTypeSms
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .codeTypeCall:
+                    if boxed {
+                        buffer.appendInt32(1948046307)
+                    }
+                    
+                    break
+                case .codeTypeFlashCall:
+                    if boxed {
+                        buffer.appendInt32(577556219)
+                    }
+                    
+                    break
+                case .codeTypeMissedCall:
+                    if boxed {
+                        buffer.appendInt32(-702884114)
+                    }
+                    
+                    break
+                case .codeTypeSms:
+                    if boxed {
+                        buffer.appendInt32(1923290508)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .codeTypeCall:
+                return ("codeTypeCall", [])
+                case .codeTypeFlashCall:
+                return ("codeTypeFlashCall", [])
+                case .codeTypeMissedCall:
+                return ("codeTypeMissedCall", [])
+                case .codeTypeSms:
+                return ("codeTypeSms", [])
+    }
+    }
+    
+        public static func parse_codeTypeCall(_ reader: BufferReader) -> CodeType? {
+            return Api.auth.CodeType.codeTypeCall
+        }
+        public static func parse_codeTypeFlashCall(_ reader: BufferReader) -> CodeType? {
+            return Api.auth.CodeType.codeTypeFlashCall
+        }
+        public static func parse_codeTypeMissedCall(_ reader: BufferReader) -> CodeType? {
+            return Api.auth.CodeType.codeTypeMissedCall
+        }
+        public static func parse_codeTypeSms(_ reader: BufferReader) -> CodeType? {
+            return Api.auth.CodeType.codeTypeSms
+        }
+    
+    }
+}
+public extension Api.auth {
     enum ExportedAuthorization: TypeConstructorDescription {
         case exportedAuthorization(id: Int64, bytes: Buffer)
     
@@ -1152,150 +1216,6 @@ public extension Api.contacts {
         }
         public static func parse_topPeersNotModified(_ reader: BufferReader) -> TopPeers? {
             return Api.contacts.TopPeers.topPeersNotModified
-        }
-    
-    }
-}
-public extension Api.help {
-    enum AppUpdate: TypeConstructorDescription {
-        case appUpdate(flags: Int32, id: Int32, version: String, text: String, entities: [Api.MessageEntity], document: Api.Document?, url: String?, sticker: Api.Document?)
-        case noAppUpdate
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url, let sticker):
-                    if boxed {
-                        buffer.appendInt32(-860107216)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeString(version, buffer: buffer, boxed: false)
-                    serializeString(text, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(entities.count))
-                    for item in entities {
-                        item.serialize(buffer, true)
-                    }
-                    if Int(flags) & Int(1 << 1) != 0 {document!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {sticker!.serialize(buffer, true)}
-                    break
-                case .noAppUpdate:
-                    if boxed {
-                        buffer.appendInt32(-1000708810)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url, let sticker):
-                return ("appUpdate", [("flags", String(describing: flags)), ("id", String(describing: id)), ("version", String(describing: version)), ("text", String(describing: text)), ("entities", String(describing: entities)), ("document", String(describing: document)), ("url", String(describing: url)), ("sticker", String(describing: sticker))])
-                case .noAppUpdate:
-                return ("noAppUpdate", [])
-    }
-    }
-    
-        public static func parse_appUpdate(_ reader: BufferReader) -> AppUpdate? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: [Api.MessageEntity]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
-            }
-            var _6: Api.Document?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.Document
-            } }
-            var _7: String?
-            if Int(_1!) & Int(1 << 2) != 0 {_7 = parseString(reader) }
-            var _8: Api.Document?
-            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.Document
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.help.AppUpdate.appUpdate(flags: _1!, id: _2!, version: _3!, text: _4!, entities: _5!, document: _6, url: _7, sticker: _8)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_noAppUpdate(_ reader: BufferReader) -> AppUpdate? {
-            return Api.help.AppUpdate.noAppUpdate
-        }
-    
-    }
-}
-public extension Api.help {
-    enum CountriesList: TypeConstructorDescription {
-        case countriesList(countries: [Api.help.Country], hash: Int32)
-        case countriesListNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .countriesList(let countries, let hash):
-                    if boxed {
-                        buffer.appendInt32(-2016381538)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(countries.count))
-                    for item in countries {
-                        item.serialize(buffer, true)
-                    }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
-                    break
-                case .countriesListNotModified:
-                    if boxed {
-                        buffer.appendInt32(-1815339214)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .countriesList(let countries, let hash):
-                return ("countriesList", [("countries", String(describing: countries)), ("hash", String(describing: hash))])
-                case .countriesListNotModified:
-                return ("countriesListNotModified", [])
-    }
-    }
-    
-        public static func parse_countriesList(_ reader: BufferReader) -> CountriesList? {
-            var _1: [Api.help.Country]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.help.Country.self)
-            }
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.help.CountriesList.countriesList(countries: _1!, hash: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_countriesListNotModified(_ reader: BufferReader) -> CountriesList? {
-            return Api.help.CountriesList.countriesListNotModified
         }
     
     }

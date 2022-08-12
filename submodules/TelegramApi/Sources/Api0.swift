@@ -821,6 +821,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1667805217] = { return Api.Update.parse_updateReadHistoryInbox($0) }
     dict[791617983] = { return Api.Update.parse_updateReadHistoryOutbox($0) }
     dict[1757493555] = { return Api.Update.parse_updateReadMessagesContents($0) }
+    dict[821314523] = { return Api.Update.parse_updateRecentEmojiStatuses($0) }
     dict[-1706939360] = { return Api.Update.parse_updateRecentStickers($0) }
     dict[-1821035490] = { return Api.Update.parse_updateSavedGifs($0) }
     dict[1960361625] = { return Api.Update.parse_updateSavedRingtones($0) }
@@ -877,6 +878,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1474462241] = { return Api.account.ContentSettings.parse_contentSettings($0) }
     dict[731303195] = { return Api.account.EmailVerified.parse_emailVerified($0) }
     dict[-507835039] = { return Api.account.EmailVerified.parse_emailVerifiedLogin($0) }
+    dict[-1866176559] = { return Api.account.EmojiStatuses.parse_emojiStatuses($0) }
+    dict[-796072379] = { return Api.account.EmojiStatuses.parse_emojiStatusesNotModified($0) }
     dict[-1787080453] = { return Api.account.Password.parse_password($0) }
     dict[-1036572727] = { return Api.account.PasswordInputSettings.parse_passwordInputSettings($0) }
     dict[-1705233435] = { return Api.account.PasswordSettings.parse_passwordSettings($0) }
@@ -1609,6 +1612,8 @@ public extension Api {
             case let _1 as Api.account.ContentSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.EmailVerified:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.account.EmojiStatuses:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.Password:
                 _1.serialize(buffer, boxed)

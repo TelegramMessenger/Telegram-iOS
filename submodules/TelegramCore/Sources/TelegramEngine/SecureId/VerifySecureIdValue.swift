@@ -72,19 +72,19 @@ public struct SecureIdPrepareEmailVerificationPayload {
 
 public func secureIdPrepareEmailVerification(network: Network, value: SecureIdEmailValue) -> Signal<SecureIdPrepareEmailVerificationPayload, SecureIdPrepareEmailVerificationError> {
     return network.request(Api.functions.account.sendVerifyEmailCode(purpose: .emailVerifyPurposePassport, email: value.email), automaticFloodWait: false)
-        |> mapError { error -> SecureIdPrepareEmailVerificationError in
-            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-                return .flood
-            } else if error.errorDescription.hasPrefix("EMAIL_INVALID") {
-                return .invalidEmail
-            }
-            return .generic
+    |> mapError { error -> SecureIdPrepareEmailVerificationError in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .flood
+        } else if error.errorDescription.hasPrefix("EMAIL_INVALID") {
+            return .invalidEmail
         }
-        |> map { sentCode -> SecureIdPrepareEmailVerificationPayload in
-            switch sentCode {
-                case .sentEmailCode(_, let length):
-                    return SecureIdPrepareEmailVerificationPayload(email: value.email, length: length)
-            }
+        return .generic
+    }
+    |> map { sentCode -> SecureIdPrepareEmailVerificationPayload in
+        switch sentCode {
+            case .sentEmailCode(_, let length):
+                return SecureIdPrepareEmailVerificationPayload(email: value.email, length: length)
+        }
     }
 }
 

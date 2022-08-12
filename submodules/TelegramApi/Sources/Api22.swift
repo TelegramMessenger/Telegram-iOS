@@ -407,6 +407,64 @@ public extension Api.account {
     }
 }
 public extension Api.account {
+    enum EmojiStatuses: TypeConstructorDescription {
+        case emojiStatuses(hash: Int64, statuses: [Api.EmojiStatus])
+        case emojiStatusesNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .emojiStatuses(let hash, let statuses):
+                    if boxed {
+                        buffer.appendInt32(-1866176559)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(statuses.count))
+                    for item in statuses {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .emojiStatusesNotModified:
+                    if boxed {
+                        buffer.appendInt32(-796072379)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .emojiStatuses(let hash, let statuses):
+                return ("emojiStatuses", [("hash", String(describing: hash)), ("statuses", String(describing: statuses))])
+                case .emojiStatusesNotModified:
+                return ("emojiStatusesNotModified", [])
+    }
+    }
+    
+        public static func parse_emojiStatuses(_ reader: BufferReader) -> EmojiStatuses? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.EmojiStatus]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EmojiStatus.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.account.EmojiStatuses.emojiStatuses(hash: _1!, statuses: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_emojiStatusesNotModified(_ reader: BufferReader) -> EmojiStatuses? {
+            return Api.account.EmojiStatuses.emojiStatusesNotModified
+        }
+    
+    }
+}
+public extension Api.account {
     enum Password: TypeConstructorDescription {
         case password(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, srpB: Buffer?, srpId: Int64?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer, pendingResetDate: Int32?, loginEmailPattern: String?)
     
@@ -1188,70 +1246,6 @@ public extension Api.auth {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api.auth {
-    enum CodeType: TypeConstructorDescription {
-        case codeTypeCall
-        case codeTypeFlashCall
-        case codeTypeMissedCall
-        case codeTypeSms
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .codeTypeCall:
-                    if boxed {
-                        buffer.appendInt32(1948046307)
-                    }
-                    
-                    break
-                case .codeTypeFlashCall:
-                    if boxed {
-                        buffer.appendInt32(577556219)
-                    }
-                    
-                    break
-                case .codeTypeMissedCall:
-                    if boxed {
-                        buffer.appendInt32(-702884114)
-                    }
-                    
-                    break
-                case .codeTypeSms:
-                    if boxed {
-                        buffer.appendInt32(1923290508)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .codeTypeCall:
-                return ("codeTypeCall", [])
-                case .codeTypeFlashCall:
-                return ("codeTypeFlashCall", [])
-                case .codeTypeMissedCall:
-                return ("codeTypeMissedCall", [])
-                case .codeTypeSms:
-                return ("codeTypeSms", [])
-    }
-    }
-    
-        public static func parse_codeTypeCall(_ reader: BufferReader) -> CodeType? {
-            return Api.auth.CodeType.codeTypeCall
-        }
-        public static func parse_codeTypeFlashCall(_ reader: BufferReader) -> CodeType? {
-            return Api.auth.CodeType.codeTypeFlashCall
-        }
-        public static func parse_codeTypeMissedCall(_ reader: BufferReader) -> CodeType? {
-            return Api.auth.CodeType.codeTypeMissedCall
-        }
-        public static func parse_codeTypeSms(_ reader: BufferReader) -> CodeType? {
-            return Api.auth.CodeType.codeTypeSms
         }
     
     }
