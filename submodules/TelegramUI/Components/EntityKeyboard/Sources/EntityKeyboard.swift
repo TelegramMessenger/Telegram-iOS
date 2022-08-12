@@ -258,7 +258,7 @@ public final class EntityKeyboardComponent: Component {
                         content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                             icon: .recent,
                             theme: component.theme,
-                            useAccentColor: !component.displayBottomPanel,
+                            useAccentColor: false,
                             title: component.strings.Stickers_Recent,
                             pressed: { [weak self] in
                                 self?.component?.switchToGifSubject(.recent)
@@ -272,7 +272,7 @@ public final class EntityKeyboardComponent: Component {
                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                         icon: .trending,
                         theme: component.theme,
-                        useAccentColor: !component.displayBottomPanel,
+                        useAccentColor: false,
                         title: component.strings.Stickers_Trending,
                         pressed: { [weak self] in
                             self?.component?.switchToGifSubject(.trending)
@@ -338,7 +338,7 @@ public final class EntityKeyboardComponent: Component {
                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                         icon: .featured,
                         theme: component.theme,
-                        useAccentColor: !component.displayBottomPanel,
+                        useAccentColor: false,
                         title: component.strings.Stickers_Trending,
                         pressed: { [weak self] in
                             self?.component?.stickerContent?.inputInteractionHolder.inputInteraction?.openFeatured()
@@ -382,7 +382,7 @@ public final class EntityKeyboardComponent: Component {
                                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                                         icon: icon,
                                         theme: component.theme,
-                                        useAccentColor: !component.displayBottomPanel,
+                                        useAccentColor: false,
                                         title: title,
                                         pressed: { [weak self] in
                                             self?.scrollToItemGroup(contentId: "stickers", groupId: itemGroup.supergroupId, subgroupId: nil)
@@ -472,7 +472,7 @@ public final class EntityKeyboardComponent: Component {
                                     content: AnyComponent(EntityKeyboardIconTopPanelComponent(
                                         icon: icon,
                                         theme: component.theme,
-                                        useAccentColor: !component.displayBottomPanel,
+                                        useAccentColor: false,
                                         title: title,
                                         pressed: { [weak self] in
                                             self?.scrollToItemGroup(contentId: "emoji", groupId: itemGroup.supergroupId, subgroupId: nil)

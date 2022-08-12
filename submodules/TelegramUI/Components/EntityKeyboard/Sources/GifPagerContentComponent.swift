@@ -18,7 +18,7 @@ import PagerComponent
 import SoftwareVideo
 import AVFoundation
 import PhotoResources
-import ContextUI
+//import ContextUI
 import ShimmerEffect
 
 private class GifVideoLayer: AVSampleBufferDisplayLayer {

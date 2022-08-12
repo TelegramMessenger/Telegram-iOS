@@ -1078,12 +1078,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 listAnimation: centerAnimation,
                                 largeListAnimation: reaction.activateAnimation,
                                 applicationAnimation: aroundAnimation,
-                                largeApplicationAnimation: reaction.effectAnimation
+                                largeApplicationAnimation: reaction.effectAnimation,
+                                isCustom: false
                             )))
                         }
                         
                         if hasPremiumPlaceholder && !premiumConfiguration.isPremiumDisabled {
                             actions.reactionItems.append(.premium)
+                        }
+                        
+                        if !actions.reactionItems.isEmpty {
+                            actions.getEmojiContent = {
+                                guard let strongSelf = self else {
+                                    preconditionFailure()
+                                }
+                                
+                                let presentationContext = strongSelf.controllerInteraction?.presentationContext
+                                return ChatEntityKeyboardInputNode.emojiInputData(
+                                    context: strongSelf.context,
+                                    animationCache: presentationContext!.animationCache,
+                                    animationRenderer: presentationContext!.animationRenderer,
+                                    isStandalone: false,
+                                    isStatusSelection: false,
+                                    isReactionSelection: true,
+                                    reactionItems: availableReactions.reactions,
+                                    areUnicodeEmojiEnabled: false,
+                                    areCustomEmojiEnabled: true,
+                                    chatPeerId: strongSelf.chatLocation.peerId
+                                )
+                            }
                         }
                     }
                     
@@ -1510,7 +1533,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 listAnimation: centerAnimation,
                                                 largeListAnimation: reaction.activateAnimation,
                                                 applicationAnimation: aroundAnimation,
-                                                largeApplicationAnimation: reaction.effectAnimation
+                                                largeApplicationAnimation: reaction.effectAnimation,
+                                                isCustom: false
                                             ),
                                             avatarPeers: [],
                                             playHaptic: false,
@@ -6554,7 +6578,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                             listAnimation: centerAnimation,
                                                             largeListAnimation: reaction.activateAnimation,
                                                             applicationAnimation: aroundAnimation,
-                                                            largeApplicationAnimation: reaction.effectAnimation
+                                                            largeApplicationAnimation: reaction.effectAnimation,
+                                                            isCustom: false
                                                         ),
                                                         avatarPeers: avatarPeers,
                                                         playHaptic: true,

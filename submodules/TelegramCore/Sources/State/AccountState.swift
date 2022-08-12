@@ -30,6 +30,10 @@ extension SentAuthorizationCodeType {
                 self = .flashCall(pattern: pattern)
             case let .sentCodeTypeMissedCall(prefix, length):
                 self = .missedCall(numberPrefix: prefix, length: length)
+            case .sentCodeTypeEmailCode:
+                preconditionFailure()
+            case .sentCodeTypeSetUpEmailRequired:
+                preconditionFailure()
         }
     }
 }

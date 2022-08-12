@@ -3063,7 +3063,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         animationCache: animationCache,
                         animationRenderer: animationRenderer,
                         isStandalone: false,
-                        isReactionSelection: true,
+                        isStatusSelection: true,
+                        isReactionSelection: false,
+                        reactionItems: [],
                         areUnicodeEmojiEnabled: false,
                         areCustomEmojiEnabled: true,
                         chatPeerId: strongSelf.context.account.peerId

@@ -9,6 +9,7 @@ import SwiftSignalKit
 import AccountContext
 import ReactionSelectionNode
 import Markdown
+import EntityKeyboard
 
 public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
     func update(
@@ -35,7 +36,7 @@ public protocol ContextControllerActionsStackItem: AnyObject {
     ) -> ContextControllerActionsStackItemNode
     
     var tip: ContextController.Tip? { get }
-    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])? { get }
+    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)? { get }
 }
 
 protocol ContextControllerActionsListItemNode: ASDisplayNode {
@@ -619,12 +620,12 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
     }
     
     private let items: [ContextMenuItem]
-    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?
+    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
     
     init(
         items: [ContextMenuItem],
-        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?,
+        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?,
         tip: ContextController.Tip?
     ) {
         self.items = items
@@ -703,12 +704,12 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
     }
     
     private let content: ContextControllerItemsContent
-    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?
+    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
     
     init(
         content: ContextControllerItemsContent,
-        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?,
+        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?,
         tip: ContextController.Tip?
     ) {
         self.content = content
@@ -732,9 +733,9 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
 }
 
 func makeContextControllerActionsStackItem(items: ContextController.Items) -> ContextControllerActionsStackItem {
-    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?
+    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?
     if let context = items.context, !items.reactionItems.isEmpty {
-        reactionItems = (context, items.reactionItems)
+        reactionItems = (context, items.reactionItems, items.getEmojiContent)
     }
     switch items.content {
     case let .list(listItems):
@@ -850,7 +851,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         let dimNode: ASDisplayNode
         let tip: ContextController.Tip?
         var tipNode: InnerTextSelectionTipContainerNode?
-        let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?
+        let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?
         var storedScrollingState: CGFloat?
         let positionLock: CGFloat?
         
@@ -861,7 +862,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             requestUpdateApparentHeight: @escaping (ContainedViewLayoutTransition) -> Void,
             item: ContextControllerActionsStackItem,
             tip: ContextController.Tip?,
-            reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?,
+            reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?,
             positionLock: CGFloat?
         ) {
             self.getController = getController
@@ -982,7 +983,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     
     private var selectionPanGesture: UIPanGestureRecognizer?
     
-    var topReactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])? {
+    var topReactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], getEmojiContent: (() -> Signal<EmojiPagerContentComponent, NoError>)?)? {
         return self.itemContainers.last?.reactionItems
     }
     

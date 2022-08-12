@@ -327,7 +327,7 @@ func _internal_twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MT
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
-            case let .password(flags, currentAlgo, srpB, srpId, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom, pendingResetDate):
+            case let .password(flags, currentAlgo, srpB, srpId, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom, pendingResetDate, _):
                 let hasRecovery = (flags & (1 << 0)) != 0
                 let hasSecureValues = (flags & (1 << 1)) != 0
                 

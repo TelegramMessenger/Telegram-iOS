@@ -639,6 +639,7 @@ public extension Api {
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
         case updateReadHistoryOutbox(peer: Api.Peer, maxId: Int32, pts: Int32, ptsCount: Int32)
         case updateReadMessagesContents(messages: [Int32], pts: Int32, ptsCount: Int32)
+        case updateRecentEmojiStatuses
         case updateRecentStickers
         case updateSavedGifs
         case updateSavedRingtones
@@ -1421,6 +1422,12 @@ public extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
+                case .updateRecentEmojiStatuses:
+                    if boxed {
+                        buffer.appendInt32(821314523)
+                    }
+                    
+                    break
                 case .updateRecentStickers:
                     if boxed {
                         buffer.appendInt32(-1706939360)
@@ -1719,6 +1726,8 @@ public extension Api {
                 return ("updateReadHistoryOutbox", [("peer", String(describing: peer)), ("maxId", String(describing: maxId)), ("pts", String(describing: pts)), ("ptsCount", String(describing: ptsCount))])
                 case .updateReadMessagesContents(let messages, let pts, let ptsCount):
                 return ("updateReadMessagesContents", [("messages", String(describing: messages)), ("pts", String(describing: pts)), ("ptsCount", String(describing: ptsCount))])
+                case .updateRecentEmojiStatuses:
+                return ("updateRecentEmojiStatuses", [])
                 case .updateRecentStickers:
                 return ("updateRecentStickers", [])
                 case .updateSavedGifs:
@@ -3324,6 +3333,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_updateRecentEmojiStatuses(_ reader: BufferReader) -> Update? {
+            return Api.Update.updateRecentEmojiStatuses
         }
         public static func parse_updateRecentStickers(_ reader: BufferReader) -> Update? {
             return Api.Update.updateRecentStickers

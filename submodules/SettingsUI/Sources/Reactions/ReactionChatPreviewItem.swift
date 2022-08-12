@@ -176,7 +176,8 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                                     listAnimation: centerAnimation,
                                     largeListAnimation: reaction.activateAnimation,
                                     applicationAnimation: aroundAnimation,
-                                    largeApplicationAnimation: reaction.effectAnimation
+                                    largeApplicationAnimation: reaction.effectAnimation,
+                                    isCustom: false
                                 ),
                                 avatarPeers: [],
                                 playHaptic: false,

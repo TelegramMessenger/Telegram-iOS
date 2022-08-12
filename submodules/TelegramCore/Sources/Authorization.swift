@@ -108,7 +108,7 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                                 return updatedAccount.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
                                 |> mapToSignal { result -> Signal<(SendCodeResult, UnauthorizedAccount), MTRpcError> in
                                     switch result {
-                                    case let .password(_, _, _, _, hint, _, _, _, _, _):
+                                    case let .password(_, _, _, _, hint, _, _, _, _, _, _):
                                         return .single((.password(hint: hint), updatedAccount))
                                     }
                                 }
@@ -141,7 +141,7 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                 }
                 |> mapToSignal { result -> Signal<(SendCodeResult, UnauthorizedAccount), AuthorizationCodeRequestError> in
                     switch result {
-                    case let .password(_, _, _, _, hint, _, _, _, _, _):
+                    case let .password(_, _, _, _, hint, _, _, _, _, _, _):
                         return .single((.password(hint: hint), account))
                     }
                 }
@@ -257,7 +257,7 @@ public func authorizeWithCode(accountManager: AccountManager<TelegramAccountMana
         if let state = transaction.getState() as? UnauthorizedAccountState {
             switch state.contents {
                 case let .confirmationCodeEntry(number, _, hash, _, _, syncContacts):
-                    return account.network.request(Api.functions.auth.signIn(phoneNumber: number, phoneCodeHash: hash, phoneCode: code), automaticFloodWait: false)
+                    return account.network.request(Api.functions.auth.signIn(flags: 0, phoneNumber: number, phoneCodeHash: hash, phoneCode: code, emailVerification: nil), automaticFloodWait: false)
                     |> map { authorization in
                         return .authorization(authorization)
                     }
@@ -274,7 +274,7 @@ public func authorizeWithCode(accountManager: AccountManager<TelegramAccountMana
                                 }
                                 |> mapToSignal { result -> Signal<AuthorizationCodeResult, AuthorizationCodeVerificationError> in
                                     switch result {
-                                        case let .password(_, _, _, _, hint, _, _, _, _, _):
+                                        case let .password(_, _, _, _, hint, _, _, _, _, _, _):
                                             return .single(.password(hint: hint ?? ""))
                                     }
                                 }

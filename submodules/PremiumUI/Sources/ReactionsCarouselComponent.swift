@@ -348,7 +348,8 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
                 listAnimation: centerAnimation,
                 largeListAnimation: reaction.activateAnimation,
                 applicationAnimation: aroundAnimation,
-                largeApplicationAnimation: reaction.effectAnimation
+                largeApplicationAnimation: reaction.effectAnimation,
+                isCustom: false
             ), hasAppearAnimation: false, useDirectRendering: false)
             containerNode.isUserInteractionEnabled = false
             containerNode.addSubnode(itemNode)
@@ -408,7 +409,8 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
                 listAnimation: centerAnimation,
                 largeListAnimation: reaction.activateAnimation,
                 applicationAnimation: aroundAnimation,
-                largeApplicationAnimation: reaction.effectAnimation
+                largeApplicationAnimation: reaction.effectAnimation,
+                isCustom: false
             ),
             avatarPeers: [],
             playHaptic: false,
