@@ -691,9 +691,13 @@ private final class StickerPackContainer: ASDisplayNode {
         
         let backgroundAlpha: CGFloat
         switch offset {
-            case let .known(value):
-                let bottomOffsetY = max(0.0, self.gridNode.scrollView.contentSize.height + self.gridNode.scrollView.contentInset.top + self.gridNode.scrollView.contentInset.bottom - value - self.gridNode.scrollView.frame.height - 10.0)
-                backgroundAlpha = min(10.0, bottomOffsetY) / 10.0
+            case .known:
+                let topPosition = self.view.convert(self.topContainerNode.frame, to: self.view).minY
+                let bottomPosition = self.actionAreaBackgroundNode.view.convert(self.actionAreaBackgroundNode.bounds, to: self.view).minY
+                let bottomEdgePosition = topPosition + self.topContainerNode.frame.height + self.gridNode.scrollView.contentSize.height
+                let bottomOffset = bottomPosition - bottomEdgePosition
+
+                backgroundAlpha = min(10.0, max(0.0, -1.0 * bottomOffset)) / 10.0
             case .unknown, .none:
                 backgroundAlpha = 1.0
         }

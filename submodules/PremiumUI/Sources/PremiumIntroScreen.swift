@@ -19,6 +19,7 @@ import ConfettiEffect
 import TextFormat
 import InstantPageCache
 import UniversalMediaPlayer
+import CheckNode
 
 public enum PremiumSource: Equatable {
     case settings
@@ -248,7 +249,7 @@ enum PremiumPerk: CaseIterable {
     }
 }
 
-private struct PremiumIntroConfiguration {
+struct PremiumIntroConfiguration {
     static var defaultValue: PremiumIntroConfiguration {
         return PremiumIntroConfiguration(perks: [
             .doubleLimits,
@@ -298,7 +299,282 @@ private struct PremiumIntroConfiguration {
     }
 }
 
-private final class SectionGroupComponent: Component {
+final class PremiumOptionComponent: CombinedComponent {
+    let title: String
+    let totalPrice: String
+    let discount: String
+    let selected: Bool
+    let primaryTextColor: UIColor
+    let secondaryTextColor: UIColor
+    let accentColor: UIColor
+    let checkForegroundColor: UIColor
+    let checkBorderColor: UIColor
+    
+    init(
+        title: String,
+        totalPrice: String,
+        discount: String,
+        selected: Bool,
+        primaryTextColor: UIColor,
+        secondaryTextColor: UIColor,
+        accentColor: UIColor,
+        checkForegroundColor: UIColor,
+        checkBorderColor: UIColor
+    ) {
+        self.title = title
+        self.totalPrice = totalPrice
+        self.discount = discount
+        self.selected = selected
+        self.primaryTextColor = primaryTextColor
+        self.secondaryTextColor = secondaryTextColor
+        self.accentColor = accentColor
+        self.checkForegroundColor = checkForegroundColor
+        self.checkBorderColor = checkBorderColor
+    }
+    
+    static func ==(lhs: PremiumOptionComponent, rhs: PremiumOptionComponent) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.totalPrice != rhs.totalPrice {
+            return false
+        }
+        if lhs.discount != rhs.discount {
+            return false
+        }
+        if lhs.selected != rhs.selected {
+            return false
+        }
+        if lhs.primaryTextColor != rhs.primaryTextColor {
+            return false
+        }
+        if lhs.secondaryTextColor != rhs.secondaryTextColor {
+            return false
+        }
+        if lhs.accentColor != rhs.accentColor {
+            return false
+        }
+        if lhs.checkForegroundColor != rhs.checkForegroundColor {
+            return false
+        }
+        if lhs.checkBorderColor != rhs.checkBorderColor {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let check = Child(CheckComponent.self)
+        let title = Child(MultilineTextComponent.self)
+        let discountBackground = Child(RoundedRectangle.self)
+        let discount = Child(MultilineTextComponent.self)
+        let label = Child(MultilineTextComponent.self)
+        
+        return { context in
+            let component = context.component
+            
+            let insets = UIEdgeInsets(top: 11.0, left: 46.0, bottom: 13.0, right: 16.0)
+                        
+            let label = label.update(
+                component: MultilineTextComponent(
+                    text: .plain(
+                        NSAttributedString(
+                            string: component.totalPrice,
+                            font: Font.regular(17),
+                            textColor: component.secondaryTextColor
+                        )
+                    ),
+                    maximumNumberOfLines: 1
+                ),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
+            let title = title.update(
+                component: MultilineTextComponent(
+                    text: .plain(
+                        NSAttributedString(
+                            string: component.title,
+                            font: Font.regular(17),
+                            textColor: component.primaryTextColor
+                        )
+                    ),
+                    maximumNumberOfLines: 1
+                ),
+                availableSize: CGSize(width: context.availableSize.width - insets.left - insets.right - label.size.width, height: context.availableSize.height),
+                transition: context.transition
+            )
+            
+            let discountSize: CGSize
+            if !component.discount.isEmpty {
+                let discount = discount.update(
+                    component: MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: component.discount,
+                                font: Font.with(size: 14.0, design: .round, weight: .semibold, traits: []),
+                                textColor: .white
+                            )
+                        ),
+                        maximumNumberOfLines: 1
+                    ),
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                
+                discountSize = CGSize(width: discount.size.width + 6.0, height: 18.0)
+            
+                let discountBackground = discountBackground.update(
+                    component: RoundedRectangle(
+                        color: component.accentColor,
+                        cornerRadius: 5.0
+                    ),
+                    availableSize: discountSize,
+                    transition: context.transition
+                )
+                
+                context.add(discountBackground
+                    .position(CGPoint(x: insets.left + title.size.width + 6.0 + discountSize.width / 2.0, y: insets.top + title.size.height / 2.0))
+                )
+                
+                context.add(discount
+                    .position(CGPoint(x: insets.left + title.size.width + 6.0 + discountSize.width / 2.0, y: insets.top + title.size.height / 2.0))
+                )
+            } else {
+                discountSize = CGSize(width: 0.0, height: 18.0)
+            }
+                        
+            let check = check.update(
+                component: CheckComponent(
+                    theme: CheckComponent.Theme(
+                        backgroundColor: component.accentColor,
+                        strokeColor: component.checkForegroundColor,
+                        borderColor: component.checkBorderColor,
+                        overlayBorder: false,
+                        hasInset: false,
+                        hasShadow: false
+                    ),
+                    selected: component.selected
+                ),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+                
+            context.add(title
+                .position(CGPoint(x: insets.left + title.size.width / 2.0, y: insets.top + title.size.height / 2.0))
+            )
+               
+            let size = CGSize(width: context.availableSize.width, height: insets.top + title.size.height + insets.bottom)
+            
+            context.add(label
+                .position(CGPoint(x: context.availableSize.width - insets.right - label.size.width / 2.0, y: size.height / 2.0))
+            )
+            
+            context.add(check
+                .position(CGPoint(x: 4.0 + check.size.width / 2.0, y: size.height / 2.0))
+            )
+            
+            return size
+        }
+    }
+}
+
+private final class CheckComponent: Component {
+    struct Theme: Equatable {
+        public let backgroundColor: UIColor
+        public let strokeColor: UIColor
+        public let borderColor: UIColor
+        public let overlayBorder: Bool
+        public let hasInset: Bool
+        public let hasShadow: Bool
+        public let filledBorder: Bool
+        public let borderWidth: CGFloat?
+        
+        public init(backgroundColor: UIColor, strokeColor: UIColor, borderColor: UIColor, overlayBorder: Bool, hasInset: Bool, hasShadow: Bool, filledBorder: Bool = false, borderWidth: CGFloat? = nil) {
+            self.backgroundColor = backgroundColor
+            self.strokeColor = strokeColor
+            self.borderColor = borderColor
+            self.overlayBorder = overlayBorder
+            self.hasInset = hasInset
+            self.hasShadow = hasShadow
+            self.filledBorder = filledBorder
+            self.borderWidth = borderWidth
+        }
+        
+        var checkNodeTheme: CheckNodeTheme {
+            return CheckNodeTheme(
+                backgroundColor: self.backgroundColor,
+                strokeColor: self.strokeColor,
+                borderColor: self.borderColor,
+                overlayBorder: self.overlayBorder,
+                hasInset: self.hasInset,
+                hasShadow: self.hasShadow,
+                filledBorder: self.filledBorder,
+                borderWidth: self.borderWidth
+            )
+        }
+    }
+    
+    let theme: Theme
+    let selected: Bool
+    
+    init(
+        theme: Theme,
+        selected: Bool
+    ) {
+        self.theme = theme
+        self.selected = selected
+    }
+    
+    static func ==(lhs: CheckComponent, rhs: CheckComponent) -> Bool {
+        if lhs.theme != rhs.theme {
+            return false
+        }
+        if lhs.selected != rhs.selected {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private var currentValue: CGFloat?
+        private var animator: DisplayLinkAnimator?
+
+        private var checkLayer: CheckLayer {
+            return self.layer as! CheckLayer
+        }
+        
+        override class var layerClass: AnyClass {
+            return CheckLayer.self
+        }
+        
+        init() {
+            super.init(frame: CGRect())
+        }
+
+        required init?(coder aDecoder: NSCoder) {
+            preconditionFailure()
+        }
+
+    
+        func update(component: CheckComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            self.checkLayer.setSelected(component.selected, animated: true)
+            self.checkLayer.theme = component.theme.checkNodeTheme
+            
+            return CGSize(width: 22.0, height: 22.0)
+        }
+    }
+
+    func makeView() -> View {
+        return View()
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
+final class SectionGroupComponent: Component {
     public final class Item: Equatable {
         public let content: AnyComponentWithIdentity<Empty>
         public let action: () -> Void
@@ -462,7 +738,7 @@ private final class SectionGroupComponent: Component {
                 self.itemViews.removeValue(forKey: id)
             }
             
-            if self.separatorViews.count > component.items.count - 1 {
+            if !self.separatorViews.isEmpty, self.separatorViews.count > component.items.count - 1 {
                 for i in (component.items.count - 1) ..< self.separatorViews.count {
                     self.separatorViews[i].removeFromSuperview()
                 }
@@ -484,7 +760,7 @@ private final class SectionGroupComponent: Component {
     }
 }
 
-private final class PerkComponent: CombinedComponent {
+final class PerkComponent: CombinedComponent {
     let iconName: String
     let iconBackgroundColors: [UIColor]
     let title: String
@@ -646,18 +922,22 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     let source: PremiumSource
     let isPremium: Bool?
     let otherPeerName: String?
-    let price: String?
+    let products: [InAppPurchaseManager.Product]?
+    let selectedProductId: String?
     let present: (ViewController) -> Void
+    let selectProduct: (String) -> Void
     let buy: () -> Void
     let updateIsFocused: (Bool) -> Void
     
-    init(context: AccountContext, source: PremiumSource, isPremium: Bool?, otherPeerName: String?, price: String?, present: @escaping (ViewController) -> Void, buy: @escaping () -> Void, updateIsFocused: @escaping (Bool) -> Void) {
+    init(context: AccountContext, source: PremiumSource, isPremium: Bool?, otherPeerName: String?, products: [InAppPurchaseManager.Product]?, selectedProductId: String?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void, updateIsFocused: @escaping (Bool) -> Void) {
         self.context = context
         self.source = source
         self.isPremium = isPremium
         self.otherPeerName = otherPeerName
-        self.price = price
+        self.products = products
+        self.selectedProductId = selectedProductId
         self.present = present
+        self.selectProduct = selectProduct
         self.buy = buy
         self.updateIsFocused = updateIsFocused
     }
@@ -675,7 +955,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         if lhs.otherPeerName != rhs.otherPeerName {
             return false
         }
-        if lhs.price != rhs.price {
+        if lhs.products != rhs.products {
+            return false
+        }
+        if lhs.selectedProductId != rhs.selectedProductId {
             return false
         }
     
@@ -685,7 +968,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     final class State: ComponentState {
         private let context: AccountContext
     
-        var price: String?
+        var products: [InAppPurchaseManager.Product]?
+        var selectedProductId: String?
+        
         var isPremium: Bool?
         
         private var disposable: Disposable?
@@ -694,6 +979,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         
         private var stickersDisposable: Disposable?
         private var preloadDisposableSet =  DisposableSet()
+        
+        var price: String? {
+            return self.products?.first(where: { $0.id == self.selectedProductId })?.price
+        }
         
         init(context: AccountContext, source: PremiumSource) {
             self.context = context
@@ -773,7 +1062,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         let overscroll = Child(Rectangle.self)
         let fade = Child(RoundedRectangle.self)
         let text = Child(MultilineTextComponent.self)
-        let section = Child(SectionGroupComponent.self)
+        let optionsSection = Child(SectionGroupComponent.self)
+        let perksSection = Child(SectionGroupComponent.self)
         let infoBackground = Child(RoundedRectangle.self)
         let infoTitle = Child(MultilineTextComponent.self)
         let infoText = Child(MultilineTextComponent.self)
@@ -785,7 +1075,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let scrollEnvironment = context.environment[ScrollChildEnvironment.self].value
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let state = context.state
-            state.price = context.component.price
+            state.products = context.component.products
+            state.selectedProductId = context.component.selectedProductId
             state.isPremium = context.component.isPremium
             
             let theme = environment.theme
@@ -886,18 +1177,101 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x54A3FF),
                 UIColor(rgb: 0x54A3FF)
             ]
-            
-            var items: [SectionGroupComponent.Item] = []
-            
+                        
             let accountContext = context.component.context
             let present = context.component.present
+            let selectProduct = context.component.selectProduct
             let buy = context.component.buy
             let updateIsFocused = context.component.updateIsFocused
             
+            if state.isPremium == true {
+                
+            } else if let products = state.products {
+                var optionsItems: [SectionGroupComponent.Item] = []
+                let gradientColors: [UIColor] = [
+                    UIColor(rgb: 0x8e77ff),
+                    UIColor(rgb: 0x9a6fff),
+                    UIColor(rgb: 0xb36eee)
+                ]
+                
+                let shortestOptionPrice: Int64
+                if let product = products.first(where: { $0.id.hasSuffix(".monthly") }) {
+                    shortestOptionPrice = Int64(Float(product.priceCurrencyAndAmount.amount))
+                } else {
+                    shortestOptionPrice = 1
+                }
+                
+                var i = 0
+                for product in products {
+                    let giftTitle: String
+                    let months: Float
+                    if product.id.hasSuffix(".monthly") {
+                        giftTitle = strings.Premium_Monthly
+                        months = 1
+                    } else {
+                        giftTitle = strings.Premium_Annual
+                        months = 12
+                    }
+                                        
+                    let discountValue = Int((1.0 - Float(product.priceCurrencyAndAmount.amount) / months / Float(shortestOptionPrice)) * 100.0)
+                    let discount: String
+                    if discountValue > 0 {
+                        discount = "-\(discountValue)%"
+                    } else {
+                        discount = ""
+                    }
+                    
+                    optionsItems.append(
+                        SectionGroupComponent.Item(
+                            AnyComponentWithIdentity(
+                                id: product.id,
+                                component: AnyComponent(
+                                    PremiumOptionComponent(
+                                        title: giftTitle,
+                                        totalPrice: product.price,
+                                        discount: discount,
+                                        selected: product.id == state.selectedProductId,
+                                        primaryTextColor: textColor,
+                                        secondaryTextColor: subtitleColor,
+                                        accentColor: gradientColors[i],
+                                        checkForegroundColor: environment.theme.list.itemCheckColors.foregroundColor,
+                                        checkBorderColor: environment.theme.list.itemCheckColors.strokeColor
+                                    )
+                                )
+                            ),
+                            action: {
+                                selectProduct(product.id)
+                            }
+                        )
+                    )
+                    i += 1
+                }
+                
+                let optionsSection = optionsSection.update(
+                    component: SectionGroupComponent(
+                        items: optionsItems,
+                        backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
+                        selectionColor: environment.theme.list.itemHighlightedBackgroundColor,
+                        separatorColor: environment.theme.list.itemBlocksSeparatorColor
+                    ),
+                    environment: {},
+                    availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
+                    transition: context.transition
+                )
+                context.add(optionsSection
+                    .position(CGPoint(x: availableWidth / 2.0, y: size.height + optionsSection.size.height / 2.0))
+                    .clipsToBounds(true)
+                    .cornerRadius(10.0)
+                )
+                size.height += optionsSection.size.height
+                size.height += 26.0
+            }
+            
             var i = 0
+            var perksItems: [SectionGroupComponent.Item] = []
             for perk in state.configuration.perks {
                 let iconBackgroundColors = gradientColors[i]
-                items.append(SectionGroupComponent.Item(
+                perksItems.append(SectionGroupComponent.Item(
                     AnyComponentWithIdentity(
                         id: perk.identifier,
                         component: AnyComponent(
@@ -982,9 +1356,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 i += 1
             }
             
-            let section = section.update(
+            let perksSection = perksSection.update(
                 component: SectionGroupComponent(
-                    items: items,
+                    items: perksItems,
                     backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
                     selectionColor: environment.theme.list.itemHighlightedBackgroundColor,
                     separatorColor: environment.theme.list.itemBlocksSeparatorColor
@@ -993,12 +1367,12 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
                 transition: context.transition
             )
-            context.add(section
-                .position(CGPoint(x: availableWidth / 2.0, y: size.height + section.size.height / 2.0))
+            context.add(perksSection
+                .position(CGPoint(x: availableWidth / 2.0, y: size.height + perksSection.size.height / 2.0))
                 .clipsToBounds(true)
                 .cornerRadius(10.0)
             )
-            size.height += section.size.height
+            size.height += perksSection.size.height
             size.height += 23.0
             
             let textSideInset: CGFloat = 16.0
@@ -1244,13 +1618,20 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         var hasIdleAnimations = true
         
         var inProgress = false
-        var premiumProduct: InAppPurchaseManager.Product?
+        
+        var products: [InAppPurchaseManager.Product]?
+        var selectedProductId: String?
+        
         var isPremium: Bool?
         var otherPeerName: String?
         
         private var disposable: Disposable?
         private var paymentDisposable = MetaDisposable()
         private var activationDisposable = MetaDisposable()
+        
+        var price: String? {
+            return self.products?.first(where: { $0.id == self.selectedProductId })?.price
+        }
         
         init(context: AccountContext, source: PremiumSource, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
             self.context = context
@@ -1295,7 +1676,10 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 otherPeerName
             ).start(next: { [weak self] products, isPremium, otherPeerName in
                 if let strongSelf = self {
-                    strongSelf.premiumProduct = products.first(where: { $0.isSubscription })
+                    if strongSelf.products == nil {
+                        strongSelf.selectedProductId = products.first?.id
+                    }
+                    strongSelf.products = products.filter { $0.isSubscription }
                     strongSelf.isPremium = isPremium
                     strongSelf.otherPeerName = otherPeerName
                     strongSelf.updated(transition: .immediate)
@@ -1311,7 +1695,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         
         func buy() {
             guard let inAppPurchaseManager = self.context.inAppPurchaseManager,
-                  let premiumProduct = self.premiumProduct, !self.inProgress else {
+                  let premiumProduct = self.products?.first(where: { $0.id == self.selectedProductId }), !self.inProgress else {
                 return
             }
                         
@@ -1412,6 +1796,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.hasIdleAnimations = !isFocused
             self.updated(transition: .immediate)
         }
+        
+        func selectProduct(_ productId: String) {
+            self.selectedProductId = productId
+            self.updated(transition: .immediate)
+        }
     }
     
     func makeState() -> State {
@@ -1440,9 +1829,14 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             if let topContentOffset = state.topContentOffset, topContentOffset >= 123.0 {
                 starIsVisible = false
             }
-                
+            
+            var isIntro = true
+            if case .profile = context.component.source {
+                isIntro = false
+            }
+                 
             let star = star.update(
-                component: PremiumStarComponent(isVisible: starIsVisible, hasIdleAnimations: state.hasIdleAnimations),
+                component: PremiumStarComponent(isIntro: isIntro, isVisible: starIsVisible, hasIdleAnimations: state.hasIdleAnimations),
                 availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
             )
@@ -1543,7 +1937,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let bottomPanelPadding: CGFloat = 12.0
             let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
             let bottomPanelHeight: CGFloat = state.isPremium == true ? bottomInset : bottomPanelPadding + 50.0 + bottomInset
-           
+                       
             let scrollContent = scrollContent.update(
                 component: ScrollComponent<EnvironmentType>(
                     content: AnyComponent(PremiumIntroScreenContentComponent(
@@ -1551,8 +1945,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         source: context.component.source,
                         isPremium: state.isPremium,
                         otherPeerName: state.otherPeerName,
-                        price: state.premiumProduct?.price,
+                        products: state.products,
+                        selectedProductId: state.selectedProductId,
                         present: context.component.present,
+                        selectProduct: { [weak state] productId in
+                            state?.selectProduct(productId)
+                        },
                         buy: { [weak state] in
                             state?.buy()
                         },
@@ -1655,7 +2053,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 let sideInset: CGFloat = 16.0
                 let button = button.update(
                     component: SolidRoundedButtonComponent(
-                        title: environment.strings.Premium_SubscribeFor(state.premiumProduct?.price ?? "—").string,
+                        title: environment.strings.Premium_SubscribeFor(state.price ?? "—").string,
                         theme: SolidRoundedButtonComponent.Theme(
                             backgroundColor: UIColor(rgb: 0x8878ff),
                             backgroundColors: [
