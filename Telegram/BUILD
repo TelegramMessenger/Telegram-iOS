@@ -417,6 +417,10 @@ official_bundle_ids = [
     "org.telegram.Telegram-iOS",
 ]
 
+store_bundle_ids = [
+    "ph.telegra.Telegraph",
+]
+
 apple_pay_merchants = official_apple_pay_merchants if telegram_bundle_id == "ph.telegra.Telegraph" else []
 
 apple_pay_merchants_fragment = "" if apple_pay_merchants == [] else """
@@ -492,12 +496,13 @@ communication_notifications_fragment = """
 <true/>
 """
 
-signin_fragment = """
+store_signin_fragment = """
 <key>com.apple.developer.applesignin</key>
 <array>
     <string>Default</string>
 </array>
 """
+signin_fragment = store_signin_fragment if telegram_bundle_id in store_bundle_ids else ""
 
 plist_fragment(
     name = "TelegramEntitlements",
