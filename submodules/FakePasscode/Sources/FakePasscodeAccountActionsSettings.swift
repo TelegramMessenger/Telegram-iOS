@@ -36,6 +36,28 @@ public struct PeerWithRemoveOptions: Codable, Equatable {
     }
 }
 
+public class PendingTaskCounter {
+    private let counterValue = Atomic<Int>(value: 0)
+    private let counterPromise = ValuePromise<Int>(0)
+    
+    public init() {}
+    
+    public func increment() {
+        counterPromise.set(counterValue.modify { $0 + 1 })
+    }
+    
+    public func decrement() {
+        counterPromise.set(counterValue.modify { $0 - 1 })
+    }
+    
+    public func completed() -> Signal<Void, NoError> {
+        return counterPromise.get()
+        |> filter { $0 == 0 }
+        |> take(1)
+        |> map { _ in }
+    }
+}
+
 public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
     public let peerId: PeerId
     public let recordId: AccountRecordId
@@ -87,58 +109,124 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
         return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: self.logOut, sessionsToHide: sessionsToHide)
     }
 
-    public func performActions(context: AccountContext, updateSettings: @escaping (FakePasscodeAccountActionsSettings) -> Void) {
-        let waitingQueueSizeValue = Atomic<Int>(value: 0)
-        let waitingQueueSizePromise = ValuePromise<Int>(0)
+    public func performActions(context: AccountContext, isCurrentAccount: Bool, beforeUnlockTaskCounter: PendingTaskCounter, updateSettings: @escaping (FakePasscodeAccountActionsSettings) -> Void) {
+        let beforeLogoutTaskCounter = PendingTaskCounter()
 
-        let updateWaitingQueueSize: ((Int) -> Int) -> Void = { f in
-            waitingQueueSizePromise.set(waitingQueueSizeValue.modify { f($0) })
-        }
-
-        for chatToRemove in chatsToRemove {
-            switch chatToRemove.removalType {
-            case .delete:
-                if chatToRemove.peerId.namespace == Namespaces.Peer.CloudChannel {
-                    context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: chatToRemove.peerId, memberId: context.account.peerId)
-                }
-
-                let deleteGloballyIfPossible: Bool
-                switch chatToRemove.peerId.namespace {
-                case Namespaces.Peer.CloudUser:
-                    deleteGloballyIfPossible = chatToRemove.deleteFromCompanion
-                    break
-                case Namespaces.Peer.SecretChat:
-                    deleteGloballyIfPossible = true
-                    break
-                default:
-                    deleteGloballyIfPossible = false
-                    break
-                }
-
-                updateWaitingQueueSize({ $0 + 1 })
-                let _ = context.engine.peers.removePeerChat(peerId: chatToRemove.peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
-                    deleteSendMessageIntents(peerId: chatToRemove.peerId)
-                    updateWaitingQueueSize({ $0 - 1 })
-                })
-                break
-
-            case .hide:
-                break
+        let chatsToDelete = chatsToRemove.filter { $0.removalType == .delete }
+        if !chatsToDelete.isEmpty {
+            beforeLogoutTaskCounter.increment()
+            if isCurrentAccount {
+                beforeUnlockTaskCounter.increment()
             }
-        }
 
-        let updatedChatsToRemove = chatsToRemove.filter({ !($0.peerId.namespace == Namespaces.Peer.SecretChat && $0.removalType == .delete) })
-        if updatedChatsToRemove != chatsToRemove {
-            updateSettings(self.withUpdatedChatsToRemove(updatedChatsToRemove))
+            let _ = context.engine.peers.currentChatListFilters().start(next: { filters in
+                // remove folder if removed chats are the only chats in it
+                var filterIdsToRemove: [Int32] = []
+                for fltr in filters {
+                    if case let .filter(id, _, _, data) = fltr {
+                        if data.categories.isEmpty && !data.includePeers.peers.isEmpty && Set(data.includePeers.peers).isSubset(of: chatsToDelete.map({ $0.peerId })) {
+                            filterIdsToRemove.append(id)
+                        }
+                    }
+                }
+
+                var deleteItems: [(peerId: PeerId, deleteGloballyIfPossible: Bool)] = []
+
+                for chatToRemove in chatsToDelete {
+                    if chatToRemove.peerId.namespace == Namespaces.Peer.CloudChannel {
+                        context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: chatToRemove.peerId, memberId: context.account.peerId)
+                    }
+
+                    let deleteGloballyIfPossible: Bool
+                    switch chatToRemove.peerId.namespace {
+                    case Namespaces.Peer.CloudUser:
+                        deleteGloballyIfPossible = chatToRemove.deleteFromCompanion
+                        break
+                    case Namespaces.Peer.SecretChat:
+                        deleteGloballyIfPossible = true
+                        break
+                    default:
+                        deleteGloballyIfPossible = false
+                        break
+                    }
+
+                    deleteItems.append((peerId: chatToRemove.peerId, deleteGloballyIfPossible: deleteGloballyIfPossible))
+                }
+
+                beforeLogoutTaskCounter.increment()
+                if isCurrentAccount {
+                    beforeUnlockTaskCounter.increment()
+                }
+
+                let _ = context.engine.peers.removePeerChats(items: deleteItems).start(completed: {
+                    if !filterIdsToRemove.isEmpty {
+                        beforeLogoutTaskCounter.increment()
+                        if isCurrentAccount {
+                            beforeUnlockTaskCounter.increment()
+                        }
+
+                        let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
+                            assert(filters.filter({ filterIdsToRemove.contains($0.id) }).allSatisfy { fltr in
+                                if case let .filter(_, _, _, data) = fltr {
+                                    return data.includePeers.peers.isEmpty
+                                }
+                                return false
+                            })
+                            return filters.filter({ !filterIdsToRemove.contains($0.id) })
+                        }).start(completed: {
+                            if isCurrentAccount {
+                                beforeUnlockTaskCounter.decrement()
+                            }
+
+                            if logOut {
+                                // need to wait for synchronization before logout
+                                let _ = (context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
+                                |> filter { view in
+                                    let entry = view.values[PreferencesKeys.chatListFilters]?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
+                                    return entry.filters == entry.remoteFilters
+                                }
+                                |> map { _ in }
+                                |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(Void()))
+                                |> take(1)).start(completed: {
+                                    beforeLogoutTaskCounter.decrement()
+                                })
+                            } else {
+                                beforeLogoutTaskCounter.decrement()
+                            }
+                        })
+                    }
+
+                    if isCurrentAccount {
+                        beforeUnlockTaskCounter.decrement()
+                    }
+
+                    let updatedChatsToRemove = chatsToRemove.filter { !($0.peerId.namespace == Namespaces.Peer.SecretChat && $0.removalType == .delete) }
+                    if updatedChatsToRemove != chatsToRemove {
+                        updateSettings(self.withUpdatedChatsToRemove(updatedChatsToRemove))
+                    }
+
+                    beforeLogoutTaskCounter.decrement()
+
+                    for (peerId, _) in deleteItems {
+                        deleteSendMessageIntents(peerId: peerId)
+                    }
+                })
+
+                beforeLogoutTaskCounter.decrement()
+                if isCurrentAccount {
+                    beforeUnlockTaskCounter.decrement()
+                }
+            })
         }
 
         if logOut {
-            let _ = (waitingQueueSizePromise.get()
-            |> filter { $0 == 0 }
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { _ in
+            beforeUnlockTaskCounter.increment()
+            let _ = (beforeLogoutTaskCounter.completed()
+            |> deliverOnMainQueue).start(next: {
                 context.sharedContext.applicationBindings.clearAllNotifications()
-                let _ = logoutFromAccount(id: recordId, accountManager: context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start()
+                let _ = logoutFromAccount(id: context.account.id, accountManager: context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start(completed: {
+                    beforeUnlockTaskCounter.decrement()
+                })
             })
         }
     }

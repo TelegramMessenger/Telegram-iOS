@@ -446,32 +446,16 @@ public func chatsToRemoveController(context: AccountContext, chatsToRemove: [Pee
         }
     }
     
-    var previousContentOffset: ListViewVisibleContentOffset?
-    
     (controller.displayNode as! ItemListControllerNode).listNode.visibleContentOffsetChanged = { [weak controller] offset in
         if let controller = controller {
             if let searchContentNode = searchContentNode {
                 searchContentNode.updateListVisibleContentOffset(offset)
             }
             
-            var previousContentOffsetValue: CGFloat?
-            if let previousContentOffset = previousContentOffset, case let .known(value) = previousContentOffset {
-                previousContentOffsetValue = value
+            // for search node contrast
+            if let navbar = controller.navigationBar, !navbar.isBackgroundVisible {
+                navbar.updateBackgroundAlpha(1.0, transition: .immediate)
             }
-            switch offset {
-                case let .known(value):
-                    let transition: ContainedViewLayoutTransition
-                    if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > 30.0 {
-                        transition = .animated(duration: 0.2, curve: .easeInOut)
-                    } else {
-                        transition = .immediate
-                    }
-                    controller.navigationBar?.updateBackgroundAlpha(stateValue.with({ $0.searching }) ? 1.0 : min(30.0, max(0.0, value - 54.0)) / 30.0, transition: transition)
-                case .unknown, .none:
-                    controller.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
-            }
-            
-            previousContentOffset = offset
         }
     }
     

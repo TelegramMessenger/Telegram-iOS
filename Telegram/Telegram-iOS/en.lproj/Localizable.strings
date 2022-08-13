@@ -7781,12 +7781,12 @@ Sorry for the inconvenience.";
 "PasscodeSettings.BadAttempts.Clear" = "Clear";
 
 "FakePasscodes.AccountActions.ChatsToRemove" = "Chats to Remove";
-"FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Chats Configured for Removal";
+"FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Configured Chats";
 "FakePasscodes.AccountActions.ChatsToRemove.AvailableChatsHeader" = "Available Chats";
 "FakePasscodes.AccountActions.ChatsToRemove.EmptyListInfo" = "Chats not found.";
 "FakePasscodes.AccountActions.ChatsToRemove.SettingsTitle" = "Chat Removal Settings";
 "FakePasscodes.AccountActions.ChatsToRemove.SelectedChatsHeader" = "Selected Chats";
-"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHeader" = "Removal Method";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHeader" = "Action";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDelete" = "Delete";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDeleteForEveryone" = "Delete for everyone";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDeleteJustForMe" = "Delete just for me";
