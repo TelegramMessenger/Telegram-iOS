@@ -9,11 +9,15 @@ import TextFormat
 import AuthorizationUI
 import CodeInputView
 import PhoneNumberFormat
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import SolidRoundedButtonNode
 
 final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
     private let theme: PresentationTheme
     
+    private let animationNode: AnimatedStickerNode
     private let titleNode: ImmediateTextNode
     private let titleIconNode: ASImageNode
     private let currentOptionNode: ASTextNode
@@ -58,6 +62,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
         self.theme = theme
+        
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 0
@@ -116,7 +122,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeField.textField.tintColor = self.theme.list.itemAccentColor*/
-        
+                
         super.init()
         
         self.setViewBlock({
@@ -133,6 +139,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.addSubnode(self.currentOptionNode)
         self.addSubnode(self.currentOptionInfoNode)
         self.addSubnode(self.nextOptionButtonNode)
+        self.addSubnode(self.animationNode)
         
         self.codeInputView.updated = { [weak self] in
             guard let strongSelf = self else {
@@ -238,46 +245,30 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             insets.bottom += max(inputHeight, layout.standardInputHeight)
         }
         
-        if max(layout.size.width, layout.size.height) > 1023.0 {
-            if let codeType = self.codeType {
-                switch codeType {
-                case .otherSession:
-                    self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_CheckOtherSessionMessages, font: Font.medium(32.0), textColor: self.theme.list.itemPrimaryTextColor)
-                case .missedCall:
-                    self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterMissingDigits, font: Font.medium(32.0), textColor: self.theme.list.itemPrimaryTextColor)
-                default:
-                    self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(40.0), textColor: self.theme.list.itemPrimaryTextColor)
-                }
-            } else {
-                self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(40.0), textColor: self.theme.list.itemPrimaryTextColor)
+
+        var animationName = "IntroMessage"
+        if let codeType = self.codeType {
+            switch codeType {
+            case .otherSession:
+                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_CheckOtherSessionMessages, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+            case .missedCall:
+                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterMissingDigits, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+            case .email:
+                self.titleNode.attributedText = NSAttributedString(string: "Check Your Email", font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+                animationName = "IntroLetter"
+            default:
+                self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
             }
         } else {
-            if let codeType = self.codeType {
-                switch codeType {
-                case .otherSession:
-                    let fontSize: CGFloat
-                    if layout.size.width > 330.0 {
-                        fontSize = 22.0
-                    } else {
-                        fontSize = 18.0
-                    }
-                    self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_CheckOtherSessionMessages, font: Font.semibold(fontSize), textColor: self.theme.list.itemPrimaryTextColor)
-                case .missedCall:
-                    let fontSize: CGFloat
-                    if layout.size.width > 330.0 {
-                        fontSize = 22.0
-                    } else {
-                        fontSize = 18.0
-                    }
-                    self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterMissingDigits, font: Font.semibold(fontSize), textColor: self.theme.list.itemPrimaryTextColor)
-                default:
-                    self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
-                }
-            } else {
-                self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
-            }
+            self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.semibold(40.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
         
+        if !self.animationNode.visibility {
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+            self.animationNode.visibility = true
+        }
+        
+        let animationSize = CGSize(width: 88.0, height: 88.0)
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         
         let currentOptionSize = self.currentOptionNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
@@ -302,6 +293,10 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             codeLength = Int(length)
         case let .sms(length):
             codeLength = Int(length)
+        case let .email(_, length, _, _, _):
+            codeLength = Int(length)
+        case .emailSetupRequired:
+            codeLength = 6
         case .none:
             codeLength = 6
         }
@@ -319,6 +314,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         )
         
         var items: [AuthorizationLayoutItem] = []
+        items.append(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        self.animationNode.updateLayout(size: animationSize)
+        
         if let codeType = self.codeType {
             switch codeType {
             case .otherSession:
@@ -351,7 +349,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                     })
                 }
                 
-                items.append(AuthorizationLayoutItem(node: self.titleIconNode, size: self.titleIconNode.image!.size, spacingBefore: AuthorizationLayoutItemSpacing(weight: 41.0, maxValue: 41.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+//                items.append(AuthorizationLayoutItem(node: self.titleIconNode, size: self.titleIconNode.image!.size, spacingBefore: AuthorizationLayoutItemSpacing(weight: 41.0, maxValue: 41.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: currentOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 
@@ -376,7 +374,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                     })
                 }
                 
-                items.append(AuthorizationLayoutItem(node: self.titleIconNode, size: self.titleIconNode.image!.size, spacingBefore: AuthorizationLayoutItemSpacing(weight: 41.0, maxValue: 41.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+//                items.append(AuthorizationLayoutItem(node: self.titleIconNode, size: self.titleIconNode.image!.size, spacingBefore: AuthorizationLayoutItemSpacing(weight: 41.0, maxValue: 41.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: currentOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 
@@ -442,6 +440,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 case let .missedCall(_, length):
                     codeLength = length
                 case let .sms(length):
+                    codeLength = length
+                case let .email(_, length, _, _, _):
                     codeLength = length
                 default:
                     break

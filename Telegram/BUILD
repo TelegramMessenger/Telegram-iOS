@@ -492,6 +492,13 @@ communication_notifications_fragment = """
 <true/>
 """
 
+signin_fragment = """
+<key>com.apple.developer.applesignin</key>
+<array>
+    <string>Default</string>
+</array>
+"""
+
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
@@ -505,6 +512,7 @@ plist_fragment(
         unrestricted_voip_fragment,
         carplay_fragment,
         communication_notifications_fragment,
+        signin_fragment,
     ])
 )
 

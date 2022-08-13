@@ -296,6 +296,7 @@ public func foldLineBreaks(_ text: String) -> String {
             result += " " + line
         }
     }
+    result = result.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
     return result
 }
 

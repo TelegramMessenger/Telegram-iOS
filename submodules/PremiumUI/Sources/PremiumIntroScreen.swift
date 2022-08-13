@@ -984,6 +984,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             return self.products?.first(where: { $0.id == self.selectedProductId })?.price
         }
         
+        var isAnnual: Bool {
+            return self.products?.first(where: { $0.id == self.selectedProductId })?.id.hasSuffix(".annual") ?? false
+        }
+        
         init(context: AccountContext, source: PremiumSource) {
             self.context = context
             
@@ -1292,8 +1296,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         var demoSubject: PremiumDemoScreen.Subject
                         switch perk {
                         case .doubleLimits:
+                            let isPremium = state?.isPremium == true
+                            
                             var dismissImpl: (() -> Void)?
-                            let controller = PremimLimitsListScreen(context: accountContext, buttonText: state?.isPremium == true ? strings.Common_OK : strings.Premium_SubscribeFor(state?.price ?? "–").string, isPremium: state?.isPremium == true)
+                            let controller = PremimLimitsListScreen(context: accountContext, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "–").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium)
                             controller.action = { [weak state] in
                                 dismissImpl?()
                                 if state?.isPremium == false {
@@ -1631,6 +1637,10 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         
         var price: String? {
             return self.products?.first(where: { $0.id == self.selectedProductId })?.price
+        }
+        
+        var isAnnual: Bool {
+            return self.products?.first(where: { $0.id == self.selectedProductId })?.id.hasSuffix(".annual") ?? false
         }
         
         init(context: AccountContext, source: PremiumSource, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
@@ -2050,10 +2060,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             if state.isPremium == true || isGiftView {
                 
             } else {
+                
                 let sideInset: CGFloat = 16.0
                 let button = button.update(
                     component: SolidRoundedButtonComponent(
-                        title: environment.strings.Premium_SubscribeFor(state.price ?? "—").string,
+                        title: state.isAnnual ? environment.strings.Premium_SubscribeForAnnual(state.price ?? "—").string : environment.strings.Premium_SubscribeFor(state.price ?? "—").string,
                         theme: SolidRoundedButtonComponent.Theme(
                             backgroundColor: UIColor(rgb: 0x8878ff),
                             backgroundColors: [

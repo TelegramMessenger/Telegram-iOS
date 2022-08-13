@@ -7663,6 +7663,7 @@ Sorry for the inconvenience.";
 "Premium.AppIconStandaloneInfo" = "Unlock a wider range of app icons by subscribing to **Telegram Premium**.";
 
 "Premium.SubscribeFor" = "Subscribe for %@ / month";
+"Premium.SubscribeForAnnual" = "Subscribe for %@ / year";
 
 "Premium.AboutTitle" = "ABOUT TELEGRAM PREMIUM";
 "Premium.AboutText" = "While the free version of Telegram already gives its users more than any other messaging application, **Telegram Premium** pushes its capabilities even further.\n\n**Telegram Premium** is a paid option, because most Premium Features require additional expenses from Telegram to third parties such as data center providers and server manufacturers. Contributions from **Telegram Premium** users allow us to cover such costs and also help Telegram stay free for everyone.";
@@ -7962,3 +7963,7 @@ Sorry for the inconvenience.";
 
 "Premium.Annual" = "Annual";
 "Premium.Monthly" = "Monthly";
+
+"Login.PhoneNumberConfirmation" = "Is this the correct number?";
+"Login.Edit" = "Edit";
+"Login.Yes" = "Yes";
