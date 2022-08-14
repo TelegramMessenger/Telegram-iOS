@@ -43,6 +43,8 @@
 "PasscodeSettings.BadAttempts.FakePasscode" = "Несапраўдны код блакіроўкі";
 "PasscodeSettings.BadAttempts.Clear" = "Ачысціць";
 
+"FakePasscodes.Common.DoNotShowAgain" = "Больш не паказваць";
+
 "FakePasscodes.AccountActions.ChatsToRemove" = "Чаты для выдалення";
 "FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Наладжаныя чаты";
 "FakePasscodes.AccountActions.ChatsToRemove.AvailableChatsHeader" = "Даступныя чаты";
@@ -58,6 +60,7 @@
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanion" = "Выдаліць у суразмоўцы";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanionInfo" = "Выдаліць дыялогі ў суразмоўцаў. Гэтая опцыя прымяняецца толькі для дыялогаў з карыстальнікамі.";
 "FakePasscodes.AccountActions.SessionsToHide" = "Сеансы для хавання";
+"FakePasscodes.AccountActions.SessionsToTerminate" = "Сеансы для завяршэння";
 "FakePasscodes.AccountActions.All" = "Усе";
 "FakePasscodes.AccountActions.AllExceptCount" = "Усе (-%1$@)";
 "FakePasscodes.AccountActions.SessionsSettingsInfo" = "Абярыце сеансы, якія будуць бачны ў наладах і/альбо завершаны пасля актывацыі несапраўднага кода блакіроўкі.";
@@ -70,3 +73,5 @@
 "AccountActions.SessionsToHide.ExceptSelected" = "Акрамя абраных";
 "AccountActions.SessionsToHide.ActiveSessions" = "Актыўныя сеансы";
 "AccountActions.SessionsToHide.CleanConfirmation" = "Вы ўпэўнены?";
+
+"AccountActions.SessionsToTerminate.24hWarningMessage" = "Гэта функцыя не будзе працавать, калі пасля увахода ў аккаўнт на гэтым дэвайсе прайшло менш за 24 гадзіны.";

@@ -43,6 +43,8 @@
 "PasscodeSettings.BadAttempts.FakePasscode" = "Ложный код-пароль";
 "PasscodeSettings.BadAttempts.Clear" = "Очистить";
 
+"FakePasscodes.Common.DoNotShowAgain" = "Не показывать снова";
+
 "FakePasscodes.AccountActions.ChatsToRemove" = "Чаты для удаления";
 "FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Настроенные чаты";
 "FakePasscodes.AccountActions.ChatsToRemove.AvailableChatsHeader" = "Доступные чаты";
@@ -58,6 +60,7 @@
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanion" = "Удалить у собеседника";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanionInfo" = "Удалить диалоги у собеседников. Эта опция применяется только для диалогов с пользователями.";
 "FakePasscodes.AccountActions.SessionsToHide" = "Сеансы для скрытия";
+"FakePasscodes.AccountActions.SessionsToTerminate" = "Сеанси для завершення";
 "FakePasscodes.AccountActions.All" = "Все";
 "FakePasscodes.AccountActions.AllExceptCount" = "Все (-%1$@)";
 "FakePasscodes.AccountActions.SessionsSettingsInfo" = "Выберите сеансы, которые будут видны в настройках и/или завершены после активации ложного код-пароля.";
@@ -71,3 +74,4 @@
 "AccountActions.SessionsToHide.ActiveSessions" = "Активные сессии";
 "AccountActions.SessionsToHide.CleanConfirmation" = "Вы уверены?";
 
+"AccountActions.SessionsToTerminate.24hWarningMessage" = "Эта функция не сработает, если после входа в аккаунт на этом устройстве прошло менее 24 часов.";

@@ -7780,6 +7780,8 @@ Sorry for the inconvenience.";
 "PasscodeSettings.BadAttempts.FakePasscode" = "Fake Passcode";
 "PasscodeSettings.BadAttempts.Clear" = "Clear";
 
+"FakePasscodes.Common.DoNotShowAgain" = "Do not show again";
+
 "FakePasscodes.AccountActions.ChatsToRemove" = "Chats to Remove";
 "FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Configured Chats";
 "FakePasscodes.AccountActions.ChatsToRemove.AvailableChatsHeader" = "Available Chats";
@@ -7795,6 +7797,7 @@ Sorry for the inconvenience.";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanion" = "Delete from Companion";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanionInfo" = "Delete dialogs from the companion. This option only applies to dialogs with users.";
 "FakePasscodes.AccountActions.SessionsToHide" = "Sessions to Hide";
+"FakePasscodes.AccountActions.SessionsToTerminate" = "Sessions to Terminate";
 "FakePasscodes.AccountActions.All" = "All";
 "FakePasscodes.AccountActions.AllExceptCount" = "All (-%1$@)";
 "FakePasscodes.AccountActions.SessionsSettingsInfo" = "Choose sessions which will be visible in Settings and/or terminated on Fake Passcode Activation";
@@ -7807,3 +7810,5 @@ Sorry for the inconvenience.";
 "AccountActions.SessionsToHide.ExceptSelected" = "Except selected";
 "AccountActions.SessionsToHide.ActiveSessions" = "Active sessions";
 "AccountActions.SessionsToHide.CleanConfirmation" = "Are your sure?";
+
+"AccountActions.SessionsToTerminate.24hWarningMessage" = "This feature will not work if less than 24 hours have passed since you signed in to your account on this device.";
