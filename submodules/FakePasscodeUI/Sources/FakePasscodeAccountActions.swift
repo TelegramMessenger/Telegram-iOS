@@ -9,12 +9,14 @@ import FakePasscode
 private final class FakePasscodeAccountActionsControllerArguments {
     let openChatsToRemove: ([PeerWithRemoveOptions]) -> Void
     let sessionsToHide: () -> Void
+    let sessionsToTerminate: (Bool) -> Void
     let switchLogOut: (Bool) -> Void
     
-    init(openChatsToRemove: @escaping ([PeerWithRemoveOptions]) -> Void, sessionsToHide: @escaping () -> Void, switchLogOut: @escaping (Bool) -> Void) {
+    init(openChatsToRemove: @escaping ([PeerWithRemoveOptions]) -> Void, sessionsToHide: @escaping () -> Void, sessionsToTerminate: @escaping (Bool) -> Void, switchLogOut: @escaping (Bool) -> Void) {
         self.openChatsToRemove = openChatsToRemove
         self.switchLogOut = switchLogOut
         self.sessionsToHide = sessionsToHide
+        self.sessionsToTerminate = sessionsToTerminate
     }
 }
 
@@ -29,12 +31,13 @@ private enum FakePasscodeAccountActionsEntry: ItemListNodeEntry {
     case chatsToRemove(PresentationTheme, String, [PeerWithRemoveOptions])
     case logOut(PresentationTheme, String, Bool)
     case sessionsToHide(PresentationTheme, String, String)
+    case sessionsToTerminate(PresentationTheme, String, String, Bool)
     case sessionsActionsInfo(PresentationTheme, String)
     case miscActionsInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
-            case .sessionsToHide, .sessionsActionsInfo:
+            case .sessionsToHide, .sessionsToTerminate, .sessionsActionsInfo:
                 return FakePasscodeAccountActionsSection.sessionActions.rawValue
             case .chatsToRemove, .logOut, .miscActionsInfo:
                 return FakePasscodeAccountActionsSection.miscActions.rawValue
@@ -51,8 +54,10 @@ private enum FakePasscodeAccountActionsEntry: ItemListNodeEntry {
                 return 2
             case .sessionsToHide:
                 return 3
-            case .sessionsActionsInfo:
+            case .sessionsToTerminate:
                 return 4
+            case .sessionsActionsInfo:
+                return 5
         }
     }
 
@@ -70,6 +75,10 @@ private enum FakePasscodeAccountActionsEntry: ItemListNodeEntry {
             case let .sessionsToHide(_, title, label):
                 return ItemListDisclosureItem(presentationData: presentationData, title: title, label: label, sectionId: self.section, style: .blocks, action: {
                     arguments.sessionsToHide()
+                })
+            case let .sessionsToTerminate(_, title, label, skipWarning):
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: label, sectionId: self.section, style: .blocks, action: {
+                    arguments.sessionsToTerminate(skipWarning)
                 })
             case let .logOut(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
@@ -95,14 +104,17 @@ private func fakePasscodeAccountActionsControllerEntries(presentationData: Prese
     entries.append(.logOut(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_LogOut, settings.logOut))
     entries.append(.miscActionsInfo(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_MiscActionsInfo))
     entries.append(.sessionsToHide(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, sessionToHideLabel(presentationData, settings.sessionsToHide)))
+    entries.append(.sessionsToTerminate(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsToTerminate, sessionToHideLabel(presentationData, settings.sessionsToTerminate), !settings.sessionsToTerminateSkipWarning))
     entries.append(.sessionsActionsInfo(presentationData.theme, presentationData.strings.FakePasscodes_AccountActions_SessionsSettingsInfo))
     return entries
 }
 
 func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, accountDisplayName: String) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController) -> Void)?
 
     let actionsDisposable = DisposableSet()
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
     let accountActionsDataPromise = Promise<FakePasscodeAccountActionsData>()
     accountActionsDataPromise.set(context.sharedContext.accountManager.transaction { transaction -> FakePasscodeAccountActionsData in
@@ -117,11 +129,41 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
             }
         }))
     }, sessionsToHide: {
-        pushControllerImpl?(hiddenSessionsController(context: context, uuid: uuid, updated: { sessionsToHide in
-            updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
-                settings.withUpdatedSessionsToHide(sessionsToHide)
+        let _ = (accountActionsDataPromise.get() |> take(1)).start(next: { data in
+            pushControllerImpl?(sessionsSelectionController(context: context, title: presentationData.strings.FakePasscodes_AccountActions_SessionsToHide, selector: data.settings.sessionsToHide, updated: { sessionsToHide in
+                updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
+                    settings.withUpdatedSessionsToHide(sessionsToHide)
+                }
+            }))
+        })
+    }, sessionsToTerminate: { showWarning in
+        let _ = (accountActionsDataPromise.get() |> take(1)).start(next: { data in
+            pushControllerImpl?(sessionsSelectionController(context: context, title: presentationData.strings.FakePasscodes_AccountActions_SessionsToTerminate, selector: data.settings.sessionsToTerminate, updated: { sessionsToTerminate in
+                updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
+                    settings.withUpdatedSessionsToTerminate(sessionsToTerminate)
+                }
+            }))
+
+            if showWarning {
+                let controller = ActionSheetController(presentationData: presentationData)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: presentationData.strings.AccountActions_SessionsToTerminate_24hWarningMessage),
+                        ActionSheetButtonItem(title: presentationData.strings.FakePasscodes_Common_DoNotShowAgain, color: .destructive, action: {
+                            updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
+                                settings.withDisabledSessionsToTerminateWarning()
+                            }
+                            dismissAction()
+                        })
+                    ]),
+                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_OK, action: { dismissAction() })])
+                ])
+                presentControllerImpl?(controller)
             }
-        }))
+        })
     }, switchLogOut: { enabled in
         updateAccountActionSettings(context: context, uuid: uuid, accountActionsDataPromise) { settings in
             return settings.withUpdatedLogOut(enabled)
@@ -146,6 +188,9 @@ func fakePasscodeAccountActionsController(context: AccountContext, uuid: UUID, a
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }
+    presentControllerImpl = { [weak controller] c in
+        controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }
 
     return controller
 }
@@ -161,13 +206,13 @@ private func updateAccountActionSettings(context: AccountContext, uuid: UUID, _ 
     })
 }
 
-private func sessionToHideLabel(_ presentationData: PresentationData, _ settings: FakePasscodeSessionsToHideSettings) -> String {
-    let sessionsCount = "\(settings.sessions.count)"
+private func sessionToHideLabel(_ presentationData: PresentationData, _ selector: SessionSelector) -> String {
+    let sessionsCount = "\(selector.sessions.count)"
 
-    switch settings.mode {
+    switch selector.mode {
     case .selected:
         return sessionsCount
     case .excluded:
-        return settings.sessions.count == 0 ? presentationData.strings.FakePasscodes_AccountActions_All : presentationData.strings.FakePasscodes_AccountActions_AllExceptCount(sessionsCount).string
+        return selector.sessions.count == 0 ? presentationData.strings.FakePasscodes_AccountActions_All : presentationData.strings.FakePasscodes_AccountActions_AllExceptCount(sessionsCount).string
     }
 }

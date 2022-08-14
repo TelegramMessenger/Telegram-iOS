@@ -41,18 +41,22 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
     public let recordId: AccountRecordId
     public let chatsToRemove: [PeerWithRemoveOptions]
     public let logOut: Bool
-    public let sessionsToHide: FakePasscodeSessionsToHideSettings
+    public let sessionsToHide: SessionSelector
+    public let sessionsToTerminate: SessionSelector
+    public let sessionsToTerminateSkipWarning: Bool
 
     public static func defaultSettings(peerId: PeerId, recordId: AccountRecordId) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: peerId, recordId: recordId, chatsToRemove: [], logOut: false, sessionsToHide: FakePasscodeSessionsToHideSettings.defaultSettings())
+        return FakePasscodeAccountActionsSettings(peerId: peerId, recordId: recordId, chatsToRemove: [], logOut: false, sessionsToHide: SessionSelector.defaultSettings(), sessionsToTerminate: SessionSelector.defaultSettings(), sessionsToTerminateSkipWarning: false)
     }
 
-    public init(peerId: PeerId, recordId: AccountRecordId, chatsToRemove: [PeerWithRemoveOptions], logOut: Bool, sessionsToHide: FakePasscodeSessionsToHideSettings) {
+    public init(peerId: PeerId, recordId: AccountRecordId, chatsToRemove: [PeerWithRemoveOptions], logOut: Bool, sessionsToHide: SessionSelector, sessionsToTerminate: SessionSelector, sessionsToTerminateSkipWarning: Bool) {
         self.peerId = peerId
         self.recordId = recordId
         self.chatsToRemove = chatsToRemove
         self.logOut = logOut
         self.sessionsToHide = sessionsToHide
+        self.sessionsToTerminate = sessionsToTerminate
+        self.sessionsToTerminateSkipWarning = sessionsToTerminateSkipWarning
     }
 
     public init(from decoder: Decoder) throws {
@@ -62,7 +66,9 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
         self.recordId = try container.decode(AccountRecordId.self, forKey: "rid")
         self.chatsToRemove = try container.decodeIfPresent([PeerWithRemoveOptions].self, forKey: "ctr") ?? []
         self.logOut = (try container.decodeIfPresent(Int32.self, forKey: "lo") ?? 0) != 0
-        self.sessionsToHide = try container.decodeIfPresent(FakePasscodeSessionsToHideSettings.self, forKey: "sth") ?? FakePasscodeSessionsToHideSettings.defaultSettings()
+        self.sessionsToHide = try container.decodeIfPresent(SessionSelector.self, forKey: "sth") ?? SessionSelector.defaultSettings()
+        self.sessionsToTerminate = try container.decodeIfPresent(SessionSelector.self, forKey: "stt") ?? SessionSelector.defaultSettings()
+        self.sessionsToTerminateSkipWarning = (try container.decodeIfPresent(Int32.self, forKey: "sttw") ?? 0) != 0
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -73,18 +79,28 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
         try container.encode(self.chatsToRemove, forKey: "ctr")
         try container.encode((self.logOut ? 1 : 0) as Int32, forKey: "lo")
         try container.encode(self.sessionsToHide, forKey: "sth")
+        try container.encode(self.sessionsToTerminate, forKey: "stt")
+        try container.encode((self.sessionsToTerminateSkipWarning ? 1 : 0) as Int32, forKey: "sttw")
     }
 
     public func withUpdatedLogOut(_ logOut: Bool) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: logOut, sessionsToHide: self.sessionsToHide)
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: logOut, sessionsToHide: self.sessionsToHide, sessionsToTerminate: self.sessionsToTerminate, sessionsToTerminateSkipWarning: self.sessionsToTerminateSkipWarning)
     }
 
     public func withUpdatedChatsToRemove(_ chatsToRemove: [PeerWithRemoveOptions]) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: chatsToRemove, logOut: self.logOut, sessionsToHide: self.sessionsToHide)
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: chatsToRemove, logOut: self.logOut, sessionsToHide: self.sessionsToHide, sessionsToTerminate: self.sessionsToTerminate, sessionsToTerminateSkipWarning: self.sessionsToTerminateSkipWarning)
     }
 
-    public func withUpdatedSessionsToHide(_ sessionsToHide: FakePasscodeSessionsToHideSettings) -> FakePasscodeAccountActionsSettings {
-        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: self.logOut, sessionsToHide: sessionsToHide)
+    public func withUpdatedSessionsToHide(_ sessionsToHide: SessionSelector) -> FakePasscodeAccountActionsSettings {
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: self.logOut, sessionsToHide: sessionsToHide, sessionsToTerminate: self.sessionsToTerminate, sessionsToTerminateSkipWarning: self.sessionsToTerminateSkipWarning)
+    }
+
+    public func withUpdatedSessionsToTerminate(_ sessionsToTerminate: SessionSelector) -> FakePasscodeAccountActionsSettings {
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: self.logOut, sessionsToHide: self.sessionsToHide, sessionsToTerminate: sessionsToTerminate, sessionsToTerminateSkipWarning: self.sessionsToTerminateSkipWarning)
+    }
+
+    public func withDisabledSessionsToTerminateWarning() -> FakePasscodeAccountActionsSettings {
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, chatsToRemove: self.chatsToRemove, logOut: self.logOut, sessionsToHide: self.sessionsToHide, sessionsToTerminate: sessionsToTerminate, sessionsToTerminateSkipWarning: true)
     }
 
     public func performActions(context: AccountContext, updateSettings: @escaping (FakePasscodeAccountActionsSettings) -> Void) {
@@ -132,6 +148,24 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
             updateSettings(self.withUpdatedChatsToRemove(updatedChatsToRemove))
         }
 
+        let activeSessionsContext = context.engine.privacy.activeSessions()
+        activeSessionsContext.loadMore();
+        if sessionsToTerminate.mode == .selected {
+            for sessionId in sessionsToTerminate.sessions {
+                let _ = activeSessionsContext.remove(hash: sessionId).start()
+            }
+        } else if sessionsToTerminate.mode == .excluded {
+            let _ = (activeSessionsContext.state |> take(1)).start(next: { context in
+                for s in context.sessions {
+                    if !(s.hash == 0 || sessionsToTerminate.sessions.contains(s.hash)) {
+                        let _ = activeSessionsContext.remove(hash: s.hash).start()
+                    }
+                }
+            })
+        } else {
+            assertionFailure("Unsupported SessionSelectionMode \(sessionsToTerminate.mode)")
+        }
+
         if logOut {
             let _ = (waitingQueueSizePromise.get()
             |> filter { $0 == 0 }
@@ -144,12 +178,12 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
     }
 }
 
-public struct FakePasscodeSessionsToHideSettings: Codable, Equatable {
+public struct SessionSelector: Codable, Equatable {
     public let sessions: [Int64]
     public let mode: SessionSelectionMode
 
-    public static func defaultSettings() -> FakePasscodeSessionsToHideSettings {
-        return FakePasscodeSessionsToHideSettings(sessions: [], mode: .selected)
+    public static func defaultSettings() -> SessionSelector {
+        return SessionSelector(sessions: [], mode: .selected)
     }
 
     public init(sessions: [Int64], mode: SessionSelectionMode) {
@@ -170,12 +204,12 @@ public struct FakePasscodeSessionsToHideSettings: Codable, Equatable {
         try container.encode(self.sessions, forKey: "s")
     }
 
-    public func withUpdatedSessions(_ sessions: [Int64]) -> FakePasscodeSessionsToHideSettings {
-        return FakePasscodeSessionsToHideSettings(sessions: sessions, mode: self.mode)
+    public func withUpdatedSessions(_ sessions: [Int64]) -> SessionSelector {
+        return SessionSelector(sessions: sessions, mode: self.mode)
     }
 
-    public func withUpdatedMode(_ mode: SessionSelectionMode) -> FakePasscodeSessionsToHideSettings {
-        return FakePasscodeSessionsToHideSettings(sessions: self.sessions, mode: mode)
+    public func withUpdatedMode(_ mode: SessionSelectionMode) -> SessionSelector {
+        return SessionSelector(sessions: self.sessions, mode: mode)
     }
 }
 
