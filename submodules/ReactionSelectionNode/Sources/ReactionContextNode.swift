@@ -659,20 +659,23 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
         
-        let additionalAnimation: TelegramMediaFile
-        if self.didTriggerExpandedReaction {
-            additionalAnimation = itemNode.item.largeApplicationAnimation
-            if incomingMessage {
-                additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+        let reduceMotion = self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion
+        if !reduceMotion {
+            let additionalAnimation: TelegramMediaFile
+            if self.didTriggerExpandedReaction {
+                additionalAnimation = itemNode.item.largeApplicationAnimation
+                if incomingMessage {
+                    additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                }
+            } else {
+                additionalAnimation = itemNode.item.applicationAnimation
             }
-        } else {
-            additionalAnimation = itemNode.item.applicationAnimation
+            
+            additionalAnimationNode.setup(source: AnimatedStickerResourceSource(account: itemNode.context.account, resource: additionalAnimation.resource), width: Int(effectFrame.width * 2.0), height: Int(effectFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: itemNode.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(additionalAnimation.resource.id)))
+            additionalAnimationNode.frame = effectFrame
+            additionalAnimationNode.updateLayout(size: effectFrame.size)
+            self.addSubnode(additionalAnimationNode)
         }
-        
-        additionalAnimationNode.setup(source: AnimatedStickerResourceSource(account: itemNode.context.account, resource: additionalAnimation.resource), width: Int(effectFrame.width * 2.0), height: Int(effectFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: itemNode.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(additionalAnimation.resource.id)))
-        additionalAnimationNode.frame = effectFrame
-        additionalAnimationNode.updateLayout(size: effectFrame.size)
-        self.addSubnode(additionalAnimationNode)
         
         var mainAnimationCompleted = false
         var additionalAnimationCompleted = false
