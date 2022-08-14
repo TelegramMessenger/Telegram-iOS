@@ -562,9 +562,7 @@ public final class CachedChannelData: CachedPeerData {
         
         self.sendAsPeerId = decoder.decodeOptionalInt64ForKey("sendAsPeerId").flatMap(PeerId.init)
         
-        if let allowedReactions = decoder.decodeArray([MessageReaction.Reaction].self, forKey: "allowedReactionList") {
-            self.allowedReactions = allowedReactions
-        } else if let allowedReactions = decoder.decodeOptionalStringArrayForKey("allowedReactions") {
+        if let allowedReactions = decoder.decodeOptionalStringArrayForKey("allowedReactions") {
             self.allowedReactions = allowedReactions.map(MessageReaction.Reaction.builtin)
         } else {
             self.allowedReactions = nil
@@ -715,9 +713,16 @@ public final class CachedChannelData: CachedPeerData {
         }
         
         if let allowedReactions = self.allowedReactions {
-            encoder.encodeArray(allowedReactions, forKey: "allowedReactionList")
+            encoder.encodeStringArray(allowedReactions.compactMap { item -> String? in
+                switch item {
+                case let .builtin(value):
+                    return value
+                case .custom:
+                    return nil
+                }
+            }, forKey: "allowedReactions")
         } else {
-            encoder.encodeNil(forKey: "allowedReactionList")
+            encoder.encodeNil(forKey: "allowedReactions")
         }
     }
     
