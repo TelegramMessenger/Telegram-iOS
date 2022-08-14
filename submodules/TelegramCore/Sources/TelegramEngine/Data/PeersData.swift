@@ -452,7 +452,7 @@ public extension TelegramEngine.EngineData.Item {
         }
         
         public struct AllowedReactions: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
-            public typealias Result = [String]?
+            public typealias Result = [MessageReaction.Reaction]?
 
             fileprivate var id: EnginePeer.Id
             public var mapKey: EnginePeer.Id {

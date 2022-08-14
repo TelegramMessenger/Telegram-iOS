@@ -661,6 +661,26 @@ public final class PostboxEncoder {
         let (data, valueType) = innerEncoder.makeData(addHeader: true, isDictionary: false)
         self.encodeInnerObjectData(data, valueType: valueType, forKey: key)
     }
+    
+    public func encodeArray<T: Encodable>(_ value: [T], forKey key: String) {
+        self.encodeKey(key)
+        var t: Int8 = ValueType.ObjectArray.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
+        var length: Int32 = Int32(value.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        
+        for object in value {
+            let typeHash: Int32 = murMurHashString32("\(type(of: object))")
+            let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
+            try! object.encode(to: innerEncoder)
+
+            let (data, _) = innerEncoder.makeData(addHeader: true, isDictionary: false)
+            
+            var length: Int32 = Int32(data.count)
+            self.buffer.write(&length, offset: 0, length: 4)
+            self.buffer.write(data)
+        }
+    }
 
     func encodeInnerObjectData(_ value: Data, valueType: ValueType, forKey key: String) {
         self.encodeKey(key)
@@ -1810,6 +1830,46 @@ public final class PostboxDecoder {
                 //assertionFailure("Decoding error: \(error)")
                 return nil
             }
+        } else {
+            return nil
+        }
+    }
+    
+    public func decodeArray<T: Decodable>(_ type: [T].Type, forKey key: String) -> [T]? {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectArray) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var array: [T] = []
+            array.reserveCapacity(Int(length))
+            
+            var i: Int32 = 0
+            while i < length {
+                var typeHash: Int32 = 0
+                memcpy(&typeHash, self.buffer.memory + self.offset, 4)
+                self.offset += 4
+                
+                var objectLength: Int32 = 0
+                memcpy(&objectLength, self.buffer.memory + self.offset, 4)
+                
+                let innerBuffer = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false)
+                let innerData = innerBuffer.makeData()
+                self.offset += 4 + Int(length)
+
+                do {
+                    let result = try AdaptedPostboxDecoder().decode(T.self, from: innerData)
+                    array.append(result)
+                } catch let error {
+                    postboxLog("Decoding error: \(error)")
+                    //assertionFailure("Decoding error: \(error)")
+                    return nil
+                }
+                
+                i += 1
+            }
+            
+            return array
         } else {
             return nil
         }

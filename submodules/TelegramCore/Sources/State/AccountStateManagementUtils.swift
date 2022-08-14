@@ -4,8 +4,7 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-private func reactionGeneratedEvent(_ previousReactions: ReactionsMessageAttribute?, _ updatedReactions: ReactionsMessageAttribute?, message: Message, transaction: Transaction) -> (reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)? {
-    
+private func reactionGeneratedEvent(_ previousReactions: ReactionsMessageAttribute?, _ updatedReactions: ReactionsMessageAttribute?, message: Message, transaction: Transaction) -> (reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)? {
     if let updatedReactions = updatedReactions, !message.flags.contains(.Incoming), message.id.peerId.namespace == Namespaces.Peer.CloudUser {
         let prev = previousReactions?.reactions ?? []
         
@@ -2533,7 +2532,7 @@ func replayFinalState(
     }
     var wasScheduledMessageIds:[MessageId] = []
     var addedIncomingMessageIds: [MessageId] = []
-    var addedReactionEvents: [(reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)] = []
+    var addedReactionEvents: [(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)] = []
     
     if !wasOperationScheduledMessageIds.isEmpty {
         let existingIds = transaction.filterStoredMessageIds(Set(wasOperationScheduledMessageIds))
@@ -2773,7 +2772,7 @@ func replayFinalState(
                     invalidateGroupStats.insert(Namespaces.PeerGroup.archive)
                 }
             case let .EditMessage(id, message):
-                var generatedEvent: (reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)?
+                var generatedEvent: (reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)?
                 transaction.updateMessage(id, update: { previousMessage in
                     var updatedFlags = message.flags
                     var updatedLocalTags = message.localTags

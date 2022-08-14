@@ -105,8 +105,8 @@ public final class AccountStateManager {
         return self.notificationMessagesPipe.signal()
     }
     
-    private let reactionNotificationsPipe = ValuePipe<[(reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)]>()
-    public var reactionNotifications: Signal<[(reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)], NoError> {
+    private let reactionNotificationsPipe = ValuePipe<[(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)]>()
+    public var reactionNotifications: Signal<[(reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)], NoError> {
         return self.reactionNotificationsPipe.signal()
     }
     
@@ -753,7 +753,7 @@ public final class AccountStateManager {
             
                 let timestamp = Int32(Date().timeIntervalSince1970)
                 let minReactionTimestamp = timestamp - 20
-                let reactionEvents = events.addedReactionEvents.compactMap { event -> (reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)? in
+                let reactionEvents = events.addedReactionEvents.compactMap { event -> (reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)? in
                     if event.timestamp >= minReactionTimestamp {
                         return (event.reactionAuthor, event.reaction, event.message, event.timestamp)
                     } else {
@@ -761,7 +761,6 @@ public final class AccountStateManager {
                     }
                 }
                 self.reactionNotificationsPipe.putNext(reactionEvents)
-
             
                 if !events.displayAlerts.isEmpty {
                     self.displayAlertsPipe.putNext(events.displayAlerts)

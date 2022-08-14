@@ -4,7 +4,7 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reaction: String?, isLarge: Bool) -> Signal<Never, NoError> {
+public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reaction: MessageReaction.Reaction?, isLarge: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         transaction.setPendingMessageAction(type: .updateReaction, id: messageId, action: UpdateMessageReactionsAction())
         transaction.updateMessage(messageId, update: { currentMessage in
@@ -31,14 +31,14 @@ private enum RequestUpdateMessageReactionError {
 }
 
 private func requestUpdateMessageReaction(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Never, RequestUpdateMessageReactionError> {
-    return postbox.transaction { transaction -> (Peer, String?, Bool)? in
+    return postbox.transaction { transaction -> (Peer, MessageReaction.Reaction?, Bool)? in
         guard let peer = transaction.getPeer(messageId.peerId) else {
             return nil
         }
         guard let message = transaction.getMessage(messageId) else {
             return nil
         }
-        var value: String?
+        var value: MessageReaction.Reaction?
         var isLarge: Bool = false
         for attribute in message.attributes {
             if let attribute = attribute as? PendingReactionsMessageAttribute {
@@ -69,7 +69,7 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
             }
         }
         
-        let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendReaction(flags: flags, peer: inputPeer, msgId: messageId.id, reaction: value))
+        let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendReaction(flags: flags, peer: inputPeer, msgId: messageId.id, reaction: value?.apiReaction))
         |> mapError { _ -> RequestUpdateMessageReactionError in
             return .generic
         }
@@ -241,7 +241,7 @@ private func synchronizeMessageReactions(transaction: Transaction, postbox: Post
 }
 
 public extension EngineMessageReactionListContext.State {
-    init(message: EngineMessage, reaction: String?) {
+    init(message: EngineMessage, reaction: MessageReaction.Reaction?) {
         var totalCount = 0
         var hasOutgoingReaction = false
         var items: [EngineMessageReactionListContext.Item] = []
@@ -277,11 +277,11 @@ public extension EngineMessageReactionListContext.State {
 public final class EngineMessageReactionListContext {
     public final class Item: Equatable {
         public let peer: EnginePeer
-        public let reaction: String?
+        public let reaction: MessageReaction.Reaction?
         
         public init(
             peer: EnginePeer,
-            reaction: String?
+            reaction: MessageReaction.Reaction?
         ) {
             self.peer = peer
             self.reaction = reaction
@@ -330,7 +330,7 @@ public final class EngineMessageReactionListContext {
         
         let account: Account
         let message: EngineMessage
-        let reaction: String?
+        let reaction: MessageReaction.Reaction?
         
         let disposable = MetaDisposable()
         
@@ -339,7 +339,7 @@ public final class EngineMessageReactionListContext {
         
         var isLoadingMore: Bool = false
         
-        init(queue: Queue, account: Account, message: EngineMessage, reaction: String?) {
+        init(queue: Queue, account: Account, message: EngineMessage, reaction: MessageReaction.Reaction?) {
             self.queue = queue
             self.account = account
             self.message = message
@@ -389,7 +389,7 @@ public final class EngineMessageReactionListContext {
                 if currentOffset != nil {
                     flags |= 1 << 1
                 }
-                return account.network.request(Api.functions.messages.getMessageReactionsList(flags: flags, peer: inputPeer, id: message.id.id, reaction: reaction, offset: currentOffset, limit: Int32(limit)))
+                return account.network.request(Api.functions.messages.getMessageReactionsList(flags: flags, peer: inputPeer, id: message.id.id, reaction: reaction?.apiReaction, offset: currentOffset, limit: Int32(limit)))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.MessageReactionsList?, NoError> in
                     return .single(nil)
@@ -423,7 +423,7 @@ public final class EngineMessageReactionListContext {
                             for reaction in reactions {
                                 switch reaction {
                                 case let .messagePeerReaction(_, peer, reaction):
-                                    if let peer = transaction.getPeer(peer.peerId) {
+                                    if let peer = transaction.getPeer(peer.peerId), let reaction = MessageReaction.Reaction(apiReaction: reaction) {
                                         items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction))
                                     }
                                 }
@@ -487,7 +487,7 @@ public final class EngineMessageReactionListContext {
         }
     }
     
-    init(account: Account, message: EngineMessage, reaction: String?) {
+    init(account: Account, message: EngineMessage, reaction: MessageReaction.Reaction?) {
         let queue = Queue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
@@ -506,7 +506,7 @@ public enum UpdatePeerAllowedReactionsError {
     case generic
 }
 
-func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allowedReactions: [String]) -> Signal<Never, UpdatePeerAllowedReactionsError> {
+func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allowedReactions: [MessageReaction.Reaction]) -> Signal<Never, UpdatePeerAllowedReactionsError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
@@ -515,7 +515,14 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
         guard let inputPeer = inputPeer else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.messages.setChatAvailableReactions(peer: inputPeer, availableReactions: allowedReactions))
+        return account.network.request(Api.functions.messages.setChatAvailableReactions(peer: inputPeer, availableReactions: allowedReactions.compactMap { item -> String? in
+            switch item {
+            case let .builtin(value):
+                return value
+            case .custom:
+                return nil
+            }
+        }))
         |> mapError { _ -> UpdatePeerAllowedReactionsError in
             return .generic
         }
@@ -539,8 +546,8 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
     }
 }
 
-func _internal_updateDefaultReaction(account: Account, reaction: String) -> Signal<Never, NoError> {
-    return account.network.request(Api.functions.messages.setDefaultReaction(reaction: reaction))
+func _internal_updateDefaultReaction(account: Account, reaction: MessageReaction.Reaction) -> Signal<Never, NoError> {
+    return account.network.request(Api.functions.messages.setDefaultReaction(reaction: reaction.apiReaction))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .single(.boolFalse)
     }

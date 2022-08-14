@@ -15,12 +15,12 @@ import WebPBinding
 
 private final class QuickReactionSetupControllerArguments {
     let context: AccountContext
-    let selectItem: (String) -> Void
+    let selectItem: (MessageReaction.Reaction) -> Void
     let toggleReaction: () -> Void
     
     init(
         context: AccountContext,
-        selectItem: @escaping (String) -> Void,
+        selectItem: @escaping (MessageReaction.Reaction) -> Void,
         toggleReaction: @escaping () -> Void
     ) {
         self.context = context
@@ -40,14 +40,14 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
         case demoMessage
         case demoDescription
         case itemsHeader
-        case item(String)
+        case item(MessageReaction.Reaction)
     }
     
     case demoHeader(String)
-    case demoMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, availableReactions: AvailableReactions?, reaction: String?)
+    case demoMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction?)
     case demoDescription(String)
     case itemsHeader(String)
-    case item(index: Int, value: String, image: UIImage?, imageIsAnimation: Bool, text: String, isSelected: Bool)
+    case item(index: Int, value: MessageReaction.Reaction, image: UIImage?, imageIsAnimation: Bool, text: String, isSelected: Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -184,7 +184,7 @@ private struct QuickReactionSetupControllerState: Equatable {
 private func quickReactionSetupControllerEntries(
     presentationData: PresentationData,
     availableReactions: AvailableReactions?,
-    images: [String: (image: UIImage, isAnimation: Bool)],
+    images: [MessageReaction.Reaction: (image: UIImage, isAnimation: Bool)],
     reactionSettings: ReactionSettings,
     state: QuickReactionSetupControllerState,
     isPremium: Bool
@@ -275,9 +275,9 @@ public func quickReactionSetupController(
         return reactionSettings
     }
     
-    let images: Signal<[String: (image: UIImage, isAnimation: Bool)], NoError> = context.engine.stickers.availableReactions()
-    |> mapToSignal { availableReactions -> Signal<[String: (image: UIImage, isAnimation: Bool)], NoError> in
-        var signals: [Signal<(String, (image: UIImage, isAnimation: Bool)?), NoError>] = []
+    let images: Signal<[MessageReaction.Reaction: (image: UIImage, isAnimation: Bool)], NoError> = context.engine.stickers.availableReactions()
+    |> mapToSignal { availableReactions -> Signal<[MessageReaction.Reaction: (image: UIImage, isAnimation: Bool)], NoError> in
+        var signals: [Signal<(MessageReaction.Reaction, (image: UIImage, isAnimation: Bool)?), NoError>] = []
         
         if let availableReactions = availableReactions {
             for availableReaction in availableReactions.reactions {
@@ -285,8 +285,8 @@ public func quickReactionSetupController(
                     continue
                 }
                 if let centerAnimation = availableReaction.centerAnimation {
-                    let signal: Signal<(String, (image: UIImage, isAnimation: Bool)?), NoError> = reactionStaticImage(context: context, animation: centerAnimation, pixelSize: CGSize(width: 72.0 * 2.0, height: 72.0 * 2.0))
-                    |> map { data -> (String, (image: UIImage, isAnimation: Bool)?) in
+                    let signal: Signal<(MessageReaction.Reaction, (image: UIImage, isAnimation: Bool)?), NoError> = reactionStaticImage(context: context, animation: centerAnimation, pixelSize: CGSize(width: 72.0 * 2.0, height: 72.0 * 2.0))
+                    |> map { data -> (MessageReaction.Reaction, (image: UIImage, isAnimation: Bool)?) in
                         guard data.isComplete else {
                             return (availableReaction.value, nil)
                         }
@@ -300,8 +300,8 @@ public func quickReactionSetupController(
                     }
                     signals.append(signal)
                 } else {
-                    let signal: Signal<(String, (image: UIImage, isAnimation: Bool)?), NoError> = context.account.postbox.mediaBox.resourceData(availableReaction.staticIcon.resource)
-                    |> map { data -> (String, (image: UIImage, isAnimation: Bool)?) in
+                    let signal: Signal<(MessageReaction.Reaction, (image: UIImage, isAnimation: Bool)?), NoError> = context.account.postbox.mediaBox.resourceData(availableReaction.staticIcon.resource)
+                    |> map { data -> (MessageReaction.Reaction, (image: UIImage, isAnimation: Bool)?) in
                         guard data.complete else {
                             return (availableReaction.value, nil)
                         }
@@ -320,8 +320,8 @@ public func quickReactionSetupController(
         }
         
         return combineLatest(queue: .mainQueue(), signals)
-        |> map { values -> [String: (image: UIImage, isAnimation: Bool)] in
-            var dict: [String: (image: UIImage, isAnimation: Bool)] = [:]
+        |> map { values -> [MessageReaction.Reaction: (image: UIImage, isAnimation: Bool)] in
+            var dict: [MessageReaction.Reaction: (image: UIImage, isAnimation: Bool)] = [:]
             for (key, image) in values {
                 if let image = image {
                     dict[key] = image

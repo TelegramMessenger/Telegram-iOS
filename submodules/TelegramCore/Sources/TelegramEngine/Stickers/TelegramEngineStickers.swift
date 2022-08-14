@@ -105,7 +105,7 @@ public extension TelegramEngine {
             return _internal_cachedAvailableReactions(postbox: self.account.postbox)
         }
         
-        public func updateQuickReaction(reaction: String) -> Signal<Never, NoError> {
+        public func updateQuickReaction(reaction: MessageReaction.Reaction) -> Signal<Never, NoError> {
             let _ = updateReactionSettingsInteractively(postbox: self.account.postbox, { settings in
                 var settings = settings
                 settings.quickReaction = reaction

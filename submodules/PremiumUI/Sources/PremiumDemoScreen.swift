@@ -569,7 +569,7 @@ private final class DemoSheetContent: CombinedComponent {
                 stickerOverrideMessages
             )
             |> map { reactions, items, data, reactionOverrideMessages, stickerOverrideMessages -> ([AvailableReactions.Reaction], [TelegramMediaFile], Bool?, PremiumPromoConfiguration?) in
-                var reactionOverrides: [String: TelegramMediaFile] = [:]
+                var reactionOverrides: [MessageReaction.Reaction: TelegramMediaFile] = [:]
                 for item in accountSpecificReactionOverrides {
                     if let maybeMessage = reactionOverrideMessages[item.messageId], let message = maybeMessage {
                         for media in message.media {
@@ -580,7 +580,7 @@ private final class DemoSheetContent: CombinedComponent {
                     }
                 }
                 
-                var stickerOverrides: [String: TelegramMediaFile] = [:]
+                var stickerOverrides: [MessageReaction.Reaction: TelegramMediaFile] = [:]
                 for item in accountSpecificStickerOverrides {
                     if let maybeMessage = stickerOverrideMessages[item.messageId], let message = maybeMessage {
                         for media in message.media {
@@ -623,7 +623,7 @@ private final class DemoSheetContent: CombinedComponent {
                         for attribute in file.attributes {
                             switch attribute {
                             case let .Sticker(displayText, _, _):
-                                if let replacementFile = stickerOverrides[displayText], let dimensions = replacementFile.dimensions {
+                                if let replacementFile = stickerOverrides[.builtin(displayText)], let dimensions = replacementFile.dimensions {
                                     let _ = dimensions
                                     return TelegramMediaFile(
                                         fileId: file.fileId,

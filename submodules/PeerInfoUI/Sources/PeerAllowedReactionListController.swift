@@ -15,12 +15,12 @@ import PresentationDataUtils
 private final class PeerAllowedReactionListControllerArguments {
     let context: AccountContext
     let toggleAll: () -> Void
-    let toggleItem: (String) -> Void
+    let toggleItem: (MessageReaction.Reaction) -> Void
     
     init(
         context: AccountContext,
         toggleAll: @escaping () -> Void,
-        toggleItem: @escaping (String) -> Void
+        toggleItem: @escaping (MessageReaction.Reaction) -> Void
     ) {
         self.context = context
         self.toggleAll = toggleAll
@@ -38,14 +38,14 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
         case allowAll
         case allowAllInfo
         case itemsHeader
-        case item(String)
+        case item(MessageReaction.Reaction)
     }
     
     case allowAll(text: String, isEnabled: Bool)
     case allowAllInfo(String)
     
     case itemsHeader(String)
-    case item(index: Int, value: String, availableReactions: AvailableReactions?, reaction: String, text: String, isEnabled: Bool)
+    case item(index: Int, value: MessageReaction.Reaction, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction, text: String, isEnabled: Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -145,7 +145,7 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
 }
 
 private struct PeerAllowedReactionListControllerState: Equatable {
-    var updatedAllowedReactions: Set<String>? = nil
+    var updatedAllowedReactions: Set<MessageReaction.Reaction>? = nil
 }
 
 private func peerAllowedReactionListControllerEntries(

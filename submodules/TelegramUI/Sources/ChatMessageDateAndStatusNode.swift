@@ -51,7 +51,7 @@ private final class StatusReactionNode: ASDisplayNode {
     private let iconImageDisposable = MetaDisposable()
     
     private var theme: PresentationTheme?
-    private var value: String?
+    private var value: MessageReaction.Reaction?
     private var isSelected: Bool?
     
     override init() {
@@ -66,7 +66,7 @@ private final class StatusReactionNode: ASDisplayNode {
         self.iconImageDisposable.dispose()
     }
     
-    func update(context: AccountContext, type: ChatMessageDateAndStatusType, value: String, file: TelegramMediaFile?, isSelected: Bool, count: Int, theme: PresentationTheme, wallpaper: TelegramWallpaper, animated: Bool) {
+    func update(context: AccountContext, type: ChatMessageDateAndStatusType, value: MessageReaction.Reaction, file: TelegramMediaFile?, isSelected: Bool, count: Int, theme: PresentationTheme, wallpaper: TelegramWallpaper, animated: Bool) {
         if self.value != value {
             self.value = value
             
@@ -147,7 +147,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         var constrainedSize: CGSize
         var availableReactions: AvailableReactions?
         var reactions: [MessageReaction]
-        var reactionPeers: [(String, EnginePeer)]
+        var reactionPeers: [(MessageReaction.Reaction, EnginePeer)]
         var replyCount: Int
         var isPinned: Bool
         var hasAutoremove: Bool
@@ -164,7 +164,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             constrainedSize: CGSize,
             availableReactions: AvailableReactions?,
             reactions: [MessageReaction],
-            reactionPeers: [(String, EnginePeer)],
+            reactionPeers: [(MessageReaction.Reaction, EnginePeer)],
             replyCount: Int,
             isPinned: Bool,
             hasAutoremove: Bool,
@@ -196,7 +196,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var clockMinNode: ASImageNode?
     private let dateNode: TextNode
     private var impressionIcon: ASImageNode?
-    private var reactionNodes: [String: StatusReactionNode] = [:]
+    private var reactionNodes: [MessageReaction.Reaction: StatusReactionNode] = [:]
     private let reactionButtonsContainer = ReactionButtonsAsyncLayoutContainer()
     private var reactionCountNode: TextNode?
     private var reactionButtonNode: HighlightTrackingButtonNode?
@@ -225,8 +225,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             }
         }
     }
-    var reactionSelected: ((String) -> Void)?
-    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, String) -> Void)?
+    var reactionSelected: ((MessageReaction.Reaction) -> Void)?
+    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
     override init() {
         self.dateNode = TextNode()
@@ -1013,7 +1013,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         
                         var reactionOffset: CGFloat = leftOffset + leftInset - reactionInset + backgroundInsets.left
                         if arguments.layoutInput.displayInlineReactions {
-                            var validReactions = Set<String>()
+                            var validReactions = Set<MessageReaction.Reaction>()
                             for reaction in arguments.reactions.sorted(by: { lhs, rhs in
                                 if lhs.isSelected != rhs.isSelected {
                                     if lhs.isSelected {
@@ -1022,7 +1022,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                         return false
                                     }
                                 } else {
-                                    return lhs.value < rhs.value
+                                    return lhs.count > rhs.count
                                 }
                             }) {
                                 let node: StatusReactionNode
@@ -1066,7 +1066,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 reactionOffset += reactionTrailingSpacing
                             }
                             
-                            var removeIds: [String] = []
+                            var removeIds: [MessageReaction.Reaction] = []
                             for (id, node) in strongSelf.reactionNodes {
                                 if !validReactions.contains(id) {
                                     removeIds.append(id)
@@ -1189,7 +1189,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    func reactionView(value: String) -> UIView? {
+    func reactionView(value: MessageReaction.Reaction) -> UIView? {
         for (id, node) in self.reactionNodes {
             if id == value {
                 return node.iconView

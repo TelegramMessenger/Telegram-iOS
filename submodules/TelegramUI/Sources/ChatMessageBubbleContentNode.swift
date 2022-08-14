@@ -217,7 +217,7 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     func unreadMessageRangeUpdated() {
     }
     
-    func reactionTargetView(value: String) -> UIView? {
+    func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         return nil
     }
     

@@ -794,7 +794,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                             continue
                                         }
                                         
-                                        subActions.append(.action(ContextMenuActionItem(text: reaction.value, icon: { _ in
+                                        guard case let .builtin(emojiValue) = reaction.value else {
+                                            continue
+                                        }
+                                        
+                                        subActions.append(.action(ContextMenuActionItem(text: emojiValue, icon: { _ in
                                             return nil
                                         }, action: { _, f in
                                             let _ = updateExperimentalUISettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
@@ -874,9 +878,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                 currentItems = []
                                             }
                                             
-                                            currentItems.removeAll(where: { $0.key == stickerName })
+                                            currentItems.removeAll(where: { $0.key == MessageReaction.Reaction.builtin(stickerName) })
                                             currentItems.append(ExperimentalUISettings.AccountReactionOverrides.Item(
-                                                key: stickerName,
+                                                key: .builtin(stickerName),
                                                 messageId: message.id,
                                                 mediaId: file.fileId
                                             ))

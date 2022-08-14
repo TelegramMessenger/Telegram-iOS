@@ -21,7 +21,7 @@ public final class AvailableReactions: Equatable, Codable {
         
         public let isEnabled: Bool
         public let isPremium: Bool
-        public let value: String
+        public let value: MessageReaction.Reaction
         public let title: String
         public let staticIcon: TelegramMediaFile
         public let appearAnimation: TelegramMediaFile
@@ -34,7 +34,7 @@ public final class AvailableReactions: Equatable, Codable {
         public init(
             isEnabled: Bool,
             isPremium: Bool,
-            value: String,
+            value: MessageReaction.Reaction,
             title: String,
             staticIcon: TelegramMediaFile,
             appearAnimation: TelegramMediaFile,
@@ -100,7 +100,7 @@ public final class AvailableReactions: Equatable, Codable {
             self.isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
             self.isPremium = try container.decodeIfPresent(Bool.self, forKey: .isPremium) ?? false
             
-            self.value = try container.decode(String.self, forKey: .value)
+            self.value = .builtin(try container.decode(String.self, forKey: .value))
             self.title = try container.decode(String.self, forKey: .title)
             
             let staticIconData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .staticIcon)
@@ -137,7 +137,12 @@ public final class AvailableReactions: Equatable, Codable {
             try container.encode(self.isEnabled, forKey: .isEnabled)
             try container.encode(self.isPremium, forKey: .isPremium)
             
-            try container.encode(self.value, forKey: .value)
+            switch self.value {
+            case let .builtin(value):
+                try container.encode(value, forKey: .value)
+            case .custom:
+                break
+            }
             try container.encode(self.title, forKey: .title)
             
             try container.encode(PostboxEncoder().encodeObjectToRawData(self.staticIcon), forKey: .staticIcon)
@@ -221,7 +226,7 @@ private extension AvailableReactions.Reaction {
             self.init(
                 isEnabled: isEnabled,
                 isPremium: isPremium,
-                value: reaction,
+                value: .builtin(reaction),
                 title: title,
                 staticIcon: staticIconFile,
                 appearAnimation: appearAnimationFile,

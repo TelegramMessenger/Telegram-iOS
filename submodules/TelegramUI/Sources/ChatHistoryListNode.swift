@@ -314,7 +314,7 @@ private final class ChatHistoryTransactionOpaqueState {
     }
 }
 
-private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?, isCopyProtectionEnabled: Bool, availableReactions: AvailableReactions?, defaultReaction: String?, isPremium: Bool) -> ChatMessageItemAssociatedData {
+private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?, isCopyProtectionEnabled: Bool, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool) -> ChatMessageItemAssociatedData {
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
     var channelDiscussionGroup: ChatMessageItemAssociatedData.ChannelDiscussionGroupStatus = .unknown
@@ -983,7 +983,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let availableReactions = context.engine.stickers.availableReactions()
         
         let defaultReaction = context.account.postbox.preferencesView(keys: [PreferencesKeys.reactionSettings])
-        |> map { preferencesView -> String? in
+        |> map { preferencesView -> MessageReaction.Reaction? in
             let reactionSettings: ReactionSettings
             if let entry = preferencesView.values[PreferencesKeys.reactionSettings], let value = entry.get(ReactionSettings.self) {
                 reactionSettings = value
@@ -2338,9 +2338,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
 
         let completion: (Bool, ListViewDisplayedItemRange) -> Void = { [weak self] wasTransformed, visibleRange in
             if let strongSelf = self {
-                var newIncomingReactions: [MessageId: (value: String, isLarge: Bool)] = [:]
+                var newIncomingReactions: [MessageId: (value: MessageReaction.Reaction, isLarge: Bool)] = [:]
                 if case .peer = strongSelf.chatLocation, let previousHistoryView = strongSelf.historyView {
-                    var updatedIncomingReactions: [MessageId: (value: String, isLarge: Bool)] = [:]
+                    var updatedIncomingReactions: [MessageId: (value: MessageReaction.Reaction, isLarge: Bool)] = [:]
                     for entry in transition.historyView.filteredEntries {
                         switch entry {
                         case let .MessageEntry(message, _, _, _, _, _):
@@ -2375,7 +2375,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         switch entry {
                         case let .MessageEntry(message, _, _, _, _, _):
                             if let updatedReaction = updatedIncomingReactions[message.id] {
-                                var previousReaction: String?
+                                var previousReaction: MessageReaction.Reaction?
                                 if let reactions = message.reactionsAttribute {
                                     for recentPeer in reactions.recentPeers {
                                         if recentPeer.isUnseen {
@@ -2390,7 +2390,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         case let .MessageGroupEntry(_, messages, _):
                             for message in messages {
                                 if let updatedReaction = updatedIncomingReactions[message.0.id] {
-                                    var previousReaction: String?
+                                    var previousReaction: MessageReaction.Reaction?
                                     if let reactions = message.0.reactionsAttribute {
                                         for recentPeer in reactions.recentPeers {
                                             if recentPeer.isUnseen {
@@ -2693,7 +2693,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 return
             }
             
-            var selectedReaction: (String, EnginePeer?, Bool)?
+            var selectedReaction: (MessageReaction.Reaction, EnginePeer?, Bool)?
             let recentPeers = forceMapping[item.content.firstMessage.id] ?? reactionsAttribute.recentPeers
             for recentPeer in recentPeers {
                 if recentPeer.isUnseen {

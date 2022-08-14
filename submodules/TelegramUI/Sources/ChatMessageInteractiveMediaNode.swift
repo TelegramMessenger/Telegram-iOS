@@ -69,7 +69,7 @@ struct ChatMessageDateAndStatus {
     var edited: Bool
     var viewCount: Int?
     var dateReactions: [MessageReaction]
-    var dateReactionPeers: [(String, EnginePeer)]
+    var dateReactionPeers: [(MessageReaction.Reaction, EnginePeer)]
     var dateReplies: Int
     var isPinned: Bool
     var dateText: String

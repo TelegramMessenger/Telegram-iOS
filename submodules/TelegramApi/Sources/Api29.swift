@@ -4416,13 +4416,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getMessageReactionsList(flags: Int32, peer: Api.InputPeer, id: Int32, reaction: String?, offset: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.MessageReactionsList>) {
+                static func getMessageReactionsList(flags: Int32, peer: Api.InputPeer, id: Int32, reaction: Api.Reaction?, offset: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.MessageReactionsList>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-521245833)
+                    buffer.appendInt32(1176190792)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(id, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(reaction!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {reaction!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(offset!, buffer: buffer, boxed: false)}
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "messages.getMessageReactionsList", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("id", String(describing: id)), ("reaction", String(describing: reaction)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.MessageReactionsList? in
@@ -5726,13 +5726,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, reaction: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, reaction: Api.Reaction?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(627641572)
+                    buffer.appendInt32(1526634933)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(reaction!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {reaction!.serialize(buffer, true)}
                     return (FunctionDescription(name: "messages.sendReaction", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("reaction", String(describing: reaction))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
@@ -5930,10 +5930,10 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func setDefaultReaction(reaction: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func setDefaultReaction(reaction: Api.Reaction) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-647969580)
-                    serializeString(reaction, buffer: buffer, boxed: false)
+                    buffer.appendInt32(1330094102)
+                    reaction.serialize(buffer, true)
                     return (FunctionDescription(name: "messages.setDefaultReaction", parameters: [("reaction", String(describing: reaction))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?

@@ -14,7 +14,7 @@ public class ItemListReactionItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let presentationData: ItemListPresentationData
     let availableReactions: AvailableReactions?
-    let reaction: String
+    let reaction: MessageReaction.Reaction
     let title: String
     let value: Bool
     let enabled: Bool
@@ -27,7 +27,7 @@ public class ItemListReactionItem: ListViewItem, ItemListItem {
         context: AccountContext,
         presentationData: ItemListPresentationData,
         availableReactions: AvailableReactions?,
-        reaction: String,
+        reaction: MessageReaction.Reaction,
         title: String,
         value: Bool,
         enabled: Bool = true,

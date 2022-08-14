@@ -65,7 +65,7 @@ public final class ReactionImageNode: ASDisplayNode {
     
     private let iconNode: ASImageNode
     
-    public init(context: AccountContext, availableReactions: AvailableReactions?, reaction: String, displayPixelSize: CGSize) {
+    public init(context: AccountContext, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction, displayPixelSize: CGSize) {
         self.iconNode = ASImageNode()
         
         var file: TelegramMediaFile?
