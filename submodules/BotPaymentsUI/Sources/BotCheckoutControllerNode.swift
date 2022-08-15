@@ -1299,8 +1299,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             }
 
             if success {
-                strongSelf.dismissAnimated()
                 strongSelf.completed(currencyValue, receiptMessageId)
+                strongSelf.dismissAnimated()
             } else {
                 strongSelf.dismissAnimated()
             }
