@@ -514,6 +514,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         textInputNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.textInputNode = textInputNode
         
+        textInputNode.textView.inputAssistantItem.leadingBarButtonGroups = []
+        textInputNode.textView.inputAssistantItem.trailingBarButtonGroups = []
+        
         if let presentationInterfaceState = self.presentationInterfaceState {
             refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
             textInputNode.textContainerInset = calculateTextFieldRealInsets(presentationInterfaceState)

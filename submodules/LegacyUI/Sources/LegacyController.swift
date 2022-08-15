@@ -287,6 +287,12 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
                 safeInsets.bottom = 21.0
             } else if validLayout.intrinsicInsets.bottom.isEqual(to: 34.0) {
                 safeInsets.bottom = 34.0
+            } else {
+                if let knownSafeInset = validLayout.deviceMetrics.onScreenNavigationHeight(inLandscape: validLayout.size.width > validLayout.size.height, systemOnScreenNavigationHeight: nil) {
+                    if knownSafeInset > 0.0 {
+                        safeInsets.bottom = knownSafeInset
+                    }
+                }
             }
             if controller.navigationPresentation == .modal {
                 safeInsets.top = 0.0

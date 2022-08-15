@@ -1482,7 +1482,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let inputBackgroundInset: CGFloat
         if cleanInsets.bottom < insets.bottom {
-            inputBackgroundInset = 0.0
+            if case .regular = layout.metrics.widthClass, let inputHeight = layout.inputHeight, inputHeight < 88.0 {
+                inputBackgroundInset = insets.bottom
+            } else {
+                inputBackgroundInset = 0.0
+            }
         } else {
             inputBackgroundInset = cleanInsets.bottom
         }
