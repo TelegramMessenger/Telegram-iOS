@@ -392,7 +392,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         return false
     }
     
-    override func reactionTargetView(value: String) -> UIView? {
+    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.interactiveImageNode.dateAndStatusNode.isHidden {
             return self.interactiveImageNode.dateAndStatusNode.reactionView(value: value)
         }

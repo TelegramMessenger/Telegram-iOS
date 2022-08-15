@@ -35,16 +35,16 @@ public final class ReactionIconView: PortalSourceView {
 private final class ReactionImageCache {
     static let shared = ReactionImageCache()
     
-    private var images: [String: UIImage] = [:]
+    private var images: [MessageReaction.Reaction: UIImage] = [:]
     
     init() {
     }
     
-    func get(reaction: String) -> UIImage? {
+    func get(reaction: MessageReaction.Reaction) -> UIImage? {
         return self.images[reaction]
     }
     
-    func put(reaction: String, image: UIImage) {
+    func put(reaction: MessageReaction.Reaction, image: UIImage) {
         self.images[reaction] = image
     }
 }
@@ -716,11 +716,11 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
 
 public final class ReactionButtonComponent: Equatable {
     public struct Reaction: Equatable {
-        public var value: String
+        public var value: MessageReaction.Reaction
         public var centerAnimation: TelegramMediaFile?
         public var legacyIcon: TelegramMediaFile?
         
-        public init(value: String, centerAnimation: TelegramMediaFile?, legacyIcon: TelegramMediaFile?) {
+        public init(value: MessageReaction.Reaction, centerAnimation: TelegramMediaFile?, legacyIcon: TelegramMediaFile?) {
             self.value = value
             self.centerAnimation = centerAnimation
             self.legacyIcon = legacyIcon
@@ -771,7 +771,7 @@ public final class ReactionButtonComponent: Equatable {
     public let avatarPeers: [EnginePeer]
     public let count: Int
     public let isSelected: Bool
-    public let action: (String) -> Void
+    public let action: (MessageReaction.Reaction) -> Void
 
     public init(
         context: AccountContext,
@@ -780,7 +780,7 @@ public final class ReactionButtonComponent: Equatable {
         avatarPeers: [EnginePeer],
         count: Int,
         isSelected: Bool,
-        action: @escaping (String) -> Void
+        action: @escaping (MessageReaction.Reaction) -> Void
     ) {
         self.context = context
         self.colors = colors
@@ -888,7 +888,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
     
     public struct ApplyResult {
         public struct Item {
-            public var value: String
+            public var value: MessageReaction.Reaction
             public var node: ReactionNodePool.Item
             public var size: CGSize
         }
@@ -897,7 +897,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
         public var removedNodes: [ReactionNodePool.Item]
     }
     
-    public private(set) var buttons: [String: ReactionNodePool.Item] = [:]
+    public private(set) var buttons: [MessageReaction.Reaction: ReactionNodePool.Item] = [:]
     
     public init() {
     }
@@ -910,15 +910,15 @@ public final class ReactionButtonsAsyncLayoutContainer {
     
     public func update(
         context: AccountContext,
-        action: @escaping (String) -> Void,
+        action: @escaping (MessageReaction.Reaction) -> Void,
         reactions: [ReactionButtonsAsyncLayoutContainer.Reaction],
         colors: ReactionButtonComponent.Colors,
         constrainedWidth: CGFloat
     ) -> Result {
         var items: [Result.Item] = []
-        var applyItems: [(key: String, size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation) -> ReactionNodePool.Item)] = []
+        var applyItems: [(key: MessageReaction.Reaction, size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation) -> ReactionNodePool.Item)] = []
         
-        var validIds = Set<String>()
+        var validIds = Set<MessageReaction.Reaction>()
         for reaction in reactions.sorted(by: { lhs, rhs in
             var lhsCount = lhs.count
             if lhs.isSelected {
@@ -931,7 +931,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
             if lhsCount != rhsCount {
                 return lhsCount > rhsCount
             }
-            return lhs.reaction.value < rhs.reaction.value
+            return false
         }) {
             validIds.insert(reaction.reaction.value)
             
@@ -962,7 +962,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
             applyItems.append((reaction.reaction.value, size, apply))
         }
         
-        var removeIds: [String] = []
+        var removeIds: [MessageReaction.Reaction] = []
         for (id, _) in self.buttons {
             if !validIds.contains(id) {
                 removeIds.append(id)

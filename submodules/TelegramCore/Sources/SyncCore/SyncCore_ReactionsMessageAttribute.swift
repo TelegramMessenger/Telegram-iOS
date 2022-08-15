@@ -1,37 +1,95 @@
 import Postbox
+import TelegramApi
 
 public struct MessageReaction: Equatable, PostboxCoding {
-    public var value: String
+    public enum Reaction: Hashable, Codable {
+        case builtin(String)
+        case custom(Int64)
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: StringCodingKey.self)
+            
+            if let value = try container.decodeIfPresent(String.self, forKey: "v") {
+                self = .builtin(value)
+            } else {
+                self = .custom(try container.decode(Int64.self, forKey: "cfid"))
+            }
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: StringCodingKey.self)
+            
+            switch self {
+            case let .builtin(value):
+                try container.encode(value, forKey: "v")
+            case let .custom(fileId):
+                try container.encode(fileId, forKey: "cfid")
+            }
+        }
+    }
+    
+    public var value: Reaction
     public var count: Int32
     public var isSelected: Bool
     
-    public init(value: String, count: Int32, isSelected: Bool) {
+    public init(value: Reaction, count: Int32, isSelected: Bool) {
         self.value = value
         self.count = count
         self.isSelected = isSelected
     }
     
     public init(decoder: PostboxDecoder) {
-        self.value = decoder.decodeStringForKey("v", orElse: "")
+        if let value = decoder.decodeOptionalStringForKey("v") {
+            self.value = .builtin(value)
+        } else {
+            self.value = .custom(decoder.decodeInt64ForKey("cfid", orElse: 0))
+        }
         self.count = decoder.decodeInt32ForKey("c", orElse: 0)
         self.isSelected = decoder.decodeInt32ForKey("s", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.value, forKey: "v")
+        switch self.value {
+        case let .builtin(value):
+            encoder.encodeString(value, forKey: "v")
+        case let .custom(fileId):
+            encoder.encodeInt64(fileId, forKey: "cfid")
+        }
         encoder.encodeInt32(self.count, forKey: "c")
         encoder.encodeInt32(self.isSelected ? 1 : 0, forKey: "s")
     }
 }
 
+extension MessageReaction.Reaction {
+    init?(apiReaction: Api.Reaction) {
+        switch apiReaction {
+        case .reactionEmpty:
+            return nil
+        case let .reactionEmoji(emoticon):
+            self = .builtin(emoticon)
+        case let .reactionCustomEmoji(documentId):
+            self = .custom(documentId)
+        }
+    }
+    
+    var apiReaction: Api.Reaction {
+        switch self {
+        case let .builtin(value):
+            return .reactionEmoji(emoticon: value)
+        case let .custom(fileId):
+            return .reactionCustomEmoji(documentId: fileId)
+        }
+    }
+}
+
 public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
     public struct RecentPeer: Equatable, PostboxCoding {
-        public var value: String
+        public var value: MessageReaction.Reaction
         public var isLarge: Bool
         public var isUnseen: Bool
         public var peerId: PeerId
         
-        public init(value: String, isLarge: Bool, isUnseen: Bool, peerId: PeerId) {
+        public init(value: MessageReaction.Reaction, isLarge: Bool, isUnseen: Bool, peerId: PeerId) {
             self.value = value
             self.isLarge = isLarge
             self.isUnseen = isUnseen
@@ -39,14 +97,23 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         }
         
         public init(decoder: PostboxDecoder) {
-            self.value = decoder.decodeStringForKey("v", orElse: "")
+            if let value = decoder.decodeOptionalStringForKey("v") {
+                self.value = .builtin(value)
+            } else {
+                self.value = .custom(decoder.decodeInt64ForKey("cfid", orElse: 0))
+            }
             self.isLarge = decoder.decodeInt32ForKey("l", orElse: 0) != 0
             self.isUnseen = decoder.decodeInt32ForKey("u", orElse: 0) != 0
             self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         }
         
         public func encode(_ encoder: PostboxEncoder) {
-            encoder.encodeString(self.value, forKey: "v")
+            switch self.value {
+            case let .builtin(value):
+                encoder.encodeString(value, forKey: "v")
+            case let .custom(fileId):
+                encoder.encodeInt64(fileId, forKey: "cfid")
+            }
             encoder.encodeInt32(self.isLarge ? 1 : 0, forKey: "l")
             encoder.encodeInt32(self.isUnseen ? 1 : 0, forKey: "u")
             encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
@@ -116,7 +183,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
 
 public final class PendingReactionsMessageAttribute: MessageAttribute {
     public let accountPeerId: PeerId?
-    public let value: String?
+    public let value: MessageReaction.Reaction?
     public let isLarge: Bool
     
     public var associatedPeerIds: [PeerId] {
@@ -127,7 +194,7 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
         }
     }
     
-    public init(accountPeerId: PeerId?, value: String?, isLarge: Bool) {
+    public init(accountPeerId: PeerId?, value: MessageReaction.Reaction?, isLarge: Bool) {
         self.accountPeerId = accountPeerId
         self.value = value
         self.isLarge = isLarge
@@ -135,7 +202,13 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
     
     required public init(decoder: PostboxDecoder) {
         self.accountPeerId = decoder.decodeOptionalInt64ForKey("ap").flatMap(PeerId.init)
-        self.value = decoder.decodeOptionalStringForKey("v")
+        if let value = decoder.decodeOptionalStringForKey("v") {
+            self.value = .builtin(value)
+        } else if let fileId = decoder.decodeOptionalInt64ForKey("cfid") {
+            self.value = .custom(fileId)
+        } else {
+            self.value = nil
+        }
         self.isLarge = decoder.decodeInt32ForKey("l", orElse: 0) != 0
     }
     
@@ -146,7 +219,12 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
             encoder.encodeNil(forKey: "ap")
         }
         if let value = self.value {
-            encoder.encodeString(value, forKey: "v")
+            switch value {
+            case let .builtin(value):
+                encoder.encodeString(value, forKey: "v")
+            case let .custom(fileId):
+                encoder.encodeInt64(fileId, forKey: "cfid")
+            }
         } else {
             encoder.encodeNil(forKey: "v")
         }

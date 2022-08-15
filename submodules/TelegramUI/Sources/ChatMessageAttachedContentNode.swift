@@ -1164,7 +1164,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         }
     }
     
-    func reactionTargetView(value: String) -> UIView? {
+    func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.statusNode.isHidden {
             if let result = self.statusNode.reactionView(value: value) {
                 return result

@@ -121,17 +121,17 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         self.context = context
         self.theme = theme
         
-        var reactionMap: [String: AvailableReactions.Reaction] = [:]
+        var reactionMap: [MessageReaction.Reaction: AvailableReactions.Reaction] = [:]
         for reaction in reactions {
             reactionMap[reaction.value] = reaction
         }
         
-        var addedReactions = Set<String>()
+        var addedReactions = Set<MessageReaction.Reaction>()
         var sortedReactions: [AvailableReactions.Reaction] = []
         for emoji in order {
-            if let reaction = reactionMap[emoji] {
+            if let reaction = reactionMap[.builtin(emoji)] {
                 sortedReactions.append(reaction)
-                addedReactions.insert(emoji)
+                addedReactions.insert(.builtin(emoji))
             }
         }
         

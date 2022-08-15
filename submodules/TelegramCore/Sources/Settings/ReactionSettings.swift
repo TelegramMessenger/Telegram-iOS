@@ -2,11 +2,11 @@ import Postbox
 import SwiftSignalKit
 
 public struct ReactionSettings: Equatable, Codable {
-    public static var `default` = ReactionSettings(quickReaction: "👍")
+    public static var `default` = ReactionSettings(quickReaction: .builtin("👍"))
 
-    public var quickReaction: String
+    public var quickReaction: MessageReaction.Reaction
 
-    public init(quickReaction: String) {
+    public init(quickReaction: MessageReaction.Reaction) {
         self.quickReaction = quickReaction
     }
 }

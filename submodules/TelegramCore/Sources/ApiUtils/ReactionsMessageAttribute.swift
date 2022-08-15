@@ -8,20 +8,28 @@ extension ReactionsMessageAttribute {
         case let .messageReactions(flags, results, recentReactions):
             let min = (flags & (1 << 0)) != 0
             let canViewList = (flags & (1 << 2)) != 0
-            var reactions = results.map { result -> MessageReaction in
+            var reactions = results.compactMap { result -> MessageReaction? in
                 switch result {
                 case let .reactionCount(flags, reaction, count):
-                    return MessageReaction(value: reaction, count: count, isSelected: (flags & (1 << 0)) != 0)
+                    if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
+                        return MessageReaction(value: reaction, count: count, isSelected: (flags & (1 << 0)) != 0)
+                    } else {
+                        return nil
+                    }
                 }
             }
             let parsedRecentReactions: [ReactionsMessageAttribute.RecentPeer]
             if let recentReactions = recentReactions {
-                parsedRecentReactions = recentReactions.map { recentReaction -> ReactionsMessageAttribute.RecentPeer in
+                parsedRecentReactions = recentReactions.compactMap { recentReaction -> ReactionsMessageAttribute.RecentPeer? in
                     switch recentReaction {
                     case let .messagePeerReaction(flags, peerId, reaction):
                         let isLarge = (flags & (1 << 0)) != 0
                         let isUnseen = (flags & (1 << 1)) != 0
-                        return ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: isLarge, isUnseen: isUnseen, peerId: peerId.peerId)
+                        if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
+                            return ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: isLarge, isUnseen: isUnseen, peerId: peerId.peerId)
+                        } else {
+                            return nil
+                        }
                     }
                 }
             } else {
@@ -29,7 +37,7 @@ extension ReactionsMessageAttribute {
             }
             
             if min {
-                var currentSelectedReaction: String?
+                var currentSelectedReaction: MessageReaction.Reaction?
                 for reaction in self.reactions {
                     if reaction.isSelected {
                         currentSelectedReaction = reaction.value
@@ -49,12 +57,12 @@ extension ReactionsMessageAttribute {
     }
 }
 
-public func mergedMessageReactionsAndPeers(message: Message) -> (reactions: [MessageReaction], peers: [(String, EnginePeer)]) {
+public func mergedMessageReactionsAndPeers(message: Message) -> (reactions: [MessageReaction], peers: [(MessageReaction.Reaction, EnginePeer)]) {
     guard let attribute = mergedMessageReactions(attributes: message.attributes) else {
         return ([], [])
     }
     
-    var recentPeers = attribute.recentPeers.compactMap { recentPeer -> (String, EnginePeer)? in
+    var recentPeers = attribute.recentPeers.compactMap { recentPeer -> (MessageReaction.Reaction, EnginePeer)? in
         if let peer = message.peers[recentPeer.peerId] {
             return (recentPeer.value, EnginePeer(peer))
         } else {
@@ -137,12 +145,16 @@ extension ReactionsMessageAttribute {
             let canViewList = (flags & (1 << 2)) != 0
             let parsedRecentReactions: [ReactionsMessageAttribute.RecentPeer]
             if let recentReactions = recentReactions {
-                parsedRecentReactions = recentReactions.map { recentReaction -> ReactionsMessageAttribute.RecentPeer in
+                parsedRecentReactions = recentReactions.compactMap { recentReaction -> ReactionsMessageAttribute.RecentPeer? in
                     switch recentReaction {
                     case let .messagePeerReaction(flags, peerId, reaction):
                         let isLarge = (flags & (1 << 0)) != 0
                         let isUnseen = (flags & (1 << 1)) != 0
-                        return ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: isLarge, isUnseen: isUnseen, peerId: peerId.peerId)
+                        if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
+                            return ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: isLarge, isUnseen: isUnseen, peerId: peerId.peerId)
+                        } else {
+                            return nil
+                        }
                     }
                 }
             } else {
@@ -151,10 +163,14 @@ extension ReactionsMessageAttribute {
             
             self.init(
                 canViewList: canViewList,
-                reactions: results.map { result in
+                reactions: results.compactMap { result -> MessageReaction? in
                     switch result {
                     case let .reactionCount(flags, reaction, count):
-                        return MessageReaction(value: reaction, count: count, isSelected: (flags & (1 << 0)) != 0)
+                        if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
+                            return MessageReaction(value: reaction, count: count, isSelected: (flags & (1 << 0)) != 0)
+                        } else {
+                            return nil
+                        }
                     }
                 },
                 recentPeers: parsedRecentReactions

@@ -166,7 +166,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[476978193] = { return Api.ChatPhoto.parse_chatPhoto($0) }
     dict[935395612] = { return Api.ChatPhoto.parse_chatPhotoEmpty($0) }
     dict[-1973130814] = { return Api.CodeSettings.parse_codeSettings($0) }
-    dict[856375399] = { return Api.Config.parse_config($0) }
+    dict[589653676] = { return Api.Config.parse_config($0) }
     dict[341499403] = { return Api.Contact.parse_contact($0) }
     dict[383348795] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
@@ -477,7 +477,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1618676578] = { return Api.MessageMedia.parse_messageMediaUnsupported($0) }
     dict[784356159] = { return Api.MessageMedia.parse_messageMediaVenue($0) }
     dict[-1557277184] = { return Api.MessageMedia.parse_messageMediaWebPage($0) }
-    dict[1370914559] = { return Api.MessagePeerReaction.parse_messagePeerReaction($0) }
+    dict[-1319698788] = { return Api.MessagePeerReaction.parse_messagePeerReaction($0) }
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
     dict[1328256121] = { return Api.MessageReactions.parse_messageReactions($0) }
     dict[-2083123262] = { return Api.MessageReplies.parse_messageReplies($0) }
@@ -609,7 +609,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1103656293] = { return Api.PrivacyRule.parse_privacyValueDisallowChatParticipants($0) }
     dict[-125240806] = { return Api.PrivacyRule.parse_privacyValueDisallowContacts($0) }
     dict[-463335103] = { return Api.PrivacyRule.parse_privacyValueDisallowUsers($0) }
-    dict[1873957073] = { return Api.ReactionCount.parse_reactionCount($0) }
+    dict[-1992950669] = { return Api.Reaction.parse_reactionCustomEmoji($0) }
+    dict[455247544] = { return Api.Reaction.parse_reactionEmoji($0) }
+    dict[2046153753] = { return Api.Reaction.parse_reactionEmpty($0) }
+    dict[609529328] = { return Api.ReactionCount.parse_reactionCount($0) }
     dict[-1551583367] = { return Api.ReceivedNotifyMessage.parse_receivedNotifyMessage($0) }
     dict[-1294306862] = { return Api.RecentMeUrl.parse_recentMeUrlChat($0) }
     dict[-347535331] = { return Api.RecentMeUrl.parse_recentMeUrlChatInvite($0) }
@@ -1488,6 +1491,8 @@ public extension Api {
             case let _1 as Api.PrivacyKey:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PrivacyRule:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.Reaction:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ReactionCount:
                 _1.serialize(buffer, boxed)

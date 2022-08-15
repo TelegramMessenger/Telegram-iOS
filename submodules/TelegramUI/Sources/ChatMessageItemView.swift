@@ -682,7 +682,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     var accessibilityData: ChatMessageAccessibilityData?
     var safeInsets = UIEdgeInsets()
     
-    var awaitingAppliedReaction: (String?, () -> Void)?
+    var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
     
     public required convenience init() {
         self.init(layerBacked: false)
@@ -868,7 +868,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     func openMessageContextMenu() {
     }
     
-    public func targetReactionView(value: String) -> UIView? {
+    public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         return nil
     }
     

@@ -55,7 +55,7 @@ public final class CachedGroupData: CachedPeerData {
     public let callJoinPeerId: PeerId?
     public let themeEmoticon: String?
     public let inviteRequestsPending: Int32?
-    public let allowedReactions: [String]?
+    public let allowedReactions: [MessageReaction.Reaction]?
     
     public let peerIds: Set<PeerId>
     public let messageIds: Set<MessageId>
@@ -98,7 +98,7 @@ public final class CachedGroupData: CachedPeerData {
         callJoinPeerId: PeerId?,
         themeEmoticon: String?,
         inviteRequestsPending: Int32?,
-        allowedReactions: [String]?
+        allowedReactions: [MessageReaction.Reaction]?
     ) {
         self.participants = participants
         self.exportedInvitation = exportedInvitation
@@ -180,7 +180,11 @@ public final class CachedGroupData: CachedPeerData {
         
         self.inviteRequestsPending = decoder.decodeOptionalInt32ForKey("irp")
         
-        self.allowedReactions = decoder.decodeOptionalStringArrayForKey("allowedReactions")
+        if let allowedReactions = decoder.decodeOptionalStringArrayForKey("allowedReactions") {
+            self.allowedReactions = allowedReactions.map(MessageReaction.Reaction.builtin)
+        } else {
+            self.allowedReactions = nil
+        }
         
         var messageIds = Set<MessageId>()
         if let pinnedMessageId = self.pinnedMessageId {
@@ -273,7 +277,14 @@ public final class CachedGroupData: CachedPeerData {
         }
         
         if let allowedReactions = self.allowedReactions {
-            encoder.encodeStringArray(allowedReactions, forKey: "allowedReactions")
+            encoder.encodeStringArray(allowedReactions.compactMap { item -> String? in
+                switch item {
+                case let .builtin(value):
+                    return value
+                case .custom:
+                    return nil
+                }
+            }, forKey: "allowedReactions")
         } else {
             encoder.encodeNil(forKey: "allowedReactions")
         }
@@ -359,7 +370,7 @@ public final class CachedGroupData: CachedPeerData {
         return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo, activeCall: self.activeCall, autoremoveTimeout: self.autoremoveTimeout, callJoinPeerId: self.callJoinPeerId, themeEmoticon: self.themeEmoticon, inviteRequestsPending: inviteRequestsPending, allowedReactions: self.allowedReactions)
     }
     
-    public func withUpdatedAllowedReactions(_ allowedReactions: [String]?) -> CachedGroupData {
+    public func withUpdatedAllowedReactions(_ allowedReactions: [MessageReaction.Reaction]?) -> CachedGroupData {
         return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo, activeCall: self.activeCall, autoremoveTimeout: self.autoremoveTimeout, callJoinPeerId: self.callJoinPeerId, themeEmoticon: self.themeEmoticon, inviteRequestsPending: self.inviteRequestsPending, allowedReactions: allowedReactions)
     }
 }

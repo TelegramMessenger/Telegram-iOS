@@ -1290,7 +1290,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         
-                        var updatedReaction: String? = reaction.rawValue
+                        var updatedReaction: MessageReaction.Reaction? = reaction.rawValue
                         var isFirst = true
                         for attribute in topMessage.attributes {
                             if let attribute = attribute as? ReactionsMessageAttribute {
@@ -1434,7 +1434,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    var updatedReaction: String?
+                    var updatedReaction: MessageReaction.Reaction?
                     switch reaction {
                     case .default:
                         updatedReaction = item.associatedData.defaultReaction
@@ -1442,7 +1442,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         updatedReaction = value
                     }
                     
-                    var removedReaction: String?
+                    var removedReaction: MessageReaction.Reaction?
                     var messageAlreadyHasThisReaction = false
                     
                     for attribute in message.attributes {
@@ -6531,7 +6531,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             guard item.message.id == messageId else {
                                                 return
                                             }
-                                            var maybeUpdatedReaction: (String, Bool, EnginePeer?)?
+                                            var maybeUpdatedReaction: (MessageReaction.Reaction, Bool, EnginePeer?)?
                                             if let attribute = item.message.reactionsAttribute {
                                                 for recentPeer in attribute.recentPeers {
                                                     if recentPeer.isUnseen {
@@ -16701,7 +16701,7 @@ func canAddMessageReactions(message: Message) -> Bool {
 }
 
 enum AllowedReactions {
-    case set(Set<String>)
+    case set(Set<MessageReaction.Reaction>)
     case all
 }
 

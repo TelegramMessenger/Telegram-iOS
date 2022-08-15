@@ -18,9 +18,9 @@ import ComponentDisplayAdapters
 
 public final class ReactionItem {
     public struct Reaction: Equatable {
-        public var rawValue: String
+        public var rawValue: MessageReaction.Reaction
         
-        public init(rawValue: String) {
+        public init(rawValue: MessageReaction.Reaction) {
             self.rawValue = rawValue
         }
     }
@@ -728,7 +728,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         itemNode.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 1.0) / itemNode.bounds.width, duration: duration, removeOnCompletion: false)
     }
     
-    public func willAnimateOutToReaction(value: String) {
+    public func willAnimateOutToReaction(value: MessageReaction.Reaction) {
         for (_, itemNode) in self.visibleItemNodes {
             if let itemNode = itemNode as? ReactionNode, itemNode.item.reaction.rawValue == value {
                 itemNode.isExtracted = true
@@ -736,7 +736,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+    public func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
         var foundItemNode: ReactionNode?
         for (_, itemNode) in self.visibleItemNodes {
             if let itemNode = itemNode as? ReactionNode, itemNode.item.reaction.rawValue == value {

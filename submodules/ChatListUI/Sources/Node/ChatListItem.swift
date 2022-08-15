@@ -1127,7 +1127,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let attribute = messages.first?._asMessage().reactionsAttribute {
                             loop: for recentPeer in attribute.recentPeers {
                                 if recentPeer.isUnseen {
-                                    messageText = item.presentationData.strings.ChatList_UserReacted(recentPeer.value).string
+                                    switch recentPeer.value {
+                                    case let .builtin(value):
+                                        messageText = item.presentationData.strings.ChatList_UserReacted(value).string
+                                    case .custom:
+                                        break
+                                    }
                                     break loop
                                 }
                             }

@@ -106,7 +106,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     private final class ReactionTabListNode: ASDisplayNode {
         private final class ItemNode: ASDisplayNode {
             let context: AccountContext
-            let reaction: String?
+            let reaction: MessageReaction.Reaction?
             let count: Int
             
             let titleLabelNode: ImmediateTextNode
@@ -115,9 +115,9 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             private var theme: PresentationTheme?
             
-            var action: ((String?) -> Void)?
+            var action: ((MessageReaction.Reaction?) -> Void)?
             
-            init(context: AccountContext, availableReactions: AvailableReactions?, reaction: String?, count: Int) {
+            init(context: AccountContext, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction?, count: Int) {
                 self.context = context
                 self.reaction = reaction
                 self.count = count
@@ -195,13 +195,13 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         private let itemNodes: [ItemNode]
         
         struct ScrollToTabReaction {
-            var value: String?
+            var value: MessageReaction.Reaction?
         }
         var scrollToTabReaction: ScrollToTabReaction?
         
-        var action: ((String?) -> Void)?
+        var action: ((MessageReaction.Reaction?) -> Void)?
         
-        init(context: AccountContext, availableReactions: AvailableReactions?, reactions: [(String?, Int)], message: EngineMessage) {
+        init(context: AccountContext, availableReactions: AvailableReactions?, reactions: [(MessageReaction.Reaction?, Int)], message: EngineMessage) {
             self.scrollNode = ASScrollNode()
             self.scrollNode.canCancelAllTouchesInViews = true
             self.scrollNode.view.delaysContentTouches = false
@@ -236,7 +236,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
         }
         
-        func update(size: CGSize, presentationData: PresentationData, selectedReaction: String?, transition: ContainedViewLayoutTransition) {
+        func update(size: CGSize, presentationData: PresentationData, selectedReaction: MessageReaction.Reaction?, transition: ContainedViewLayoutTransition) {
             let sideInset: CGFloat = 11.0
             let spacing: CGFloat = 0.0
             let verticalInset: CGFloat = 7.0
@@ -352,7 +352,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 let avatarSize: CGFloat = 28.0
                 let sideInset: CGFloat = 16.0
                 
-                let reaction: String? = item.reaction
+                let reaction: MessageReaction.Reaction? = item.reaction
                 if let reaction = reaction {
                     if self.reactionIconNode == nil {
                         let reactionIconNode = ReactionImageNode(context: self.context, availableReactions: self.availableReactions, reaction: reaction, displayPixelSize: CGSize(width: 30.0 * UIScreenScale, height: 30.0 * UIScreenScale))
@@ -366,7 +366,18 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 if self.item != item {
                     self.item = item
                     
-                    self.accessibilityLabel = "\(item.peer.debugDisplayTitle) \(item.reaction ?? "")"
+                    let reactionStringValue: String
+                    if let reaction = item.reaction {
+                        switch reaction {
+                        case let .builtin(value):
+                            reactionStringValue = value
+                        case .custom:
+                            reactionStringValue = ""
+                        }
+                    } else {
+                        reactionStringValue = ""
+                    }
+                    self.accessibilityLabel = "\(item.peer.debugDisplayTitle) \(reactionStringValue)"
                 }
                 
                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
@@ -488,7 +499,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         
         private let context: AccountContext
         private let availableReactions: AvailableReactions?
-        let reaction: String?
+        let reaction: MessageReaction.Reaction?
         private let requestUpdate: (ReactionsTabNode, ContainedViewLayoutTransition) -> Void
         private let requestUpdateApparentHeight: (ReactionsTabNode, ContainedViewLayoutTransition) -> Void
         private let openPeer: (PeerId) -> Void
@@ -516,7 +527,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             context: AccountContext,
             availableReactions: AvailableReactions?,
             message: EngineMessage,
-            reaction: String?,
+            reaction: MessageReaction.Reaction?,
             readStats: MessageReadStats?,
             requestUpdate: @escaping (ReactionsTabNode, ContainedViewLayoutTransition) -> Void,
             requestUpdateApparentHeight: @escaping (ReactionsTabNode, ContainedViewLayoutTransition) -> Void,
@@ -754,7 +765,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         private let availableReactions: AvailableReactions?
         private let message: EngineMessage
         private let readStats: MessageReadStats?
-        private let reactions: [(String?, Int)]
+        private let reactions: [(MessageReaction.Reaction?, Int)]
         private let requestUpdate: (ContainedViewLayoutTransition) -> Void
         private let requestUpdateApparentHeight: (ContainedViewLayoutTransition) -> Void
         
@@ -781,7 +792,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             context: AccountContext,
             availableReactions: AvailableReactions?,
             message: EngineMessage,
-            reaction: String?,
+            reaction: MessageReaction.Reaction?,
             readStats: MessageReadStats?,
             requestUpdate: @escaping (ContainedViewLayoutTransition) -> Void,
             requestUpdateApparentHeight: @escaping (ContainedViewLayoutTransition) -> Void,
@@ -808,7 +819,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 }
             }
             
-            var reactions: [(String?, Int)] = []
+            var reactions: [(MessageReaction.Reaction?, Int)] = []
             var totalCount: Int = 0
             if let reactionsAttribute = message._asMessage().reactionsAttribute {
                 for listReaction in reactionsAttribute.reactions {
@@ -967,7 +978,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
             if let tabListNode = self.tabListNode {
                 let tabListFrame = CGRect(origin: CGPoint(x: 0.0, y: topContentHeight), size: CGSize(width: constrainedSize.width, height: 44.0))
-                let selectedReaction: String? = self.reactions[self.currentTabIndex].0
+                let selectedReaction: MessageReaction.Reaction? = self.reactions[self.currentTabIndex].0
                 tabListNode.update(size: tabListFrame.size, presentationData: self.presentationData, selectedReaction: selectedReaction, transition: transition)
                 transition.updateFrame(node: tabListNode, frame: tabListFrame)
                 topContentHeight += tabListFrame.height
@@ -1124,7 +1135,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     let context: AccountContext
     let availableReactions: AvailableReactions?
     let message: EngineMessage
-    let reaction: String?
+    let reaction: MessageReaction.Reaction?
     let readStats: MessageReadStats?
     let back: (() -> Void)?
     let openPeer: (PeerId) -> Void
@@ -1133,7 +1144,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         context: AccountContext,
         availableReactions: AvailableReactions?,
         message: EngineMessage,
-        reaction: String?,
+        reaction: MessageReaction.Reaction?,
         readStats: MessageReadStats?,
         back: (() -> Void)?,
         openPeer: @escaping (PeerId) -> Void

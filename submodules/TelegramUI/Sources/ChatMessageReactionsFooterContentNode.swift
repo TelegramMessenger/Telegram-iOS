@@ -60,10 +60,10 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     private var bubbleBackgroundNode: WallpaperBubbleBackgroundNode?
     private let container: ReactionButtonsAsyncLayoutContainer
     private var backgroundMaskView: UIView?
-    private var backgroundMaskButtons: [String: UIView] = [:]
+    private var backgroundMaskButtons: [MessageReaction.Reaction: UIView] = [:]
     
-    var reactionSelected: ((String) -> Void)?
-    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, String) -> Void)?
+    var reactionSelected: ((MessageReaction.Reaction) -> Void)?
+    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
     override init() {
         self.container = ReactionButtonsAsyncLayoutContainer()
@@ -268,7 +268,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 
                 let reactionButtons = reactionButtonsResult.apply(animation)
                 
-                var validIds = Set<String>()
+                var validIds = Set<MessageReaction.Reaction>()
                 for item in reactionButtons.items {
                     validIds.insert(item.value)
                     
@@ -352,7 +352,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                     }
                 }
                 
-                var removeMaskIds: [String] = []
+                var removeMaskIds: [MessageReaction.Reaction] = []
                 for (id, view) in strongSelf.backgroundMaskButtons {
                     if !validIds.contains(id) {
                         removeMaskIds.append(id)
@@ -415,7 +415,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
         }
     }
     
-    func reactionTargetView(value: String) -> UIView? {
+    func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         for (key, button) in self.container.buttons {
             if key == value {
                 return button.view.iconView
@@ -569,7 +569,7 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
         return nil
     }
     
-    override func reactionTargetView(value: String) -> UIView? {
+    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         return self.buttonsNode.reactionTargetView(value: value)
     }
 }
@@ -608,8 +608,8 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
     
     private let buttonsNode: MessageReactionButtonsNode
     
-    var reactionSelected: ((String) -> Void)?
-    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, String) -> Void)?
+    var reactionSelected: ((MessageReaction.Reaction) -> Void)?
+    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
     override init() {
         self.buttonsNode = MessageReactionButtonsNode()
@@ -669,7 +669,7 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
         animation.animator.updateFrame(layer: self.buttonsNode.layer, frame: self.buttonsNode.layer.frame.offsetBy(dx: 0.0, dy: -self.buttonsNode.layer.bounds.height / 2.0), completion: nil)
     }
     
-    func reactionTargetView(value: String) -> UIView? {
+    func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         return self.buttonsNode.reactionTargetView(value: value)
     }
     
