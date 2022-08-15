@@ -1923,6 +1923,34 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
             }
+            
+            if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
+                if let item = self.item, let forwardInfo = item.message.forwardInfo {
+                    let performAction: () -> Void = {
+                        if let sourceMessageId = forwardInfo.sourceMessageId {
+                            if !item.message.id.peerId.isReplies, let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
+                                if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+                                } else if case .member = channel.participationStatus {
+                                } else {
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                    return
+                                }
+                            }
+                            item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
+                        } else if let peer = forwardInfo.source ?? forwardInfo.author {
+                            item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, nil)
+                        } else if let _ = forwardInfo.authorSignature {
+                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
+                        }
+                    }
+                    
+                    if forwardInfoNode.hasAction(at: self.view.convert(location, to: forwardInfoNode.view)) {
+                        return .action({})
+                    } else {
+                        return .optionalAction(performAction)
+                    }
+                }
+            }
              
             if let item = self.item, self.imageNode.frame.contains(location) {
                 let emojiTapAction: (Bool) -> InternalBubbleTapAction? = { shouldPlay in

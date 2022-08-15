@@ -1119,7 +1119,7 @@ public class Window1 {
                 
                 if let image = self.badgeView.image {
                     self.updateBadgeVisibility()
-                    self.badgeView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.windowLayout.size.width - image.size.width) / 2.0), y: 6.0), size: image.size)
+                    self.badgeView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.windowLayout.size.width - image.size.width) / 2.0), y: 5.0), size: image.size)
                 }
             }
         }
