@@ -7812,3 +7812,10 @@ Sorry for the inconvenience.";
 "AccountActions.SessionsToHide.CleanConfirmation" = "Are your sure?";
 
 "AccountActions.SessionsToTerminate.24hWarningMessage" = "This feature will not work if less than 24 hours have passed since you signed in to your account on this device.";
+
+"CloudballonSettings.Title" = "Cloudballon";
+"CloudballonSettings.ShowPeerId" = "Show ID";
+"CloudballonSettings.ShowPeerIdHelp" = "Show ID in user, group, channel, bot profiles.";
+"Profile.Id" = "id";
+"Conversation.IdCopied" = "ID copied to clipboard.";
+"Settings.CopyId" = "Copy ID";
