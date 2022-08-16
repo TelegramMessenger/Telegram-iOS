@@ -610,24 +610,29 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     let setPhotoTitle: String
     let displaySetPhoto: Bool
     if let peer = data.peer, !peer.profileImageRepresentations.isEmpty {
-        setPhotoTitle = presentationData.strings.Settings_SetNewProfilePhotoOrVideo
-        displaySetPhoto = isExpanded
+        setPhotoTitle = presentationData.strings.Settings_ChangeProfilePhoto
+        displaySetPhoto = true
     } else {
         setPhotoTitle = presentationData.strings.Settings_SetProfilePhotoOrVideo
         displaySetPhoto = true
     }
     
     //TODO:localize
-    let setStatusTitle: String = "Set Emoji Status"
+    var setStatusTitle: String = ""
     let displaySetStatus: Bool
+    var hasEmojiStatus = false
     if let peer = data.peer as? TelegramUser, peer.isPremium {
+        if peer.emojiStatus != nil {
+            hasEmojiStatus = true
+        }
         displaySetStatus = true
+        setStatusTitle = "Set Emoji Status"
     } else {
         displaySetStatus = false
     }
     
     if displaySetStatus {
-        items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: setStatusTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: setStatusTitle, icon: UIImage(bundleImageName: hasEmojiStatus ? "Settings/EditEmojiStatus" : "Settings/SetEmojiStatus"), action: {
             interaction.openSettings(.emojiStatus)
         }))
     }

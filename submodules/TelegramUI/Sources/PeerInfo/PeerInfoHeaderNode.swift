@@ -2447,7 +2447,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: 32.0, height: 32.0)
+                containerSize: CGSize(width: 34.0, height: 34.0)
             )
             let expandedIconSize = self.titleExpandedCredibilityIconView.update(
                 transition: Transition(transition),
@@ -2470,7 +2470,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: 32.0, height: 32.0)
+                containerSize: CGSize(width: 34.0, height: 34.0)
             )
             
             self.credibilityIconSize = iconSize
@@ -2594,8 +2594,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
             }
 
-            titleString = NSAttributedString(string: title, font: Font.medium(29.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
-            smallTitleString = NSAttributedString(string: title, font: Font.semibold(28.0), textColor: .white)
+            titleString = NSAttributedString(string: title, font: Font.regular(30.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            smallTitleString = NSAttributedString(string: title, font: Font.regular(30.0), textColor: .white)
             if self.isSettings, let user = peer as? TelegramUser {
                 var subtitle = formatPhoneNumber(user.phone ?? "")
                 
@@ -2708,7 +2708,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var titleHorizontalOffset: CGFloat = 0.0
         if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
             titleHorizontalOffset = -(credibilityIconSize.width + 4.0) / 2.0
-            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0, y: floor((titleSize.height - credibilityIconSize.height) / 2.0) + 1.0), size: credibilityIconSize))
+            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0, y: floor((titleSize.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize))
             transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
         }
         
@@ -2727,7 +2727,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             subtitleFrame = CGRect(origin: CGPoint(x: 16.0, y: minTitleFrame.maxY + 2.0), size: subtitleSize)
             usernameFrame = CGRect(origin: CGPoint(x: width - usernameSize.width - 16.0, y: minTitleFrame.midY - usernameSize.height / 2.0), size: usernameSize)
         } else {
-            titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 7.0 + (subtitleSize.height.isZero ? 11.0 : 0.0) + 11.0), size: titleSize)
+            titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 9.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
                         
             let totalSubtitleWidth = subtitleSize.width + usernameSpacing + usernameSize.width
             if usernameSize.width == 0.0 {
@@ -2924,7 +2924,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.avatarListNode.avatarContainerNode.canAttachVideo = false
         }
         
-        let panelWithAvatarHeight: CGFloat = 40.0 + avatarSize
+        let panelWithAvatarHeight: CGFloat = 35.0 + avatarSize
         
         let rawHeight: CGFloat
         let height: CGFloat

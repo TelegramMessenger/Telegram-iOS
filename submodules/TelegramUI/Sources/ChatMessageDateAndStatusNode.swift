@@ -54,6 +54,9 @@ private final class StatusReactionNode: ASDisplayNode {
     private var value: MessageReaction.Reaction?
     private var isSelected: Bool?
     
+    private var resolvedFile: TelegramMediaFile?
+    private var fileDisposable: Disposable?
+    
     override init() {
         self.iconView = ReactionIconView()
         
@@ -64,9 +67,10 @@ private final class StatusReactionNode: ASDisplayNode {
     
     deinit {
         self.iconImageDisposable.dispose()
+        self.fileDisposable?.dispose()
     }
     
-    func update(context: AccountContext, type: ChatMessageDateAndStatusType, value: MessageReaction.Reaction, file: TelegramMediaFile?, isSelected: Bool, count: Int, theme: PresentationTheme, wallpaper: TelegramWallpaper, animated: Bool) {
+    func update(context: AccountContext, type: ChatMessageDateAndStatusType, value: MessageReaction.Reaction, file: TelegramMediaFile?, fileId: Int64?, isSelected: Bool, count: Int, theme: PresentationTheme, wallpaper: TelegramWallpaper, animated: Bool) {
         if self.value != value {
             self.value = value
             
@@ -74,7 +78,7 @@ private final class StatusReactionNode: ASDisplayNode {
             let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
             let imageSize: CGSize
             if let file = file {
-                self.iconImageDisposable.set((reactionStaticImage(context: context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0))
+                self.iconImageDisposable.set((reactionStaticImage(context: context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0), queue: sharedReactionStaticImage)
                 |> deliverOnMainQueue).start(next: { [weak self] data in
                     guard let strongSelf = self else {
                         return
@@ -87,8 +91,44 @@ private final class StatusReactionNode: ASDisplayNode {
                     }
                 }))
                 imageSize = file.dimensions?.cgSize.aspectFitted(defaultImageSize) ?? defaultImageSize
+                
+                self.fileDisposable?.dispose()
+                self.fileDisposable = nil
+            } else if let fileId = fileId {
+                self.fileDisposable?.dispose()
+                self.fileDisposable = nil
+                
+                imageSize = boundingImageSize
+                
+                if let resolvedFile = self.resolvedFile, resolvedFile.fileId.id == fileId {
+                } else {
+                    self.fileDisposable = (context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let strongSelf = self, let file = result[fileId] else {
+                            return
+                        }
+                        
+                        strongSelf.resolvedFile = file
+                        
+                        strongSelf.iconImageDisposable.set((reactionStaticImage(context: context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0), queue: sharedReactionStaticImage)
+                        |> deliverOnMainQueue).start(next: { data in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            if data.isComplete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                                if let image = UIImage(data: dataValue) {
+                                    strongSelf.iconView.imageView.image = image
+                                }
+                            }
+                        }))
+                    })
+                }
             } else {
                 imageSize = defaultImageSize
+                
+                self.fileDisposable?.dispose()
+                self.fileDisposable = nil
             }
             
             let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingImageSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((boundingImageSize.height - imageSize.height) / 2.0)), size: imageSize)
@@ -1037,17 +1077,23 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 validReactions.insert(reaction.value)
                                 
                                 var centerAnimation: TelegramMediaFile?
+                                var reactionFileId: Int64?
                                 
-                                if let availableReactions = arguments.availableReactions {
-                                    for availableReaction in availableReactions.reactions {
-                                        if availableReaction.value == reaction.value {
-                                            centerAnimation = availableReaction.centerAnimation
-                                            break
+                                switch reaction.value {
+                                case .builtin:
+                                    if let availableReactions = arguments.availableReactions {
+                                        for availableReaction in availableReactions.reactions {
+                                            if availableReaction.value == reaction.value {
+                                                centerAnimation = availableReaction.centerAnimation
+                                                break
+                                            }
                                         }
                                     }
+                                case let .custom(fileId):
+                                    reactionFileId = fileId
                                 }
                                 
-                                node.update(context: arguments.context, type: arguments.type, value: reaction.value, file: centerAnimation, isSelected: reaction.isSelected, count: Int(reaction.count), theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, animated: false)
+                                node.update(context: arguments.context, type: arguments.type, value: reaction.value, file: centerAnimation, fileId: reactionFileId, isSelected: reaction.isSelected, count: Int(reaction.count), theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, animated: false)
                                 if node.supernode == nil {
                                     strongSelf.addSubnode(node)
                                     if animation.isAnimated {

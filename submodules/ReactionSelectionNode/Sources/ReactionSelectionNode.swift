@@ -104,7 +104,9 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.appearAnimation.resource)).start()
         self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.stillAnimation.resource)).start()
         self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.listAnimation.resource)).start()
-        self.fetchFullAnimationDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.applicationAnimation.resource)).start()
+        if let applicationAnimation = item.applicationAnimation {
+            self.fetchFullAnimationDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: applicationAnimation.resource)).start()
+        }
     }
     
     deinit {
@@ -175,9 +177,12 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             }
             
             if largeExpanded {
-                animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.largeListAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.largeListAnimation.resource.id)))
+                let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.item.largeListAnimation.resource, isVideo: self.item.largeListAnimation.isVideoSticker || self.item.largeListAnimation.isVideoEmoji)
+                
+                animationNode.setup(source: source, width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.largeListAnimation.resource.id)))
             } else {
-                animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.listAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.listAnimation.resource.id)))
+                let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.item.listAnimation.resource, isVideo: self.item.listAnimation.isVideoSticker || self.item.listAnimation.isVideoEmoji)
+                animationNode.setup(source: source, width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.listAnimation.resource.id)))
             }
             animationNode.frame = expandedAnimationFrame
             animationNode.updateLayout(size: expandedAnimationFrame.size)
@@ -203,16 +208,6 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                         animateInAnimationNode.removeFromSupernode()
                     })
                 }
-                /*if let customContentsNode = self.customContentsNode {
-                    customContentsNode.alpha = 0.0
-                    customContentsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
-                        guard let strongSelf = self, let customContentsNode = strongSelf.customContentsNode else {
-                            return
-                        }
-                        strongSelf.customContentsNode = nil
-                        customContentsNode.removeFromSupernode()
-                    })
-                }*/
                 
                 var referenceNode: ASDisplayNode?
                 if let animateInAnimationNode = self.animateInAnimationNode {
@@ -234,13 +229,14 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                     self.staticAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 }
                 
-                
                 if let customContentsNode = self.customContentsNode, !customContentsNode.isHidden {
                     transition.animateTransformScale(node: customContentsNode, from: customContentsNode.bounds.width / animationFrame.width)
                     transition.animatePositionAdditive(node: customContentsNode, offset: CGPoint(x: customContentsNode.frame.midX - animationFrame.midX, y: customContentsNode.frame.midY - animationFrame.midY))
                     
-                    customContentsNode.alpha = 0.0
-                    customContentsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    if self.item.listAnimation.isVideoEmoji || self.item.listAnimation.isVideoSticker || self.item.listAnimation.isAnimatedSticker {
+                        customContentsNode.alpha = 0.0
+                        customContentsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    }
                 }
                 
                 animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
@@ -352,10 +348,6 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         
         if let customContentsNode = self.customContentsNode {
             transition.updateFrame(node: customContentsNode, frame: animationFrame)
-            /*if customContentsNode.alpha != 0.0 {
-                customContentsNode.alpha = 0.0
-                customContentsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
-            }*/
         }
     }
 }

@@ -165,47 +165,51 @@ public extension TelegramEngine {
         }
         
         public func resolveInlineStickers(fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
-            return self.account.postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
-                var cachedFiles: [Int64: TelegramMediaFile] = [:]
-                for fileId in fileIds {
-                    if let file = transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile {
-                        cachedFiles[fileId] = file
-                    }
-                }
-                return cachedFiles
+            return _internal_resolveInlineStickers(postbox: self.account.postbox, network: self.account.network, fileIds: fileIds)
+        }
+    }
+}
+
+func _internal_resolveInlineStickers(postbox: Postbox, network: Network, fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
+    return postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
+        var cachedFiles: [Int64: TelegramMediaFile] = [:]
+        for fileId in fileIds {
+            if let file = transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile {
+                cachedFiles[fileId] = file
             }
-            |> mapToSignal { cachedFiles -> Signal<[Int64: TelegramMediaFile], NoError> in
-                if cachedFiles.count == fileIds.count {
-                    return .single(cachedFiles)
-                }
-                
-                var unknownIds = Set<Int64>()
-                for fileId in fileIds {
-                    if cachedFiles[fileId] == nil {
-                        unknownIds.insert(fileId)
+        }
+        return cachedFiles
+    }
+    |> mapToSignal { cachedFiles -> Signal<[Int64: TelegramMediaFile], NoError> in
+        if cachedFiles.count == fileIds.count {
+            return .single(cachedFiles)
+        }
+        
+        var unknownIds = Set<Int64>()
+        for fileId in fileIds {
+            if cachedFiles[fileId] == nil {
+                unknownIds.insert(fileId)
+            }
+        }
+        
+        return network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(unknownIds)))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<[Api.Document]?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<[Int64: TelegramMediaFile], NoError> in
+            guard let result = result else {
+                return .single(cachedFiles)
+            }
+            return postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
+                var resultFiles: [Int64: TelegramMediaFile] = cachedFiles
+                for document in result {
+                    if let file = telegramMediaFileFromApiDocument(document) {
+                        resultFiles[file.fileId.id] = file
+                        transaction.storeMediaIfNotPresent(media: file)
                     }
                 }
-                
-                return self.account.network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(unknownIds)))
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<[Api.Document]?, NoError> in
-                    return .single(nil)
-                }
-                |> mapToSignal { result -> Signal<[Int64: TelegramMediaFile], NoError> in
-                    guard let result = result else {
-                        return .single(cachedFiles)
-                    }
-                    return self.account.postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
-                        var resultFiles: [Int64: TelegramMediaFile] = cachedFiles
-                        for document in result {
-                            if let file = telegramMediaFileFromApiDocument(document) {
-                                resultFiles[file.fileId.id] = file
-                                transaction.storeMediaIfNotPresent(media: file)
-                            }
-                        }
-                        return resultFiles
-                    }
-                }
+                return resultFiles
             }
         }
     }

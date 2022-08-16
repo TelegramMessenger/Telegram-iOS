@@ -19,6 +19,8 @@ swift_library(
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/rlottie:RLottieBinding",
         "//submodules/GZip:GZip",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
     ],
     visibility = [
         "//visibility:public",

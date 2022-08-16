@@ -7,7 +7,7 @@ import GZip
 import WebPBinding
 
 public func cacheLottieAnimation(data: Data, width: Int, height: Int, keyframeOnly: Bool, writer: AnimationCacheItemWriter, firstFrameOnly: Bool) {
-    writer.queue.async {
+    let work: () -> Void = {
         let decompressedData = TGGUnzipData(data, 1 * 1024 * 1024) ?? data
         guard let animation = LottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
             writer.finish()
@@ -42,10 +42,12 @@ public func cacheLottieAnimation(data: Data, width: Int, height: Int, keyframeOn
         
         writer.finish()
     }
+    
+    writer.queue.async(work)
 }
 
 public func cacheStillSticker(path: String, width: Int, height: Int, writer: AnimationCacheItemWriter) {
-    writer.queue.async {
+    let work: () -> Void = {
         if let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let image = WebP.convert(fromWebP: data) {
             writer.add(with: { surface in
                 let context = DrawingContext(size: CGSize(width: CGFloat(surface.width), height: CGFloat(surface.height)), scale: 1.0, opaque: false, clear: true, bytesPerRow: surface.bytesPerRow)
@@ -61,4 +63,6 @@ public func cacheStillSticker(path: String, width: Int, height: Int, writer: Ani
         
         writer.finish()
     }
+    
+    writer.queue.async(work)
 }

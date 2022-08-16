@@ -96,12 +96,14 @@ public final class EmojiStatusSelectionComponent: Component {
             
             self.component = component
             
+            let topPanelHeight: CGFloat = 42.0
+            
             let keyboardSize = self.keyboardView.update(
                 transition: transition,
                 component: AnyComponent(EntityKeyboardComponent(
                     theme: component.theme,
                     strings: component.strings,
-                    containerInsets: UIEdgeInsets(top: 41.0 - 34.0, left: 0.0, bottom: 0.0, right: 0.0),
+                    containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: 0.0, bottom: 0.0, right: 0.0),
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                     emojiContent: component.emojiContent,
                     stickerContent: nil,
@@ -134,15 +136,15 @@ public final class EmojiStatusSelectionComponent: Component {
                     self.keyboardClippingView.clipsToBounds = false
                 }
                 
-                transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0), size: CGSize(width: availableSize.width, height: availableSize.height - 41.0)))
+                transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelHeight)))
                 
-                transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -41.0), size: keyboardSize))
-                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0 - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
+                transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelHeight), size: keyboardSize))
+                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
                 
-                transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: keyboardSize.width, height: 41.0)))
+                transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: keyboardSize.width, height: topPanelHeight)))
                 self.panelBackgroundView.update(size: self.panelBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
                 
-                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
+                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
             }
             
             return availableSize
@@ -193,24 +195,24 @@ public final class EmojiStatusSelectionController: ViewController {
             
             self.componentHost = ComponentView<Empty>()
             self.componentShadowLayer = SimpleLayer()
-            self.componentShadowLayer.shadowOpacity = 0.15
+            self.componentShadowLayer.shadowOpacity = 0.12
             self.componentShadowLayer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
             self.componentShadowLayer.shadowOffset = CGSize(width: 0.0, height: 2.0)
-            self.componentShadowLayer.shadowRadius = 15.0
+            self.componentShadowLayer.shadowRadius = 16.0
             
             self.cloudLayer0 = SimpleLayer()
             self.cloudShadowLayer0 = SimpleLayer()
-            self.cloudShadowLayer0.shadowOpacity = 0.15
+            self.cloudShadowLayer0.shadowOpacity = 0.12
             self.cloudShadowLayer0.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
             self.cloudShadowLayer0.shadowOffset = CGSize(width: 0.0, height: 2.0)
-            self.cloudShadowLayer0.shadowRadius = 15.0
+            self.cloudShadowLayer0.shadowRadius = 16.0
             
             self.cloudLayer1 = SimpleLayer()
             self.cloudShadowLayer1 = SimpleLayer()
-            self.cloudShadowLayer1.shadowOpacity = 0.15
+            self.cloudShadowLayer1.shadowOpacity = 0.12
             self.cloudShadowLayer1.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
             self.cloudShadowLayer1.shadowOffset = CGSize(width: 0.0, height: 2.0)
-            self.cloudShadowLayer1.shadowRadius = 15.0
+            self.cloudShadowLayer1.shadowRadius = 16.0
             
             super.init()
             
@@ -258,7 +260,9 @@ public final class EmojiStatusSelectionController: ViewController {
                     },
                     sendSticker: nil,
                     chatPeerId: nil,
-                    peekBehavior: nil
+                    peekBehavior: nil,
+                    customLayout: nil,
+                    externalBackground: nil
                 )
                 
                 strongSelf.refreshLayout(transition: .immediate)
@@ -295,8 +299,24 @@ public final class EmojiStatusSelectionController: ViewController {
                 return
             }
             
-            self.cloudLayer0.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.cgColor
-            self.cloudLayer1.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.cgColor
+            let listBackgroundColor: UIColor
+            let separatorColor: UIColor
+            if self.presentationData.theme.overallDarkAppearance {
+                listBackgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
+                separatorColor = self.presentationData.theme.list.itemBlocksSeparatorColor
+                self.componentShadowLayer.shadowOpacity = 0.32
+                self.cloudShadowLayer0.shadowOpacity = 0.32
+                self.cloudShadowLayer1.shadowOpacity = 0.32
+            } else {
+                listBackgroundColor = self.presentationData.theme.list.plainBackgroundColor
+                separatorColor = self.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5)
+                self.componentShadowLayer.shadowOpacity = 0.12
+                self.cloudShadowLayer0.shadowOpacity = 0.12
+                self.cloudShadowLayer1.shadowOpacity = 0.12
+            }
+            
+            self.cloudLayer0.backgroundColor = listBackgroundColor.cgColor
+            self.cloudLayer1.backgroundColor = listBackgroundColor.cgColor
             
             let sideInset: CGFloat = 16.0
             
@@ -307,11 +327,11 @@ public final class EmojiStatusSelectionController: ViewController {
                     strings: self.presentationData.strings,
                     deviceMetrics: layout.deviceMetrics,
                     emojiContent: emojiContent,
-                    backgroundColor: self.presentationData.theme.list.plainBackgroundColor,
-                    separatorColor: self.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5)
+                    backgroundColor: listBackgroundColor,
+                    separatorColor: separatorColor
                 )),
                 environment: {},
-                containerSize: CGSize(width: layout.size.width - sideInset * 2.0, height: min(300.0, layout.size.height))
+                containerSize: CGSize(width: layout.size.width - sideInset * 2.0, height: min(308.0, layout.size.height))
             )
             if let componentView = self.componentHost.view {
                 var animateIn = false
@@ -334,7 +354,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     sourceOrigin = CGPoint(x: layout.size.width / 2.0, y: floor(layout.size.height / 2.0 - componentSize.height))
                 }
                 
-                let componentFrame = CGRect(origin: CGPoint(x: sideInset, y: sourceOrigin.y + 8.0), size: componentSize)
+                let componentFrame = CGRect(origin: CGPoint(x: sideInset, y: sourceOrigin.y + 5.0), size: componentSize)
                 
                 if self.componentShadowLayer.bounds.size != componentFrame.size {
                     let componentShadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: componentFrame.size), cornerRadius: 24.0).cgPath
@@ -373,7 +393,7 @@ public final class EmojiStatusSelectionController: ViewController {
                         self?.allowsGroupOpacity = false
                     })
                     
-                    let contentDuration: Double = 0.25
+                    let contentDuration: Double = 0.5
                     let contentDelay: Double = 0.14
                     let initialContentFrame = CGRect(origin: CGPoint(x: cloudFrame0.midX - 24.0, y: componentFrame.minY), size: CGSize(width: 24.0 * 2.0, height: 24.0 * 2.0))
                     
