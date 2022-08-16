@@ -109,6 +109,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
             var updatedIconOffset = CGPoint()
             if case .pinnedMessages = subject {
                 updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                updatedIconOffset = CGPoint(x: UIScreenPixel, y: 1.0)
             } else if isReplies {
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: account.peerId) {
