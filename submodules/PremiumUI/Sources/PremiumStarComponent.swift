@@ -208,15 +208,15 @@ class PremiumStarComponent: Component {
                 "rotate",
                 "tapRotate"
             ]
-            if #available(iOS 11.0, *) {
-                for key in keys {
-                    node.removeAnimation(forKey: key, blendOutDuration: 0.1)
-                }
-            } else {
+//            if #available(iOS 11.0, *) {
+//                for key in keys {
+//                    node.removeAnimation(forKey: key, blendOutDuration: 0.1)
+//                }
+//            } else {
                 for key in keys {
                     node.removeAnimation(forKey: key)
                 }
-            }
+//            }
             
             switch gesture.state {
                 case .began:
@@ -535,9 +535,9 @@ class PremiumStarComponent: Component {
             let to = SCNVector3(x: 0.0, y: toValue, z: 0.0)
             let distance = rad2deg(to.y - from.y)
             
-//            guard !distance.isZero else {
-//                return
-//            }
+            guard !distance.isZero else {
+                return
+            }
             
             let springAnimation = CASpringAnimation(keyPath: "eulerAngles")
             springAnimation.fromValue = NSValue(scnVector3: from)

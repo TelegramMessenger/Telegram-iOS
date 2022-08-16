@@ -864,18 +864,35 @@ public final class ChatListNode: ListView {
                             break
                         case let .limitExceeded(count, _):
                             if isPremium {
-                                let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {})
-                                strongSelf.push?(controller)
-                            } else {
-                                var replaceImpl: ((ViewController) -> Void)?
-                                let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
-                                    let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
-                                    replaceImpl?(premiumScreen)
-                                })
-                                replaceImpl = { [weak controller] c in
-                                    controller?.replace(with: c)
+                                if case .filter = location {
+                                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {})
+                                    strongSelf.push?(controller)
+                                } else {
+                                    let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {})
+                                    strongSelf.push?(controller)
                                 }
-                                strongSelf.push?(controller)
+                            } else {
+                                if case .filter = location {
+                                    var replaceImpl: ((ViewController) -> Void)?
+                                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
+                                        let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                        replaceImpl?(premiumScreen)
+                                    })
+                                    strongSelf.push?(controller)
+                                    replaceImpl = { [weak controller] c in
+                                        controller?.replace(with: c)
+                                    }
+                                } else {
+                                    var replaceImpl: ((ViewController) -> Void)?
+                                    let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
+                                        let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                        replaceImpl?(premiumScreen)
+                                    })
+                                    strongSelf.push?(controller)
+                                    replaceImpl = { [weak controller] c in
+                                        controller?.replace(with: c)
+                                    }
+                                }
                             }
                         }
                     }
