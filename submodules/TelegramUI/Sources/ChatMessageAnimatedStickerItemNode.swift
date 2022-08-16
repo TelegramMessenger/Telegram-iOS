@@ -977,7 +977,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 
                 if item.message.forwardInfo != nil || item.message.attributes.first(where: { $0 is ReplyMessageAttribute }) != nil {
-                    tmpWidth -= 60.0
+                    tmpWidth -= 45.0
                 }
                 
                 tmpWidth -= deliveryFailedInset
