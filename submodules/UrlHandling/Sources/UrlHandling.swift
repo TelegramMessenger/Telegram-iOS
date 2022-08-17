@@ -230,6 +230,15 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     }
                                 }
                                 return .startAttach(peerName, nil, choose)
+                            } else if queryItem.name == "startgroup" || queryItem.name == "startchannel" {
+                                var botAdminRights: ResolvedBotAdminRights?
+                                for queryItem in queryItems {
+                                    if queryItem.name == "admin", let value = queryItem.value {
+                                        botAdminRights = ResolvedBotAdminRights(value)
+                                        break
+                                    }
+                                }
+                                return .peerName(peerName, .groupBotStart("", botAdminRights))
                             }
                         }
                     }

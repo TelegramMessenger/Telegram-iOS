@@ -7967,3 +7967,5 @@ Sorry for the inconvenience.";
 "Login.PhoneNumberConfirmation" = "Is this the correct number?";
 "Login.Edit" = "Edit";
 "Login.Yes" = "Yes";
+
+"Checkout.PaymentLiabilityBothAlert" = "Telegram will not have access to your credit card information. Credit card details will be handled only by the payment system, {target}.\n\nPayments will go directly to the developer of {target}. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of {target} or your bank.";
