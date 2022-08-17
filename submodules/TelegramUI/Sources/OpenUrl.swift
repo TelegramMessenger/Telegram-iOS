@@ -706,7 +706,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 if !startGroup.isEmpty {
                                     result += "?startgroup=\(startGroup)"
                                 } else {
-                                    result += "?startgroup
+                                    result += "?startgroup"
                                 }
                                 if let admin = admin {
                                     result += "&admin=\(admin)"
@@ -715,7 +715,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 if !startChannel.isEmpty {
                                     result += "?startchannel=\(startChannel)"
                                 } else {
-                                    result += "?startchannel
+                                    result += "?startchannel"
                                 }
                                 if let admin = admin {
                                     result += "&admin=\(admin)"
