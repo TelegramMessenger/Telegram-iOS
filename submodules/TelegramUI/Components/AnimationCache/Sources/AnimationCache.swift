@@ -74,7 +74,7 @@ public struct AnimationCacheItemDrawingSurface {
     public let bytesPerRow: Int
     public let length: Int
     
-    init(
+    public init(
         argb: UnsafeMutablePointer<UInt8>,
         width: Int,
         height: Int,
@@ -234,7 +234,10 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
         var duration: Double
     }
     
-    let queue: Queue
+    var queue: Queue {
+        return self.innerQueue
+    }
+    let innerQueue: Queue
     var isCancelled: Bool = false
     
     private let compressedPath: String
@@ -269,7 +272,7 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
         self.dctQualityChroma = 88
         self.dctQualityDelta = 22
         
-        self.queue = queue
+        self.innerQueue = queue
         self.compressedPath = allocateTempFile()
         
         guard let file = ManagedFile(queue: nil, path: self.compressedPath, mode: .readwrite) else {

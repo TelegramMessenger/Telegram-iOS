@@ -353,6 +353,17 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         }
     }
     
+    private var proposedReactionsPositionLock: CGFloat?
+    private var currentReactionsPositionLock: CGFloat?
+    
+    private func setCurrentReactionsPositionLock() {
+        self.currentReactionsPositionLock = self.proposedReactionsPositionLock
+    }
+    
+    private func getCurrentReactionsPositionLock() -> CGFloat? {
+        return self.currentReactionsPositionLock
+    }
+    
     func update(
         presentationData: PresentationData,
         layout: ContainerViewLayout,
@@ -433,10 +444,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     presentationData: presentationData,
                     items: reactionItems.reactionItems,
                     getEmojiContent: reactionItems.getEmojiContent,
-                    requestLayout: { [weak self] transition in
+                    isExpandedUpdated: { [weak self] transition in
                         guard let strongSelf = self else {
                             return
                         }
+                        strongSelf.setCurrentReactionsPositionLock()
                         strongSelf.requestUpdate(transition)
                     }
                 )
@@ -453,11 +465,14 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     }
                     controller.reactionSelected?(reaction, isLarge)
                 }
+                reactionContextNode.premiumReactionsSelected = { [weak self] in
+                    guard let strongSelf = self, let controller = strongSelf.getController() as? ContextController else {
+                        return
+                    }
+                    controller.premiumReactionsSelected?()
+                }
             }
-            contentTopInset += reactionContextNode.currentContentHeight + 8.0
-            //if reactionContextNode.currentContentHeight > 100.0 {
-                contentTopInset += 10.0
-            //}
+            contentTopInset += reactionContextNode.currentContentHeight + 18.0
         } else if let reactionContextNode = self.reactionContextNode {
             self.reactionContextNode = nil
             removedReactionContextNode = reactionContextNode
@@ -473,7 +488,6 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 }
             }
         }
-        
         
         let contentParentGlobalFrame: CGRect
         var contentRect: CGRect
@@ -555,7 +569,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if case .animateOut = stateTransition {
                 isAnimatingOut = true
             } else {
-                if let topPositionLock = self.actionsStackNode.topPositionLock {
+                if let currentReactionsPositionLock = self.currentReactionsPositionLock, let reactionContextNode = self.reactionContextNode {
+                    contentRect.origin.y = currentReactionsPositionLock + reactionContextNode.currentContentHeight + 18.0
+                } else if let topPositionLock = self.actionsStackNode.topPositionLock {
                     contentRect.origin.y = topPositionLock - contentActionsSpacing - contentRect.height
                 } else if keepInPlace {
                 } else {
@@ -581,7 +597,18 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 }
                 reactionContextNodeTransition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
                 reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0), anchorRect: contentRect.offsetBy(dx: contentParentGlobalFrame.minX, dy: 0.0), isAnimatingOut: isAnimatingOut, transition: reactionContextNodeTransition)
+                
+                self.proposedReactionsPositionLock = contentRect.minY - 18.0 - reactionContextNode.currentContentHeight - 46.0
+            } else {
+                self.proposedReactionsPositionLock = nil
             }
+            
+            if let _ = self.currentReactionsPositionLock {
+                transition.updateAlpha(node: self.actionsStackNode, alpha: 0.0)
+            } else {
+                transition.updateAlpha(node: self.actionsStackNode, alpha: 1.0)
+            }
+            
             if let removedReactionContextNode = removedReactionContextNode {
                 removedReactionContextNode.animateOut(to: contentRect, animatingOutToReaction: false)
                 transition.updateAlpha(node: removedReactionContextNode, alpha: 0.0, completion: { [weak removedReactionContextNode] _ in
@@ -645,7 +672,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
             
             let contentHeight: CGFloat
-            if self.actionsStackNode.topPositionLock != nil {
+            if self.actionsStackNode.topPositionLock != nil || self.currentReactionsPositionLock != nil {
                 contentHeight = layout.size.height
             } else {
                 if keepInPlace, case .extracted = self.source {
@@ -720,7 +747,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 currentContentScreenFrame = contentRect
             }
             
-            self.actionsStackNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.05)
+            self.actionsStackNode.layer.animateAlpha(from: 0.0, to: self.actionsStackNode.alpha, duration: 0.05)
             self.actionsStackNode.layer.animateSpring(
                 from: 0.01 as NSNumber,
                 to: 1.0 as NSNumber,
@@ -932,7 +959,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 )
             }
             
-            self.actionsStackNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
+            self.actionsStackNode.layer.animateAlpha(from: self.actionsStackNode.alpha, to: 0.0, duration: duration, removeOnCompletion: false)
             self.actionsStackNode.layer.animate(
                 from: 1.0 as NSNumber,
                 to: 0.01 as NSNumber,

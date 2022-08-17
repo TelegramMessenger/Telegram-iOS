@@ -594,7 +594,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     if let image = ReactionImageCache.shared.get(reaction: layout.spec.component.reaction.value) {
                         iconView.imageView.image = image
                     } else {
-                        self.iconImageDisposable.set((reactionStaticImage(context: layout.spec.component.context, animation: file, pixelSize: CGSize(width: 32.0 * UIScreenScale, height: 32.0 * UIScreenScale))
+                        self.iconImageDisposable.set((reactionStaticImage(context: layout.spec.component.context, animation: file, pixelSize: CGSize(width: 32.0 * UIScreenScale, height: 32.0 * UIScreenScale), queue: sharedReactionStaticImage)
                         |> filter { data in
                             return data.isComplete
                         }

@@ -4,8 +4,36 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reaction: MessageReaction.Reaction?, isLarge: Bool) -> Signal<Never, NoError> {
+public enum UpdateMessageReaction {
+    case builtin(String)
+    case custom(fileId: Int64, file: TelegramMediaFile?)
+    
+    public var reaction: MessageReaction.Reaction {
+        switch self {
+        case let .builtin(value):
+            return .builtin(value)
+        case let .custom(fileId, _):
+            return .custom(fileId)
+        }
+    }
+}
+
+public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reaction: UpdateMessageReaction?, isLarge: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
+        let mappedReaction: MessageReaction.Reaction?
+        
+        switch reaction {
+        case .none:
+            mappedReaction = nil
+        case let .custom(fileId, file):
+            mappedReaction = .custom(fileId)
+            if let file = file {
+                transaction.storeMediaIfNotPresent(media: file)
+            }
+        case let .builtin(value):
+            mappedReaction = .builtin(value)
+        }
+        
         transaction.setPendingMessageAction(type: .updateReaction, id: messageId, action: UpdateMessageReactionsAction())
         transaction.updateMessage(messageId, update: { currentMessage in
             var storeForwardInfo: StoreMessageForwardInfo?
@@ -19,7 +47,7 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
                     break loop
                 }
             }
-            attributes.append(PendingReactionsMessageAttribute(accountPeerId: account.peerId, value: reaction, isLarge: isLarge))
+            attributes.append(PendingReactionsMessageAttribute(accountPeerId: account.peerId, value: mappedReaction, isLarge: isLarge))
             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
         })
     }

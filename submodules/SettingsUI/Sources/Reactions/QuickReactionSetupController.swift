@@ -285,7 +285,7 @@ public func quickReactionSetupController(
                     continue
                 }
                 if let centerAnimation = availableReaction.centerAnimation {
-                    let signal: Signal<(MessageReaction.Reaction, (image: UIImage, isAnimation: Bool)?), NoError> = reactionStaticImage(context: context, animation: centerAnimation, pixelSize: CGSize(width: 72.0 * 2.0, height: 72.0 * 2.0))
+                    let signal: Signal<(MessageReaction.Reaction, (image: UIImage, isAnimation: Bool)?), NoError> = reactionStaticImage(context: context, animation: centerAnimation, pixelSize: CGSize(width: 72.0 * 2.0, height: 72.0 * 2.0), queue: sharedReactionStaticImage)
                     |> map { data -> (MessageReaction.Reaction, (image: UIImage, isAnimation: Bool)?) in
                         guard data.isComplete else {
                             return (availableReaction.value, nil)

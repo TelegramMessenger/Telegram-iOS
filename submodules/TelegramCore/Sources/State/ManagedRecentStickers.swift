@@ -202,3 +202,63 @@ func managedAllPremiumStickers(postbox: Postbox, network: Network) -> Signal<Voi
     })
     return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
+
+func managedRecentStatusEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentStatusEmoji, reverseHashOrder: false, forceFetch: false, fetch: { hash in
+        return network.request(Api.functions.account.getEmojiStatuses(flags: 1 << 1, hash: hash))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+            case .emojiStatusesNotModified:
+                return .single(nil)
+            case let .emojiStatuses(_, statuses):
+                let parsedStatuses = statuses.compactMap(PeerEmojiStatus.init(apiStatus:))
+                
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedStatuses.map(\.fileId))
+                |> map { files -> [OrderedItemListEntry] in
+                    var items: [OrderedItemListEntry] = []
+                    for status in parsedStatuses {
+                        guard let file = files[status.fileId] else {
+                            continue
+                        }
+                        if let entry = CodableEntry(RecentMediaItem(file)) {
+                            items.append(OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry))
+                        }
+                    }
+                    return items
+                }
+            }
+        }
+    })
+    return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}
+
+func managedFeaturedStatusEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedStatusEmoji, reverseHashOrder: false, forceFetch: false, fetch: { hash in
+        return network.request(Api.functions.account.getEmojiStatuses(flags: 1 << 0, hash: hash))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+            case .emojiStatusesNotModified:
+                return .single(nil)
+            case let .emojiStatuses(_, statuses):
+                let parsedStatuses = statuses.compactMap(PeerEmojiStatus.init(apiStatus:))
+                
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedStatuses.map(\.fileId))
+                |> map { files -> [OrderedItemListEntry] in
+                    var items: [OrderedItemListEntry] = []
+                    for status in parsedStatuses {
+                        guard let file = files[status.fileId] else {
+                            continue
+                        }
+                        if let entry = CodableEntry(RecentMediaItem(file)) {
+                            items.append(OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry))
+                        }
+                    }
+                    return items
+                }
+            }
+        }
+    })
+    return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}

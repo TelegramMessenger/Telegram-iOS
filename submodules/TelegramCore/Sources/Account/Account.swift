@@ -1175,6 +1175,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedGreetingStickers(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPremiumStickers(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedAllPremiumStickers(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedRecentStatusEmoji(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedFeaturedStatusEmoji(postbox: self.postbox, network: self.network).start())
 
         if !supplementary {
             let mediaBox = postbox.mediaBox

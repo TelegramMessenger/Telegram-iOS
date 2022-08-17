@@ -1519,7 +1519,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         if !items.reactionItems.isEmpty, let context = items.context {
-            let reactionContextNode = ReactionContextNode(context: context, presentationData: self.presentationData, items: items.reactionItems, getEmojiContent: items.getEmojiContent, requestLayout: { _ in })
+            let reactionContextNode = ReactionContextNode(context: context, presentationData: self.presentationData, items: items.reactionItems, getEmojiContent: items.getEmojiContent, isExpandedUpdated: { _ in })
             self.reactionContextNode = reactionContextNode
             self.addSubnode(reactionContextNode)
             
@@ -1528,6 +1528,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     return
                 }
                 controller.reactionSelected?(reaction, isLarge)
+            }
+            reactionContextNode.premiumReactionsSelected = { [weak self] in
+                guard let strongSelf = self, let controller = strongSelf.getController() as? ContextController else {
+                    return
+                }
+                controller.premiumReactionsSelected?()
             }
         }
 
@@ -2459,7 +2465,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     private var shouldBeDismissedDisposable: Disposable?
     
-    public var reactionSelected: ((ReactionContextItem, Bool) -> Void)?
+    public var reactionSelected: ((UpdateMessageReaction, Bool) -> Void)?
+    public var premiumReactionsSelected: (() -> Void)?
     
     public var getOverlayViews: (() -> [UIView])?
     

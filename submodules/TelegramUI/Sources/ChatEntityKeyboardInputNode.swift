@@ -110,8 +110,17 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
+        var orderedItemListCollectionIds: [Int32] = []
+        
+        orderedItemListCollectionIds.append(Namespaces.OrderedItemList.LocalRecentEmoji)
+        
+        if isStatusSelection {
+            orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudFeaturedStatusEmoji)
+            orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudRecentStatusEmoji)
+        }
+        
         let emojiItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
-            context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.LocalRecentEmoji], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
+            context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
             ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true),
             context.account.viewTracker.featuredEmojiPacks()
         )
@@ -131,9 +140,15 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             var itemGroupIndexById: [AnyHashable: Int] = [:]
             
             var recentEmoji: OrderedItemListView?
+            var featuredStatusEmoji: OrderedItemListView?
+            var recentStatusEmoji: OrderedItemListView?
             for orderedView in view.orderedItemListsViews {
                 if orderedView.collectionId == Namespaces.OrderedItemList.LocalRecentEmoji {
                     recentEmoji = orderedView
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedStatusEmoji {
+                    featuredStatusEmoji = orderedView
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedStatusEmoji {
+                    recentStatusEmoji = orderedView
                 }
             }
             
@@ -151,6 +166,62 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 } else {
                     itemGroupIndexById[groupId] = itemGroups.count
                     itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
+                }
+                
+                var existingIds = Set<MediaId>()
+                if let recentStatusEmoji = recentStatusEmoji {
+                    for item in recentStatusEmoji.items {
+                        guard let item = item.contents.get(RecentMediaItem.self) else {
+                            continue
+                        }
+                        
+                        let file = item.media
+                        if existingIds.contains(file.fileId) {
+                            continue
+                        }
+                        existingIds.insert(file.fileId)
+                        
+                        let resultItem: EmojiPagerContentComponent.Item
+                        
+                        let animationData = EntityKeyboardAnimationData(file: file)
+                        resultItem = EmojiPagerContentComponent.Item(
+                            animationData: animationData,
+                            content: .animation(animationData),
+                            itemFile: file,
+                            subgroupId: nil
+                        )
+                        
+                        if let groupIndex = itemGroupIndexById[groupId] {
+                            itemGroups[groupIndex].items.append(resultItem)
+                        }
+                    }
+                }
+                if let featuredStatusEmoji = featuredStatusEmoji {
+                    for item in featuredStatusEmoji.items {
+                        guard let item = item.contents.get(RecentMediaItem.self) else {
+                            continue
+                        }
+                        
+                        let file = item.media
+                        if existingIds.contains(file.fileId) {
+                            continue
+                        }
+                        existingIds.insert(file.fileId)
+                        
+                        let resultItem: EmojiPagerContentComponent.Item
+                        
+                        let animationData = EntityKeyboardAnimationData(file: file)
+                        resultItem = EmojiPagerContentComponent.Item(
+                            animationData: animationData,
+                            content: .animation(animationData),
+                            itemFile: file,
+                            subgroupId: nil
+                        )
+                        
+                        if let groupIndex = itemGroupIndexById[groupId] {
+                            itemGroups[groupIndex].items.append(resultItem)
+                        }
+                    }
                 }
             } else if isReactionSelection {
                 for reactionItem in reactionItems {
@@ -173,7 +244,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             }
             
-            if let recentEmoji = recentEmoji, !isReactionSelection {
+            if let recentEmoji = recentEmoji, !isReactionSelection, !isStatusSelection {
                 for item in recentEmoji.items {
                     guard let item = item.contents.get(RecentEmojiItem.self) else {
                         continue
@@ -1411,7 +1482,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 let _ = controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer)
             },
             chatPeerId: chatPeerId,
-            peekBehavior: nil
+            peekBehavior: nil,
+            customLayout: nil,
+            externalBackground: nil
         )
         
         var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
@@ -1609,7 +1682,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 let _ = controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer)
             },
             chatPeerId: chatPeerId,
-            peekBehavior: stickerPeekBehavior
+            peekBehavior: stickerPeekBehavior,
+            customLayout: nil,
+            externalBackground: nil
         )
         
         self.inputDataDisposable = (combineLatest(queue: .mainQueue(),
@@ -2333,7 +2408,9 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             },
             sendSticker: nil,
             chatPeerId: nil,
-            peekBehavior: nil
+            peekBehavior: nil,
+            customLayout: nil,
+            externalBackground: nil
         )
         
         let semaphore = DispatchSemaphore(value: 0)

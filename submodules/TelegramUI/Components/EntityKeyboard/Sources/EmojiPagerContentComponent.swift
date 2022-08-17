@@ -234,8 +234,8 @@ public final class EntityKeyboardAnimationData: Equatable {
     }
 }
 
-private final class PassthroughLayer: CALayer {
-    var mirrorLayer: CALayer?
+public final class PassthroughLayer: CALayer {
+    public var mirrorLayer: CALayer?
     
     override init() {
         super.init()
@@ -249,7 +249,7 @@ private final class PassthroughLayer: CALayer {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override var position: CGPoint {
+    override public var position: CGPoint {
         get {
             return super.position
         } set(value) {
@@ -260,7 +260,7 @@ private final class PassthroughLayer: CALayer {
         }
     }
     
-    override var bounds: CGRect {
+    override public var bounds: CGRect {
         get {
             return super.bounds
         } set(value) {
@@ -271,7 +271,7 @@ private final class PassthroughLayer: CALayer {
         }
     }
     
-    override var opacity: Float {
+    override public var opacity: Float {
         get {
             return super.opacity
         } set(value) {
@@ -282,7 +282,7 @@ private final class PassthroughLayer: CALayer {
         }
     }
     
-    override var sublayerTransform: CATransform3D {
+    override public var sublayerTransform: CATransform3D {
         get {
             return super.sublayerTransform
         } set(value) {
@@ -293,7 +293,7 @@ private final class PassthroughLayer: CALayer {
         }
     }
     
-    override var transform: CATransform3D {
+    override public var transform: CATransform3D {
         get {
             return super.transform
         } set(value) {
@@ -304,7 +304,7 @@ private final class PassthroughLayer: CALayer {
         }
     }
     
-    override func add(_ animation: CAAnimation, forKey key: String?) {
+    override public func add(_ animation: CAAnimation, forKey key: String?) {
         if let mirrorLayer = self.mirrorLayer {
             mirrorLayer.add(animation, forKey: key)
         }
@@ -312,7 +312,7 @@ private final class PassthroughLayer: CALayer {
         super.add(animation, forKey: key)
     }
     
-    override func removeAllAnimations() {
+    override public func removeAllAnimations() {
         if let mirrorLayer = self.mirrorLayer {
             mirrorLayer.removeAllAnimations()
         }
@@ -320,12 +320,32 @@ private final class PassthroughLayer: CALayer {
         super.removeAllAnimations()
     }
     
-    override func removeAnimation(forKey: String) {
+    override public func removeAnimation(forKey: String) {
         if let mirrorLayer = self.mirrorLayer {
             mirrorLayer.removeAnimation(forKey: forKey)
         }
         
         super.removeAnimation(forKey: forKey)
+    }
+}
+
+open class PassthroughView: UIView {
+    override public static var layerClass: AnyClass {
+        return PassthroughLayer.self
+    }
+    
+    public let passthroughView: UIView
+    
+    override public init(frame: CGRect) {
+        self.passthroughView = UIView()
+        
+        super.init(frame: frame)
+        
+        (self.layer as? PassthroughLayer)?.mirrorLayer = self.passthroughView.layer
+    }
+    
+    required public init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
 }
 
@@ -1465,6 +1485,35 @@ public final class EmojiPagerContentComponent: Component {
         }
     }
     
+    public struct CustomLayout: Equatable {
+        public var itemsPerRow: Int
+        public var itemSize: CGFloat
+        public var sideInset: CGFloat
+        public var itemSpacing: CGFloat
+        
+        public init(
+            itemsPerRow: Int,
+            itemSize: CGFloat,
+            sideInset: CGFloat,
+            itemSpacing: CGFloat
+        ) {
+            self.itemsPerRow = itemsPerRow
+            self.itemSize = itemSize
+            self.sideInset = sideInset
+            self.itemSpacing = itemSpacing
+        }
+    }
+    
+    public final class ExternalBackground {
+        public let effectContainerView: UIView?
+        
+        public init(
+            effectContainerView: UIView?
+        ) {
+            self.effectContainerView = effectContainerView
+        }
+    }
+    
     public final class InputInteractionHolder {
         public var inputInteraction: InputInteraction?
         
@@ -1486,6 +1535,8 @@ public final class EmojiPagerContentComponent: Component {
         public let sendSticker: ((FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void)?
         public let chatPeerId: PeerId?
         public let peekBehavior: EmojiContentPeekBehavior?
+        public let customLayout: CustomLayout?
+        public let externalBackground: ExternalBackground?
         
         public init(
             performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer) -> Void,
@@ -1500,7 +1551,9 @@ public final class EmojiPagerContentComponent: Component {
             navigationController: @escaping () -> NavigationController?,
             sendSticker: ((FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void)?,
             chatPeerId: PeerId?,
-            peekBehavior: EmojiContentPeekBehavior?
+            peekBehavior: EmojiContentPeekBehavior?,
+            customLayout: CustomLayout?,
+            externalBackground: ExternalBackground?
         ) {
             self.performItemAction = performItemAction
             self.deleteBackwards = deleteBackwards
@@ -1515,6 +1568,8 @@ public final class EmojiPagerContentComponent: Component {
             self.sendSticker = sendSticker
             self.chatPeerId = chatPeerId
             self.peekBehavior = peekBehavior
+            self.customLayout = customLayout
+            self.externalBackground = externalBackground
         }
     }
     
@@ -1812,7 +1867,7 @@ public final class EmojiPagerContentComponent: Component {
             var premiumButtonInset: CGFloat
             var premiumButtonHeight: CGFloat
             
-            init(layoutType: ItemLayoutType, width: CGFloat, containerInsets: UIEdgeInsets, itemGroups: [ItemGroupDescription], expandedGroupIds: Set<AnyHashable>, curveNearBounds: Bool) {
+            init(layoutType: ItemLayoutType, width: CGFloat, containerInsets: UIEdgeInsets, itemGroups: [ItemGroupDescription], expandedGroupIds: Set<AnyHashable>, curveNearBounds: Bool, customLayout: CustomLayout?) {
                 self.layoutType = layoutType
                 self.width = width
                 
@@ -1823,6 +1878,7 @@ public final class EmojiPagerContentComponent: Component {
                 
                 let minItemsPerRow: Int
                 let minSpacing: CGFloat
+                let itemInsets: UIEdgeInsets
                 switch layoutType {
                 case .compact:
                     minItemsPerRow = 8
@@ -1831,10 +1887,10 @@ public final class EmojiPagerContentComponent: Component {
                     self.verticalSpacing = 9.0
                     
                     if width >= 420.0 {
-                        self.itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 5.0, bottom: containerInsets.bottom, right: containerInsets.right + 5.0)
+                        itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 5.0, bottom: containerInsets.bottom, right: containerInsets.right + 5.0)
                         minSpacing = 2.0
                     } else {
-                        self.itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 7.0, bottom: containerInsets.bottom, right: containerInsets.right + 7.0)
+                        itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 7.0, bottom: containerInsets.bottom, right: containerInsets.right + 7.0)
                         minSpacing = 9.0
                     }
                     
@@ -1850,22 +1906,28 @@ public final class EmojiPagerContentComponent: Component {
                     minSpacing = 12.0
                     self.itemDefaultHeaderHeight = 24.0
                     self.itemFeaturedHeaderHeight = 60.0
-                    self.itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 10.0, bottom: containerInsets.bottom, right: containerInsets.right + 10.0)
+                    itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 10.0, bottom: containerInsets.bottom, right: containerInsets.right + 10.0)
                     self.headerInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + 16.0, bottom: containerInsets.bottom, right: containerInsets.right + 16.0)
                 }
                 
                 self.verticalGroupDefaultSpacing = 18.0
                 self.verticalGroupFeaturedSpacing = 15.0
                 
-                let itemHorizontalSpace = width - self.itemInsets.left - self.itemInsets.right
-                
-                self.itemsPerRow = max(minItemsPerRow, Int((itemHorizontalSpace + minSpacing) / (self.nativeItemSize + minSpacing)))
-                
-                let proposedItemSize = floor((itemHorizontalSpace - minSpacing * (CGFloat(self.itemsPerRow) - 1.0)) / CGFloat(self.itemsPerRow))
-                
-                self.visibleItemSize = proposedItemSize < self.nativeItemSize ? proposedItemSize : self.nativeItemSize
-                
-                self.horizontalSpacing = floorToScreenPixels((itemHorizontalSpace - self.visibleItemSize * CGFloat(self.itemsPerRow)) / CGFloat(self.itemsPerRow - 1))
+                if let customLayout = customLayout {
+                    self.itemsPerRow = customLayout.itemsPerRow
+                    self.nativeItemSize = customLayout.itemSize
+                    self.visibleItemSize = customLayout.itemSize
+                    self.verticalSpacing = 9.0
+                    self.itemInsets = UIEdgeInsets(top: containerInsets.top, left: containerInsets.left + customLayout.sideInset, bottom: containerInsets.bottom, right: containerInsets.right + customLayout.sideInset)
+                    self.horizontalSpacing = customLayout.itemSpacing
+                } else {
+                    self.itemInsets = itemInsets
+                    let itemHorizontalSpace = width - self.itemInsets.left - self.itemInsets.right
+                    self.itemsPerRow = max(minItemsPerRow, Int((itemHorizontalSpace + minSpacing) / (self.nativeItemSize + minSpacing)))
+                    let proposedItemSize = floor((itemHorizontalSpace - minSpacing * (CGFloat(self.itemsPerRow) - 1.0)) / CGFloat(self.itemsPerRow))
+                    self.visibleItemSize = proposedItemSize < self.nativeItemSize ? proposedItemSize : self.nativeItemSize
+                    self.horizontalSpacing = floorToScreenPixels((itemHorizontalSpace - self.visibleItemSize * CGFloat(self.itemsPerRow)) / CGFloat(self.itemsPerRow - 1))
+                }
                 
                 let actualContentWidth = self.visibleItemSize * CGFloat(self.itemsPerRow) + self.horizontalSpacing * CGFloat(self.itemsPerRow - 1)
                 self.itemInsets.left = floorToScreenPixels((width - actualContentWidth) / 2.0)
@@ -2215,7 +2277,7 @@ public final class EmojiPagerContentComponent: Component {
                         switch icon {
                         case .premiumStar:
                             if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon"), color: accentIconColor) {
-                                let imageSize = image.size.aspectFitted(CGSize(width: size.width - 8.0, height: size.height - 8.0))
+                                let imageSize = image.size.aspectFitted(CGSize(width: size.width - 6.0, height: size.height - 6.0))
                                 image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
                             }
                         }
@@ -2443,8 +2505,10 @@ public final class EmojiPagerContentComponent: Component {
         
         private let backgroundView: BlurredBackgroundView
         private var vibrancyEffectView: UIVisualEffectView?
+        public private(set) var mirrorContentClippingView: UIView?
         private let mirrorContentScrollView: UIView
         private var warpView: WarpView?
+        private var mirrorContentWarpView: WarpView?
         private let scrollView: ContentScrollView
         private var scrollGradientLayer: SimpleGradientLayer?
         private let boundsChangeTrackerLayer = SimpleLayer()
@@ -2527,15 +2591,18 @@ public final class EmojiPagerContentComponent: Component {
         
         func updateIsWarpEnabled(isEnabled: Bool) {
             if isEnabled {
-                let warpView: WarpView
-                if let current = self.warpView {
-                    warpView = current
-                } else {
-                    warpView = WarpView(frame: CGRect())
+                if self.warpView == nil {
+                    let warpView = WarpView(frame: CGRect())
                     self.warpView = warpView
                     
                     self.insertSubview(warpView, aboveSubview: self.scrollView)
                     warpView.contentView.addSubview(self.scrollView)
+                }
+                if self.mirrorContentWarpView == nil {
+                    let mirrorContentWarpView = WarpView(frame: CGRect())
+                    self.mirrorContentWarpView = mirrorContentWarpView
+                    
+                    mirrorContentWarpView.contentView.addSubview(self.mirrorContentScrollView)
                 }
             } else {
                 if let warpView = self.warpView {
@@ -2543,6 +2610,17 @@ public final class EmojiPagerContentComponent: Component {
                     
                     self.insertSubview(self.scrollView, aboveSubview: warpView)
                     warpView.removeFromSuperview()
+                }
+                if let mirrorContentWarpView = self.mirrorContentWarpView {
+                    self.mirrorContentWarpView = nil
+                    
+                    if let mirrorContentClippingView = self.mirrorContentClippingView {
+                        mirrorContentClippingView.addSubview(self.mirrorContentScrollView)
+                    } else if let vibrancyEffectView = self.vibrancyEffectView {
+                        vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
+                    }
+                    
+                    mirrorContentWarpView.removeFromSuperview()
                 }
             }
         }
@@ -2560,11 +2638,31 @@ public final class EmojiPagerContentComponent: Component {
             let scrollLocation = self.convert(fromLocation, to: self.scrollView)
             for (_, itemLayer) in self.visibleItemLayers {
                 let distanceVector = CGPoint(x: scrollLocation.x - itemLayer.position.x, y: scrollLocation.y - itemLayer.position.y)
-                let distance = sqrt(distanceVector.x * distanceVector.x + distanceVector.y + distanceVector.y)
+                let distance = sqrt(distanceVector.x * distanceVector.x + distanceVector.y * distanceVector.y)
                 
                 let distanceNorm = min(1.0, max(0.0, distance / self.bounds.width))
-                let delay = (distanceNorm) * 0.3
-                itemLayer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, delay: 1.05 * delay)
+                let delay = 0.05 + (distanceNorm) * 0.4
+                itemLayer.animateScale(from: 0.01, to: 1.0, duration: 0.18, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+        }
+        
+        public func animateInReactionSelection(stationaryItemCount: Int) {
+            guard let component = self.component else {
+                return
+            }
+            var stationaryItemIds = Set<ItemLayer.Key>()
+            if let group = component.itemGroups.first {
+                for item in group.items {
+                    stationaryItemIds.insert(ItemLayer.Key(
+                        groupId: group.groupId,
+                        itemId: item.content.id
+                    ))
+                }
+            }
+            for (key, itemLayer) in self.visibleItemLayers {
+                if !stationaryItemIds.contains(key) {
+                    itemLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
         }
         
@@ -3902,7 +4000,30 @@ public final class EmojiPagerContentComponent: Component {
                 return
             }
             
-            if keyboardChildEnvironment.theme.overallDarkAppearance || component.warpContentsOnEdges {
+            if let externalBackground = component.inputInteractionHolder.inputInteraction?.externalBackground, let effectContainerView = externalBackground.effectContainerView {
+                let mirrorContentClippingView: UIView
+                if let current = self.mirrorContentClippingView {
+                    mirrorContentClippingView = current
+                } else {
+                    mirrorContentClippingView = UIView()
+                    mirrorContentClippingView.clipsToBounds = true
+                    self.mirrorContentClippingView = mirrorContentClippingView
+                    
+                    if let mirrorContentWarpView = self.mirrorContentWarpView {
+                        mirrorContentClippingView.addSubview(mirrorContentWarpView)
+                    } else {
+                        mirrorContentClippingView.addSubview(self.mirrorContentScrollView)
+                    }
+                }
+                
+                let clippingFrame = CGRect(origin: CGPoint(x: 0.0, y: 42.0), size: CGSize(width: backgroundFrame.width, height: backgroundFrame.height))
+                transition.setPosition(view: mirrorContentClippingView, position: clippingFrame.center)
+                transition.setBounds(view: mirrorContentClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: 42.0), size: clippingFrame.size))
+                
+                if mirrorContentClippingView.superview !== effectContainerView {
+                    effectContainerView.addSubview(mirrorContentClippingView)
+                }
+            } else if keyboardChildEnvironment.theme.overallDarkAppearance || component.warpContentsOnEdges {
                 if let vibrancyEffectView = self.vibrancyEffectView {
                     self.vibrancyEffectView = nil
                     vibrancyEffectView.removeFromSuperview()
@@ -3916,9 +4037,6 @@ public final class EmojiPagerContentComponent: Component {
                     let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
                     self.vibrancyEffectView = vibrancyEffectView
                     self.backgroundView.addSubview(vibrancyEffectView)
-                    for subview in vibrancyEffectView.subviews {
-                        let _ = subview
-                    }
                     vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
                 }
             }
@@ -4120,7 +4238,8 @@ public final class EmojiPagerContentComponent: Component {
                 containerInsets: UIEdgeInsets(top: pagerEnvironment.containerInsets.top + 9.0, left: pagerEnvironment.containerInsets.left, bottom: 9.0 + pagerEnvironment.containerInsets.bottom, right: pagerEnvironment.containerInsets.right),
                 itemGroups: itemGroups,
                 expandedGroupIds: self.expandedGroupIds,
-                curveNearBounds: component.warpContentsOnEdges
+                curveNearBounds: component.warpContentsOnEdges,
+                customLayout: component.inputInteractionHolder.inputInteraction?.customLayout
             )
             if let previousItemLayout = self.itemLayout {
                 if previousItemLayout.width != itemLayout.width {
@@ -4138,10 +4257,14 @@ public final class EmojiPagerContentComponent: Component {
             let previousSize = self.scrollView.bounds.size
             self.scrollView.bounds = CGRect(origin: self.scrollView.bounds.origin, size: availableSize)
             
+            let warpHeight: CGFloat = 50.0
             if let warpView = self.warpView {
                 transition.setFrame(view: warpView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: availableSize))
-                let warpHeight: CGFloat = 50.0
                 warpView.update(size: CGSize(width: availableSize.width, height: availableSize.height), topInset: pagerEnvironment.containerInsets.top, warpHeight: warpHeight, theme: keyboardChildEnvironment.theme, transition: transition)
+            }
+            if let mirrorContentWarpView = self.mirrorContentWarpView {
+                transition.setFrame(view: mirrorContentWarpView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: availableSize))
+                mirrorContentWarpView.update(size: CGSize(width: availableSize.width, height: availableSize.height), topInset: pagerEnvironment.containerInsets.top, warpHeight: warpHeight, theme: keyboardChildEnvironment.theme, transition: transition)
             }
             
             if availableSize.height > previousSize.height || transition.animation.isImmediate {
@@ -4165,8 +4288,12 @@ public final class EmojiPagerContentComponent: Component {
             if self.scrollView.contentSize != itemLayout.contentSize {
                 self.scrollView.contentSize = itemLayout.contentSize
             }
-            if self.scrollView.scrollIndicatorInsets != pagerEnvironment.containerInsets {
-                self.scrollView.scrollIndicatorInsets = pagerEnvironment.containerInsets
+            var scrollIndicatorInsets = pagerEnvironment.containerInsets
+            if self.warpView != nil {
+                scrollIndicatorInsets.bottom += 20.0
+            }
+            if self.scrollView.scrollIndicatorInsets != scrollIndicatorInsets {
+                self.scrollView.scrollIndicatorInsets = scrollIndicatorInsets
             }
             self.previousScrollingOffset = ScrollingOffsetState(value: scrollView.contentOffset.y, isDraggingOrDecelerating: scrollView.isDragging || scrollView.isDecelerating)
             
