@@ -16,6 +16,8 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     private let openUrl: (String) -> Void
     
     var loginWithCode: ((String) -> Void)?
+    var signInWithApple: (() -> Void)?
+    
     var reset: (() -> Void)?
     var requestNextOption: (() -> Void)?
     
@@ -23,6 +25,8 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     var termsOfService: (UnauthorizedAccountTermsOfService, Bool)?
     
     private let hapticFeedback = HapticFeedback()
+    
+    private var appleSignInAllowed = false
     
     var inProgress: Bool = false {
         didSet {
@@ -76,6 +80,10 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.continueWithCode(code)
         }
         
+        self.controllerNode.signInWithApple = { [weak self] in
+            self?.signInWithApple?()
+        }
+        
         self.controllerNode.requestNextOption = { [weak self] in
             self?.requestNextOption?()
         }
@@ -89,7 +97,11 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         }
         
         if let (number, codeType, nextType, timeout) = self.data {
-            self.controllerNode.updateData(number: number, codeType: codeType, nextType: nextType, timeout: timeout)
+            var appleSignInAllowed = false
+            if case let .email(_, _, _, appleSignInAllowedValue, _) = codeType {
+                appleSignInAllowed = appleSignInAllowedValue
+            }
+            self.controllerNode.updateData(number: number, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
         }
     }
     
@@ -113,8 +125,14 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
                 self.title = nil
             }
             self.data = (number, codeType, nextType, timeout)
+                        
+            var appleSignInAllowed = false
+            if case let .email(_, _, _, appleSignInAllowedValue, _) = codeType {
+                appleSignInAllowed = appleSignInAllowedValue
+            }
+            
             if self.isNodeLoaded {
-                self.controllerNode.updateData(number: number, codeType: codeType, nextType: nextType, timeout: timeout)
+                self.controllerNode.updateData(number: number, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
                 self.requestLayout(transition: .immediate)
             }
         }

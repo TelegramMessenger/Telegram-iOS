@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TextFormat
 import AuthorizationUI
+import AuthenticationServices
 import CodeInputView
 import PhoneNumberFormat
 import AnimatedStickerNode
@@ -25,6 +26,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private let nextOptionTitleNode: ImmediateTextNode
     private let nextOptionButtonNode: HighlightableButtonNode
     
+    private let dividerNode: AuthorizationDividerNode
+    private var signInWithAppleButton: UIControl?
+    
     private let codeInputView: CodeInputView
     
     private var codeType: SentAuthorizationCodeType?
@@ -33,6 +37,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private var currentTimeoutTime: Int32?
     
     private var layoutArguments: (ContainerViewLayout, CGFloat)?
+    
+    private var appleSignInAllowed = false
     
     var phoneNumber: String = "" {
         didSet {
@@ -49,6 +55,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     }
     
     var loginWithCode: ((String) -> Void)?
+    var signInWithApple: (() -> Void)?
+    
     var requestNextOption: (() -> Void)?
     var requestAnotherOption: (() -> Void)?
     var updateNextEnabled: ((Bool) -> Void)?
@@ -106,6 +114,13 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.codeInputView.textField.keyboardType = .numberPad
         }
         
+        self.dividerNode = AuthorizationDividerNode(theme: self.theme, strings: self.strings)
+        
+        if #available(iOS 13.0, *) {
+            self.signInWithAppleButton = ASAuthorizationAppleIDButton(authorizationButtonType: .signIn, authorizationButtonStyle: theme.overallDarkAppearance ? .white : .black)
+            (self.signInWithAppleButton as? ASAuthorizationAppleIDButton)?.cornerRadius = 11
+        }
+        
         /*self.codeField = TextFieldNode()
         self.codeField.textField.font = Font.regular(24.0)
         self.codeField.textField.textAlignment = .center
@@ -140,6 +155,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.addSubnode(self.currentOptionInfoNode)
         self.addSubnode(self.nextOptionButtonNode)
         self.addSubnode(self.animationNode)
+        self.addSubnode(self.dividerNode)
         
         self.codeInputView.updated = { [weak self] in
             guard let strongSelf = self else {
@@ -154,10 +170,19 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         //self.codeField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_Code, font: Font.regular(24.0), textColor: self.theme.list.itemPlaceholderTextColor)
         
         self.nextOptionButtonNode.addTarget(self, action: #selector(self.nextOptionNodePressed), forControlEvents: .touchUpInside)
+        self.signInWithAppleButton?.addTarget(self, action: #selector(self.signInWithApplePressed), for: .touchUpInside)
     }
     
     deinit {
         self.countdownDisposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        if let signInWithAppleButton = self.signInWithAppleButton {
+            self.view.addSubview(signInWithAppleButton)
+        }
     }
     
     func updateCode(_ code: String) {
@@ -189,9 +214,16 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeInputView.text = ""
     }
     
-    func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?) {
+    func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool) {
         self.codeType = codeType
         self.phoneNumber = number
+        
+        var appleSignInAllowed = appleSignInAllowed
+        if #available(iOS 13.0, *) {
+        } else {
+            appleSignInAllowed = false
+        }
+        self.appleSignInAllowed = appleSignInAllowed
         
         self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
         if case .missedCall = codeType {
@@ -394,8 +426,22 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 /*items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 88.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))*/
-                
-                items.append(AuthorizationLayoutItem(node: self.nextOptionButtonNode, size: nextOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                                
+                if self.appleSignInAllowed, let signInWithAppleButton = self.signInWithAppleButton {
+                    self.nextOptionButtonNode.isHidden = true
+                    signInWithAppleButton.isHidden = false
+                    
+                    let dividerSize = self.dividerNode.updateLayout(width: layout.size.width)
+                    items.append(AuthorizationLayoutItem(node: self.dividerNode, size: dividerSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                    
+                    let buttonSize = CGSize(width: layout.size.width - 48.0, height: 50.0)
+                    items.append(AuthorizationLayoutItem(view: signInWithAppleButton, size: buttonSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                } else {
+                    self.signInWithAppleButton?.isHidden = true
+                    self.dividerNode.isHidden = true
+                    self.nextOptionButtonNode.isHidden = false
+                    items.append(AuthorizationLayoutItem(node: self.nextOptionButtonNode, size: nextOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                }
             }
         } else {
             self.titleIconNode.isHidden = true
@@ -475,5 +521,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     @objc func nextOptionNodePressed() {
         self.requestAnotherOption?()
+    }
+    
+    @objc func signInWithApplePressed() {
+        self.signInWithApple?()
     }
 }

@@ -50,7 +50,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         
         self.statusBar.statusBarStyle = presentationData.theme.intro.statusBarStyle.style
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+//        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
         self.attemptNavigation = { _ in
             return false

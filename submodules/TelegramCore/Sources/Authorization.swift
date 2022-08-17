@@ -364,7 +364,7 @@ public func sendLoginEmailCode(account: UnauthorizedAccount, email: String) -> S
     |> ignoreValues
 }
 
-public func verifyLoginEmail(account: UnauthorizedAccount, code: AuthorizationCode.EmailVerification) -> Signal<Never, AuthorizationEmailVerificationError> {
+public func verifyLoginEmailSetup(account: UnauthorizedAccount, code: AuthorizationCode.EmailVerification) -> Signal<Never, AuthorizationEmailVerificationError> {
     return account.postbox.transaction { transaction -> Signal<Never, AuthorizationEmailVerificationError> in
         if let state = transaction.getState() as? UnauthorizedAccountState {
             switch state.contents {
