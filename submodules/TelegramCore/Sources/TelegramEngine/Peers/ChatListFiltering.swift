@@ -123,13 +123,9 @@ public struct ChatListFilterIncludePeers: Equatable, Hashable {
             self.pinnedPeers.insert(peerId, at: 0)
             return true
         } else {
-            if self.peers.count < 100 {
-                self.peers.insert(peerId, at: 0)
-                self.pinnedPeers.insert(peerId, at: 0)
-                return true
-            } else {
-                return false
-            }
+            self.peers.insert(peerId, at: 0)
+            self.pinnedPeers.insert(peerId, at: 0)
+            return true
         }
     }
     
@@ -217,10 +213,7 @@ public struct ChatListFilterData: Equatable, Hashable {
         if self.excludePeers.contains(peerId) {
             return false
         }
-        if self.excludePeers.count >= 100 {
-            return false
-        }
-        
+ 
         let _ = self.includePeers.removePeer(peerId)
         self.excludePeers.append(peerId)
         

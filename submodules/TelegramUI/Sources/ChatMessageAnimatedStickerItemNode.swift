@@ -109,6 +109,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
             var updatedIconOffset = CGPoint()
             if case .pinnedMessages = subject {
                 updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                updatedIconOffset = CGPoint(x: UIScreenPixel, y: 1.0)
             } else if isReplies {
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: account.peerId) {
@@ -712,7 +713,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if !alreadySeen {
                 item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
                 if let emojiString = self.emojiString, emojiString.count == 1 {
-                    self.playAdditionalEmojiAnimation(index: 1)
+                    if item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                        self.playAdditionalEmojiAnimation(index: 1)
+                    }
                 } else if let file = file, file.isPremiumSticker {
                     Queue.mainQueue().after(0.1) {
                         self.playPremiumStickerAnimation()
@@ -974,13 +977,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 
                 if item.message.forwardInfo != nil || item.message.attributes.first(where: { $0 is ReplyMessageAttribute }) != nil {
-                    tmpWidth -= 60.0
+                    tmpWidth -= 45.0
                 }
                 
                 tmpWidth -= deliveryFailedInset
                 
-                let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset) - 70.0
-                
+                let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
+
                 let font = Font.regular(fontSizeForEmojiString(item.message.text))
                 let attributedText = stringWithAppliedEntities(item.message.text, entities: item.message.textEntitiesAttribute?.entities ?? [], baseColor: .black, linkColor: .black, baseFont: font, linkFont: font, boldFont: font, italicFont: font, boldItalicFont: font, fixedFont: font, blockQuoteFont: font, message: item.message)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural))
@@ -1921,6 +1924,34 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
             }
+            
+            if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
+                if let item = self.item, let forwardInfo = item.message.forwardInfo {
+                    let performAction: () -> Void = {
+                        if let sourceMessageId = forwardInfo.sourceMessageId {
+                            if !item.message.id.peerId.isReplies, let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
+                                if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+                                } else if case .member = channel.participationStatus {
+                                } else {
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                    return
+                                }
+                            }
+                            item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
+                        } else if let peer = forwardInfo.source ?? forwardInfo.author {
+                            item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, nil)
+                        } else if let _ = forwardInfo.authorSignature {
+                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
+                        }
+                    }
+                    
+                    if forwardInfoNode.hasAction(at: self.view.convert(location, to: forwardInfoNode.view)) {
+                        return .action({})
+                    } else {
+                        return .optionalAction(performAction)
+                    }
+                }
+            }
              
             if let item = self.item, self.imageNode.frame.contains(location) {
                 let emojiTapAction: (Bool) -> InternalBubbleTapAction? = { shouldPlay in
@@ -2658,23 +2689,23 @@ private func fontSizeForEmojiString(_ string: String) -> CGFloat {
         case 1:
             multiplier = 1.0
         case 2:
-            multiplier = 0.7
+            multiplier = 0.84
         case 3:
-            multiplier = 0.52
+            multiplier = 0.69
         case 4:
-            multiplier = 0.37
+            multiplier = 0.53
         case 5:
-            multiplier = 0.28
+            multiplier = 0.46
         case 6:
-            multiplier = 0.25
+            multiplier = 0.38
         case 7:
-            multiplier = 0.23
+            multiplier = 0.32
         case 8:
-            multiplier = 0.21
+            multiplier = 0.27
         case 9:
-            multiplier = 0.19
+            multiplier = 0.24
         default:
-            multiplier = 0.19
+            multiplier = 0.21
     }
     return floor(basicSize * multiplier)
 }

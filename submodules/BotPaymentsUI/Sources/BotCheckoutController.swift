@@ -180,6 +180,7 @@ public final class BotCheckoutController: ViewController {
         guard !self.didCancel && !self.didFail && !self.didComplete else {
             return
         }
+        self.didCancel = true
         self.cancelled()
     }
     
@@ -188,6 +189,7 @@ public final class BotCheckoutController: ViewController {
         guard !self.didCancel && !self.didFail && !self.didComplete else {
             return
         }
+        self.didFail = true
         self.failed()
     }
     
@@ -196,6 +198,7 @@ public final class BotCheckoutController: ViewController {
         guard !self.didCancel && !self.didFail && !self.didComplete else {
             return
         }
+        self.didComplete = true
         self.completed(currencyValue, receiptMessageId)
     }
     

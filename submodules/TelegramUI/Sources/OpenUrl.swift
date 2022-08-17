@@ -647,6 +647,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var domain: String?
                         var start: String?
                         var startGroup: String?
+                        var startChannel: String?
                         var admin: String?
                         var game: String?
                         var post: String?
@@ -684,6 +685,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     voiceChat = ""
                                 } else if queryItem.name == "startattach" {
                                     startAttach = ""
+                                } else if queryItem.name == "startgroup" {
+                                    startGroup = ""
+                                } else if queryItem.name == "startchannel" {
+                                    startChannel = ""
                                 }
                             }
                         }
@@ -698,7 +703,20 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             if let start = start {
                                 result += "?start=\(start)"
                             } else if let startGroup = startGroup {
-                                result += "?startgroup=\(startGroup)"
+                                if !startGroup.isEmpty {
+                                    result += "?startgroup=\(startGroup)"
+                                } else {
+                                    result += "?startgroup"
+                                }
+                                if let admin = admin {
+                                    result += "&admin=\(admin)"
+                                }
+                            } else if let startChannel = startChannel {
+                                if !startChannel.isEmpty {
+                                    result += "?startchannel=\(startChannel)"
+                                } else {
+                                    result += "?startchannel"
+                                }
                                 if let admin = admin {
                                     result += "&admin=\(admin)"
                                 }

@@ -521,17 +521,20 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                 }
             }))
             
-            let credibilityIconNode: ASImageNode
-            if let current = self.credibilityIconNode {
-                credibilityIconNode = current
-            } else {
-                credibilityIconNode = ASImageNode()
-                credibilityIconNode.displaysAsynchronously = false
-                credibilityIconNode.displayWithoutProcessing = true
-                credibilityIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
-                self.containerNode.addSubnode(credibilityIconNode)
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+            if !premiumConfiguration.isPremiumDisabled {
+                let credibilityIconNode: ASImageNode
+                if let current = self.credibilityIconNode {
+                    credibilityIconNode = current
+                } else {
+                    credibilityIconNode = ASImageNode()
+                    credibilityIconNode.displaysAsynchronously = false
+                    credibilityIconNode.displayWithoutProcessing = true
+                    credibilityIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
+                    self.containerNode.addSubnode(credibilityIconNode)
+                }
+                credibilityIconNode.frame = CGRect(origin: CGPoint(x: 29.0 - UIScreenPixel, y: 29.0 - UIScreenPixel), size: CGSize(width: 10.0, height: 10.0))
             }
-            credibilityIconNode.frame = CGRect(origin: CGPoint(x: 29.0 - UIScreenPixel, y: 29.0 - UIScreenPixel), size: CGSize(width: 10.0, height: 10.0))
         } else {
             self.credibilityIconNode?.removeFromSupernode()
             self.credibilityIconNode = nil

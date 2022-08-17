@@ -239,7 +239,7 @@
     if (_keyboardHeight > 0.0) {
         backgroundHeight += _keyboardHeight - edgeInsets.bottom;
     }
-    _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight);
+    _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight + 1.0);
 }
 
 @end
