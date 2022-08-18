@@ -294,7 +294,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                     
                     if case let .email(_, _, _, _, setup) = type, setup, case let .emailVerification(emailCode) = authorizationCode {
-                        strongSelf.actionDisposable.set(((verifyLoginEmail(account: strongSelf.account, code: emailCode))
+                        strongSelf.actionDisposable.set(((verifyLoginEmailSetup(account: strongSelf.account, code: emailCode))
                         |> deliverOnMainQueue).start(error: { error in
                             Queue.mainQueue().async {
                                 if let strongSelf = self, let controller = controller {
@@ -475,10 +475,28 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
             }
         }
+        controller.signInWithApple = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.signInWithAppleSetup = false
+            
+            if #available(iOS 13.0, *) {
+                let appleIdProvider = ASAuthorizationAppleIDProvider()
+                let request = appleIdProvider.createRequest()
+                 
+                let authorizationController = ASAuthorizationController(authorizationRequests: [request])
+                authorizationController.delegate = strongSelf
+                authorizationController.presentationContextProvider = strongSelf
+                authorizationController.performRequests()
+            }
+        }
         controller.updateData(number: formatPhoneNumber(number), codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)
         return controller
     }
     
+    private var signInWithAppleSetup = false
     private func emailSetupController(appleSignInAllowed: Bool) -> AuthorizationSequenceEmailEntryController {
         var currentController: AuthorizationSequenceEmailEntryController?
         for c in self.viewControllers {
@@ -533,6 +551,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 return
             }
             
+            strongSelf.signInWithAppleSetup = true
+            
             if #available(iOS 13.0, *) {
                 let appleIdProvider = ASAuthorizationAppleIDProvider()
                 let request = appleIdProvider.createRequest()
@@ -559,8 +579,9 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     return
                 }
             
-                self.actionDisposable.set((verifyLoginEmail(account: self.account, code: .appleToken(token))
-                |> deliverOnMainQueue).start(error: { [weak self] error in
+            if self.signInWithAppleSetup {
+                self.actionDisposable.set((verifyLoginEmailSetup(account: self.account, code: .appleToken(token))
+                |> deliverOnMainQueue).start(error: { [weak self, weak lastController] error in
                     if let strongSelf = self, let lastController = lastController {
                         let text: String
                         switch error {
@@ -576,6 +597,49 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         lastController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
                 }))
+            } else {
+                self.actionDisposable.set(
+                    authorizeWithCode(accountManager: self.sharedContext.accountManager, account: self.account, code: .emailVerification(.appleToken(token)), termsOfService: nil, forcedPasswordSetupNotice: { value in
+                        guard let entry = CodableEntry(ApplicationSpecificCounterNotice(value: value)) else {
+                            return nil
+                        }
+                        return (ApplicationSpecificNotice.forcedPasswordSetupKey(), entry)
+                    }).start(next: { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+//                        lastController?.inProgress = false
+                        switch result {
+                            case let .signUp(data):
+                                let _ = beginSignUp(account: strongSelf.account, data: data).start()
+                            case .loggedIn:
+                                break
+                        }
+                    }, error: { [weak self, weak lastController] error in
+                        Queue.mainQueue().async {
+                            if let strongSelf = self, let lastController = lastController {
+//                                controller.inProgress = false
+                                
+                                let text: String
+                                switch error {
+                                    case .limitExceeded:
+                                        text = strongSelf.presentationData.strings.Login_CodeFloodError
+                                    case .invalidCode:
+                                        text = strongSelf.presentationData.strings.Login_InvalidCodeError
+                                    case .generic:
+                                        text = strongSelf.presentationData.strings.Login_UnknownError
+                                    case .codeExpired:
+                                        text = strongSelf.presentationData.strings.Login_CodeExpired
+                                        let account = strongSelf.account
+                                        let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                }
+                                
+                                lastController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            }
+                        }
+                    })
+                )
+            }
             default:
                 break
         }

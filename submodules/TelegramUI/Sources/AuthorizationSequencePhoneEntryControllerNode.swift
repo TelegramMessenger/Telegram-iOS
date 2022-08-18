@@ -235,8 +235,6 @@ private final class ContactSyncNode: ASDisplayNode {
     }
 }
 
-
-
 final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private let sharedContext: SharedAccountContext
     private var account: UnauthorizedAccount
