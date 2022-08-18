@@ -5726,13 +5726,17 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, reaction: Api.Reaction?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, reaction: [Api.Reaction]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1526634933)
+                    buffer.appendInt32(-754091820)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {reaction!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(reaction!.count))
+                    for item in reaction! {
+                        item.serialize(buffer, true)
+                    }}
                     return (FunctionDescription(name: "messages.sendReaction", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("reaction", String(describing: reaction))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
@@ -6461,23 +6465,6 @@ public extension Api.functions.payments {
                         var result: Api.payments.SavedInfo?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.payments.SavedInfo
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.payments {
-                static func requestRecurringPayment(userId: Api.InputUser, recurringInitCharge: String, invoiceMedia: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(342791565)
-                    userId.serialize(buffer, true)
-                    serializeString(recurringInitCharge, buffer: buffer, boxed: false)
-                    invoiceMedia.serialize(buffer, true)
-                    return (FunctionDescription(name: "payments.requestRecurringPayment", parameters: [("userId", String(describing: userId)), ("recurringInitCharge", String(describing: recurringInitCharge)), ("invoiceMedia", String(describing: invoiceMedia))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })

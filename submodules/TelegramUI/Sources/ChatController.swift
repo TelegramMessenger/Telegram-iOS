@@ -1308,7 +1308,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.push(controller)
                     }
                     
-                    controller.reactionSelected = { [weak controller] reaction, isLarge in
+                    controller.reactionSelected = { [weak controller] chosenUpdatedReaction, isLarge in
                         guard let strongSelf = self else {
                             return
                         }
@@ -1317,7 +1317,97 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         
-                        var updatedReaction: UpdateMessageReaction? = reaction
+                        let chosenReaction: MessageReaction.Reaction = chosenUpdatedReaction.reaction
+                        
+                        let currentReactions = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+                        var updatedReactions: [MessageReaction.Reaction] = currentReactions.filter(\.isSelected).map(\.value)
+                        var removedReaction: MessageReaction.Reaction?
+                        var isFirst = false
+                        
+                        if let index = updatedReactions.firstIndex(where: { $0 == chosenReaction }) {
+                            removedReaction = chosenReaction
+                            updatedReactions.remove(at: index)
+                        } else {
+                            updatedReactions.append(chosenReaction)
+                            isFirst = !currentReactions.contains(where: { $0.value == chosenReaction })
+                        }
+                        
+                        /*guard let allowedReactions = allowedReactions else {
+                            itemNode.openMessageContextMenu()
+                            return
+                        }
+                        
+                        switch allowedReactions {
+                        case let .set(set):
+                            if !messageAlreadyHasThisReaction && updatedReactions.contains(where: { !set.contains($0) }) {
+                                itemNode.openMessageContextMenu()
+                                return
+                            }
+                        case .all:
+                            break
+                        }*/
+                        
+                        strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                            if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                                if item.message.id == message.id {
+                                    if removedReaction == nil && !updatedReactions.isEmpty {
+                                        itemNode.awaitingAppliedReaction = (chosenReaction, { [weak itemNode] in
+                                            guard let controller = controller else {
+                                                return
+                                            }
+                                            if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: chosenReaction) {
+                                                strongSelf.chatDisplayNode.messageTransitionNode.addMessageContextController(messageId: item.message.id, contextController: controller)
+                                                
+                                                var hideTargetButton: UIView?
+                                                if isFirst {
+                                                    hideTargetButton = targetView.superview
+                                                }
+                                                
+                                                controller.dismissWithReaction(value: chosenReaction, targetView: targetView, hideNode: true, animateTargetContainer: hideTargetButton, addStandaloneReactionAnimation: { standaloneReactionAnimation in
+                                                    guard let strongSelf = self else {
+                                                        return
+                                                    }
+                                                    strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                                    standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
+                                                    strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                                }, completion: { [weak itemNode, weak targetView] in
+                                                    guard let strongSelf = self, let itemNode = itemNode, let targetView = targetView else {
+                                                        return
+                                                    }
+                                                    
+                                                    let _ = strongSelf
+                                                    let _ = itemNode
+                                                    let _ = targetView
+                                                })
+                                            }
+                                        })
+                                    } else {
+                                        itemNode.awaitingAppliedReaction = (nil, {
+                                            controller?.dismiss()
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                        
+                        let mappedUpdatedReactions = updatedReactions.map { reaction -> UpdateMessageReaction in
+                            switch reaction {
+                            case let .builtin(value):
+                                return .builtin(value)
+                            case let .custom(fileId):
+                                var customFile: TelegramMediaFile?
+                                if case let .custom(customFileId, file) = chosenUpdatedReaction, fileId == customFileId {
+                                    customFile = file
+                                }
+                                return .custom(fileId: fileId, file: customFile)
+                            }
+                        }
+                        
+                        let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reactions: mappedUpdatedReactions, isLarge: isLarge).start()
+                        
+                        /*let currentReactions = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+                        var updatedReactions: [MessageReaction.Reaction] = currentReactions.filter(\.isSelected).map(\.value)
+                        
                         var isFirst = true
                         for attribute in topMessage.attributes {
                             if let attribute = attribute as? ReactionsMessageAttribute {
@@ -1336,49 +1426,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
-                        strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                            if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
-                                if item.message.id == message.id {
-                                    if let updatedReaction = updatedReaction {
-                                        itemNode.awaitingAppliedReaction = (updatedReaction.reaction, { [weak itemNode] in
-                                            guard let controller = controller else {
-                                                return
-                                            }
-                                            if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: updatedReaction.reaction) {
-                                                strongSelf.chatDisplayNode.messageTransitionNode.addMessageContextController(messageId: item.message.id, contextController: controller)
-                                                
-                                                var hideTargetButton: UIView?
-                                                if isFirst {
-                                                    hideTargetButton = targetView.superview
-                                                }
-                                                
-                                                controller.dismissWithReaction(value: updatedReaction.reaction, targetView: targetView, hideNode: true, animateTargetContainer: hideTargetButton, addStandaloneReactionAnimation: { standaloneReactionAnimation in
-                                                    guard let strongSelf = self else {
-                                                        return
-                                                    }
-                                                    strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                                    standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
-                                                    strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                                                }, completion: { [weak itemNode, weak targetView] in
-                                                    guard let strongSelf = self, let itemNode = itemNode, let targetView = targetView else {
-                                                        return
-                                                    }
-                                                    
-                                                    let _ = strongSelf
-                                                    let _ = itemNode
-                                                    let _ = targetView
-                                                })
-                                            }
-                                        })
-                                    } else if updatedReaction == nil {
-                                        itemNode.awaitingAppliedReaction = (nil, {
-                                            controller?.dismiss()
-                                        })
-                                    }
-                                }
-                            }
-                        }
-                        let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reaction: updatedReaction, isLarge: isLarge).start()
+                        
+                        let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reaction: updatedReaction, isLarge: isLarge).start()*/
                     }
 
                     strongSelf.forEachController({ controller in
@@ -1461,92 +1510,71 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    var updatedReaction: UpdateMessageReaction?
+                    let chosenReaction: MessageReaction.Reaction?
+                    
                     switch reaction {
                     case .default:
                         switch item.associatedData.defaultReaction {
                         case .none:
-                            updatedReaction = nil
+                            chosenReaction = nil
                         case let .builtin(value):
-                            updatedReaction = .builtin(value)
+                            chosenReaction = .builtin(value)
                         case let .custom(fileId):
-                            updatedReaction = .custom(fileId: fileId, file: nil)
+                            chosenReaction = .custom(fileId)
                         }
                     case let .reaction(value):
                         switch value {
                         case let .builtin(value):
-                            updatedReaction = .builtin(value)
+                            chosenReaction = .builtin(value)
                         case let .custom(fileId):
-                            updatedReaction = .custom(fileId: fileId, file: nil)
+                            chosenReaction = .custom(fileId)
                         }
+                    }
+                    
+                    guard let chosenReaction = chosenReaction else {
+                        return
                     }
                     
                     var removedReaction: MessageReaction.Reaction?
                     var messageAlreadyHasThisReaction = false
                     
-                    for attribute in message.attributes {
-                        if let attribute = attribute as? ReactionsMessageAttribute {
-                            for listReaction in attribute.reactions {
-                                switch reaction {
-                                case .default:
-                                    if listReaction.isSelected {
-                                        updatedReaction = nil
-                                        removedReaction = listReaction.value
-                                    } else if listReaction.value == updatedReaction?.reaction {
-                                        messageAlreadyHasThisReaction = true
-                                    }
-                                case let .reaction(value):
-                                    if listReaction.value == value {
-                                        messageAlreadyHasThisReaction = true
-                                        
-                                        if listReaction.isSelected {
-                                            updatedReaction = nil
-                                            removedReaction = value
-                                        }
-                                    }
-                                }
-                            }
-                        } else if let attribute = attribute as? PendingReactionsMessageAttribute {
-                            if attribute.value != nil {
-                                switch reaction {
-                                case .default:
-                                    updatedReaction = nil
-                                    removedReaction = attribute.value
-                                case let .reaction(value):
-                                    if attribute.value == value {
-                                        updatedReaction = nil
-                                        removedReaction = value
-                                    }
-                                }
-                            }
-                        }
+                    let currentReactions = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+                    var updatedReactions: [MessageReaction.Reaction] = currentReactions.filter(\.isSelected).map(\.value)
+                    
+                    if let index = updatedReactions.firstIndex(where: { $0 == chosenReaction }) {
+                        removedReaction = chosenReaction
+                        updatedReactions.remove(at: index)
+                    } else {
+                        updatedReactions.append(chosenReaction)
+                        messageAlreadyHasThisReaction = currentReactions.contains(where: { $0.value == chosenReaction })
                     }
                     
-                    if let updatedReaction = updatedReaction {
-                        guard let allowedReactions = allowedReactions else {
+                    guard let allowedReactions = allowedReactions else {
+                        itemNode.openMessageContextMenu()
+                        return
+                    }
+                    
+                    switch allowedReactions {
+                    case let .set(set):
+                        if !messageAlreadyHasThisReaction && updatedReactions.contains(where: { !set.contains($0) }) {
                             itemNode.openMessageContextMenu()
                             return
                         }
-                        switch allowedReactions {
-                        case let .set(set):
-                            if !messageAlreadyHasThisReaction && !set.contains(updatedReaction.reaction) {
-                                itemNode.openMessageContextMenu()
-                                return
-                            }
-                        case .all:
-                            break
-                        }
-                        
+                    case .all:
+                        break
+                    }
+                    
+                    if removedReaction == nil && !updatedReactions.isEmpty {
                         if strongSelf.selectPollOptionFeedback == nil {
                             strongSelf.selectPollOptionFeedback = HapticFeedback()
                         }
                         strongSelf.selectPollOptionFeedback?.tap()
                         
-                        itemNode.awaitingAppliedReaction = (updatedReaction.reaction, { [weak itemNode] in
+                        itemNode.awaitingAppliedReaction = (chosenReaction, { [weak itemNode] in
                             guard let strongSelf = self else {
                                 return
                             }
-                            if let itemNode = itemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction.reaction) {
+                            if let itemNode = itemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: chosenReaction) {
                                 for reaction in availableReactions.reactions {
                                     guard let centerAnimation = reaction.centerAnimation else {
                                         continue
@@ -1555,7 +1583,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         continue
                                     }
                                     
-                                    if reaction.value == updatedReaction.reaction {
+                                    if reaction.value == chosenReaction {
                                         let standaloneReactionAnimation = StandaloneReactionAnimation()
                                         
                                         strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
@@ -1620,7 +1648,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reaction: updatedReaction, isLarge: false).start()
+                    let mappedUpdatedReactions = updatedReactions.map { reaction -> UpdateMessageReaction in
+                        switch reaction {
+                        case let .builtin(value):
+                            return .builtin(value)
+                        case let .custom(fileId):
+                            return .custom(fileId: fileId, file: nil)
+                        }
+                    }
+                    
+                    let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reactions: mappedUpdatedReactions, isLarge: false).start()
                 }
             })
         }, activateMessagePinch: { [weak self] sourceNode in

@@ -14,10 +14,10 @@ private func reactionGeneratedEvent(_ previousReactions: ReactionsMessageAttribu
             })
         }
         let myUpdated = updatedReactions.reactions.filter { value in
-            return value.isSelected
+            return value.chosenOrder != nil
         }.first
         let myPrevious = prev.filter { value in
-            return value.isSelected
+            return value.chosenOrder != nil
         }.first
         
         let previousCount = prev.reduce(0, {
@@ -28,7 +28,7 @@ private func reactionGeneratedEvent(_ previousReactions: ReactionsMessageAttribu
         })
         
         let newReaction = updated.filter {
-            !$0.isSelected
+            $0.chosenOrder == nil
         }.first?.value
         
         if !updated.isEmpty && myUpdated == myPrevious, updatedCount >= previousCount, let value = newReaction {
