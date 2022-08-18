@@ -66,7 +66,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     })
                 }
                 if let attachBotStart = params.attachBotStart {
-                    controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload)
+                    controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload, justInstalled: attachBotStart.justInstalled)
                 }
                 params.setupController(controller)
                 found = true
@@ -85,7 +85,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 })
             }
             if let attachBotStart = params.attachBotStart {
-                controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload)
+                controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload, justInstalled: attachBotStart.justInstalled)
             }
         } else {
             controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, attachBotStart: params.attachBotStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)

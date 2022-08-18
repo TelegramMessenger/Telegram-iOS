@@ -9734,7 +9734,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if let attachBotStart = self.attachBotStart {
             self.attachBotStart = nil
-            self.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload)
+            self.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload, justInstalled: attachBotStart.justInstalled)
         }
     }
     
@@ -11134,12 +11134,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    public func presentAttachmentBot(botId: PeerId, payload: String?) {
+    public func presentAttachmentBot(botId: PeerId, payload: String?, justInstalled: Bool) {
         self.attachmentController?.dismiss(animated: true, completion: nil)
-        self.presentAttachmentMenu(editMediaOptions: nil, editMediaReference: nil, botId: botId, botPayload: payload)
+        self.presentAttachmentMenu(editMediaOptions: nil, editMediaReference: nil, botId: botId, botPayload: payload, botJustInstalled: justInstalled)
     }
     
-    private func presentAttachmentMenu(editMediaOptions: MessageMediaEditingOptions?, editMediaReference: AnyMediaReference?, botId: PeerId? = nil, botPayload: String? = nil) {
+    private func presentAttachmentMenu(editMediaOptions: MessageMediaEditingOptions?, editMediaReference: AnyMediaReference?, botId: PeerId? = nil, botPayload: String? = nil, botJustInstalled: Bool = false) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
@@ -11184,33 +11184,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             isScheduledMessages = true
         }
         
-        let buttons: Signal<([AttachmentButtonType], AttachmentButtonType?), NoError>
+        var peerType: AttachMenuBots.Bot.PeerFlags = []
+        if let user = peer as? TelegramUser {
+            if let _ = user.botInfo {
+                peerType.insert(.bot)
+            } else {
+                peerType.insert(.user)
+            }
+        } else if let _ = peer as? TelegramGroup {
+            peerType = .group
+        } else if let channel = peer as? TelegramChannel {
+            if case .broadcast = channel.info {
+                peerType = .channel
+            } else {
+                peerType = .group
+            }
+        }
+        
+        let buttons: Signal<([AttachmentButtonType], [AttachmentButtonType], AttachmentButtonType?), NoError>
         if !isScheduledMessages {
             buttons = self.context.engine.messages.attachMenuBots()
             |> map { attachMenuBots in
                 var buttons = availableButtons
+                var allButtons = availableButtons
+                
                 var initialButton: AttachmentButtonType?
                 if botId == nil {
                     initialButton = .gallery
                 }
                 
-                var peerType: AttachMenuBots.Bot.PeerFlags = []
-                if let user = peer as? TelegramUser {
-                    if let _ = user.botInfo {
-                        peerType.insert(.bot)
-                    } else {
-                        peerType.insert(.user)
-                    }
-                } else if let _ = peer as? TelegramGroup {
-                    peerType = .group
-                } else if let channel = peer as? TelegramChannel {
-                    if case .broadcast = channel.info {
-                        peerType = .channel
-                    } else {
-                        peerType = .group
-                    }
-                }
-                 
                 for bot in attachMenuBots.reversed() {
                     var peerType = peerType
                     if bot.peer.id == peer.id {
@@ -11218,19 +11220,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         peerType.remove(.bot)
                     }
                     
+                    let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
                     if !bot.peerTypes.intersection(peerType).isEmpty {
-                        let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
                         buttons.insert(button, at: 1)
                         
                         if initialButton == nil && bot.peer.id == botId {
                             initialButton = button
                         }
                     }
+                    allButtons.insert(button, at: 1)
                 }
-                return (buttons, initialButton)
+                return (buttons, allButtons, initialButton)
             }
         } else {
-            buttons = .single((availableButtons, .gallery))
+            buttons = .single((availableButtons, availableButtons, .gallery))
         }
                     
         let dataSettings = self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
@@ -11243,25 +11246,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let (buttons, initialButton) = buttonsAndInitialButton
+            let (buttons, allButtons, initialButton) = buttonsAndInitialButton
             
             guard let initialButton = initialButton else {
                 if let botId = botId {
-                    let _ = (context.engine.messages.getAttachMenuBot(botId: botId)
-                    |> deliverOnMainQueue).start(next: { bot in
-                        let peer = EnginePeer(bot.peer)
-                        let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, completion: {
-                            let _ = (context.engine.messages.addBotToAttachMenu(botId: botId)
-                            |> deliverOnMainQueue).start(error: { _ in
-                                
-                            }, completed: {
-                                strongSelf.presentAttachmentBot(botId: botId, payload: botPayload)
+                    if let button = allButtons.first(where: { button in
+                        if case let .app(botPeer, _, _) = button, botPeer.id == botId {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }), case let .app(_, botName, _) = button {
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: botJustInstalled ? strongSelf.presentationData.strings.WebApp_AddToAttachmentSucceeded(botName).string : strongSelf.presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    } else {
+                        let _ = (context.engine.messages.getAttachMenuBot(botId: botId)
+                        |> deliverOnMainQueue).start(next: { bot in
+                            let peer = EnginePeer(bot.peer)
+                            let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, completion: {
+                                let _ = (context.engine.messages.addBotToAttachMenu(botId: botId)
+                                |> deliverOnMainQueue).start(error: { _ in
+                                    
+                                }, completed: {
+                                    strongSelf.presentAttachmentBot(botId: botId, payload: botPayload, justInstalled: true)
+                                })
                             })
+                            strongSelf.present(controller, in: .window(.root))
+                        }, error: { _ in
+                            strongSelf.present(textAlertController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         })
-                        strongSelf.present(controller, in: .window(.root))
-                    }, error: { _ in
-                        strongSelf.present(textAlertController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                    })
+                    }
                 }
                 return
             }

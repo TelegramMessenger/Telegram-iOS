@@ -151,10 +151,12 @@ public struct ChatControllerInitialBotStart {
 public struct ChatControllerInitialAttachBotStart {
     public let botId: PeerId
     public let payload: String?
+    public let justInstalled: Bool
     
-    public init(botId: PeerId, payload: String?) {
+    public init(botId: PeerId, payload: String?, justInstalled: Bool) {
         self.botId = botId
         self.payload = payload
+        self.justInstalled = justInstalled
     }
 }
 
