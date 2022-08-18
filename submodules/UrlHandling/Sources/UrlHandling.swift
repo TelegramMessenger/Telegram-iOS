@@ -477,7 +477,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                         |> take(1)
                         |> map { botPeer -> ResolvedUrl? in
                             if let botPeer = botPeer?._asPeer() {
-                                return .peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: startAttach)))
+                                return .peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: startAttach, justInstalled: false)))
                             } else {
                                 return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
                             }
@@ -511,7 +511,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 }
                                 |> mapToSignal { botPeer -> Signal<ResolvedUrl?, NoError> in
                                     if let botPeer = botPeer {
-                                        return .single(.peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload))))
+                                        return .single(.peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: false))))
                                     } else {
                                         return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
                                     }

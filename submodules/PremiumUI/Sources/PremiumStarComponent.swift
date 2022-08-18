@@ -19,7 +19,7 @@ private func rad2deg(_ number: Float) -> Float {
 }
 
 private func generateParticlesTexture() -> UIImage {
-    return UIImage() 
+    return UIImage()
 }
 
 private func generateFlecksTexture() -> UIImage {

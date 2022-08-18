@@ -7441,6 +7441,7 @@ Sorry for the inconvenience.";
 
 "WebApp.AddToAttachmentUnavailableError" = "This bot can't be added to the attachment menu.";
 "WebApp.AddToAttachmentAlreadyAddedError" = "This bot is already added to your attachment menu.";
+"WebApp.AddToAttachmentSucceeded" = "**%@** has been added to your attachment menu.";
 
 "WebApp.OpenWebViewAlertTitle" = "Open Web App";
 "WebApp.OpenWebViewAlertText" = "**%@** would like to open its web app to proceed.\n\nIt will be able to access your **IP address** and basic device info.";
