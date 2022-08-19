@@ -2137,6 +2137,7 @@ public final class EmojiPagerContentComponent: Component {
             
             private let content: ItemContent
             private let placeholderColor: UIColor
+            let pixelSize: CGSize
             private let size: CGSize
             private var disposable: Disposable?
             private var fetchDisposable: Disposable?
@@ -2176,6 +2177,7 @@ public final class EmojiPagerContentComponent: Component {
                 
                 let scale = min(2.0, UIScreenScale)
                 let pixelSize = CGSize(width: pointSize.width * scale, height: pointSize.height * scale)
+                self.pixelSize = pixelSize
                 self.size = CGSize(width: pixelSize.width / scale, height: pixelSize.height / scale)
                 
                 super.init()
@@ -2298,6 +2300,7 @@ public final class EmojiPagerContentComponent: Component {
                 self.content = layer.content
                 self.placeholderColor = layer.placeholderColor
                 self.size = layer.size
+                self.pixelSize = layer.pixelSize
                 
                 self.onUpdateDisplayPlaceholder = { _, _ in }
                 
@@ -2646,23 +2649,45 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
-        public func animateInReactionSelection(stationaryItemCount: Int) {
-            guard let component = self.component else {
+        public func animateInReactionSelection(sourceItems: [MediaId: (position: CGPoint, frameIndex: Int, placeholder: UIImage)]) {
+            guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
-            var stationaryItemIds = Set<ItemLayer.Key>()
-            if let group = component.itemGroups.first {
-                for item in group.items {
-                    stationaryItemIds.insert(ItemLayer.Key(
-                        groupId: group.groupId,
-                        itemId: item.content.id
-                    ))
+
+            for (_, itemLayer) in self.visibleItemLayers {
+                guard case let .animation(animationData) = itemLayer.item.content else {
+                    continue
+                }
+                guard let file = itemLayer.item.itemFile else {
+                    continue
+                }
+                if let sourceItem = sourceItems[file.fileId] {
+                    component.animationRenderer.setFrameIndex(itemId: animationData.resource.resource.id.stringRepresentation, size: itemLayer.pixelSize, frameIndex: sourceItem.frameIndex, placeholder: sourceItem.placeholder)
+                } else {
+                    let distance = itemLayer.position.y - itemLayout.frame(groupIndex: 0, itemIndex: 0).midY
+                    let maxDistance = self.bounds.height
+                    let clippedDistance = max(0.0, min(distance, maxDistance))
+                    let distanceNorm = clippedDistance / maxDistance
+                    
+                    let delay = listViewAnimationCurveSystem(distanceNorm) * 0.16
+                    
+                    itemLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
+                    itemLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, delay: delay)
                 }
             }
-            for (key, itemLayer) in self.visibleItemLayers {
-                if !stationaryItemIds.contains(key) {
-                    itemLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                }
+            
+            for (_, groupHeader) in self.visibleGroupHeaders {
+                let distance = groupHeader.layer.position.y - itemLayout.frame(groupIndex: 0, itemIndex: 0).midY
+                let maxDistance = self.bounds.height
+                let clippedDistance = max(0.0, min(distance, maxDistance))
+                let distanceNorm = clippedDistance / maxDistance
+                
+                let delay = listViewAnimationCurveSystem(distanceNorm) * 0.16
+                
+                groupHeader.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
+                groupHeader.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, delay: delay)
+                groupHeader.tintContentLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
+                groupHeader.tintContentLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, delay: delay)
             }
         }
         

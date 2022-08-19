@@ -67,7 +67,13 @@ public extension TelegramEngine {
             return self.account.postbox.transaction { transaction -> Void in
                 if let file = file {
                     transaction.storeMediaIfNotPresent(media: file)
+                    
+                    if let entry = CodableEntry(RecentMediaItem(file)) {
+                        let itemEntry = OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry)
+                        transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStatusEmoji, item: itemEntry, removeTailIfCountExceeds: 50)
+                    }
                 }
+                
                 if let peer = transaction.getPeer(peerId) as? TelegramUser {
                     updatePeers(transaction: transaction, peers: [peer.withUpdatedEmojiStatus(file.flatMap({ PeerEmojiStatus(fileId: $0.fileId.id) }))], update: { _, updated in
                         updated

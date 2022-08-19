@@ -56,14 +56,20 @@ public final class AnimationCacheItem {
     
     public let numFrames: Int
     private let advanceImpl: (Advance, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?
+    private let resetImpl: () -> Void
     
-    public init(numFrames: Int, advanceImpl: @escaping (Advance, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?) {
+    public init(numFrames: Int, advanceImpl: @escaping (Advance, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?, resetImpl: @escaping () -> Void) {
         self.numFrames = numFrames
         self.advanceImpl = advanceImpl
+        self.resetImpl = resetImpl
     }
     
     public func advance(advance: Advance, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
         return self.advanceImpl(advance, requestedFormat)
+    }
+    
+    public func reset() {
+        self.resetImpl()
     }
 }
 
@@ -775,6 +781,10 @@ private final class AnimationCacheItemAccessor {
         }
     }
     
+    func reset() {
+        self.currentFrame = nil
+    }
+    
     func advance(advance: AnimationCacheItem.Advance, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
         switch advance {
         case let .frames(count):
@@ -1204,6 +1214,8 @@ private func loadItem(path: String) throws -> AnimationCacheItem {
     
     return AnimationCacheItem(numFrames: frameMapping.count, advanceImpl: { advance, requestedFormat in
         return itemAccessor.advance(advance: advance, requestedFormat: requestedFormat)
+    }, resetImpl: {
+        itemAccessor.reset()
     })
 }
 

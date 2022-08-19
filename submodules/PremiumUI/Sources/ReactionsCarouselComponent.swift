@@ -9,6 +9,9 @@ import AccountContext
 import ReactionSelectionNode
 import TelegramPresentationData
 import AccountContext
+import AnimationCache
+import Postbox
+import MultiAnimationRenderer
 
 final class ReactionsCarouselComponent: Component {
     public typealias EnvironmentType = DemoPageEnvironment
@@ -117,9 +120,17 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     private var previousInteractionTimestamp: Double = 0.0
     private var timer: SwiftSignalKit.Timer?
     
+    private let animationCache: AnimationCache
+    private let animationRenderer: MultiAnimationRenderer
+    
     init(context: AccountContext, theme: PresentationTheme, reactions: [AvailableReactions.Reaction]) {
         self.context = context
         self.theme = theme
+        
+        self.animationCache = AnimationCacheImpl(basePath: self.context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+            return TempBox.shared.tempFile(fileName: "file").path
+        })
+        self.animationRenderer = MultiAnimationRendererImpl()
         
         var reactionMap: [MessageReaction.Reaction: AvailableReactions.Reaction] = [:]
         for reaction in reactions {
@@ -341,6 +352,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
                 continue
             }
             let containerNode = ASDisplayNode()
+            
             let itemNode = ReactionNode(context: self.context, theme: self.theme, item: ReactionItem(
                 reaction: ReactionItem.Reaction(rawValue: reaction.value),
                 appearAnimation: reaction.appearAnimation,
@@ -350,7 +362,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
                 applicationAnimation: aroundAnimation,
                 largeApplicationAnimation: reaction.effectAnimation,
                 isCustom: false
-            ), hasAppearAnimation: false, useDirectRendering: false)
+            ), animationCache: self.animationCache, animationRenderer: self.animationRenderer, hasAppearAnimation: false, useDirectRendering: false)
             containerNode.isUserInteractionEnabled = false
             containerNode.addSubnode(itemNode)
             self.addSubnode(containerNode)
@@ -402,7 +414,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         targetContainerNode.addSubnode(standaloneReactionAnimation)
         standaloneReactionAnimation.frame = targetContainerNode.bounds
         standaloneReactionAnimation.animateReactionSelection(
-            context: self.context, theme: self.theme, reaction: ReactionItem(
+            context: self.context, theme: self.theme, animationCache: self.animationCache, reaction: ReactionItem(
                 reaction: ReactionItem.Reaction(rawValue: reaction.value),
                 appearAnimation: reaction.appearAnimation,
                 stillAnimation: reaction.selectAnimation,

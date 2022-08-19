@@ -363,7 +363,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     
                     let dateLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
-                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message), preferAdditionalInset: false))
+                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium), preferAdditionalInset: false))
                     
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: item.context,
@@ -380,7 +380,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.message)
+                        canViewReactionList: canViewMessageReactionList(message: item.message),
+                        animationCache: item.controllerInteraction.presentationContext.animationCache,
+                        animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))
                 }
                 

@@ -49,6 +49,8 @@ final class AnimationRendererPool {
 }
 
 protocol AnimationRenderer: ASDisplayNode {
+    var currentFrameImage: UIImage? { get }
+    
     func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, mulAlpha: Bool, completion: @escaping () -> Void)
     
     func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool)

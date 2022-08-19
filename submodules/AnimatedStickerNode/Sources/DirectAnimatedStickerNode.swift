@@ -42,6 +42,13 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
         } set(value) {
         }
     }
+    public var currentFrameImage: UIImage? {
+        if let contents = self.layer.contents {
+            return UIImage(cgImage: contents as! CGImage)
+        } else {
+            return nil
+        }
+    }
     
     public private(set) var isPlaying: Bool = false
     public var stopAtNearestLoop: Bool = false
@@ -346,6 +353,9 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
     }
     
     public func playOnce() {
+    }
+    
+    public func playLoop() {
     }
     
     public func play(firstFrame: Bool, fromIndex: Int?) {

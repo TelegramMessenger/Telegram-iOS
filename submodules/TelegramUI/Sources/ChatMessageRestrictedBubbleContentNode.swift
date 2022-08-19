@@ -120,7 +120,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: message), preferAdditionalInset: false)),
+                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: message, isPremium: item.associatedData.isPremium), preferAdditionalInset: false)),
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
                         reactions: dateReactionsAndPeers.reactions,
@@ -128,7 +128,9 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.message)
+                        canViewReactionList: canViewMessageReactionList(message: item.message),
+                        animationCache: item.controllerInteraction.presentationContext.animationCache,
+                        animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))
                 }
                 

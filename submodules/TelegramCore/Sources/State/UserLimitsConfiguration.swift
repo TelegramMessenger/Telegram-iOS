@@ -93,6 +93,6 @@ extension UserLimitsConfiguration {
         self.maxUploadFileParts = getValue("upload_max_fileparts", orElse: defaultValue.maxUploadFileParts)
         self.maxAboutLength = getValue("about_length_limit", orElse: defaultValue.maxAboutLength)
         self.maxAnimatedEmojisInText = getGeneralValue("message_animated_emoji_max", orElse: defaultValue.maxAnimatedEmojisInText)
-        self.maxReactionsPerMessage = getGeneralValue("reactions_user_max", orElse: 1)
+        self.maxReactionsPerMessage = getValue("reactions_user_max", orElse: 1)
     }
 }

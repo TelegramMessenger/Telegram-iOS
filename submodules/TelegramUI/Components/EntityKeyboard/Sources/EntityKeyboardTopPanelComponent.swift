@@ -1132,8 +1132,8 @@ private final class ReorderGestureRecognizer: UIGestureRecognizer {
     }
 }
 
-final class EntityKeyboardTopPanelComponent: Component {
-    typealias EnvironmentType = EntityKeyboardTopContainerPanelEnvironment
+public final class EntityKeyboardTopPanelComponent: Component {
+    public typealias EnvironmentType = EntityKeyboardTopContainerPanelEnvironment
     
     final class Item: Equatable {
         let id: AnyHashable
@@ -1161,6 +1161,7 @@ final class EntityKeyboardTopPanelComponent: Component {
         }
     }
     
+    let id: AnyHashable
     let theme: PresentationTheme
     let items: [Item]
     let containerSideInset: CGFloat
@@ -1170,6 +1171,7 @@ final class EntityKeyboardTopPanelComponent: Component {
     let reorderItems: ([Item]) -> Void
     
     init(
+        id: AnyHashable,
         theme: PresentationTheme,
         items: [Item],
         containerSideInset: CGFloat,
@@ -1178,6 +1180,7 @@ final class EntityKeyboardTopPanelComponent: Component {
         activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>,
         reorderItems: @escaping ([Item]) -> Void
     ) {
+        self.id = id
         self.theme = theme
         self.items = items
         self.containerSideInset = containerSideInset
@@ -1187,7 +1190,10 @@ final class EntityKeyboardTopPanelComponent: Component {
         self.reorderItems = reorderItems
     }
     
-    static func ==(lhs: EntityKeyboardTopPanelComponent, rhs: EntityKeyboardTopPanelComponent) -> Bool {
+    public static func ==(lhs: EntityKeyboardTopPanelComponent, rhs: EntityKeyboardTopPanelComponent) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
         if lhs.theme !== rhs.theme {
             return false
         }
@@ -1210,7 +1216,15 @@ final class EntityKeyboardTopPanelComponent: Component {
         return true
     }
     
-    final class View: UIView, UIScrollViewDelegate {
+    public final class Tag {
+        public let id: AnyHashable
+        
+        public init(id: AnyHashable) {
+            self.id = id
+        }
+    }
+    
+    public final class View: UIView, UIScrollViewDelegate, ComponentTaggedView {
         private struct ItemLayout {
             struct ItemDescription {
                 var isStatic: Bool
@@ -1455,6 +1469,21 @@ final class EntityKeyboardTopPanelComponent: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        public func matches(tag: Any) -> Bool {
+            if let tag = tag as? Tag {
+                if tag.id == self.component?.id {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        public func animateIn() {
+            for (_, itemView) in self.itemViews {
+                itemView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.3, delay: 0.12)
+            }
         }
         
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -2095,11 +2124,11 @@ final class EntityKeyboardTopPanelComponent: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

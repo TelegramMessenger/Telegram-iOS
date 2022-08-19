@@ -93,6 +93,8 @@ swift_library(
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/CheckNode:CheckNode",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
     ],
     visibility = [
         "//visibility:public",

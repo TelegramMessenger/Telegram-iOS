@@ -543,7 +543,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             }
             
             let reactions: ReactionsMessageAttribute
-            if shouldDisplayInlineDateReactions(message: item.message) {
+            if shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium) {
                 reactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
             } else {
                 reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])

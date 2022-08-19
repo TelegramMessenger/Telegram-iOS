@@ -1061,7 +1061,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 impressionCount: viewCount,
                 dateText: dateText,
                 type: statusType,
-                layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
+                layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                 constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude),
                 availableReactions: item.associatedData.availableReactions,
                 reactions: dateReactionsAndPeers.reactions,
@@ -1069,7 +1069,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                 hasAutoremove: item.message.isSelfExpiring,
-                canViewReactionList: canViewMessageReactionList(message: item.message)
+                canViewReactionList: canViewMessageReactionList(message: item.message),
+                animationCache: item.controllerInteraction.presentationContext.animationCache,
+                animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
             ))
             
             let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
@@ -1214,7 +1216,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             let reactions: ReactionsMessageAttribute
-            if shouldDisplayInlineDateReactions(message: item.message) {
+            if shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium) {
                 reactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
             } else {
                 reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])

@@ -10,6 +10,8 @@ import AccountContext
 import ReactionSelectionNode
 import Markdown
 import EntityKeyboard
+import AnimationCache
+import MultiAnimationRenderer
 
 public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
     func update(
@@ -36,7 +38,8 @@ public protocol ContextControllerActionsStackItem: AnyObject {
     ) -> ContextControllerActionsStackItemNode
     
     var tip: ContextController.Tip? { get }
-    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)? { get }
+    var tipSignal: Signal<ContextController.Tip?, NoError>? { get }
+    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)? { get }
 }
 
 protocol ContextControllerActionsListItemNode: ASDisplayNode {
@@ -620,17 +623,20 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
     }
     
     private let items: [ContextMenuItem]
-    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?
+    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
+    let tipSignal: Signal<ContextController.Tip?, NoError>?
     
     init(
         items: [ContextMenuItem],
-        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?,
-        tip: ContextController.Tip?
+        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
+        tip: ContextController.Tip?,
+        tipSignal: Signal<ContextController.Tip?, NoError>?
     ) {
         self.items = items
         self.reactionItems = reactionItems
         self.tip = tip
+        self.tipSignal = tipSignal
     }
     
     func node(
@@ -704,17 +710,20 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
     }
     
     private let content: ContextControllerItemsContent
-    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?
+    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
+    let tipSignal: Signal<ContextController.Tip?, NoError>?
     
     init(
         content: ContextControllerItemsContent,
-        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?,
-        tip: ContextController.Tip?
+        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
+        tip: ContextController.Tip?,
+        tipSignal: Signal<ContextController.Tip?, NoError>?
     ) {
         self.content = content
         self.reactionItems = reactionItems
         self.tip = tip
+        self.tipSignal = tipSignal
     }
     
     func node(
@@ -733,15 +742,15 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
 }
 
 func makeContextControllerActionsStackItem(items: ContextController.Items) -> ContextControllerActionsStackItem {
-    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?
-    if let context = items.context, !items.reactionItems.isEmpty {
-        reactionItems = (context, items.reactionItems, items.getEmojiContent)
+    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
+    if let context = items.context, let animationCache = items.animationCache, !items.reactionItems.isEmpty {
+        reactionItems = (context, items.reactionItems, animationCache, items.getEmojiContent)
     }
     switch items.content {
     case let .list(listItems):
-        return ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip)
+        return ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)
     case let .custom(customContent):
-        return ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip)
+        return ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)
     }
 }
 
@@ -849,11 +858,14 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         let requestUpdate: (ContainedViewLayoutTransition) -> Void
         let node: ContextControllerActionsStackItemNode
         let dimNode: ASDisplayNode
-        let tip: ContextController.Tip?
+        var tip: ContextController.Tip?
+        let tipSignal: Signal<ContextController.Tip?, NoError>?
         var tipNode: InnerTextSelectionTipContainerNode?
-        let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?
+        let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
         var storedScrollingState: CGFloat?
         let positionLock: CGFloat?
+        
+        private var tipDisposable: Disposable?
         
         init(
             getController: @escaping () -> ContextControllerProtocol?,
@@ -862,7 +874,8 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             requestUpdateApparentHeight: @escaping (ContainedViewLayoutTransition) -> Void,
             item: ContextControllerActionsStackItem,
             tip: ContextController.Tip?,
-            reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], (() -> Signal<EmojiPagerContentComponent, NoError>)?)?,
+            tipSignal: Signal<ContextController.Tip?, NoError>?,
+            reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
             positionLock: CGFloat?
         ) {
             self.getController = getController
@@ -882,6 +895,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             self.positionLock = positionLock
             
             self.tip = tip
+            self.tipSignal = tipSignal
             
             super.init()
             
@@ -889,6 +903,21 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             
             self.addSubnode(self.node)
             self.addSubnode(self.dimNode)
+            
+            if let tipSignal = tipSignal {
+                self.tipDisposable = (tipSignal
+                |> deliverOnMainQueue).start(next: { [weak self] tip in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.tip = tip
+                    requestUpdate(.immediate)
+                })
+            }
+        }
+        
+        deinit {
+            self.tipDisposable?.dispose()
         }
         
         func update(
@@ -922,7 +951,12 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         func updateTip(presentationData: PresentationData, width: CGFloat, transition: ContainedViewLayoutTransition) -> (node: ASDisplayNode, height: CGFloat)? {
             if let tip = self.tip {
                 var updatedTransition = transition
-                if self.tipNode == nil {
+                if let tipNode = self.tipNode, tipNode.tip == tip {
+                } else {
+                    if let tipNode = self.tipNode {
+                        self.tipNode = nil
+                        tipNode.removeFromSupernode()
+                    }
                     updatedTransition = .immediate
                     let tipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
                     tipNode.requestDismiss = { [weak self] completion in
@@ -983,7 +1017,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     
     private var selectionPanGesture: UIPanGestureRecognizer?
     
-    var topReactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], getEmojiContent: (() -> Signal<EmojiPagerContentComponent, NoError>)?)? {
+    var topReactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)? {
         return self.itemContainers.last?.reactionItems
     }
     
@@ -1076,6 +1110,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             },
             item: item,
             tip: item.tip,
+            tipSignal: item.tipSignal,
             reactionItems: item.reactionItems,
             positionLock: positionLock
         )

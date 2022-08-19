@@ -12,6 +12,7 @@ import PresentationDataUtils
 import AccountContext
 import WallpaperBackgroundNode
 import ReactionSelectionNode
+import AnimationCache
 
 class ReactionChatPreviewItem: ListViewItem, ItemListItem {
     let context: AccountContext
@@ -88,6 +89,8 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
     
     private var item: ReactionChatPreviewItem?
     private(set) weak var standaloneReactionAnimation: StandaloneReactionAnimation?
+    
+    private var animationCache: AnimationCache?
     
     init() {
         self.topStripeNode = ASDisplayNode()
@@ -166,10 +169,20 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                             let standaloneReactionAnimation = StandaloneReactionAnimation()
                             self.standaloneReactionAnimation = standaloneReactionAnimation
                             
+                            let animationCache: AnimationCache
+                            if let current = self.animationCache {
+                                animationCache = current
+                            } else {
+                                animationCache = AnimationCacheImpl(basePath: item.context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+                                    return TempBox.shared.tempFile(fileName: "file").path
+                                })
+                                self.animationCache = animationCache
+                            }
+                            
                             supernode.addSubnode(standaloneReactionAnimation)
                             standaloneReactionAnimation.frame = supernode.bounds
                             standaloneReactionAnimation.animateReactionSelection(
-                                context: item.context, theme: item.theme, reaction: ReactionItem(
+                                context: item.context, theme: item.theme, animationCache: animationCache, reaction: ReactionItem(
                                     reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                     appearAnimation: reaction.appearAnimation,
                                     stillAnimation: reaction.selectAnimation,
