@@ -2023,7 +2023,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
     
-    var displayPremiumIntro: ((UIView, Bool) -> Void)?
+    var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Bool) -> Void)?
     
     var navigationTransition: PeerInfoHeaderNavigationTransition?
     
@@ -2214,7 +2214,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     }
     
     func invokeDisplayPremiumIntro() {
-        self.displayPremiumIntro?(self.isAvatarExpanded ? self.titleExpandedCredibilityIconView : self.titleCredibilityIconView, self.isAvatarExpanded)
+        self.displayPremiumIntro?(self.isAvatarExpanded ? self.titleExpandedCredibilityIconView : self.titleCredibilityIconView, nil, self.isAvatarExpanded)
     }
     
     func initiateAvatarExpansion(gallery: Bool, first: Bool) {
@@ -2403,6 +2403,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             let _ = image
             let _ = expandedImage
             
+            var currentEmojiStatus: PeerEmojiStatus?
             let emojiRegularStatusContent: EmojiStatusComponent.Content
             let emojiExpandedStatusContent: EmojiStatusComponent.Content
             switch credibilityIcon {
@@ -2422,6 +2423,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiRegularStatusContent = .scam(color: presentationData.theme.chat.message.incoming.scamColor)
                 emojiExpandedStatusContent = .scam(color: presentationData.theme.chat.message.incoming.scamColor)
             case let .emojiStatus(emojiStatus):
+                currentEmojiStatus = emojiStatus
                 emojiRegularStatusContent = .emojiStatus(status: emojiStatus, placeholderColor: presentationData.theme.list.mediaPlaceholderColor)
                 emojiExpandedStatusContent = .emojiStatus(status: emojiStatus, placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15))
             }
@@ -2437,7 +2439,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.displayPremiumIntro?(strongSelf.titleCredibilityIconView, false)
+                        strongSelf.displayPremiumIntro?(strongSelf.titleCredibilityIconView, currentEmojiStatus, false)
                     },
                     longTapAction: { [weak self] in
                         guard let strongSelf = self else {
@@ -2460,7 +2462,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.displayPremiumIntro?(strongSelf.titleExpandedCredibilityIconView, false)
+                        strongSelf.displayPremiumIntro?(strongSelf.titleExpandedCredibilityIconView, currentEmojiStatus, true)
                     },
                     longTapAction: { [weak self] in
                         guard let strongSelf = self else {

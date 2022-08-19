@@ -484,9 +484,12 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             
             if #available(iOS 13.0, *) {
                 let appleIdProvider = ASAuthorizationAppleIDProvider()
+                let passwordProvider = ASAuthorizationPasswordProvider()
                 let request = appleIdProvider.createRequest()
+                request.user = number
+                let passwordRequest = passwordProvider.createRequest()
                  
-                let authorizationController = ASAuthorizationController(authorizationRequests: [request])
+                let authorizationController = ASAuthorizationController(authorizationRequests: [request, passwordRequest])
                 authorizationController.delegate = strongSelf
                 authorizationController.presentationContextProvider = strongSelf
                 authorizationController.performRequests()
@@ -497,7 +500,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     }
     
     private var signInWithAppleSetup = false
-    private func emailSetupController(appleSignInAllowed: Bool) -> AuthorizationSequenceEmailEntryController {
+    private func emailSetupController(number: String, appleSignInAllowed: Bool) -> AuthorizationSequenceEmailEntryController {
         var currentController: AuthorizationSequenceEmailEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceEmailEntryController {
@@ -557,6 +560,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 let appleIdProvider = ASAuthorizationAppleIDProvider()
                 let request = appleIdProvider.createRequest()
                 request.requestedScopes = [.email]
+                request.user = number
                  
                 let authorizationController = ASAuthorizationController(authorizationRequests: [request])
                 authorizationController.delegate = strongSelf
@@ -999,7 +1003,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                     controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
                     if case let .emailSetupRequired(appleSignInAllowed) = type {
-                        controllers.append(self.emailSetupController(appleSignInAllowed: appleSignInAllowed))
+                        controllers.append(self.emailSetupController(number: number, appleSignInAllowed: appleSignInAllowed))
                     } else {
                         controllers.append(self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
                     }

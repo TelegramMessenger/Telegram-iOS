@@ -118,6 +118,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         if #available(iOS 13.0, *) {
             self.signInWithAppleButton = ASAuthorizationAppleIDButton(authorizationButtonType: .signIn, authorizationButtonStyle: theme.overallDarkAppearance ? .white : .black)
+            self.signInWithAppleButton?.isHidden = true
             (self.signInWithAppleButton as? ASAuthorizationAppleIDButton)?.cornerRadius = 11
         }
         

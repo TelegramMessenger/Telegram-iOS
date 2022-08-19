@@ -53,7 +53,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         
         self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+//        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
         self.attemptNavigation = { _ in
             return false

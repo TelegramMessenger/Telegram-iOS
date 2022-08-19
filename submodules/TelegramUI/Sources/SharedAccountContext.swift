@@ -1501,6 +1501,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 mappedSource = .deeplink(reference)
             case let .profile(peerId):
                 mappedSource = .profile(peerId)
+            case let .emojiStatus(peerId, fileId):
+                mappedSource = .emojiStatus(peerId, fileId)
         }
         return PremiumIntroScreen(context: context, source: mappedSource)
     }

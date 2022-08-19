@@ -40,6 +40,7 @@ public enum PremiumSource: Equatable {
     case animatedEmoji
     case deeplink(String?)
     case profile(PeerId)
+    case emojiStatus(PeerId, Int64)
     case gift(from: PeerId, to: PeerId, duration: Int32)
     case giftTerms
     
@@ -79,6 +80,8 @@ public enum PremiumSource: Equatable {
                 return "animated_emoji"
             case let .profile(id):
                 return "profile__\(id.id._internalGetInt64Value())"
+            case .emojiStatus:
+                return "emoji_status"
             case .gift, .giftTerms:
                 return nil
             case let .deeplink(reference):
@@ -1126,7 +1129,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let boldTextFont = Font.semibold(15.0)
             
             let textString: String
-            if case .giftTerms = context.component.source {
+            if case .emojiStatus = context.component.source {
+                textString = strings.Premium_EmojiStatusText
+            } else if case .giftTerms = context.component.source {
                 textString = strings.Premium_PersonalDescription
             } else if let _ = context.component.otherPeerName {
                 if case let .gift(fromId, _, _) = context.component.source {
@@ -1658,16 +1663,20 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 availableProducts = .single([])
             }
             
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let otherPeerName: Signal<String?, NoError>
             if case let .gift(fromPeerId, toPeerId, _) = source {
                 let otherPeerId = fromPeerId != context.account.peerId ? fromPeerId : toPeerId
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: otherPeerId))
                 |> map { peer -> String? in
                     return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                 }
             } else if case let .profile(peerId) = source {
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> map { peer -> String? in
+                    return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                }
+            } else if case let .emojiStatus(peerId, _) = source {
                 otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> map { peer -> String? in
                     return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
@@ -1901,7 +1910,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             
             let secondaryTitleText: String
             if let otherPeerName = state.otherPeerName {
-                if case .profile = context.component.source {
+                if case .emojiStatus = context.component.source {
+                    secondaryTitleText = environment.strings.Premium_EmojiStatusTitle(otherPeerName, "").string
+                } else if case .profile = context.component.source {
                     secondaryTitleText = environment.strings.Premium_PersonalTitle(otherPeerName).string
                 } else if case let .gift(fromPeerId, _, duration) = context.component.source {
                     if fromPeerId == context.component.context.account.peerId {

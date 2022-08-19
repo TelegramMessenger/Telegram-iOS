@@ -780,6 +780,7 @@ public enum PremiumIntroSource {
     case about
     case deeplink(String?)
     case profile(PeerId)
+    case emojiStatus(PeerId, Int64)
 }
 
 #if ENABLE_WALLET
