@@ -68,15 +68,16 @@ public extension Api {
 }
 public extension Api {
     enum ReactionCount: TypeConstructorDescription {
-        case reactionCount(flags: Int32, reaction: Api.Reaction, count: Int32)
+        case reactionCount(flags: Int32, chosenOrder: Int32?, reaction: Api.Reaction, count: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .reactionCount(let flags, let reaction, let count):
+                case .reactionCount(let flags, let chosenOrder, let reaction, let count):
                     if boxed {
-                        buffer.appendInt32(609529328)
+                        buffer.appendInt32(-1546531968)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(chosenOrder!, buffer: buffer, boxed: false)}
                     reaction.serialize(buffer, true)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     break
@@ -85,25 +86,28 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .reactionCount(let flags, let reaction, let count):
-                return ("reactionCount", [("flags", String(describing: flags)), ("reaction", String(describing: reaction)), ("count", String(describing: count))])
+                case .reactionCount(let flags, let chosenOrder, let reaction, let count):
+                return ("reactionCount", [("flags", String(describing: flags)), ("chosenOrder", String(describing: chosenOrder)), ("reaction", String(describing: reaction)), ("count", String(describing: count))])
     }
     }
     
         public static func parse_reactionCount(_ reader: BufferReader) -> ReactionCount? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Api.Reaction?
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: Api.Reaction?
             if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Reaction
+                _3 = Api.parse(reader, signature: signature) as? Api.Reaction
             }
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ReactionCount.reactionCount(flags: _1!, reaction: _2!, count: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.ReactionCount.reactionCount(flags: _1!, chosenOrder: _2, reaction: _3!, count: _4!)
             }
             else {
                 return nil

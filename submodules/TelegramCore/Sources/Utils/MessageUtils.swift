@@ -330,7 +330,7 @@ public extension Message {
         }
         for attribute in self.attributes {
             if let attribute = attribute as? PendingReactionsMessageAttribute {
-                return attribute.value != nil
+                return !attribute.reactions.isEmpty
             }
         }
         return false
