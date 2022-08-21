@@ -156,6 +156,7 @@ public protocol AnimatedStickerNode: ASDisplayNode {
     var completed: (Bool) -> Void { get set }
     var frameUpdated: (Int, Int) -> Void { get set }
     var currentFrameIndex: Int { get }
+    var currentFrameImage: UIImage? { get }
     var currentFrameCount: Int { get }
     var isPlaying: Bool { get }
     var stopAtNearestLoop: Bool { get set }
@@ -173,6 +174,7 @@ public protocol AnimatedStickerNode: ASDisplayNode {
     func setup(source: AnimatedStickerNodeSource, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode, mode: AnimatedStickerMode)
     func reset()
     func playOnce()
+    func playLoop()
     func play(firstFrame: Bool, fromIndex: Int?)
     func pause()
     func stop()
@@ -224,6 +226,10 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
     
     public var autoplay = false
     public var overrideVisibility: Bool = false
+    
+    public var currentFrameImage: UIImage? {
+        return self.renderer?.renderer.currentFrameImage
+    }
     
     public var visibility = false {
         didSet {
@@ -419,6 +425,11 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
     
     public func playOnce() {
         self.playbackMode = .once
+        self.play()
+    }
+    
+    public func playLoop() {
+        self.playbackMode = .loop
         self.play()
     }
         

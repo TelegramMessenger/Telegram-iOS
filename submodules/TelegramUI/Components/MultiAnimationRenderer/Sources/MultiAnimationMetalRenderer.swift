@@ -835,6 +835,9 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         return EmptyDisposable
     }
     
+    public func setFrameIndex(itemId: String, size: CGSize, frameIndex: Int, placeholder: UIImage) {
+    }
+    
     private func animationTick() {
         let secondsPerFrame = Double(self.frameSkip) / 60.0
         

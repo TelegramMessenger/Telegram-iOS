@@ -10,6 +10,8 @@ import TelegramAnimatedStickerNode
 import SwiftSignalKit
 import StickerResources
 import AccountContext
+import AnimationCache
+import MultiAnimationRenderer
 
 private func generateBubbleImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
@@ -69,7 +71,15 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         
     var expandedAnimationDidBegin: (() -> Void)?
     
-    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, hasAppearAnimation: Bool = true, useDirectRendering: Bool = false) {
+    var currentFrameIndex: Int {
+        return self.staticAnimationNode.currentFrameIndex
+    }
+    
+    var currentFrameImage: UIImage? {
+        return self.staticAnimationNode.currentFrameImage
+    }
+    
+    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, hasAppearAnimation: Bool = true, useDirectRendering: Bool = false) {
         self.context = context
         self.item = item
         self.hasAppearAnimation = hasAppearAnimation
@@ -95,6 +105,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             }
             if strongSelf.animationNode == nil {
                 strongSelf.staticAnimationNode.isHidden = false
+                strongSelf.staticAnimationNode.playLoop()
             }
             
             strongSelf.animateInAnimationNode?.removeFromSupernode()
@@ -126,8 +137,6 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         }
     }
     
-    public var mainAnimationCompletion: (() -> Void)?
-    
     public func setCustomContents(contents: Any) {
         if self.customContentsNode == nil {
             let customContentsNode = ASDisplayNode()
@@ -155,9 +164,6 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         let expandedAnimationFrame = animationFrame
         
         if isExpanded && !self.hasAppearAnimation {
-            self.staticAnimationNode.completed = { [weak self] _ in
-                self?.mainAnimationCompletion?()
-            }
             self.staticAnimationNode.play(firstFrame: false, fromIndex: 0)
         } else if isExpanded, self.animationNode == nil {
             let animationNode: AnimatedStickerNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
@@ -171,9 +177,6 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                     didReportStarted = true
                     self?.expandedAnimationDidBegin?()
                 }
-            }
-            animationNode.completed = { [weak self] _ in
-                self?.mainAnimationCompletion?()
             }
             
             if largeExpanded {
@@ -281,6 +284,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                             animateInAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1)
                             
                             strongSelf.staticAnimationNode.isHidden = false
+                            strongSelf.staticAnimationNode.playLoop()
                         }
                     }
                     stillAnimationNode.visibility = true
@@ -319,6 +323,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             if self.animationNode == nil {
                 self.didSetupStillAnimation = true
                 
+                self.staticAnimationNode.automaticallyLoadFirstFrame = true
                 if !self.hasAppearAnimation {
                     self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.largeListAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.largeListAnimation.resource.id)))
                 } else {

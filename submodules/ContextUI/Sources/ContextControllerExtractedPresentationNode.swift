@@ -441,6 +441,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             } else {
                 reactionContextNode = ReactionContextNode(
                     context: reactionItems.context,
+                    animationCache: reactionItems.animationCache,
                     presentationData: presentationData,
                     items: reactionItems.reactionItems,
                     getEmojiContent: reactionItems.getEmojiContent,

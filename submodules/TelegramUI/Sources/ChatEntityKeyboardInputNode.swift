@@ -147,7 +147,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     recentEmoji = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedStatusEmoji {
                     featuredStatusEmoji = orderedView
-                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedStatusEmoji {
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStatusEmoji {
                     recentStatusEmoji = orderedView
                 }
             }

@@ -78,7 +78,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         var feedbackTapImpl: (() -> Void)?
         var activatedActionImpl: (() -> Void)?
         var requestLayoutImpl: (() -> Void)?
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(content: .list(content.menuItems())), getController: { [weak controller] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(content: .list(content.menuItems()), animationCache: nil), getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             activatedActionImpl?()
@@ -377,7 +377,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.contentNodeHasValidLayout = false
         
         let previousActionsContainerNode = self.actionsContainerNode
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: ContextController.Items(content: .list(content.menuItems())), getController: { [weak self] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: ContextController.Items(content: .list(content.menuItems()), animationCache: nil), getController: { [weak self] in
             return self?.controller
         }, actionSelected: { [weak self] result in
             self?.requestDismiss()

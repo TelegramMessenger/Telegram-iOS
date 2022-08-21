@@ -308,6 +308,7 @@ public final class EntityKeyboardComponent: Component {
                     defaultActiveGifItemId = AnyHashable(value)
                 }
                 contentTopPanels.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(EntityKeyboardTopPanelComponent(
+                    id: "gifs",
                     theme: component.theme,
                     items: topGifItems,
                     containerSideInset: component.containerInsets.left + component.topPanelInsets.left,
@@ -417,6 +418,7 @@ public final class EntityKeyboardComponent: Component {
                 }
                 contents.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(stickerContent)))
                 contentTopPanels.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(EntityKeyboardTopPanelComponent(
+                    id: "stickers",
                     theme: component.theme,
                     items: topStickerItems,
                     containerSideInset: component.containerInsets.left + component.topPanelInsets.left,
@@ -520,6 +522,7 @@ public final class EntityKeyboardComponent: Component {
                 }
             }
             contentTopPanels.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(EntityKeyboardTopPanelComponent(
+                id: "emoji",
                 theme: component.theme,
                 items: topEmojiItems,
                 containerSideInset: component.containerInsets.left + component.topPanelInsets.left,

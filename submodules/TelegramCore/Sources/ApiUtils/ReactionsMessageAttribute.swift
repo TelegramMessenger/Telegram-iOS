@@ -80,16 +80,19 @@ private func mergeReactions(reactions: [MessageReaction], recentPeers: [Reaction
     var result = reactions
     var recentPeers = recentPeers
     
+    var pendingIndex: Int = Int(Int32.max - 100)
     for pendingReaction in pending {
         if let index = result.firstIndex(where: { $0.value == pendingReaction.value }) {
             var merged = result[index]
             if merged.chosenOrder == nil {
-                merged.chosenOrder = Int(Int32.max)
+                merged.chosenOrder = pendingIndex
+                pendingIndex += 1
                 merged.count += 1
             }
             result[index] = merged
         } else {
-            result.append(MessageReaction(value: pendingReaction.value, count: 1, chosenOrder: Int(Int32.max)))
+            result.append(MessageReaction(value: pendingReaction.value, count: 1, chosenOrder: pendingIndex))
+            pendingIndex += 1
         }
         
         if let index = recentPeers.firstIndex(where: { $0.value == pendingReaction.value && $0.peerId == accountPeerId }) {

@@ -144,16 +144,20 @@ final class MessageReactionButtonsNode: ASDisplayNode {
             },
             reactions: reactions.reactions.map { reaction in
                 var centerAnimation: TelegramMediaFile?
-                var legacyIcon: TelegramMediaFile?
+                var animationFileId: Int64?
                 
-                if let availableReactions = availableReactions {
-                    for availableReaction in availableReactions.reactions {
-                        if availableReaction.value == reaction.value {
-                            centerAnimation = availableReaction.centerAnimation
-                            legacyIcon = availableReaction.staticIcon
-                            break
+                switch reaction.value {
+                case .builtin:
+                    if let availableReactions = availableReactions {
+                        for availableReaction in availableReactions.reactions {
+                            if availableReaction.value == reaction.value {
+                                centerAnimation = availableReaction.centerAnimation
+                                break
+                            }
                         }
                     }
+                case let .custom(fileId):
+                    animationFileId = fileId
                 }
                 
                 var peers: [EnginePeer] = []
@@ -176,11 +180,11 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                     reaction: ReactionButtonComponent.Reaction(
                         value: reaction.value,
                         centerAnimation: centerAnimation,
-                        legacyIcon: legacyIcon
+                        animationFileId: animationFileId
                     ),
                     count: Int(reaction.count),
                     peers: peers,
-                    isSelected: reaction.isSelected
+                    chosenOrder: reaction.chosenOrder
                 )
             },
             colors: reactionColors,
@@ -266,7 +270,13 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                     reactionButtonPosition = CGPoint(x: size.width + 1.0, y: topInset)
                 }
                 
-                let reactionButtons = reactionButtonsResult.apply(animation)
+                let reactionButtons = reactionButtonsResult.apply(
+                    animation,
+                    ReactionButtonsAsyncLayoutContainer.Arguments(
+                        animationCache: presentationContext.animationCache,
+                        animationRenderer: presentationContext.animationRenderer
+                    )
+                )
                 
                 var validIds = Set<MessageReaction.Reaction>()
                 for item in reactionButtons.items {

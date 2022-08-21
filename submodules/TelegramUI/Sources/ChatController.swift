@@ -1041,6 +1041,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     actions.context = strongSelf.context
+                    
+                    actions.animationCache = strongSelf.controllerInteraction?.presentationContext.animationCache
                                          
                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                     
@@ -1112,24 +1114,42 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     return nil
                                 }
                             }
-                            actions.getEmojiContent = {
-                                guard let strongSelf = self else {
-                                    preconditionFailure()
+                            
+                            var allReactionsAreAvailable = false
+                            switch allowedReactions {
+                            case let .set(set):
+                                if set == Set(availableReactions.reactions.filter(\.isEnabled).map(\.value)) {
+                                    allReactionsAreAvailable = true
+                                } else {
+                                    allReactionsAreAvailable = false
                                 }
-                                
-                                let presentationContext = strongSelf.controllerInteraction?.presentationContext
-                                return ChatEntityKeyboardInputNode.emojiInputData(
-                                    context: strongSelf.context,
-                                    animationCache: presentationContext!.animationCache,
-                                    animationRenderer: presentationContext!.animationRenderer,
-                                    isStandalone: false,
-                                    isStatusSelection: false,
-                                    isReactionSelection: true,
-                                    reactionItems: reactionItems,
-                                    areUnicodeEmojiEnabled: false,
-                                    areCustomEmojiEnabled: true,
-                                    chatPeerId: strongSelf.chatLocation.peerId
-                                )
+                            case .all:
+                                allReactionsAreAvailable = true
+                            }
+                            
+                            if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
+                                allReactionsAreAvailable = false
+                            }
+                            
+                            if allReactionsAreAvailable {
+                                actions.getEmojiContent = { animationCache, animationRenderer in
+                                    guard let strongSelf = self else {
+                                        preconditionFailure()
+                                    }
+                                    
+                                    return ChatEntityKeyboardInputNode.emojiInputData(
+                                        context: strongSelf.context,
+                                        animationCache: animationCache,
+                                        animationRenderer: animationRenderer,
+                                        isStandalone: false,
+                                        isStatusSelection: false,
+                                        isReactionSelection: true,
+                                        reactionItems: reactionItems,
+                                        areUnicodeEmojiEnabled: false,
+                                        areCustomEmojiEnabled: true,
+                                        chatPeerId: strongSelf.chatLocation.peerId
+                                    )
+                                }
                             }
                         }
                     }
@@ -1171,66 +1191,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                     
                                     let action = {
-                                        guard let packReference = packReferences.first, let strongSelf = self else {
+                                        guard let strongSelf = self else {
                                             return
                                         }
-                                        strongSelf.chatDisplayNode.dismissTextInput()
-                                        
-                                        let presentationData = strongSelf.presentationData
-                                        let controller = StickerPackScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(packReferences), parentNavigationController: strongSelf.effectiveNavigationController, actionPerformed: { [weak self] actions in
-                                            guard let strongSelf = self else {
-                                                return
-                                            }
-                                            if actions.count > 1, let first = actions.first {
-                                                if case .add = first.2 {
-                                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.EmojiPackActionInfo_AddedTitle, text: presentationData.strings.EmojiPackActionInfo_MultipleAddedText(Int32(actions.count)), undo: false, info: first.0, topItem: first.1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
-                                                        return true
-                                                    }))
-                                                } else if actions.allSatisfy({
-                                                    if case .remove = $0.2 {
-                                                        return true
-                                                    } else {
-                                                        return false
-                                                    }
-                                                }) {
-                                                    let isEmoji = actions[0].0.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
-                                                    
-                                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_MultipleRemovedText(Int32(actions.count)) : presentationData.strings.StickerPackActionInfo_MultipleRemovedText(Int32(actions.count)), undo: true, info: actions[0].0, topItem: actions[0].1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
-                                                        if case .undo = action {
-                                                            var itemsAndIndices: [(StickerPackCollectionInfo, [StickerPackItem], Int)] = actions.compactMap { action -> (StickerPackCollectionInfo, [StickerPackItem], Int)? in
-                                                                if case let .remove(index) = action.2 {
-                                                                    return (action.0, action.1, index)
-                                                                } else {
-                                                                    return nil
-                                                                }
-                                                            }
-                                                            itemsAndIndices.sort(by: { $0.2 < $1.2 })
-                                                            for (info, items, index) in itemsAndIndices.reversed() {
-                                                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: index).start()
-                                                            }
-                                                        }
-                                                        return true
-                                                    }))
-                                                }
-                                            } else if let (info, items, action) = actions.first {
-                                                let isEmoji = info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
-                                                
-                                                switch action {
-                                                case .add:
-                                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedTitle : presentationData.strings.StickerPackActionInfo_AddedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedText(info.title).string : presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
-                                                        return true
-                                                    }))
-                                                case let .remove(positionInList):
-                                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string : presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
-                                                        if case .undo = action {
-                                                            let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
-                                                        }
-                                                        return true
-                                                    }))
-                                                }
-                                            }
-                                        })
-                                        strongSelf.present(controller, in: .window(.root))
+                                        strongSelf.presentEmojiList(references: packReferences)
                                     }
                                     
                                     if packReferences.count > 1 {
@@ -1379,6 +1343,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     let _ = itemNode
                                                     let _ = targetView
                                                 })
+                                            } else {
+                                                controller.dismiss()
                                             }
                                         })
                                     } else {
@@ -1444,15 +1410,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let _ = (strongSelf.context.engine.stickers.availableReactions()
-            |> deliverOnMainQueue).start(next: { availableReactions in
+            var customFileIds: [Int64] = []
+            if case let .custom(fileId) = value {
+                customFileIds.append(fileId)
+            }
+            
+            let _ = (combineLatest(
+                strongSelf.context.engine.stickers.availableReactions(),
+                strongSelf.context.engine.stickers.resolveInlineStickers(fileIds: customFileIds)
+            )
+            |> deliverOnMainQueue).start(next: { availableReactions, customEmoji in
                 guard let strongSelf = self else {
                     return
                 }
                 
                 var dismissController: ((@escaping () -> Void) -> Void)?
                 
-                let items = ContextController.Items(content: .custom(ReactionListContextMenuContent(context: strongSelf.context, availableReactions: availableReactions, message: EngineMessage(message), reaction: value, readStats: nil, back: nil, openPeer: { id in
+                var items = ContextController.Items(content: .custom(ReactionListContextMenuContent(
+                    context: strongSelf.context,
+                    availableReactions: availableReactions,
+                    animationCache: strongSelf.controllerInteraction!.presentationContext.animationCache,
+                    animationRenderer: strongSelf.controllerInteraction!.presentationContext.animationRenderer,
+                    message: EngineMessage(message), reaction: value, readStats: nil, back: nil, openPeer: { id in
                     dismissController?({
                         guard let strongSelf = self else {
                             return
@@ -1462,7 +1441,124 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 })))
                 
+                var packReferences: [StickerPackReference] = []
+                var existingIds = Set<Int64>()
+                for (_, file) in customEmoji {
+                    loop: for attribute in file.attributes {
+                        if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                            if case let .id(id, _) = packReference, !existingIds.contains(id) {
+                                packReferences.append(packReference)
+                                existingIds.insert(id)
+                            }
+                            break loop
+                        }
+                    }
+                }
+                
                 strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+                
+                let context = strongSelf.context
+                let presentationData = strongSelf.presentationData
+                
+                let action = {
+                    guard let packReference = packReferences.first, let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.chatDisplayNode.dismissTextInput()
+                    
+                    let presentationData = strongSelf.presentationData
+                    let controller = StickerPackScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(packReferences), parentNavigationController: strongSelf.effectiveNavigationController, actionPerformed: { [weak self] actions in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if actions.count > 1, let first = actions.first {
+                            if case .add = first.2 {
+                                strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.EmojiPackActionInfo_AddedTitle, text: presentationData.strings.EmojiPackActionInfo_MultipleAddedText(Int32(actions.count)), undo: false, info: first.0, topItem: first.1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                                    return true
+                                }))
+                            } else if actions.allSatisfy({
+                                if case .remove = $0.2 {
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            }) {
+                                let isEmoji = actions[0].0.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
+                                
+                                strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_MultipleRemovedText(Int32(actions.count)) : presentationData.strings.StickerPackActionInfo_MultipleRemovedText(Int32(actions.count)), undo: true, info: actions[0].0, topItem: actions[0].1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
+                                    if case .undo = action {
+                                        var itemsAndIndices: [(StickerPackCollectionInfo, [StickerPackItem], Int)] = actions.compactMap { action -> (StickerPackCollectionInfo, [StickerPackItem], Int)? in
+                                            if case let .remove(index) = action.2 {
+                                                return (action.0, action.1, index)
+                                            } else {
+                                                return nil
+                                            }
+                                        }
+                                        itemsAndIndices.sort(by: { $0.2 < $1.2 })
+                                        for (info, items, index) in itemsAndIndices.reversed() {
+                                            let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: index).start()
+                                        }
+                                    }
+                                    return true
+                                }))
+                            }
+                        } else if let (info, items, action) = actions.first {
+                            let isEmoji = info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
+                            
+                            switch action {
+                            case .add:
+                                strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedTitle : presentationData.strings.StickerPackActionInfo_AddedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedText(info.title).string : presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                                    return true
+                                }))
+                            case let .remove(positionInList):
+                                strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string : presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
+                                    if case .undo = action {
+                                        let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                                    }
+                                    return true
+                                }))
+                            }
+                        }
+                    })
+                    strongSelf.present(controller, in: .window(.root))
+                }
+                
+                let presentationContext = strongSelf.controllerInteraction?.presentationContext
+                
+                if !packReferences.isEmpty {
+                    items.tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
+                    
+                    if packReferences.count > 1 {
+                        items.tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_EmojiSet(Int32(packReferences.count)), arguments: nil, file: nil, action: action)
+                    } else if let reference = packReferences.first {
+                        items.tipSignal = context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
+                        |> filter { result in
+                            if case .result = result {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        |> mapToSignal { result -> Signal<ContextController.Tip?, NoError> in
+                            if case let .result(info, items, _) = result, let presentationContext = presentationContext {
+                                let tip: ContextController.Tip = .animatedEmoji(
+                                    text: presentationData.strings.ChatContextMenu_EmojiSetSingle(info.title).string,
+                                    arguments: TextNodeWithEntities.Arguments(
+                                        context: context,
+                                        cache: presentationContext.animationCache,
+                                        renderer: presentationContext.animationRenderer,
+                                        placeholderColor: .clear,
+                                        attemptSynchronous: true
+                                    ),
+                                    file: items.first?.file,
+                                    action: action)
+                                return .single(tip) |> delay(1.0, queue: .mainQueue())
+                            } else {
+                                return .complete()
+                            }
+                        }
+                    }
+                }
                 
                 let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageReactionContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message, contentView: sourceView)), items: .single(items), recognizer: nil, gesture: gesture)
                 
@@ -1554,14 +1650,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    switch allowedReactions {
-                    case let .set(set):
-                        if !messageAlreadyHasThisReaction && updatedReactions.contains(where: { !set.contains($0) }) {
-                            itemNode.openMessageContextMenu()
-                            return
+                    if removedReaction == nil {
+                        switch allowedReactions {
+                        case let .set(set):
+                            if !messageAlreadyHasThisReaction && updatedReactions.contains(where: { !set.contains($0) }) {
+                                itemNode.openMessageContextMenu()
+                                return
+                            }
+                        case .all:
+                            break
                         }
-                    case .all:
-                        break
                     }
                     
                     if removedReaction == nil && !updatedReactions.isEmpty {
@@ -1593,6 +1691,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         standaloneReactionAnimation.animateReactionSelection(
                                             context: strongSelf.context,
                                             theme: strongSelf.presentationData.theme,
+                                            animationCache: strongSelf.controllerInteraction!.presentationContext.animationCache,
                                             reaction: ReactionItem(
                                                 reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                                 appearAnimation: reaction.appearAnimation,
@@ -1628,7 +1727,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts(itemNode: itemNode)
                         
-                        if let removedReaction = removedReaction, let targetView = itemNode.targetReactionView(value: removedReaction), shouldDisplayInlineDateReactions(message: message) {
+                        if let removedReaction = removedReaction, let targetView = itemNode.targetReactionView(value: removedReaction), shouldDisplayInlineDateReactions(message: message, isPremium: strongSelf.presentationInterfaceState.isPremium) {
                             var hideRemovedReaction: Bool = false
                             if let reactions = mergedMessageReactions(attributes: message.attributes) {
                                 for reaction in reactions.reactions {
@@ -6647,6 +6746,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     standaloneReactionAnimation.animateReactionSelection(
                                                         context: strongSelf.context,
                                                         theme: strongSelf.presentationData.theme,
+                                                        animationCache: strongSelf.controllerInteraction!.presentationContext.animationCache,
                                                         reaction: ReactionItem(
                                                             reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                                             appearAnimation: reaction.appearAnimation,
@@ -16651,6 +16751,70 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.present(controller, in: .window(.root))
             strongSelf.themeSceen = controller
         })
+    }
+    
+    func presentEmojiList(references: [StickerPackReference]) {
+        guard let packReference = references.first else {
+            return
+        }
+        self.chatDisplayNode.dismissTextInput()
+        
+        let presentationData = self.presentationData
+        let controller = StickerPackScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(references), parentNavigationController: self.effectiveNavigationController, actionPerformed: { [weak self] actions in
+            guard let strongSelf = self else {
+                return
+            }
+            let context = strongSelf.context
+            if actions.count > 1, let first = actions.first {
+                if case .add = first.2 {
+                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.EmojiPackActionInfo_AddedTitle, text: presentationData.strings.EmojiPackActionInfo_MultipleAddedText(Int32(actions.count)), undo: false, info: first.0, topItem: first.1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                        return true
+                    }))
+                } else if actions.allSatisfy({
+                    if case .remove = $0.2 {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                    let isEmoji = actions[0].0.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
+                    
+                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_MultipleRemovedText(Int32(actions.count)) : presentationData.strings.StickerPackActionInfo_MultipleRemovedText(Int32(actions.count)), undo: true, info: actions[0].0, topItem: actions[0].1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
+                        if case .undo = action {
+                            var itemsAndIndices: [(StickerPackCollectionInfo, [StickerPackItem], Int)] = actions.compactMap { action -> (StickerPackCollectionInfo, [StickerPackItem], Int)? in
+                                if case let .remove(index) = action.2 {
+                                    return (action.0, action.1, index)
+                                } else {
+                                    return nil
+                                }
+                            }
+                            itemsAndIndices.sort(by: { $0.2 < $1.2 })
+                            for (info, items, index) in itemsAndIndices.reversed() {
+                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: index).start()
+                            }
+                        }
+                        return true
+                    }))
+                }
+            } else if let (info, items, action) = actions.first {
+                let isEmoji = info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
+                
+                switch action {
+                case .add:
+                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedTitle : presentationData.strings.StickerPackActionInfo_AddedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedText(info.title).string : presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                        return true
+                    }))
+                case let .remove(positionInList):
+                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string : presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
+                        if case .undo = action {
+                            let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                        }
+                        return true
+                    }))
+                }
+            }
+        })
+        self.present(controller, in: .window(.root))
     }
     
     public func hintPlayNextOutgoingGift() {

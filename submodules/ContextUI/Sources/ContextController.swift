@@ -10,6 +10,8 @@ import SwiftSignalKit
 import AccountContext
 import TextNodeWithEntities
 import EntityKeyboard
+import AnimationCache
+import MultiAnimationRenderer
 
 private let animationDurationFactor: Double = 1.0
 
@@ -1518,8 +1520,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             })
         }
         
-        if !items.reactionItems.isEmpty, let context = items.context {
-            let reactionContextNode = ReactionContextNode(context: context, presentationData: self.presentationData, items: items.reactionItems, getEmojiContent: items.getEmojiContent, isExpandedUpdated: { _ in })
+        if !items.reactionItems.isEmpty, let context = items.context, let animationCache = items.animationCache {
+            let reactionContextNode = ReactionContextNode(context: context, animationCache: animationCache, presentationData: self.presentationData, items: items.reactionItems, getEmojiContent: items.getEmojiContent, isExpandedUpdated: { _ in })
             self.reactionContextNode = reactionContextNode
             self.addSubnode(reactionContextNode)
             
@@ -2380,17 +2382,21 @@ public final class ContextController: ViewController, StandalonePresentableContr
         public var content: Content
         public var context: AccountContext?
         public var reactionItems: [ReactionContextItem]
-        public var getEmojiContent: (() -> Signal<EmojiPagerContentComponent, NoError>)?
+        public var animationCache: AnimationCache?
+        public var getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?
         public var disablePositionLock: Bool
         public var tip: Tip?
+        public var tipSignal: Signal<Tip?, NoError>?
 
-        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], getEmojiContent: (() -> Signal<EmojiPagerContentComponent, NoError>)? = nil, disablePositionLock: Bool = false, tip: Tip? = nil) {
+        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], animationCache: AnimationCache? = nil, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)? = nil, disablePositionLock: Bool = false, tip: Tip? = nil, tipSignal: Signal<Tip?, NoError>? = nil) {
             self.content = content
             self.context = context
+            self.animationCache = animationCache
             self.reactionItems = reactionItems
             self.getEmojiContent = getEmojiContent
             self.disablePositionLock = disablePositionLock
             self.tip = tip
+            self.tipSignal = tipSignal
         }
 
         public init() {
@@ -2400,6 +2406,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.getEmojiContent = nil
             self.disablePositionLock = false
             self.tip = nil
+            self.tipSignal = nil
         }
     }
 
@@ -2408,11 +2415,46 @@ public final class ContextController: ViewController, StandalonePresentableContr
         case slide(forward: Bool)
     }
 
-    public enum Tip {
+    public enum Tip: Equatable {
         case textSelection
         case messageViewsPrivacy
         case messageCopyProtection(isChannel: Bool)
         case animatedEmoji(text: String?, arguments: TextNodeWithEntities.Arguments?,  file: TelegramMediaFile?, action: (() -> Void)?)
+        
+        public static func ==(lhs: Tip, rhs: Tip) -> Bool {
+            switch lhs {
+            case .textSelection:
+                if case .textSelection = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .messageViewsPrivacy:
+                if case .messageViewsPrivacy = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .messageCopyProtection(isChannel):
+                if case .messageCopyProtection(isChannel) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .animatedEmoji(text, _, file, _):
+                if case let .animatedEmoji(rhsText, _, rhsFile, _) = rhs {
+                    if text != rhsText {
+                        return false
+                    }
+                    if file?.fileId != rhsFile?.fileId {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
+            }
+        }
     }
 
     public final class ActionsHeight {

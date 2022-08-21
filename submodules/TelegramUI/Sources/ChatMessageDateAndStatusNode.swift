@@ -10,6 +10,8 @@ import AccountContext
 import AppBundle
 import ReactionButtonListComponent
 import ReactionImageComponent
+import AnimationCache
+import MultiAnimationRenderer
 
 private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     if let _ = layer.animation(forKey: "clockFrameAnimation") {
@@ -70,12 +72,12 @@ private final class StatusReactionNode: ASDisplayNode {
         self.fileDisposable?.dispose()
     }
     
-    func update(context: AccountContext, type: ChatMessageDateAndStatusType, value: MessageReaction.Reaction, file: TelegramMediaFile?, fileId: Int64?, isSelected: Bool, count: Int, theme: PresentationTheme, wallpaper: TelegramWallpaper, animated: Bool) {
+    func update(context: AccountContext, type: ChatMessageDateAndStatusType, value: MessageReaction.Reaction, file: TelegramMediaFile?, fileId: Int64?, isSelected: Bool, count: Int, theme: PresentationTheme, wallpaper: TelegramWallpaper, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, animated: Bool) {
         if self.value != value {
             self.value = value
             
             let boundingImageSize = CGSize(width: 14.0, height: 14.0)
-            let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
+            /*let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
             let imageSize: CGSize
             if let file = file {
                 self.iconImageDisposable.set((reactionStaticImage(context: context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0), queue: sharedReactionStaticImage)
@@ -129,11 +131,31 @@ private final class StatusReactionNode: ASDisplayNode {
                 
                 self.fileDisposable?.dispose()
                 self.fileDisposable = nil
-            }
+            }*/
             
-            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingImageSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((boundingImageSize.height - imageSize.height) / 2.0)), size: imageSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingImageSize.width - boundingImageSize.width) / 2.0), y: floorToScreenPixels((boundingImageSize.height - boundingImageSize.height) / 2.0)), size: boundingImageSize)
             self.iconView.frame = iconFrame
-            self.iconView.update(size: iconFrame.size, transition: .immediate)
+            if let fileId = fileId ?? file?.fileId.id {
+                let animateIdle: Bool
+                if case .custom = value {
+                    animateIdle = true
+                } else {
+                    animateIdle = false
+                }
+                
+                self.iconView.update(
+                    size: boundingImageSize,
+                    context: context,
+                    file: file,
+                    fileId: fileId,
+                    animationCache: animationCache,
+                    animationRenderer: animationRenderer,
+                    placeholderColor: .gray,
+                    animateIdle: animateIdle,
+                    reaction: value,
+                    transition: .immediate
+                )
+            }
         }
     }
 }
@@ -192,6 +214,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         var isPinned: Bool
         var hasAutoremove: Bool
         var canViewReactionList: Bool
+        var animationCache: AnimationCache
+        var animationRenderer: MultiAnimationRenderer
         
         init(
             context: AccountContext,
@@ -208,7 +232,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             replyCount: Int,
             isPinned: Bool,
             hasAutoremove: Bool,
-            canViewReactionList: Bool
+            canViewReactionList: Bool,
+            animationCache: AnimationCache,
+            animationRenderer: MultiAnimationRenderer
         ) {
             self.context = context
             self.presentationData = presentationData
@@ -225,6 +251,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             self.isPinned = isPinned
             self.hasAutoremove = hasAutoremove
             self.canViewReactionList = canViewReactionList
+            self.animationCache = animationCache
+            self.animationRenderer = animationRenderer
         }
     }
     
@@ -711,16 +739,20 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         },
                         reactions: arguments.reactions.map { reaction in
                             var centerAnimation: TelegramMediaFile?
-                            var legacyIcon: TelegramMediaFile?
+                            var animationFileId: Int64?
                             
-                            if let availableReactions = arguments.availableReactions {
-                                for availableReaction in availableReactions.reactions {
-                                    if availableReaction.value == reaction.value {
-                                        centerAnimation = availableReaction.centerAnimation
-                                        legacyIcon = availableReaction.staticIcon
-                                        break
+                            switch reaction.value {
+                            case .builtin:
+                                if let availableReactions = arguments.availableReactions {
+                                    for availableReaction in availableReactions.reactions {
+                                        if availableReaction.value == reaction.value {
+                                            centerAnimation = availableReaction.centerAnimation
+                                            break
+                                        }
                                     }
                                 }
+                            case let .custom(fileId):
+                                animationFileId = fileId
                             }
                             
                             var peers: [EnginePeer] = []
@@ -737,11 +769,11 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 reaction: ReactionButtonComponent.Reaction(
                                     value: reaction.value,
                                     centerAnimation: centerAnimation,
-                                    legacyIcon: legacyIcon
+                                    animationFileId: animationFileId
                                 ),
                                 count: Int(reaction.count),
                                 peers: peers,
-                                isSelected: reaction.isSelected
+                                chosenOrder: reaction.chosenOrder
                             )
                         },
                         colors: reactionColors,
@@ -832,7 +864,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         strongSelf.type = arguments.type
                         strongSelf.layoutSize = layoutSize
                         
-                        let reactionButtons = reactionButtonsResult.apply(animation)
+                        let reactionButtons = reactionButtonsResult.apply(
+                            animation,
+                            ReactionButtonsAsyncLayoutContainer.Arguments(
+                                animationCache: arguments.animationCache,
+                                animationRenderer: arguments.animationRenderer
+                            )
+                        )
                         
                         var reactionButtonPosition = CGPoint(x: -1.0, y: verticalReactionsInset)
                         for item in reactionButtons.items {
@@ -1062,9 +1100,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                         return false
                                     }
                                 } else {
-                                    return lhs.count > rhs.count
+                                    if let lhsIndex = lhs.chosenOrder, let rhsIndex = rhs.chosenOrder {
+                                        return lhsIndex < rhsIndex
+                                    } else {
+                                        return lhs.count > rhs.count
+                                    }
                                 }
-                            }) {
+                            }).prefix(10) {
                                 let node: StatusReactionNode
                                 var animateNode = true
                                 if let current = strongSelf.reactionNodes[reaction.value] {
@@ -1093,7 +1135,20 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     reactionFileId = fileId
                                 }
                                 
-                                node.update(context: arguments.context, type: arguments.type, value: reaction.value, file: centerAnimation, fileId: reactionFileId, isSelected: reaction.isSelected, count: Int(reaction.count), theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, animated: false)
+                                node.update(
+                                    context: arguments.context,
+                                    type: arguments.type,
+                                    value: reaction.value,
+                                    file: centerAnimation,
+                                    fileId: reactionFileId,
+                                    isSelected: reaction.isSelected,
+                                    count: Int(reaction.count),
+                                    theme: arguments.presentationData.theme.theme,
+                                    wallpaper: arguments.presentationData.theme.wallpaper,
+                                    animationCache: arguments.animationCache,
+                                    animationRenderer: arguments.animationRenderer,
+                                    animated: false
+                                )
                                 if node.supernode == nil {
                                     strongSelf.addSubnode(node)
                                     if animation.isAnimated {
@@ -1125,6 +1180,23 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     } else {
                                         node.removeFromSupernode()
                                     }
+                                }
+                            }
+                            for id in removeIds {
+                                strongSelf.reactionNodes.removeValue(forKey: id)
+                            }
+                        } else {
+                            var removeIds: [MessageReaction.Reaction] = []
+                            for (id, node) in strongSelf.reactionNodes {
+                                removeIds.append(id)
+                                if animation.isAnimated {
+                                    node.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                                    node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
+                                        node?.layer.removeAllAnimations()
+                                        node?.removeFromSupernode()
+                                    })
+                                } else {
+                                    node.removeFromSupernode()
                                 }
                             }
                             for id in removeIds {
@@ -1266,8 +1338,29 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     }
 }
 
-func shouldDisplayInlineDateReactions(message: Message) -> Bool {
+func shouldDisplayInlineDateReactions(message: Message, isPremium: Bool) -> Bool {
     if message.id.peerId.namespace == Namespaces.Peer.CloudUser || message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+        if let chatPeer = message.peers[message.id.peerId] as? TelegramUser, chatPeer.isPremium {
+            return false
+        }
+        if let author = message.author as? TelegramUser, author.isPremium {
+            return false
+        }
+        if isPremium {
+            return false
+        }
+        
+        if let effectiveReactions = message.effectiveReactions {
+            if effectiveReactions.count > 1 {
+                return false
+            }
+            for reaction in effectiveReactions {
+                if case .custom = reaction.value {
+                    return false
+                }
+            }
+        }
+        
         return true
     }
     return false

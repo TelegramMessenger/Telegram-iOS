@@ -9,6 +9,7 @@ public protocol MultiAnimationRenderer: AnyObject {
     func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable
     func loadFirstFrameSynchronously(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize) -> Bool
     func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (Bool, Bool) -> Void) -> Disposable
+    func setFrameIndex(itemId: String, size: CGSize, frameIndex: Int, placeholder: UIImage)
 }
 
 private var nextRenderTargetId: Int64 = 1
@@ -230,9 +231,11 @@ private final class ItemAnimationContext {
     private var disposable: Disposable?
     private var displayLink: ConstantDisplayLinkAnimator?
     private var item: Atomic<AnimationCacheItem>?
+    private var itemPlaceholderAndFrameIndex: (UIImage, Int)?
     
     private var currentFrame: Frame?
-    private var isLoadingFrame: Bool = false
+    private var loadingFrameTaskId: Int?
+    private var nextLoadingFrameTaskId: Int = 0
     
     private(set) var isPlaying: Bool = false {
         didSet {
@@ -257,6 +260,10 @@ private final class ItemAnimationContext {
                 if let item = result.item {
                     strongSelf.item = Atomic(value: item)
                 }
+                if let (placeholder, index) = strongSelf.itemPlaceholderAndFrameIndex {
+                    strongSelf.itemPlaceholderAndFrameIndex = nil
+                    strongSelf.setFrameIndex(index: index, placeholder: placeholder)
+                }
                 strongSelf.updateIsPlaying()
             }
         })
@@ -265,6 +272,45 @@ private final class ItemAnimationContext {
     deinit {
         self.disposable?.dispose()
         self.displayLink?.invalidate()
+    }
+    
+    func setFrameIndex(index: Int, placeholder: UIImage) {
+        if let item = self.item {
+            let nextFrame = item.with { item -> AnimationCacheItemFrame? in
+                item.reset()
+                for i in 0 ... index {
+                    let result = item.advance(advance: .frames(1), requestedFormat: .rgba)
+                    if i == index {
+                        return result
+                    }
+                }
+                return nil
+            }
+            
+            self.loadingFrameTaskId = nil
+            
+            if let nextFrame = nextFrame, let currentFrame = Frame(frame: nextFrame) {
+                self.currentFrame = currentFrame
+                
+                for target in self.targets.copyItems() {
+                    if let target = target.value {
+                        target.transitionToContents(currentFrame.image.cgImage!)
+                        
+                        if let blurredRepresentationTarget = target.blurredRepresentationTarget {
+                            blurredRepresentationTarget.contents = currentFrame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
+                        }
+                    }
+                }
+            }
+        } else {
+            for target in self.targets.copyItems() {
+                if let target = target.value {
+                    target.transitionToContents(placeholder.cgImage!)
+                }
+            }
+            
+            self.itemPlaceholderAndFrameIndex = (placeholder, index)
+        }
     }
     
     func updateAddedTarget(target: MultiAnimationRenderTarget) {
@@ -313,7 +359,7 @@ private final class ItemAnimationContext {
         }
         
         var frameAdvance: AnimationCacheItem.Advance?
-        if !self.isLoadingFrame {
+        if self.loadingFrameTaskId == nil {
             if let currentFrame = self.currentFrame, advanceTimestamp > 0.0 {
                 let divisionFactor = advanceTimestamp / currentFrame.remainingDuration
                 let wholeFactor = round(divisionFactor)
@@ -331,8 +377,11 @@ private final class ItemAnimationContext {
             }
         }
         
-        if let frameAdvance = frameAdvance, !self.isLoadingFrame {
-            self.isLoadingFrame = true
+        if let frameAdvance = frameAdvance, self.loadingFrameTaskId == nil {
+            let taskId = self.nextLoadingFrameTaskId
+            self.nextLoadingFrameTaskId += 1
+            
+            self.loadingFrameTaskId = taskId
             
             return LoadFrameGroupTask(task: { [weak self] in
                 let currentFrame: Frame?
@@ -352,7 +401,11 @@ private final class ItemAnimationContext {
                         return
                     }
                     
-                    strongSelf.isLoadingFrame = false
+                    if strongSelf.loadingFrameTaskId != taskId {
+                        return
+                    }
+                    
+                    strongSelf.loadingFrameTaskId = nil
                     
                     if let currentFrame = currentFrame {
                         strongSelf.currentFrame = currentFrame
@@ -529,6 +582,12 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             })
         }
         
+        func setFrameIndex(itemId: String, size: CGSize, frameIndex: Int, placeholder: UIImage) {
+            if let itemContext = self.itemContexts[ItemKey(id: itemId, width: Int(size.width), height: Int(size.height))] {
+                itemContext.setFrameIndex(index: frameIndex, placeholder: placeholder)
+            }
+        }
+        
         private func updateIsPlaying() {
             var isPlaying = false
             for (_, itemContext) in self.itemContexts {
@@ -658,6 +717,12 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
         
         return groupContext.loadFirstFrame(target: target, cache: cache, itemId: itemId, size: size, fetch: fetch, completion: completion)
+    }
+    
+    public func setFrameIndex(itemId: String, size: CGSize, frameIndex: Int, placeholder: UIImage) {
+        if let groupContext = self.groupContext {
+            groupContext.setFrameIndex(itemId: itemId, size: size, frameIndex: frameIndex, placeholder: placeholder)
+        }
     }
     
     private func updateIsPlaying() {
