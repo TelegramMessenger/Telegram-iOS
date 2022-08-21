@@ -10,24 +10,41 @@ import LegacyComponents
 import AvatarNode
 import AccountContext
 import TelegramCore
+import AnimationCache
+import MultiAnimationRenderer
+import EmojiStatusComponent
 
 private let sceneVersion: Int = 3
 
-class GiftAvatarComponent: Component {
+class EmojiHeaderComponent: Component {
     let context: AccountContext
-    let peer: EnginePeer?
+    let animationCache: AnimationCache
+    let animationRenderer: MultiAnimationRenderer
+    let placeholderColor: UIColor
+    let fileId: Int64
     let isVisible: Bool
     let hasIdleAnimations: Bool
         
-    init(context: AccountContext, peer: EnginePeer?, isVisible: Bool, hasIdleAnimations: Bool) {
+    init(
+        context: AccountContext,
+        animationCache: AnimationCache,
+        animationRenderer: MultiAnimationRenderer,
+        placeholderColor: UIColor,
+        fileId: Int64,
+        isVisible: Bool,
+        hasIdleAnimations: Bool
+    ) {
         self.context = context
-        self.peer = peer
+        self.animationCache = animationCache
+        self.animationRenderer = animationRenderer
+        self.placeholderColor = placeholderColor
+        self.fileId = fileId
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
     }
     
-    static func ==(lhs: GiftAvatarComponent, rhs: GiftAvatarComponent) -> Bool {
-        return lhs.peer == rhs.peer && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
+    static func ==(lhs: EmojiHeaderComponent, rhs: EmojiHeaderComponent) -> Bool {
+        return lhs.placeholderColor == rhs.placeholderColor && lhs.fileId == rhs.fileId && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
     final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -51,7 +68,7 @@ class GiftAvatarComponent: Component {
         var animationColor: UIColor?
         
         private let sceneView: SCNView
-        private let avatarNode: ImageNode
+        let statusView: ComponentHostView<Empty>
         
         private var previousInteractionTimestamp: Double = 0.0
         private var timer: SwiftSignalKit.Timer?
@@ -63,14 +80,13 @@ class GiftAvatarComponent: Component {
             self.sceneView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
             self.sceneView.isUserInteractionEnabled = false
             self.sceneView.preferredFramesPerSecond = 60
-            
-            self.avatarNode = ImageNode()
-            self.avatarNode.displaysAsynchronously = false
+                        
+            self.statusView = ComponentHostView<Empty>()
             
             super.init(frame: frame)
             
             self.addSubview(self.sceneView)
-            self.addSubview(self.avatarNode.view)
+            self.addSubview(self.statusView)
             
             self.setup()
                         
@@ -119,9 +135,39 @@ class GiftAvatarComponent: Component {
             }
         }
         
+        private func maybeAnimateIn() {
+            guard let animateFrom = self.animateFrom, var containerView = self.containerView else {
+                return
+            }
+                        
+            containerView = containerView.subviews[2].subviews[1]
+            
+            let initialPosition = self.statusView.center
+            let targetPosition = self.statusView.superview!.convert(self.statusView.center, to: containerView)
+            let sourcePosition = animateFrom.superview!.convert(animateFrom.center, to: containerView).offsetBy(dx: 0.0, dy: -20.0)
+            
+            containerView.addSubview(self.statusView)
+            self.statusView.center = targetPosition
+            
+            animateFrom.alpha = 0.0
+            self.statusView.layer.animateScale(from: 0.05, to: 1.0, duration: 0.8, timingFunction: kCAMediaTimingFunctionSpring)
+            self.statusView.layer.animatePosition(from: sourcePosition, to: targetPosition, duration: 0.8, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+                self.addSubview(self.statusView)
+                self.statusView.center = initialPosition
+            })
+            
+            Queue.mainQueue().after(0.4, {
+                animateFrom.alpha = 1.0
+            })
+            
+            self.animateFrom = nil
+            self.containerView = nil
+        }
+        
         private func onReady() {
             self.setupScaleAnimation()
             
+            self.maybeAnimateIn()
             self.playAppearanceAnimation(explode: true)
             
             self.previousInteractionTimestamp = CACurrentMediaTime()
@@ -137,15 +183,15 @@ class GiftAvatarComponent: Component {
         }
         
         private func setupScaleAnimation() {
-            let animation = CABasicAnimation(keyPath: "transform.scale")
-            animation.duration = 2.0
-            animation.fromValue = 1.0
-            animation.toValue = 1.15
-            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            animation.autoreverses = true
-            animation.repeatCount = .infinity
-
-            self.avatarNode.view.layer.add(animation, forKey: "scale")
+//            let animation = CABasicAnimation(keyPath: "transform.scale")
+//            animation.duration = 2.0
+//            animation.fromValue = 1.0
+//            animation.toValue = 1.15
+//            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+//            animation.autoreverses = true
+//            animation.repeatCount = .infinity
+//
+//            self.avatarNode.view.layer.add(animation, forKey: "scale")
         }
         
         private func playAppearanceAnimation(velocity: CGFloat? = nil, smallAngle: Bool = false, mirror: Bool = false, explode: Bool = false) {
@@ -235,19 +281,33 @@ class GiftAvatarComponent: Component {
             }
         }
         
-        func update(component: GiftAvatarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: EmojiHeaderComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
             if self.sceneView.superview == self {
                 self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
             }
             
             self.hasIdleAnimations = component.hasIdleAnimations
-            let avatarSize = CGSize(width: 100.0, height: 100.0)
-            if let peer = component.peer {
-                self.avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: peer, size: avatarSize, font: avatarPlaceholderFont(size: 43.0), fullSize: true))
-            }
-            self.avatarNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - avatarSize.width) / 2.0), y: 63.0), size: avatarSize)
             
+            let size = self.statusView.update(
+                transition: .immediate,
+                component: AnyComponent(EmojiStatusComponent(
+                    context: component.context,
+                    animationCache: component.animationCache,
+                    animationRenderer: component.animationRenderer,
+                    content: .emojiStatus(
+                        status: PeerEmojiStatus(fileId: component.fileId),
+                        size: CGSize(width: 100.0, height: 100.0),
+                        placeholderColor: component.placeholderColor
+                    ),
+                    action: nil,
+                    longTapAction: nil
+                )),
+                environment: {},
+                containerSize: CGSize(width: 96.0, height: 96.0)
+            )
+            self.statusView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - size.width) / 2.0), y: 63.0), size: size)
+
             return availableSize
         }
     }

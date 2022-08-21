@@ -7,26 +7,32 @@ import TextFormat
 import Markdown
 
 public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> NSAttributedString {
+    let fontSize: CGFloat = 17.0
     switch type {
     case .sms:
-        return NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
+        return NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
     case .otherSession:
-        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: primaryColor)
-        let bold = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: primaryColor)
+        let body = MarkdownAttributeSet(font: Font.regular(fontSize), textColor: primaryColor)
+        let bold = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: primaryColor)
         return parseMarkdownIntoAttributedString(strings.Login_CodeSentInternal, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
     case .missedCall:
-        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: primaryColor)
-        let bold = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: primaryColor)
+        let body = MarkdownAttributeSet(font: Font.regular(fontSize), textColor: primaryColor)
+        let bold = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: primaryColor)
         return parseMarkdownIntoAttributedString(strings.Login_ShortCallTitle, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
     case .call:
-        return NSAttributedString(string: strings.Login_CodeSentCall, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
+        return NSAttributedString(string: strings.Login_CodeSentCall, font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
     case .flashCall:
-        return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
+        return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
     case .emailSetupRequired:
-        return NSAttributedString(string: "", font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
+        return NSAttributedString(string: "", font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
     case let .email(emailPattern, _, _, _, _):
         //TODO: localize
-        return NSAttributedString(string: "Please enter the code we have sent to your email \(emailPattern).", font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
+        let mutableString = NSAttributedString(string: "Please enter the code we have sent to your email \(emailPattern).", font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center).mutableCopy() as! NSMutableAttributedString
+        let range = (mutableString.string as NSString).range(of: "*******")
+        if range.location != NSNotFound {
+            mutableString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: range)
+        }
+        return mutableString
     }
 }
 

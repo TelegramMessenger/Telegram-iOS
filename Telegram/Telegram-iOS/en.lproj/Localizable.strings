@@ -7972,3 +7972,8 @@ Sorry for the inconvenience.";
 "Checkout.PaymentLiabilityBothAlert" = "Telegram will not have access to your credit card information. Credit card details will be handled only by the payment system, {target}.\n\nPayments will go directly to the developer of {target}. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of {target} or your bank.";
 
 "Settings.ChangeProfilePhoto" = "Change Profile Photo";
+
+"Premium.EmojiStatusTitle" = "This is %1$@'s current status from #[%2$@]().";
+"Premium.EmojiStatusText" = "Emoji status is a premium feature.\n Other features included in **Telegram Premium**:";
+
+"Login.SelectCountry" = "Country";

@@ -84,8 +84,9 @@ final class AuthorizationSequenceSignUpController: ViewController {
     override public func loadDisplayNode() {
         let currentAvatarMixin = Atomic<NSObject?>(value: nil)
         
-        self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, addPhoto: { [weak self] in
-            presentLegacyAvatarPicker(holder: currentAvatarMixin, signup: false, theme: defaultPresentationTheme, present: { c, a in
+        let theme = self.presentationData.theme
+        self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: theme, strings: self.presentationData.strings, addPhoto: { [weak self] in
+            presentLegacyAvatarPicker(holder: currentAvatarMixin, signup: false, theme: theme, present: { c, a in
                 self?.view.endEditing(true)
                 self?.present(c, in: .window(.root), with: a)
             }, openCurrent: nil, completion: { image in

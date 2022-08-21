@@ -84,7 +84,7 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.theme = theme
         
         self.animationNode = DefaultAnimatedStickerNodeImpl()
-        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroMail"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroMail"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         
         self.titleNode = ASTextNode()
@@ -95,6 +95,7 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.noticeNode = ASTextNode()
         self.noticeNode.isUserInteractionEnabled = false
         self.noticeNode.displaysAsynchronously = false
+        self.noticeNode.lineSpacing = 0.1
         self.noticeNode.attributedText = NSAttributedString(string: "Please enter your valid email address to protect your account.", font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         if #available(iOS 13.0, *) {
@@ -186,13 +187,13 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.layoutArguments = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [])
-        insets.top = navigationBarHeight
+        insets.top = layout.statusBarHeight ?? 20.0
         
         if let inputHeight = layout.inputHeight {
-            insets.bottom += max(inputHeight, layout.standardInputHeight)
+            insets.bottom += max(inputHeight, insets.bottom)
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: "Add Email", font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: "Add Email", font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
 
         let animationSize = CGSize(width: 88.0, height: 88.0)
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
@@ -202,11 +203,11 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         let proceedSize = CGSize(width: layout.size.width - 48.0, height: proceedHeight)
         
         var items: [AuthorizationLayoutItem] = []
-        items.append(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         self.animationNode.updateLayout(size: animationSize)
         
         items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-        items.append(AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 20.0, maxValue: 20.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         
         items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 32.0, maxValue: 60.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 48.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
@@ -221,7 +222,7 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         
         items.append(AuthorizationLayoutItem(node: self.proceedNode, size: proceedSize, spacingBefore: self.dividerNode.isHidden ? AuthorizationLayoutItemSpacing(weight: 48.0, maxValue: 100.0) : AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                         
-        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 20.0)), items: items, transition: transition, failIfDoesNotFit: false)
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 80.0)), items: items, transition: transition, failIfDoesNotFit: false)
         
         if let signInWithAppleButton = self.signInWithAppleButton, self.appleSignInAllowed {
             signInWithAppleButton.isHidden = false

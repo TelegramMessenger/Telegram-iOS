@@ -50,7 +50,8 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         self.noticeNode = ASTextNode()
         self.noticeNode.isUserInteractionEnabled = false
         self.noticeNode.displaysAsynchronously = false
-        self.noticeNode.attributedText = NSAttributedString(string: strings.TwoStepAuth_EnterPasswordHelp, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        self.noticeNode.lineSpacing = 0.1
+        self.noticeNode.attributedText = NSAttributedString(string: strings.TwoStepAuth_EnterPasswordHelp, font: Font.regular(17.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         self.forgotNode = HighlightableButtonNode()
         self.forgotNode.displaysAsynchronously = false

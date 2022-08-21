@@ -30,12 +30,12 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     
     var inProgress: Bool = false {
         didSet {
-            if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
-                self.navigationItem.rightBarButtonItem = item
-            } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-            }
+//            if self.inProgress {
+//                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
+//                self.navigationItem.rightBarButtonItem = item
+//            } else {
+//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+//            }
             self.controllerNode.inProgress = self.inProgress
         }
     }
@@ -53,7 +53,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         
         self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+//        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
         self.attemptNavigation = { _ in
             return false
@@ -118,12 +118,6 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
         self.termsOfService = termsOfService
         if self.data?.0 != number || self.data?.1 != codeType || self.data?.2 != nextType || self.data?.3 != timeout {
-            switch codeType {
-            case .otherSession, .missedCall:
-                self.title = number
-            default:
-                self.title = nil
-            }
             self.data = (number, codeType, nextType, timeout)
                         
             var appleSignInAllowed = false

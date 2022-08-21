@@ -1524,7 +1524,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let peer = messages.last?.author {
                             if case let .user(user) = peer, let emojiStatus = user.emojiStatus {
                                 currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
-                                currentCredibilityIconContent = .emojiStatus(status: emojiStatus, placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                                currentCredibilityIconContent = .emojiStatus(status: emojiStatus, size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
                             } else if peer.isScam {
                                 currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                                 currentCredibilityIconContent = .scam(color: item.presentationData.theme.chat.message.incoming.scamColor)
@@ -1545,7 +1545,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
                     if case let .user(user) = peer, let emojiStatus = user.emojiStatus {
                         currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
-                        currentCredibilityIconContent = .emojiStatus(status: emojiStatus, placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                        currentCredibilityIconContent = .emojiStatus(status: emojiStatus, size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
                     } else if peer.isScam {
                         currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
                         currentCredibilityIconContent = .scam(color: item.presentationData.theme.chat.message.incoming.scamColor)
