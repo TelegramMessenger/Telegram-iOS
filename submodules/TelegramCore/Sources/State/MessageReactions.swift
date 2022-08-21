@@ -558,7 +558,7 @@ public enum UpdatePeerAllowedReactionsError {
     case generic
 }
 
-func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allowedReactions: [MessageReaction.Reaction]) -> Signal<Never, UpdatePeerAllowedReactionsError> {
+func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allowedReactions: PeerAllowedReactions) -> Signal<Never, UpdatePeerAllowedReactionsError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
@@ -567,14 +567,18 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
         guard let inputPeer = inputPeer else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.messages.setChatAvailableReactions(peer: inputPeer, availableReactions: allowedReactions.compactMap { item -> String? in
-            switch item {
-            case let .builtin(value):
-                return value
-            case .custom:
-                return nil
-            }
-        }))
+        
+        let mappedReactions: Api.ChatReactions
+        switch allowedReactions {
+        case .all:
+            mappedReactions = .chatReactionsAll(flags: 0)
+        case let .limited(array):
+            mappedReactions = .chatReactionsSome(reactions: array.map(\.apiReaction))
+        case .empty:
+            mappedReactions = .chatReactionsNone
+        }
+        
+        return account.network.request(Api.functions.messages.setChatAvailableReactions(peer: inputPeer, availableReactions: mappedReactions))
         |> mapError { _ -> UpdatePeerAllowedReactionsError in
             return .generic
         }
@@ -584,9 +588,9 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
             return account.postbox.transaction { transaction -> Void in
                 transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                     if let current = current as? CachedChannelData {
-                        return current.withUpdatedAllowedReactions(allowedReactions)
+                        return current.withUpdatedAllowedReactions(.known(allowedReactions))
                     } else if let current = current as? CachedGroupData {
-                        return current.withUpdatedAllowedReactions(allowedReactions)
+                        return current.withUpdatedAllowedReactions(.known(allowedReactions))
                     } else {
                         return current
                     }

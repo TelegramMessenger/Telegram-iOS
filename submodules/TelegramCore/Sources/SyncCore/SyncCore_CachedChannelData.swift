@@ -238,7 +238,7 @@ public final class CachedChannelData: CachedPeerData {
     public let themeEmoticon: String?
     public let inviteRequestsPending: Int32?
     public let sendAsPeerId: PeerId?
-    public let allowedReactions: [MessageReaction.Reaction]?
+    public let allowedReactions: EnginePeerCachedInfoItem<PeerAllowedReactions>
     
     public let peerIds: Set<PeerId>
     public let messageIds: Set<MessageId>
@@ -276,7 +276,7 @@ public final class CachedChannelData: CachedPeerData {
         self.themeEmoticon = nil
         self.inviteRequestsPending = nil
         self.sendAsPeerId = nil
-        self.allowedReactions = nil
+        self.allowedReactions = .unknown
     }
     
     public init(
@@ -307,7 +307,7 @@ public final class CachedChannelData: CachedPeerData {
         themeEmoticon: String?,
         inviteRequestsPending: Int32?,
         sendAsPeerId: PeerId?,
-        allowedReactions: [MessageReaction.Reaction]?
+        allowedReactions: EnginePeerCachedInfoItem<PeerAllowedReactions>
     ) {
         self.isNotAccessible = isNotAccessible
         self.flags = flags
@@ -471,7 +471,7 @@ public final class CachedChannelData: CachedPeerData {
         return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation, slowModeTimeout: self.slowModeTimeout, slowModeValidUntilTimestamp: self.slowModeValidUntilTimestamp, hasScheduledMessages: self.hasScheduledMessages, statsDatacenterId: self.statsDatacenterId, invitedBy: self.invitedBy, invitedOn: self.invitedOn, photo: self.photo, activeCall: self.activeCall, callJoinPeerId: self.callJoinPeerId, autoremoveTimeout: self.autoremoveTimeout, pendingSuggestions: pendingSuggestions, themeEmoticon: self.themeEmoticon, inviteRequestsPending: self.inviteRequestsPending, sendAsPeerId: sendAsPeerId, allowedReactions: self.allowedReactions)
     }
     
-    public func withUpdatedAllowedReactions(_ allowedReactions: [MessageReaction.Reaction]?) -> CachedChannelData {
+    public func withUpdatedAllowedReactions(_ allowedReactions: EnginePeerCachedInfoItem<PeerAllowedReactions>) -> CachedChannelData {
         return CachedChannelData(isNotAccessible: self.isNotAccessible, flags: self.flags, about: self.about, participantsSummary: self.participantsSummary, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, stickerPack: self.stickerPack, minAvailableMessageId: self.minAvailableMessageId, migrationReference: self.migrationReference, linkedDiscussionPeerId: self.linkedDiscussionPeerId, peerGeoLocation: self.peerGeoLocation, slowModeTimeout: self.slowModeTimeout, slowModeValidUntilTimestamp: self.slowModeValidUntilTimestamp, hasScheduledMessages: self.hasScheduledMessages, statsDatacenterId: self.statsDatacenterId, invitedBy: self.invitedBy, invitedOn: self.invitedOn, photo: self.photo, activeCall: self.activeCall, callJoinPeerId: self.callJoinPeerId, autoremoveTimeout: self.autoremoveTimeout, pendingSuggestions: pendingSuggestions, themeEmoticon: self.themeEmoticon, inviteRequestsPending: self.inviteRequestsPending, sendAsPeerId: self.sendAsPeerId, allowedReactions: allowedReactions)
     }
     
@@ -562,10 +562,12 @@ public final class CachedChannelData: CachedPeerData {
         
         self.sendAsPeerId = decoder.decodeOptionalInt64ForKey("sendAsPeerId").flatMap(PeerId.init)
         
-        if let allowedReactions = decoder.decodeOptionalStringArrayForKey("allowedReactions") {
-            self.allowedReactions = allowedReactions.map(MessageReaction.Reaction.builtin)
+        if let legacyAllowedReactions = decoder.decodeOptionalStringArrayForKey("allowedReactions") {
+            self.allowedReactions = .known(.limited(legacyAllowedReactions.map(MessageReaction.Reaction.builtin)))
+        } else if let allowedReactions = decoder.decode(PeerAllowedReactions.self, forKey: "allowedReactionSet") {
+            self.allowedReactions = .known(allowedReactions)
         } else {
-            self.allowedReactions = nil
+            self.allowedReactions = .unknown
         }
         
         if case let .known(linkedDiscussionPeerIdValue) = self.linkedDiscussionPeerId {
@@ -712,17 +714,11 @@ public final class CachedChannelData: CachedPeerData {
             encoder.encodeNil(forKey: "sendAsPeerId")
         }
         
-        if let allowedReactions = self.allowedReactions {
-            encoder.encodeStringArray(allowedReactions.compactMap { item -> String? in
-                switch item {
-                case let .builtin(value):
-                    return value
-                case .custom:
-                    return nil
-                }
-            }, forKey: "allowedReactions")
-        } else {
-            encoder.encodeNil(forKey: "allowedReactions")
+        switch self.allowedReactions {
+        case .unknown:
+            encoder.encodeNil(forKey: "allowedReactionSet")
+        case let .known(value):
+            encoder.encode(value, forKey: "allowedReactionSet")
         }
     }
     

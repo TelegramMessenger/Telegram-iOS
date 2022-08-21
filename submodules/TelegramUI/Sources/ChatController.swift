@@ -16963,12 +16963,18 @@ func peerAllowedReactions(context: AccountContext, peerId: PeerId) -> Signal<All
         TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: peerId)
     )
     |> map { peer, allowedReactions -> AllowedReactions? in
-        if let allowedReactions = allowedReactions {
-            return .set(Set(allowedReactions))
-        } else if case .user = peer {
-            return .all
-        } else {
+        switch allowedReactions {
+        case .unknown:
             return nil
+        case let .known(value):
+            switch value {
+            case .all:
+                return .all
+            case let .limited(reactions):
+                return .set(Set(reactions))
+            case .empty:
+                return .set(Set())
+            }
         }
     }
 }

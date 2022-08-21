@@ -694,7 +694,7 @@ public extension TelegramEngine {
             return _internal_updatePeerSendAsPeer(account: self.account, peerId: peerId, sendAs: sendAs)
         }
         
-        public func updatePeerAllowedReactions(peerId: PeerId, allowedReactions: [MessageReaction.Reaction]) -> Signal<Never, UpdatePeerAllowedReactionsError> {
+        public func updatePeerAllowedReactions(peerId: PeerId, allowedReactions: PeerAllowedReactions) -> Signal<Never, UpdatePeerAllowedReactionsError> {
             return _internal_updatePeerAllowedReactions(account: account, peerId: peerId, allowedReactions: allowedReactions)
         }
         

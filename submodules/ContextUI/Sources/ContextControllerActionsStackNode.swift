@@ -1156,6 +1156,11 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         
         let animateAppearingContainers = transition.isAnimated && !self.dismissingItemContainers.isEmpty
         
+        struct TipLayout {
+            var tipNode: ASDisplayNode
+            var tipHeight: CGFloat
+        }
+        
         struct ItemLayout {
             var size: CGSize
             var apparentHeight: CGFloat
@@ -1163,6 +1168,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             var alphaTransitionFraction: CGFloat
             var itemTransition: ContainedViewLayoutTransition
             var animateAppearingContainer: Bool
+            var tip: TipLayout?
         }
         
         var topItemSize = CGSize()
@@ -1204,13 +1210,19 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 topItemSize = itemSize.size
             }
             
+            var tip: TipLayout?
+            if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, width: itemSize.size.width, transition: itemContainerTransition) {
+                tip = TipLayout(tipNode: tipNode, tipHeight: tipHeight)
+            }
+            
             itemLayouts.append(ItemLayout(
                 size: itemSize.size,
                 apparentHeight: itemSize.apparentHeight,
                 transitionFraction: transitionFraction,
                 alphaTransitionFraction: alphaTransitionFraction,
                 itemTransition: itemContainerTransition,
-                animateAppearingContainer: animateAppearingContainer
+                animateAppearingContainer: animateAppearingContainer,
+                tip: tip
             ))
         }
         
@@ -1232,6 +1244,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         }
         
         let navigationContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: topItemWidth, height: max(14 * 2.0, topItemApparentHeight)))
+        let previousNavigationContainerFrame = self.navigationContainer.frame
         transition.updateFrame(node: self.navigationContainer, frame: navigationContainerFrame, beginWithCurrentState: true)
         self.navigationContainer.update(presentationData: presentationData, presentation: presentation, size: navigationContainerFrame.size, transition: transition)
         
@@ -1258,20 +1271,28 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             
             self.itemContainers[i].updateDimNode(presentationData: presentationData, size: CGSize(width: itemLayouts[i].size.width, height: navigationContainerFrame.size.height), transitionFraction: itemLayouts[i].alphaTransitionFraction, transition: transition)
             
-            if let (tipNode, tipHeight) = self.itemContainers[i].updateTip(presentationData: presentationData, width: itemLayouts[i].size.width, transition: transition) {
-                var tipTransition = transition
-                if tipNode.supernode == nil {
-                    tipTransition = .immediate
-                    self.addSubnode(tipNode)
+            if let tip = itemLayouts[i].tip {
+                let tipTransition = transition
+                var animateTipIn = false
+                if tip.tipNode.supernode == nil {
+                    self.addSubnode(tip.tipNode)
+                    animateTipIn = transition.isAnimated
+                    tip.tipNode.frame = CGRect(origin: CGPoint(x: previousNavigationContainerFrame.minX, y: previousNavigationContainerFrame.maxY + tipSpacing), size: CGSize(width: itemLayouts[i].size.width, height: tip.tipHeight))
                 }
                 
                 let tipAlpha: CGFloat = itemLayouts[i].alphaTransitionFraction
                 
-                tipTransition.updateFrame(node: tipNode, frame: CGRect(origin: CGPoint(x: navigationContainerFrame.minX, y: navigationContainerFrame.maxY + tipSpacing), size: CGSize(width: itemLayouts[i].size.width, height: tipHeight)), beginWithCurrentState: true)
-                tipTransition.updateAlpha(node: tipNode, alpha: tipAlpha, beginWithCurrentState: true)
+                tipTransition.updateFrame(node: tip.tipNode, frame: CGRect(origin: CGPoint(x: navigationContainerFrame.minX, y: navigationContainerFrame.maxY + tipSpacing), size: CGSize(width: itemLayouts[i].size.width, height: tip.tipHeight)), beginWithCurrentState: true)
+                
+                if animateTipIn {
+                    tip.tipNode.alpha = tipAlpha
+                    tip.tipNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                } else {
+                    tipTransition.updateAlpha(node: tip.tipNode, alpha: tipAlpha, beginWithCurrentState: true)
+                }
                 
                 if i == self.itemContainers.count - 1 {
-                    topItemSize.height += tipSpacing + tipHeight
+                    topItemSize.height += tipSpacing + tip.tipHeight
                 }
             }
         }

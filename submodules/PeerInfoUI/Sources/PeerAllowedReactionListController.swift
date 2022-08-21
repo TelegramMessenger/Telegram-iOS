@@ -323,23 +323,21 @@ public func peerAllowedReactionListController(
         updateState { state in
             var state = state
             
-            if allowedReactions == nil {
-                state.updatedMode = .all
-                if let availableReactions = availableReactions {
-                    let updatedAllowedReactions = availableReactions.reactions.map { $0.value }
-                    state.updatedAllowedReactions = Set(updatedAllowedReactions)
-                }
-            } else if let allowedReactions = allowedReactions, !allowedReactions.isEmpty {
-                if let availableReactions = availableReactions, Set(allowedReactions) == Set(availableReactions.reactions.map(\.value)) {
+            switch allowedReactions {
+            case .unknown:
+                break
+            case let .known(value):
+                switch value {
+                case .all:
                     state.updatedMode = .all
-                } else {
+                    state.updatedAllowedReactions = Set()
+                case let .limited(reactions):
                     state.updatedMode = .some
+                    state.updatedAllowedReactions = Set(reactions)
+                case .empty:
+                    state.updatedMode = .empty
+                    state.updatedAllowedReactions = Set()
                 }
-                let updatedAllowedReactions = Set(allowedReactions)
-                state.updatedAllowedReactions = updatedAllowedReactions
-            } else {
-                state.updatedMode = .empty
-                state.updatedAllowedReactions = Set()
             }
             
             return state
@@ -371,6 +369,12 @@ public func peerAllowedReactionListController(
                             }
                         case .some:
                             updatedAllowedReactions.removeAll()
+                            if let thumbsUp = availableReactions.reactions.first(where: { $0.value == .builtin("👍") }) {
+                                updatedAllowedReactions.insert(thumbsUp.value)
+                            }
+                            if let thumbsDown = availableReactions.reactions.first(where: { $0.value == .builtin("👎") }) {
+                                updatedAllowedReactions.insert(thumbsDown.value)
+                            }
                         case .empty:
                             updatedAllowedReactions.removeAll()
                         }
@@ -443,12 +447,24 @@ public func peerAllowedReactionListController(
     let controller = ItemListController(context: context, state: signal)
     controller.willDisappear = { _ in
         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: peerId))
-        |> deliverOnMainQueue).start(next: { initialAllowedReactionList in
-            let initialAllowedReactions = initialAllowedReactionList.flatMap(Set.init)
+        |> deliverOnMainQueue).start(next: { initialAllowedReactions in
+            let state = stateValue.with({ $0 })
+            guard let updatedMode = state.updatedMode, let updatedAllowedReactions = state.updatedAllowedReactions else {
+                return
+            }
             
-            let updatedAllowedReactions = stateValue.with({ $0 }).updatedAllowedReactions
-            if let updatedAllowedReactions = updatedAllowedReactions, initialAllowedReactions != updatedAllowedReactions {
-                let _ = context.engine.peers.updatePeerAllowedReactions(peerId: peerId, allowedReactions: Array(updatedAllowedReactions)).start()
+            let updatedValue: PeerAllowedReactions
+            switch updatedMode {
+            case .all:
+                updatedValue = .all
+            case .some:
+                updatedValue = .limited(Array(updatedAllowedReactions))
+            case .empty:
+                updatedValue = .empty
+            }
+            
+            if initialAllowedReactions != .known(updatedValue) {
+                let _ = context.engine.peers.updatePeerAllowedReactions(peerId: peerId, allowedReactions: updatedValue).start()
             }
         })
     }

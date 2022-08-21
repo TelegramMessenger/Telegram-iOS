@@ -5322,6 +5322,23 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func reportReaction(peer: Api.InputPeer, id: Int32, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1631726152)
+                    peer.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    userId.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.reportReaction", parameters: [("peer", String(describing: peer)), ("id", String(describing: id)), ("userId", String(describing: userId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func reportSpam(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-820669733)
@@ -5898,15 +5915,11 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func setChatAvailableReactions(peer: Api.InputPeer, availableReactions: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func setChatAvailableReactions(peer: Api.InputPeer, availableReactions: Api.ChatReactions) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(335875750)
+                    buffer.appendInt32(-21928079)
                     peer.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(availableReactions.count))
-                    for item in availableReactions {
-                        serializeString(item, buffer: buffer, boxed: false)
-                    }
+                    availableReactions.serialize(buffer, true)
                     return (FunctionDescription(name: "messages.setChatAvailableReactions", parameters: [("peer", String(describing: peer)), ("availableReactions", String(describing: availableReactions))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?

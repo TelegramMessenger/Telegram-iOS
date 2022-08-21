@@ -151,8 +151,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1605510357] = { return Api.ChatAdminRights.parse_chatAdminRights($0) }
     dict[-219353309] = { return Api.ChatAdminWithInvites.parse_chatAdminWithInvites($0) }
     dict[-1626209256] = { return Api.ChatBannedRights.parse_chatBannedRights($0) }
-    dict[-362240487] = { return Api.ChatFull.parse_channelFull($0) }
-    dict[-779165146] = { return Api.ChatFull.parse_chatFull($0) }
+    dict[-231385849] = { return Api.ChatFull.parse_channelFull($0) }
+    dict[-908914376] = { return Api.ChatFull.parse_chatFull($0) }
     dict[806110401] = { return Api.ChatInvite.parse_chatInvite($0) }
     dict[1516793212] = { return Api.ChatInvite.parse_chatInviteAlready($0) }
     dict[1634294960] = { return Api.ChatInvite.parse_chatInvitePeek($0) }
@@ -165,6 +165,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2023500831] = { return Api.ChatParticipants.parse_chatParticipantsForbidden($0) }
     dict[476978193] = { return Api.ChatPhoto.parse_chatPhoto($0) }
     dict[935395612] = { return Api.ChatPhoto.parse_chatPhotoEmpty($0) }
+    dict[1385335754] = { return Api.ChatReactions.parse_chatReactionsAll($0) }
+    dict[-352570692] = { return Api.ChatReactions.parse_chatReactionsNone($0) }
+    dict[1713193015] = { return Api.ChatReactions.parse_chatReactionsSome($0) }
     dict[-1973130814] = { return Api.CodeSettings.parse_codeSettings($0) }
     dict[589653676] = { return Api.Config.parse_config($0) }
     dict[341499403] = { return Api.Contact.parse_contact($0) }
@@ -1206,6 +1209,8 @@ public extension Api {
             case let _1 as Api.ChatParticipants:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChatPhoto:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ChatReactions:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.CodeSettings:
                 _1.serialize(buffer, boxed)

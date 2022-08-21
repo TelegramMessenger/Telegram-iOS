@@ -1277,11 +1277,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 
                 if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                     let label: String
-                    if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
-                        if allowedReactions.isEmpty {
+                    if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
+                        switch allowedReactions {
+                        case .all:
+                            //TODO:localize
+                            label = "Enabled"
+                        case .empty:
                             label = presentationData.strings.PeerInfo_ReactionsDisabled
-                        } else {
-                            label = "\(allowedReactions.count)"
+                        case let .limited(reactions):
+                            label = "\(reactions.count)"
                         }
                     } else {
                         label = ""
@@ -1439,11 +1443,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         
                         if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                             let label: String
-                            if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
-                                if allowedReactions.isEmpty {
+                            if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
+                                switch allowedReactions {
+                                case .all:
+                                    //TODO:localize
+                                    label = "Enabled"
+                                case .empty:
                                     label = presentationData.strings.PeerInfo_ReactionsDisabled
-                                } else {
-                                    label = "\(allowedReactions.count)"
+                                case let .limited(reactions):
+                                    label = "\(reactions.count)"
                                 }
                             } else {
                                 label = ""
@@ -1461,11 +1469,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     } else {
                         if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                             let label: String
-                            if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
-                                if allowedReactions.isEmpty {
+                            if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
+                                switch allowedReactions {
+                                case .all:
+                                    //TODO:localize
+                                    label = "Enabled"
+                                case .empty:
                                     label = presentationData.strings.PeerInfo_ReactionsDisabled
-                                } else {
-                                    label = "\(allowedReactions.count)"
+                                case let .limited(reactions):
+                                    label = "\(reactions.count)"
                                 }
                             } else {
                                 label = ""
@@ -1571,11 +1583,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 
                 do {
                     let label: String
-                    if let cachedData = data.cachedData as? CachedGroupData, let allowedReactions = cachedData.allowedReactions {
-                        if allowedReactions.isEmpty {
+                    if let cachedData = data.cachedData as? CachedGroupData, case let .known(allowedReactions) = cachedData.allowedReactions {
+                        switch allowedReactions {
+                        case .all:
+                            //TODO:localize
+                            label = "Enabled"
+                        case .empty:
                             label = presentationData.strings.PeerInfo_ReactionsDisabled
-                        } else {
-                            label = "\(allowedReactions.count)"
+                        case let .limited(reactions):
+                            label = "\(reactions.count)"
                         }
                     } else {
                         label = ""
