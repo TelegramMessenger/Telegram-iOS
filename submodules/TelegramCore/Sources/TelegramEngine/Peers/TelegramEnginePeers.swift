@@ -160,7 +160,11 @@ public extension TelegramEngine {
         }
 
         public func reportPeerMessages(messageIds: [MessageId], reason: ReportReason, message: String) -> Signal<Void, NoError> {
-            return _internal_reportPeerMessages(account: account, messageIds: messageIds, reason: reason, message: message)
+            return _internal_reportPeerMessages(account: self.account, messageIds: messageIds, reason: reason, message: message)
+        }
+        
+        public func reportPeerReaction(authorId: PeerId, messageId: MessageId) -> Signal<Never, NoError> {
+            return _internal_reportPeerReaction(account: self.account, authorId: authorId, messageId: messageId)
         }
 
         public func dismissPeerStatusOptions(peerId: PeerId) -> Signal<Void, NoError> {

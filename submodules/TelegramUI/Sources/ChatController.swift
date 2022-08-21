@@ -881,7 +881,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }, openPeer: { [weak self] peerId in
                 if let strongSelf = self {
-                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, nil)
+                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, false, nil)
                 }
             }, openHashtag: { [weak self] peerName, hashtag in
                 if let strongSelf = self {
@@ -948,8 +948,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             })))
-        }, openPeer: { [weak self] id, navigation, fromMessage, _ in
-            self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
+        }, openPeer: { [weak self] id, navigation, fromMessage, isReaction, _ in
+            self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage, fromReactionMessageId: isReaction ? fromMessage?.id : nil)
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
         }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, anyRecognizer, location in
@@ -1437,7 +1437,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         
-                        strongSelf.openPeer(peerId: id, navigation: .default, fromMessage: MessageReference(message))
+                        strongSelf.openPeer(peerId: id, navigation: .default, fromMessage: MessageReference(message), fromReactionMessageId: message.id)
                     })
                 })))
                 
@@ -1552,7 +1552,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     ),
                                     file: items.first?.file,
                                     action: action)
-                                return .single(tip) |> delay(1.0, queue: .mainQueue())
+                                return .single(tip)
                             } else {
                                 return .complete()
                             }
@@ -12707,7 +12707,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .mention(peerId, mention):
                 switch action {
                 case .tap:
-                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, nil)
+                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, false, nil)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
                 }
@@ -12795,7 +12795,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .mention(peerId, mention):
                 switch action {
                 case .tap:
-                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, nil)
+                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, false, nil)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
                 }
@@ -12904,7 +12904,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .mention(peerId, mention):
                 switch action {
                 case .tap:
-                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, nil)
+                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, false, nil)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
                 }
@@ -14887,7 +14887,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    private func openPeer(peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer, fromMessage: MessageReference?, expandAvatar: Bool = false) {
+    private func openPeer(peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer, fromMessage: MessageReference?, fromReactionMessageId: MessageId? = nil, expandAvatar: Bool = false) {
         let _ = self.presentVoiceMessageDiscardAlert(action: {
             if case let .peer(currentPeerId) = self.chatLocation, peerId == currentPeerId {
                 switch navigation {
@@ -14935,6 +14935,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         var mode: PeerInfoControllerMode = .generic
                                         if let _ = fromMessage, let chatPeerId = chatPeerId {
                                             mode = .group(chatPeerId)
+                                        }
+                                        if let fromReactionMessageId = fromReactionMessageId {
+                                            mode = .reaction(fromReactionMessageId)
                                         }
                                         var expandAvatar = expandAvatar
                                         if peer.smallProfileImage == nil {

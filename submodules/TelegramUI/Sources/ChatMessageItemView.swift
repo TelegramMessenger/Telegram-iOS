@@ -847,7 +847,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                 case .setupPoll:
                     break
                 case let .openUserProfile(peerId):
-                    item.controllerInteraction.openPeer(peerId, .info, nil, nil)
+                    item.controllerInteraction.openPeer(peerId, .info, nil, false, nil)
                 case let .openWebView(url, simple):
                     item.controllerInteraction.openWebView(button.title, url, simple, false)
             }

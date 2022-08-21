@@ -112,7 +112,7 @@ private final class ExpandItemView: UIView {
         self.tintView.layer.cornerRadius = size.width / 2.0
         
         if let image = self.arrowView.image {
-            transition.updateFrame(view: self.arrowView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels((size.height - image.size.height) / 2.0)), size: image.size))
+            transition.updateFrame(view: self.arrowView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels(size.height - size.width + (size.width - image.size.height) / 2.0)), size: image.size))
         }
     }
 }
@@ -168,6 +168,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     public private(set) var currentContentHeight: CGFloat = 46.0
     public private(set) var isExpanded: Bool = false
+    public private(set) var canBeExpanded: Bool = false
+    
+    private var animateFromExtensionDistance: CGFloat = 0.0
+    private var extensionDistance: CGFloat = 0.0
     
     private var emojiContent: EmojiPagerContentComponent?
     private var emojiContentDisposable: Disposable?
@@ -252,6 +256,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             self.contentContainer.view.addSubview(expandItemView)
             self.contentTintContainer.view.addSubview(expandItemView.tintView)
+            
+            self.canBeExpanded = true
         } else {
             self.expandItemView = nil
         }
@@ -287,6 +293,16 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     public func updateIsIntersectingContent(isIntersectingContent: Bool, transition: ContainedViewLayoutTransition) {
         self.backgroundNode.updateIsIntersectingContent(isIntersectingContent: isIntersectingContent, transition: transition)
+    }
+    
+    public func updateExtension(distance: CGFloat) {
+        if self.extensionDistance != distance {
+            self.extensionDistance = distance
+            
+            if let (size, insets, anchorRect) = self.validLayout {
+                self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
+            }
+        }
     }
     
     private func calculateBackgroundFrame(containerSize: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, contentSize: CGSize) -> (backgroundFrame: CGRect, visualBackgroundFrame: CGRect, isLeftAligned: Bool, cloudSourcePoint: CGFloat) {
@@ -325,7 +341,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             cloudSourcePoint = max(rect.minX + 46.0 / 2.0, anchorRect.minX)
         }
         
-        let visualRect = rect
+        var visualRect = rect
+        visualRect.size.height += self.extensionDistance
         
         return (rect, visualRect, isLeftAligned, cloudSourcePoint)
     }
@@ -478,7 +495,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let expandItemView = self.expandItemView {
-            let baseNextFrame = CGRect(origin: CGPoint(x: nextX + 3.0, y: containerHeight - contentHeight + floor((contentHeight - 30.0) / 2.0) + (self.isExpanded ? 46.0 : 0.0)), size: CGSize(width: 30.0, height: 30.0))
+            let baseNextFrame = CGRect(origin: CGPoint(x: nextX + 3.0, y: containerHeight - contentHeight + floor((contentHeight - 30.0) / 2.0) + (self.isExpanded ? 46.0 : 0.0)), size: CGSize(width: 30.0, height: 30.0 + self.extensionDistance))
             
             transition.updateFrame(view: expandItemView, frame: baseNextFrame)
             transition.updateFrame(view: expandItemView.tintView, frame: baseNextFrame)
@@ -488,10 +505,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         if let currentMaskFrame = currentMaskFrame {
             let transition = maskTransition ?? transition
-            transition.updateFrame(node: self.leftBackgroundMaskNode, frame: CGRect(x: -1000.0 + currentMaskFrame.minX, y: 0.0, width: 1000.0, height: self.currentContentHeight))
-            transition.updateFrame(node: self.rightBackgroundMaskNode, frame: CGRect(x: currentMaskFrame.maxX, y: 0.0, width: 1000.0, height: self.currentContentHeight))
+            transition.updateFrame(node: self.leftBackgroundMaskNode, frame: CGRect(x: -1000.0 + currentMaskFrame.minX, y: 0.0, width: 1000.0, height: self.currentContentHeight + self.extensionDistance))
+            transition.updateFrame(node: self.rightBackgroundMaskNode, frame: CGRect(x: currentMaskFrame.maxX, y: 0.0, width: 1000.0, height: self.currentContentHeight + self.extensionDistance))
         } else {
-            self.leftBackgroundMaskNode.frame = CGRect(x: 0.0, y: 0.0, width: 1000.0, height: self.currentContentHeight)
+            self.leftBackgroundMaskNode.frame = CGRect(x: 0.0, y: 0.0, width: 1000.0, height: self.currentContentHeight + self.extensionDistance)
             self.rightBackgroundMaskNode.frame = CGRect(origin: .zero, size: .zero)
         }
         
@@ -569,12 +586,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.isLeftAligned = isLeftAligned
         self.visibleItemCount = itemCount
         
+        var scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.isExpanded ? 46.0 : 0.0), size: actualBackgroundFrame.size)
+        scrollFrame.origin.y += floorToScreenPixels(self.extensionDistance / 2.0)
+        
         transition.updateFrame(node: self.contentContainer, frame: visualBackgroundFrame, beginWithCurrentState: true)
         transition.updateFrame(node: self.contentTintContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: visualBackgroundFrame.size), beginWithCurrentState: true)
         transition.updateFrame(view: self.contentContainerMask, frame: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size), beginWithCurrentState: true)
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isExpanded ? 46.0 : 0.0), size: actualBackgroundFrame.size), beginWithCurrentState: true)
+        transition.updateFrame(node: self.scrollNode, frame: scrollFrame, beginWithCurrentState: true)
         transition.updateFrame(node: self.previewingItemContainer, frame: visualBackgroundFrame, beginWithCurrentState: true)
-        self.scrollNode.view.contentSize = CGSize(width: completeContentWidth, height: visualBackgroundFrame.size.height)
+        self.scrollNode.view.contentSize = CGSize(width: completeContentWidth, height: scrollFrame.size.height)
         
         self.updateScrolling(transition: transition)
         
@@ -607,9 +627,23 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     guard let strongSelf = self else {
                         return
                     }
+                    
                     strongSelf.emojiContent = emojiContent
-                    if let (size, insets, anchorRect) = strongSelf.validLayout {
-                        strongSelf.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
+                    
+                    if let reactionSelectionComponentHost = strongSelf.reactionSelectionComponentHost, let componentView = reactionSelectionComponentHost.view {
+                        let _ = reactionSelectionComponentHost.update(
+                            transition: .immediate,
+                            component: AnyComponent(EmojiStatusSelectionComponent(
+                                theme: strongSelf.presentationData.theme,
+                                strings: strongSelf.presentationData.strings,
+                                deviceMetrics: DeviceMetrics.iPhone13,
+                                emojiContent: emojiContent,
+                                backgroundColor: .clear,
+                                separatorColor: strongSelf.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5)
+                            )),
+                            environment: {},
+                            containerSize: CGSize(width: componentView.bounds.width, height: 300.0)
+                        )
                     }
                 })
             }
@@ -754,7 +788,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     componentTransition.setFrame(view: componentView, frame: CGRect(origin: componentFrame.origin, size: CGSize(width: componentFrame.width, height: componentFrame.height)))
                     
                     if animateIn {
-                        transition.animatePositionAdditive(layer: componentView.layer, offset: CGPoint(x: 0.0, y: -46.0))
+                        transition.animatePositionAdditive(layer: componentView.layer, offset: CGPoint(x: 0.0, y: -46.0 + floorToScreenPixels(self.animateFromExtensionDistance / 2.0)))
                     }
                 }
             }
@@ -1248,6 +1282,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         default:
             break
         }
+    }
+    
+    public func expand() {
+        self.animateFromExtensionDistance = self.extensionDistance
+        self.extensionDistance = 0.0
+        self.currentContentHeight = 300.0
+        self.isExpanded = true
+        self.isExpandedUpdated(.animated(duration: 0.4, curve: .spring))
     }
     
     public func highlightGestureMoved(location: CGPoint, hover: Bool) {
