@@ -21,7 +21,7 @@ public final class EmojiStatusComponent: Component {
         case verified(fillColor: UIColor, foregroundColor: UIColor)
         case fake(color: UIColor)
         case scam(color: UIColor)
-        case emojiStatus(status: PeerEmojiStatus, placeholderColor: UIColor)
+        case emojiStatus(status: PeerEmojiStatus, size: CGSize, placeholderColor: UIColor)
     }
     
     public let context: AccountContext
@@ -30,6 +30,7 @@ public final class EmojiStatusComponent: Component {
     public let content: Content
     public let action: (() -> Void)?
     public let longTapAction: (() -> Void)?
+    public let emojiFileUpdated: ((TelegramMediaFile?) -> Void)?
     
     public init(
         context: AccountContext,
@@ -37,7 +38,8 @@ public final class EmojiStatusComponent: Component {
         animationRenderer: MultiAnimationRenderer,
         content: Content,
         action: (() -> Void)?,
-        longTapAction: (() -> Void)?
+        longTapAction: (() -> Void)?,
+        emojiFileUpdated: ((TelegramMediaFile?) -> Void)? = nil
     ) {
         self.context = context
         self.animationCache = animationCache
@@ -45,6 +47,7 @@ public final class EmojiStatusComponent: Component {
         self.content = content
         self.action = action
         self.longTapAction = longTapAction
+        self.emojiFileUpdated = emojiFileUpdated
     }
     
     public static func ==(lhs: EmojiStatusComponent, rhs: EmojiStatusComponent) -> Bool {
@@ -105,6 +108,7 @@ public final class EmojiStatusComponent: Component {
             var iconImage: UIImage?
             var emojiFileId: Int64?
             var emojiPlaceholderColor: UIColor?
+            var emojiSize = CGSize()
             
             /*
              if case .fake = credibilityIcon {
@@ -213,12 +217,13 @@ public final class EmojiStatusComponent: Component {
                     iconImage = nil
                 case .scam:
                     iconImage = nil
-                case let .emojiStatus(emojiStatus, placeholderColor):
+                case let .emojiStatus(emojiStatus, size, placeholderColor):
                     iconImage = nil
                     emojiFileId = emojiStatus.fileId
                     emojiPlaceholderColor = placeholderColor
+                    emojiSize = size
                     
-                    if case let .emojiStatus(previousEmojiStatus, _) = self.component?.content {
+                    if case let .emojiStatus(previousEmojiStatus, _, _) = self.component?.content {
                         if previousEmojiStatus.fileId != emojiStatus.fileId {
                             self.emojiFileDisposable?.dispose()
                             self.emojiFileDisposable = nil
@@ -237,9 +242,10 @@ public final class EmojiStatusComponent: Component {
                 }
             } else {
                 iconImage = self.iconView?.image
-                if case let .emojiStatus(status, placeholderColor) = component.content {
+                if case let .emojiStatus(status, size, placeholderColor) = component.content {
                     emojiFileId = status.fileId
                     emojiPlaceholderColor = placeholderColor
+                    emojiSize = size
                 }
             }
             
@@ -273,6 +279,7 @@ public final class EmojiStatusComponent: Component {
                 }
             }
             
+            let emojiFileUpdated = component.emojiFileUpdated
             if let emojiFileId = emojiFileId, let emojiPlaceholderColor = emojiPlaceholderColor {
                 size = availableSize
                 
@@ -292,7 +299,7 @@ public final class EmojiStatusComponent: Component {
                             cache: component.animationCache,
                             renderer: component.animationRenderer,
                             placeholderColor: emojiPlaceholderColor,
-                            pointSize: CGSize(width: 32.0, height: 32.0)
+                            pointSize: emojiSize
                         )
                         self.animationLayer = animationLayer
                         self.layer.addSublayer(animationLayer)
@@ -311,10 +318,17 @@ public final class EmojiStatusComponent: Component {
                             }
                             strongSelf.emojiFile = result[emojiFileId]
                             strongSelf.state?.updated(transition: .immediate)
+                            
+                            emojiFileUpdated?(result[emojiFileId])
                         })
                     }
                 }
             } else {
+                if let _ = self.emojiFile {
+                    self.emojiFile = nil
+                    emojiFileUpdated?(nil)
+                }
+                
                 self.emojiFileDisposable?.dispose()
                 self.emojiFileDisposable = nil
                 

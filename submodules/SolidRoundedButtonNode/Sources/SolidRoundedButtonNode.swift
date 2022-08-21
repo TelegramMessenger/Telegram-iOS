@@ -162,6 +162,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             }
         }
     }
+    
+    public var progressType: SolidRoundedButtonProgressType = .fullSize
         
     public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
@@ -570,43 +572,91 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.isUserInteractionEnabled = false
         
+        let rotationAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+        rotationAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
+        rotationAnimation.duration = 1.0
+        rotationAnimation.fromValue = NSNumber(value: Float(0.0))
+        rotationAnimation.toValue = NSNumber(value: Float.pi * 2.0)
+        rotationAnimation.repeatCount = Float.infinity
+        rotationAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+        rotationAnimation.beginTime = 1.0
+        
         let buttonOffset = self.buttonBackgroundNode.frame.minX
         let buttonWidth = self.buttonBackgroundNode.frame.width
         
-        let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(buttonOffset + (buttonWidth - self.buttonHeight) / 2.0), y: 0.0), size: CGSize(width: self.buttonHeight, height: self.buttonHeight))
         let progressNode = ASImageNode()
-        progressNode.displaysAsynchronously = false
-        progressNode.frame = progressFrame
-        progressNode.image = generateIndefiniteActivityIndicatorImage(color: self.buttonBackgroundNode.backgroundColor ?? .clear, diameter: self.buttonHeight, lineWidth: 2.0 + UIScreenPixel)
-        self.insertSubnode(progressNode, at: 0)
+        
+        switch self.progressType {
+            case .fullSize:
+                let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(buttonOffset + (buttonWidth - self.buttonHeight) / 2.0), y: 0.0), size: CGSize(width: self.buttonHeight, height: self.buttonHeight))
+                progressNode.frame = progressFrame
+                progressNode.image = generateIndefiniteActivityIndicatorImage(color: self.buttonBackgroundNode.backgroundColor ?? .clear, diameter: self.buttonHeight, lineWidth: 2.0 + UIScreenPixel)
+                                
+                self.buttonBackgroundNode.layer.cornerRadius = self.buttonHeight / 2.0
+                self.buttonBackgroundNode.layer.animate(from: self.buttonCornerRadius as NSNumber, to: self.buttonHeight / 2.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                self.buttonBackgroundNode.layer.animateFrame(from: self.buttonBackgroundNode.frame, to: progressFrame, duration: 0.2)
+                
+                self.buttonBackgroundNode.alpha = 0.0
+                self.buttonBackgroundNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                            
+                self.insertSubnode(progressNode, at: 0)
+            case .embedded:
+                let diameter: CGFloat = self.buttonHeight - 22.0
+                let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(buttonOffset + (buttonWidth - diameter) / 2.0), y: floorToScreenPixels((self.buttonHeight - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter))
+                progressNode.frame = progressFrame
+                progressNode.image = generateIndefiniteActivityIndicatorImage(color: self.theme.foregroundColor, diameter: diameter, lineWidth: 3.0)
+                    
+                self.addSubnode(progressNode)
+        }
+        
+        progressNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        progressNode.layer.add(rotationAnimation, forKey: "progressRotation")
         self.progressNode = progressNode
-        
-        let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
-        basicAnimation.duration = 0.5
-        basicAnimation.fromValue = NSNumber(value: Float(0.0))
-        basicAnimation.toValue = NSNumber(value: Float.pi * 2.0)
-        basicAnimation.repeatCount = Float.infinity
-        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-        basicAnimation.beginTime = 1.0
-        progressNode.layer.add(basicAnimation, forKey: "progressRotation")
-        
-        self.buttonBackgroundNode.cornerRadius = self.buttonHeight / 2.0
-        self.buttonBackgroundNode.layer.animate(from: self.buttonCornerRadius as NSNumber, to: self.buttonHeight / 2.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
-        self.buttonBackgroundNode.layer.animateFrame(from: self.buttonBackgroundNode.frame, to: progressFrame, duration: 0.2)
-        
-        self.buttonBackgroundNode.alpha = 0.0
-        self.buttonBackgroundNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        
-        progressNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false)
         
         self.titleNode.alpha = 0.0
         self.titleNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
         
         self.subtitleNode.alpha = 0.0
         self.subtitleNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
+        
+        self.shimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.borderShimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
+    public func transitionFromProgress() {
+        guard let progressNode = self.progressNode else {
+            return
+        }
+        self.progressNode = nil
+        
+        switch self.progressType {
+            case .fullSize:
+                self.buttonBackgroundNode.layer.cornerRadius = self.buttonCornerRadius
+                self.buttonBackgroundNode.layer.animate(from: self.buttonHeight / 2.0 as NSNumber, to: self.buttonCornerRadius as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                self.buttonBackgroundNode.layer.animateFrame(from: progressNode.frame, to: self.bounds, duration: 0.2)
+                
+                self.buttonBackgroundNode.alpha = 1.0
+                self.buttonBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false)
+            case .embedded:
+                break
+        }
+        
+        progressNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak progressNode, weak self] _ in
+            progressNode?.removeFromSupernode()
+            self?.isUserInteractionEnabled = true
+        })
+        
+        self.titleNode.alpha = 1.0
+        self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        self.subtitleNode.alpha = 1.0
+        self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        self.shimmerView?.layer.removeAllAnimations()
+        self.shimmerView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.borderShimmerView?.layer.removeAllAnimations()
+        self.borderShimmerView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
 }
 
 public final class SolidRoundedButtonView: UIView {

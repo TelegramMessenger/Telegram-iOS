@@ -32,12 +32,12 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     var inProgress: Bool = false {
         didSet {
-            if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
-                self.navigationItem.rightBarButtonItem = item
-            } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-            }
+//            if self.inProgress {
+//                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
+//                self.navigationItem.rightBarButtonItem = item
+//            } else {
+//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+//            }
             self.controllerNode.inProgress = self.inProgress
         }
     }

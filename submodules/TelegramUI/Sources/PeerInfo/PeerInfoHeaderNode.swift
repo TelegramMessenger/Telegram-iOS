@@ -2023,7 +2023,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
     
-    var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Bool) -> Void)?
+    var displayPremiumIntro: ((UIView, PeerEmojiStatus?, TelegramMediaFile?, String?, Bool) -> Void)?
     
     var navigationTransition: PeerInfoHeaderNavigationTransition?
     
@@ -2032,6 +2032,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
+    
+    var emojiStatusPackDisposable = MetaDisposable()
+    var emojiStatusFile: TelegramMediaFile?
+    var emojiStatusPackTitle: String?
     
     init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool) {
         self.context = context
@@ -2185,6 +2189,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
     }
     
+    deinit {
+        self.emojiStatusPackDisposable.dispose()
+    }
+    
     override func didLoad() {
         super.didLoad()
         
@@ -2214,7 +2222,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     }
     
     func invokeDisplayPremiumIntro() {
-        self.displayPremiumIntro?(self.isAvatarExpanded ? self.titleExpandedCredibilityIconView : self.titleCredibilityIconView, nil, self.isAvatarExpanded)
+        self.displayPremiumIntro?(self.isAvatarExpanded ? self.titleExpandedCredibilityIconView : self.titleCredibilityIconView, nil, nil, nil, self.isAvatarExpanded)
     }
     
     func initiateAvatarExpansion(gallery: Bool, first: Bool) {
@@ -2424,8 +2432,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiExpandedStatusContent = .scam(color: presentationData.theme.chat.message.incoming.scamColor)
             case let .emojiStatus(emojiStatus):
                 currentEmojiStatus = emojiStatus
-                emojiRegularStatusContent = .emojiStatus(status: emojiStatus, placeholderColor: presentationData.theme.list.mediaPlaceholderColor)
-                emojiExpandedStatusContent = .emojiStatus(status: emojiStatus, placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15))
+                emojiRegularStatusContent = .emojiStatus(status: emojiStatus, size: CGSize(width: 32.0, height: 32.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor)
+                emojiExpandedStatusContent = .emojiStatus(status: emojiStatus, size: CGSize(width: 32.0, height: 32.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15))
             }
             
             let iconSize = self.titleCredibilityIconView.update(
@@ -2439,13 +2447,50 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.displayPremiumIntro?(strongSelf.titleCredibilityIconView, currentEmojiStatus, false)
+                        strongSelf.displayPremiumIntro?(strongSelf.titleCredibilityIconView, currentEmojiStatus, strongSelf.emojiStatusFile, strongSelf.emojiStatusPackTitle, false)
                     },
                     longTapAction: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
                         let _ = strongSelf.context.engine.accountData.setEmojiStatus(file: nil).start()
+                    }, emojiFileUpdated: { [weak self] emojiFile in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if let emojiFile = emojiFile {
+                            strongSelf.emojiStatusFile = nil
+                            for attribute in emojiFile.attributes {
+                                if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                                    strongSelf.emojiStatusPackDisposable.set((strongSelf.context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
+                                    |> filter { result in
+                                        if case .result = result {
+                                            return true
+                                        } else {
+                                            return false
+                                        }
+                                    }
+                                    |> mapToSignal { result -> Signal<(TelegramMediaFile, String)?, NoError> in
+                                        if case let .result(info, items, _) = result {
+                                            return .single(items.first.flatMap { ($0.file, info.title) })
+                                        } else {
+                                            return .complete()
+                                        }
+                                    }).start(next: { fileAndPackTitle in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.emojiStatusFile = fileAndPackTitle?.0
+                                        strongSelf.emojiStatusPackTitle = fileAndPackTitle?.1
+                                    }))
+                                    break
+                                }
+                            }
+                        } else {
+                            strongSelf.emojiStatusFile = nil
+                            strongSelf.emojiStatusPackDisposable.set(nil)
+                        }
                     }
                 )),
                 environment: {},
@@ -2462,7 +2507,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.displayPremiumIntro?(strongSelf.titleExpandedCredibilityIconView, currentEmojiStatus, true)
+                        strongSelf.displayPremiumIntro?(strongSelf.titleExpandedCredibilityIconView, currentEmojiStatus, strongSelf.emojiStatusFile, strongSelf.emojiStatusPackTitle, true)
                     },
                     longTapAction: { [weak self] in
                         guard let strongSelf = self else {

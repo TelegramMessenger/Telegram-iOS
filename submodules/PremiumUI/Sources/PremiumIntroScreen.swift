@@ -11,6 +11,7 @@ import ViewControllerComponent
 import AccountContext
 import SolidRoundedButtonComponent
 import MultilineTextComponent
+import MultilineTextWithEntitiesComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
@@ -20,6 +21,8 @@ import TextFormat
 import InstantPageCache
 import UniversalMediaPlayer
 import CheckNode
+import AnimationCache
+import MultiAnimationRenderer
 
 public enum PremiumSource: Equatable {
     case settings
@@ -40,7 +43,7 @@ public enum PremiumSource: Equatable {
     case animatedEmoji
     case deeplink(String?)
     case profile(PeerId)
-    case emojiStatus(PeerId, Int64)
+    case emojiStatus(PeerId, Int64, TelegramMediaFile?, String?)
     case gift(from: PeerId, to: PeerId, duration: Int32)
     case giftTerms
     
@@ -158,7 +161,7 @@ enum PremiumPerk: CaseIterable {
             case .animatedUserpics:
                 return "animated_userpics"
             case .appIcons:
-                return "app_icon"
+                return "app_icons"
             case .animatedEmoji:
                 return "animated_emoji"
         }
@@ -1121,6 +1124,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             size.height += 183.0 + 10.0 + environment.navigationHeight - 56.0
             
             let textColor = theme.list.itemPrimaryTextColor
+            let accentColor = theme.list.itemAccentColor
             let titleColor = theme.list.itemPrimaryTextColor
             let subtitleColor = theme.list.itemSecondaryTextColor
             let arrowColor = theme.list.disclosureArrowColor
@@ -1130,7 +1134,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             
             let textString: String
             if case .emojiStatus = context.component.source {
-                textString = strings.Premium_EmojiStatusText
+                textString = strings.Premium_EmojiStatusText.replacingOccurrences(of: "#", with: "# ")
             } else if case .giftTerms = context.component.source {
                 textString = strings.Premium_PersonalDescription
             } else if let _ = context.component.otherPeerName {
@@ -1149,9 +1153,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 textString = strings.Premium_Description
             }
             
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
+            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: accentColor), linkAttribute: { _ in
                 return nil
             })
+            
             let text = text.update(
                 component: MultilineTextComponent(
                     text: .markdown(
@@ -1485,9 +1490,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             return nil
                         }
                     },
-                    tapAction: { attributes, _ in
+                    tapAction: { [weak environment] attributes, _ in
                         if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String,
-                            let controller = environment.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
+                            let controller = environment?.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
                             if url.hasPrefix("https://apps.apple.com/account/subscriptions") {
                                 controller.context.sharedContext.applicationBindings.openSubscriptions()
                             } else if url.hasPrefix("https://") || url.hasPrefix("tg://") {
@@ -1636,6 +1641,14 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         var isPremium: Bool?
         var otherPeerName: String?
         
+        let animationCache: AnimationCache
+        let animationRenderer: MultiAnimationRenderer
+        
+        var emojiFile: TelegramMediaFile?
+        var emojiPackTitle: String?
+        private var emojiFileDisposable: Disposable?
+        
+        
         private var disposable: Disposable?
         private var paymentDisposable = MetaDisposable()
         private var activationDisposable = MetaDisposable()
@@ -1653,6 +1666,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.updateInProgress = updateInProgress
             self.present = present
             self.completion = completion
+            
+            self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+                return TempBox.shared.tempFile(fileName: "file").path
+            })
+            self.animationRenderer = MultiAnimationRendererImpl()
             
             super.init()
             
@@ -1676,7 +1694,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 |> map { peer -> String? in
                     return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                 }
-            } else if case let .emojiStatus(peerId, _) = source {
+            } else if case let .emojiStatus(peerId, _, _, _) = source {
                 otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> map { peer -> String? in
                     return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
@@ -1704,12 +1722,30 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     strongSelf.updated(transition: .immediate)
                 }
             })
+            
+            if case let .emojiStatus(_, emojiFileId, emojiFile, emojiPackTitle) = source {
+                if let emojiFile = emojiFile {
+                    self.emojiFile = emojiFile
+                    self.emojiPackTitle = emojiPackTitle
+                    self.updated(transition: .immediate)
+                } else {
+                    self.emojiFileDisposable = (context.engine.stickers.resolveInlineStickers(fileIds: [emojiFileId])
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.emojiFile = result[emojiFileId]
+                        strongSelf.updated(transition: .immediate)
+                    })
+                }
+            }
         }
         
         deinit {
             self.disposable?.dispose()
             self.paymentDisposable.dispose()
             self.activationDisposable.dispose()
+            self.emojiFileDisposable?.dispose()
         }
         
         func buy() {
@@ -1830,10 +1866,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         let background = Child(Rectangle.self)
         let scrollContent = Child(ScrollComponent<EnvironmentType>.self)
         let star = Child(PremiumStarComponent.self)
+        let emoji = Child(EmojiHeaderComponent.self)
         let topPanel = Child(BlurredRectangle.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
-        let secondaryTitle = Child(MultilineTextComponent.self)
+        let secondaryTitle = Child(MultilineTextWithEntitiesComponent.self)
         let bottomPanel = Child(BlurredRectangle.self)
         let bottomSeparator = Child(Rectangle.self)
         let button = Child(SolidRoundedButtonComponent.self)
@@ -1853,12 +1890,33 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             if case .profile = context.component.source {
                 isIntro = false
             }
-
-            let star = star.update(
-                component: PremiumStarComponent(isIntro: isIntro, isVisible: starIsVisible, hasIdleAnimations: state.hasIdleAnimations),
-                availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
-                transition: context.transition
-            )
+            
+            let header: _UpdatedChildComponent
+            if case let .emojiStatus(_, fileId, _, _) = context.component.source {
+                header = emoji.update(
+                    component: EmojiHeaderComponent(
+                        context: context.component.context,
+                        animationCache: state.animationCache,
+                        animationRenderer: state.animationRenderer,
+                        placeholderColor: environment.theme.list.mediaPlaceholderColor,
+                        fileId: fileId,
+                        isVisible: starIsVisible,
+                        hasIdleAnimations: state.hasIdleAnimations
+                    ),
+                    availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
+                    transition: context.transition
+                )
+            } else {
+                header = star.update(
+                    component: PremiumStarComponent(
+                        isIntro: isIntro,
+                        isVisible: starIsVisible,
+                        hasIdleAnimations: state.hasIdleAnimations
+                    ),
+                    availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
+                    transition: context.transition
+                )
+            }
             
             let topPanel = topPanel.update(
                 component: BlurredRectangle(
@@ -1899,7 +1957,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             )
             
             let textColor = environment.theme.list.itemPrimaryTextColor
-            let accentColor = UIColor(rgb: 0x597cf5)
+            let accentColor: UIColor
+            if case .emojiStatus = context.component.source {
+                accentColor = environment.theme.list.itemAccentColor
+            } else {
+                accentColor = UIColor(rgb: 0x597cf5)
+            }
             
             let textFont = Font.bold(18.0)
             let boldTextFont = Font.bold(18.0)
@@ -1908,10 +1971,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 return nil
             })
             
+            var highlightableLinks = false
             let secondaryTitleText: String
             if let otherPeerName = state.otherPeerName {
-                if case .emojiStatus = context.component.source {
-                    secondaryTitleText = environment.strings.Premium_EmojiStatusTitle(otherPeerName, "").string
+                if case let .emojiStatus(_, _, _, emojiPackTitle) = context.component.source {
+                    highlightableLinks = true
+                    secondaryTitleText = environment.strings.Premium_EmojiStatusTitle(otherPeerName, emojiPackTitle ?? "").string.replacingOccurrences(of: "#", with: " #  ")
                 } else if case .profile = context.component.source {
                     secondaryTitleText = environment.strings.Premium_PersonalTitle(otherPeerName).string
                 } else if case let .gift(fromPeerId, _, duration) = context.component.source {
@@ -1943,13 +2008,47 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 secondaryTitleText = ""
             }
             
+            let secondaryAttributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(secondaryTitleText, attributes: markdownAttributes))
+            if let emojiFile = state.emojiFile {
+                let range = (secondaryAttributedText.string as NSString).range(of: "#")
+                if range.location != NSNotFound {
+                    secondaryAttributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: emojiFile.fileId.id, file: emojiFile), range: range)
+                }
+            }
+            let accountContext = context.component.context
+            let presentController = context.component.present
+            
             let secondaryTitle = secondaryTitle.update(
-                component: MultilineTextComponent(
-                    text: .markdown(text: secondaryTitleText, attributes: markdownAttributes),
+                component: MultilineTextWithEntitiesComponent(
+                    context: context.component.context,
+                    animationCache: context.state.animationCache,
+                    animationRenderer: context.state.animationRenderer,
+                    placeholderColor: environment.theme.list.mediaPlaceholderColor,
+                    text: .plain(secondaryAttributedText),
                     horizontalAlignment: .center,
                     truncationType: .end,
                     maximumNumberOfLines: 2,
-                    lineSpacing: 0.0
+                    lineSpacing: 0.0,
+                    highlightAction: highlightableLinks ? { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    } : nil,
+                    tapAction: { [weak state, weak environment] _, _ in
+                        if let emojiFile = state?.emojiFile, let controller = environment?.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
+                            for attribute in emojiFile.attributes {
+                                if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                                    let controller = accountContext.sharedContext.makeStickerPackScreen(context: accountContext, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: navigationController, sendSticker: { _, _, _ in
+                                        return false
+                                    })
+                                    presentController(controller)
+                                    break
+                                }
+                            }
+                        }
+                    }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - 32.0, height: context.availableSize.width),
                 transition: context.transition
@@ -2035,8 +2134,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 titleAlpha = state.otherPeerName != nil ? 0.0 : 1.0
             }
             
-            context.add(star
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: topInset + star.size.height / 2.0 - 30.0 - titleOffset * titleScale))
+            context.add(header
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: topInset + header.size.height / 2.0 - 30.0 - titleOffset * titleScale))
                 .scale(titleScale)
             )
             
@@ -2248,6 +2347,19 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         
         if !self.didSetReady {
             if let view = self.node.hostView.findTaggedView(tag: PremiumStarComponent.View.Tag()) as? PremiumStarComponent.View {
+                self.didSetReady = true
+                self._ready.set(view.ready)
+                
+                if let sourceView = self.sourceView {
+                    view.animateFrom = sourceView
+                    view.containerView = self.containerView
+                    view.animationColor = self.animationColor
+                    
+                    self.sourceView = nil
+                    self.containerView = nil
+                    self.animationColor = nil
+                }
+            } else if let view = self.node.hostView.findTaggedView(tag: EmojiHeaderComponent.View.Tag()) as? EmojiHeaderComponent.View {
                 self.didSetReady = true
                 self._ready.set(view.ready)
                 

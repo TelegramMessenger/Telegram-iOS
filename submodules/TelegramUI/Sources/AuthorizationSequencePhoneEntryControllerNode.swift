@@ -29,25 +29,27 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
         
-        let countryButtonBackground = generateImage(CGSize(width: 68.0, height: 67.0), rotatedContext: { size, context in
+        let inset: CGFloat = 24.0
+        
+        let countryButtonBackground = generateImage(CGSize(width: 136.0, height: 67.0), rotatedContext: { size, context in
             let arrowSize: CGFloat = 10.0
             let lineWidth = UIScreenPixel
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
             context.setLineWidth(lineWidth)
-            context.move(to: CGPoint(x: 15.0, y: lineWidth / 2.0))
-            context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
+            context.move(to: CGPoint(x: inset, y: lineWidth / 2.0))
+            context.addLine(to: CGPoint(x: size.width - inset, y: lineWidth / 2.0))
             context.strokePath()
             
-            context.move(to: CGPoint(x: size.width, y: size.height - arrowSize - lineWidth / 2.0))
-            context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize - lineWidth / 2.0))
-            context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize, y: size.height - lineWidth / 2.0))
-            context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize - lineWidth / 2.0))
-            context.addLine(to: CGPoint(x: 15.0, y: size.height - arrowSize - lineWidth / 2.0))
+            context.move(to: CGPoint(x: size.width - inset, y: size.height - arrowSize - lineWidth / 2.0))
+            context.addLine(to: CGPoint(x: 69.0, y: size.height - arrowSize - lineWidth / 2.0))
+            context.addLine(to: CGPoint(x: 69.0 - arrowSize, y: size.height - lineWidth / 2.0))
+            context.addLine(to: CGPoint(x: 69.0 - arrowSize - arrowSize, y: size.height - arrowSize - lineWidth / 2.0))
+            context.addLine(to: CGPoint(x: inset, y: size.height - arrowSize - lineWidth / 2.0))
             context.strokePath()
-        })?.stretchableImage(withLeftCapWidth: 67, topCapHeight: 1)
+        })?.stretchableImage(withLeftCapWidth: 69, topCapHeight: 1)
         
-        let countryButtonHighlightedBackground = generateImage(CGSize(width: 68.0, height: 67.0), rotatedContext: { size, context in
+        let countryButtonHighlightedBackground = generateImage(CGSize(width: 70.0, height: 67.0), rotatedContext: { size, context in
             let arrowSize: CGFloat = 10.0
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(theme.list.itemHighlightedBackgroundColor.cgColor)
@@ -58,18 +60,18 @@ private final class PhoneAndCountryNode: ASDisplayNode {
             context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize))
             context.closePath()
             context.fillPath()
-        })?.stretchableImage(withLeftCapWidth: 67, topCapHeight: 2)
+        })?.stretchableImage(withLeftCapWidth: 69, topCapHeight: 2)
         
         let phoneInputBackground = generateImage(CGSize(width: 96.0, height: 57.0), rotatedContext: { size, context in
             let lineWidth = UIScreenPixel
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
             context.setLineWidth(lineWidth)
-            context.move(to: CGPoint(x: 15.0, y: size.height - lineWidth / 2.0))
+            context.move(to: CGPoint(x: inset, y: size.height - lineWidth / 2.0))
             context.addLine(to: CGPoint(x: size.width, y: size.height - lineWidth / 2.0))
             context.strokePath()
-            context.move(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: size.height - lineWidth / 2.0))
-            context.addLine(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: 0.0))
+            context.move(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: size.height - 9.0))
+            context.addLine(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: 8.0))
             context.strokePath()
         })?.stretchableImage(withLeftCapWidth: 95, topCapHeight: 2)
         
@@ -107,7 +109,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.phoneInputNode.countryCodeField.textField.disableAutomaticKeyboardHandling = [.forward]
         self.phoneInputNode.numberField.textField.disableAutomaticKeyboardHandling = [.forward]
         
-        self.countryButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 15.0, bottom: 10.0, right: 0.0)
+        self.countryButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 24.0 + 16.0, bottom: 10.0, right: 0.0)
         self.countryButton.contentHorizontalAlignment = .left
         
         self.countryButton.addTarget(self, action: #selector(self.countryPressed), forControlEvents: .touchUpInside)
@@ -159,7 +161,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                     strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
                     strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
                 } else {
-                    strongSelf.countryButton.setTitle(strings.Login_SelectCountry_Title, with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
+                    strongSelf.countryButton.setTitle(strings.Login_SelectCountry, with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
                     strongSelf.phoneInputNode.mask = nil
                     strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
                 }
@@ -188,13 +190,14 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         super.layout()
         
         let size = self.bounds.size
+        let inset: CGFloat = 24.0
         
         self.countryButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 67.0))
-        self.phoneBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - 57.0), size: CGSize(width: size.width, height: 57.0))
+        self.phoneBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - 57.0), size: CGSize(width: size.width - inset, height: 57.0))
         
-        let countryCodeFrame = CGRect(origin: CGPoint(x: 18.0, y: size.height - 57.0), size: CGSize(width: 71.0, height: 57.0))
-        let numberFrame = CGRect(origin: CGPoint(x: 107.0, y: size.height - 57.0), size: CGSize(width: size.width - 96.0 - 8.0, height: 57.0))
-        let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 16.0)
+        let countryCodeFrame = CGRect(origin: CGPoint(x: 18.0, y: size.height - 58.0), size: CGSize(width: 71.0, height: 57.0))
+        let numberFrame = CGRect(origin: CGPoint(x: 107.0, y: size.height - 58.0), size: CGSize(width: size.width - 96.0 - 8.0, height: 57.0))
+        let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 17.0 - UIScreenPixel)
         
         let phoneInputFrame = countryCodeFrame.union(numberFrame)
         
@@ -227,10 +230,11 @@ private final class ContactSyncNode: ASDisplayNode {
     
     func updateLayout(width: CGFloat) -> CGSize {
         let switchSize = CGSize(width: 51.0, height: 31.0)
-        let titleSize = self.titleNode.updateLayout(CGSize(width: width - switchSize.width - 16.0 * 2.0 - 8.0, height: .greatestFiniteMagnitude))
+        let inset: CGFloat = 24.0
+        let titleSize = self.titleNode.updateLayout(CGSize(width: width - switchSize.width - inset * 2.0 - 8.0, height: .greatestFiniteMagnitude))
         let height: CGFloat = 40.0
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
-        self.switchNode.frame = CGRect(origin: CGPoint(x: width - 16.0 - switchSize.width, y: floor((height - switchSize.height) / 2.0)), size: switchSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
+        self.switchNode.frame = CGRect(origin: CGPoint(x: width - inset - switchSize.width, y: floor((height - switchSize.height) / 2.0)), size: switchSize)
         return CGSize(width: width, height: height)
     }
 }
@@ -286,6 +290,14 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
             self.phoneAndCountryNode.phoneInputNode.enableEditing = !self.inProgress
             self.phoneAndCountryNode.phoneInputNode.alpha = self.inProgress ? 0.6 : 1.0
             self.phoneAndCountryNode.countryButton.isEnabled = !self.inProgress
+            
+            if self.inProgress != oldValue {
+                if self.inProgress {
+                    self.proceedNode.transitionToProgress()
+                } else {
+                    self.proceedNode.transitionFromProgress()
+                }
+            }
         }
     }
     
@@ -299,7 +311,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.hasOtherAccounts = hasOtherAccounts
         
         self.animationNode = DefaultAnimatedStickerNodeImpl()
-        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroPhone"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroPhone"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         
         self.titleNode = ASTextNode()
@@ -311,13 +323,15 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.noticeNode.maximumNumberOfLines = 0
         self.noticeNode.isUserInteractionEnabled = true
         self.noticeNode.displaysAsynchronously = false
-        self.noticeNode.attributedText = NSAttributedString(string: strings.Login_PhoneAndCountryHelp, font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        self.noticeNode.lineSpacing = 0.1
+        self.noticeNode.attributedText = NSAttributedString(string: strings.Login_PhoneAndCountryHelp, font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         self.contactSyncNode = ContactSyncNode(theme: theme, strings: strings)
         
         self.phoneAndCountryNode = PhoneAndCountryNode(strings: strings, theme: theme)
         
         self.proceedNode = SolidRoundedButtonNode(title: "Continue", theme: SolidRoundedButtonTheme(theme: self.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
+        self.proceedNode.progressType = .embedded
         
         super.init()
         
@@ -372,25 +386,27 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         var insets = layout.insets(options: [])
-        insets.top = navigationBarHeight
+        insets.top = layout.statusBarHeight ?? 20.0
         
         if let inputHeight = layout.inputHeight, !inputHeight.isZero {
-            insets.bottom += max(inputHeight, layout.standardInputHeight)
+            insets.bottom = max(inputHeight, insets.bottom)
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+        
+        let inset: CGFloat = 24.0
         
         let animationSize = CGSize(width: 88.0, height: 88.0)
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         let noticeSize = self.noticeNode.measure(CGSize(width: min(274.0, layout.size.width - 28.0), height: CGFloat.greatestFiniteMagnitude))
-        let proceedHeight = self.proceedNode.updateLayout(width: layout.size.width - 48.0, transition: transition)
-        let proceedSize = CGSize(width: layout.size.width - 48.0, height: proceedHeight)
+        let proceedHeight = self.proceedNode.updateLayout(width: layout.size.width - inset * 2.0, transition: transition)
+        let proceedSize = CGSize(width: layout.size.width - inset * 2.0, height: proceedHeight)
         
         var items: [AuthorizationLayoutItem] = [
-            AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
             AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
-            AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 20.0, maxValue: 20.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
-            AuthorizationLayoutItem(node: self.phoneAndCountryNode, size: CGSize(width: layout.size.width, height: 115.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 44.0, maxValue: 44.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.phoneAndCountryNode, size: CGSize(width: layout.size.width, height: 115.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
         ]
         let contactSyncSize = self.contactSyncNode.updateLayout(width: layout.size.width)
         if self.hasOtherAccounts {
@@ -400,11 +416,11 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
             self.contactSyncNode.isHidden = true
         }
         
-        items.append(AuthorizationLayoutItem(node: self.proceedNode, size: proceedSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 48.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        transition.updateFrame(node: self.proceedNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize))
         
         self.animationNode.updateLayout(size: animationSize)
         
-        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 10.0)), items: items, transition: transition, failIfDoesNotFit: false)
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 80.0)), items: items, transition: transition, failIfDoesNotFit: false)
     }
     
     func activateInput() {

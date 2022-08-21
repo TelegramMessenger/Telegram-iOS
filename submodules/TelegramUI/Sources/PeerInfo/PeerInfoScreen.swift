@@ -3051,7 +3051,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }))
             }
             
-            self.headerNode.displayPremiumIntro = { [weak self] sourceView, _, _ in
+            self.headerNode.displayPremiumIntro = { [weak self] sourceView, _, _, _, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -3080,26 +3080,36 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)
                        
-            self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, white in
+            self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFile, emojiPackTitle, white in
                 guard let strongSelf = self else {
                     return
                 }
                 
-                let source: PremiumSource
-                if let peerStatus = peerStatus {
-                    source = .emojiStatus(strongSelf.peerId, peerStatus.fileId)
-                } else {
-                    source = .profile(strongSelf.peerId)
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
+                guard !premiumConfiguration.isPremiumDisabled else {
+                    return
                 }
                 
-                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
-                if !premiumConfiguration.isPremiumDisabled {
-                    let controller = PremiumIntroScreen(context: strongSelf.context, source: source)
-                    controller.sourceView = sourceView
-                    controller.containerView = strongSelf.controller?.navigationController?.view
-                    controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
-                    strongSelf.controller?.push(controller)
-                }
+                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId))
+                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let emojiFile = emojiStatusFile {
+                        let source: PremiumSource
+                        if let peerStatus = peerStatus {
+                            source = .emojiStatus(strongSelf.peerId, peerStatus.fileId, emojiStatusFile, emojiPackTitle)
+                        } else {
+                            source = .profile(strongSelf.peerId)
+                        }
+                        
+                        let controller = PremiumIntroScreen(context: strongSelf.context, source: source)
+                        controller.sourceView = sourceView
+                        controller.containerView = strongSelf.controller?.navigationController?.view
+                        controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
+                        strongSelf.controller?.push(controller)
+                    }
+                })
             }
             
             self.headerNode.displayAvatarContextMenu = { [weak self] node, gesture in

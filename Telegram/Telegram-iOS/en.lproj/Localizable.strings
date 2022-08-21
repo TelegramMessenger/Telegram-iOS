@@ -7973,5 +7973,7 @@ Sorry for the inconvenience.";
 
 "Settings.ChangeProfilePhoto" = "Change Profile Photo";
 
-"Premium.EmojiStatusTitle" = "This is %1$@'s current status from %2$@.";
+"Premium.EmojiStatusTitle" = "This is %1$@'s current status from #[%2$@]().";
 "Premium.EmojiStatusText" = "Emoji status is a premium feature.\n Other features included in **Telegram Premium**:";
+
+"Login.SelectCountry" = "Country";

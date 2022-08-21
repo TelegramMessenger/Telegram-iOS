@@ -676,7 +676,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         case .scam:
             titleCredibilityContent = .scam(color: self.theme.chat.message.incoming.scamColor)
         case let .emojiStatus(emojiStatus):
-            titleCredibilityContent = .emojiStatus(status: emojiStatus, placeholderColor: self.theme.list.mediaPlaceholderColor)
+            titleCredibilityContent = .emojiStatus(status: emojiStatus, size: CGSize(width: 32.0, height: 32.0), placeholderColor: self.theme.list.mediaPlaceholderColor)
         }
         
         let titleCredibilitySize = self.titleCredibilityIconView.update(

@@ -43,7 +43,8 @@ final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, 
         self.noticeNode = ASTextNode()
         self.noticeNode.isUserInteractionEnabled = false
         self.noticeNode.displaysAsynchronously = false
-        self.noticeNode.attributedText = NSAttributedString(string: strings.TwoStepAuth_RecoveryCodeHelp, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        self.noticeNode.attributedText = NSAttributedString(string: strings.TwoStepAuth_RecoveryCodeHelp, font: Font.regular(17.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        self.noticeNode.lineSpacing = 0.1
         
         self.noAccessNode = HighlightableButtonNode()
         self.noAccessNode.displaysAsynchronously = false

@@ -177,7 +177,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     private func updatePlaceholder() {
         if let mask = self.mask {
             let mutableMask = NSMutableAttributedString(attributedString: mask)
-            mutableMask.replaceCharacters(in: NSRange(location: 0, length: mask.string.count), with: mask.string.replacingOccurrences(of: "X", with: "–"))
+            mutableMask.replaceCharacters(in: NSRange(location: 0, length: mask.string.count), with: mask.string.replacingOccurrences(of: "X", with: "0"))
             if let text = self.numberField.textField.text {
                 mutableMask.replaceCharacters(in: NSRange(location: 0, length: min(text.count, mask.string.count)), with: text)
             }

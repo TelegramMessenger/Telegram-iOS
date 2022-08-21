@@ -13,6 +13,7 @@ import PhoneNumberFormat
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import SolidRoundedButtonNode
+import InvisibleInkDustNode
 
 final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
@@ -21,7 +22,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private let animationNode: AnimatedStickerNode
     private let titleNode: ImmediateTextNode
     private let titleIconNode: ASImageNode
-    private let currentOptionNode: ASTextNode
+    private let currentOptionNode: ImmediateTextNode
+    private var dustNode: InvisibleInkDustNode?
+    
     private let currentOptionInfoNode: ASTextNode
     private let nextOptionTitleNode: ImmediateTextNode
     private let nextOptionButtonNode: HighlightableButtonNode
@@ -84,9 +87,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.titleIconNode.displayWithoutProcessing = true
         self.titleIconNode.displaysAsynchronously = false
         
-        self.currentOptionNode = ASTextNode()
+        self.currentOptionNode = ImmediateTextNode()
         self.currentOptionNode.isUserInteractionEnabled = false
         self.currentOptionNode.displaysAsynchronously = false
+        self.currentOptionNode.lineSpacing = 0.1
+        self.currentOptionNode.maximumNumberOfLines = 0
         
         self.currentOptionInfoNode = ASTextNode()
         self.currentOptionInfoNode.isUserInteractionEnabled = false
@@ -122,23 +127,6 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             (self.signInWithAppleButton as? ASAuthorizationAppleIDButton)?.cornerRadius = 11
         }
         
-        /*self.codeField = TextFieldNode()
-        self.codeField.textField.font = Font.regular(24.0)
-        self.codeField.textField.textAlignment = .center
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            self.codeField.textField.keyboardType = .asciiCapableNumberPad
-        } else {
-            self.codeField.textField.keyboardType = .numberPad
-        }
-        if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
-            self.codeField.textField.textContentType = .oneTimeCode
-        }
-        self.codeField.textField.returnKeyType = .done
-        self.codeField.textField.textColor = self.theme.list.itemPrimaryTextColor
-        self.codeField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
-        self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
-        self.codeField.textField.tintColor = self.theme.list.itemAccentColor*/
-                
         super.init()
         
         self.setViewBlock({
@@ -165,11 +153,6 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             strongSelf.textChanged(text: strongSelf.codeInputView.text)
         }
         
-        //self.codeField.textField.delegate = self
-        //self.codeField.textField.addTarget(self, action: #selector(self.codeFieldTextChanged(_:)), for: .editingChanged)
-        
-        //self.codeField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_Code, font: Font.regular(24.0), textColor: self.theme.list.itemPlaceholderTextColor)
-        
         self.nextOptionButtonNode.addTarget(self, action: #selector(self.nextOptionNodePressed), forControlEvents: .touchUpInside)
         self.signInWithAppleButton?.addTarget(self, action: #selector(self.signInWithApplePressed), for: .touchUpInside)
     }
@@ -189,8 +172,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     func updateCode(_ code: String) {
         self.codeInputView.text = code
         self.textChanged(text: code)
-        //self.codeField.textField.text = code
-        //self.codeFieldTextChanged(self.codeField.textField)
+
         if let codeType = self.codeType {
             var codeLength: Int32?
             switch codeType {
@@ -228,9 +210,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
         if case .missedCall = codeType {
-            self.currentOptionInfoNode.attributedText = NSAttributedString(string: self.strings.Login_CodePhonePatternInfoText, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+            self.currentOptionInfoNode.attributedText = NSAttributedString(string: self.strings.Login_CodePhonePatternInfoText, font: Font.regular(17.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         } else {
-            self.currentOptionInfoNode.attributedText = NSAttributedString(string: "", font: Font.regular(15.0), textColor: self.theme.list.itemPrimaryTextColor)
+            self.currentOptionInfoNode.attributedText = NSAttributedString(string: "", font: Font.regular(17.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
         if let timeout = timeout {
             #if DEBUG
@@ -272,13 +254,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.layoutArguments = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [])
-        insets.top = navigationBarHeight
-        
-        if let inputHeight = layout.inputHeight {
-            insets.bottom += max(inputHeight, layout.standardInputHeight)
-        }
-        
-
+        insets.top = layout.statusBarHeight ?? 20.0
+                
         var animationName = "IntroMessage"
         if let codeType = self.codeType {
             switch codeType {
@@ -296,15 +273,23 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.semibold(40.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
         
+        if let inputHeight = layout.inputHeight {
+            if let codeType = self.codeType, case .email = codeType {
+                insets.bottom = max(inputHeight, insets.bottom)
+            } else {
+                insets.bottom = max(inputHeight, layout.standardInputHeight)
+            }
+        }
+        
         if !self.animationNode.visibility {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
             self.animationNode.visibility = true
         }
         
         let animationSize = CGSize(width: 88.0, height: 88.0)
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         
-        let currentOptionSize = self.currentOptionNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        let currentOptionSize = self.currentOptionNode.updateLayout(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
         let currentOptionInfoSize = self.currentOptionInfoNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
         let nextOptionSize = self.nextOptionTitleNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         
@@ -347,9 +332,10 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         )
         
         var items: [AuthorizationLayoutItem] = []
-        items.append(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         self.animationNode.updateLayout(size: animationSize)
         
+        var additionalBottomInset: CGFloat = 20.0
         if let codeType = self.codeType {
             switch codeType {
             case .otherSession:
@@ -421,22 +407,25 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 items.append(AuthorizationLayoutItem(node: self.nextOptionButtonNode, size: nextOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
             default:
                 self.titleIconNode.isHidden = true
-                items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-                items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: currentOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: currentOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 
-                items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 104.0, maxValue: 104.0)))
                 /*items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 88.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))*/
                                 
                 if self.appleSignInAllowed, let signInWithAppleButton = self.signInWithAppleButton {
+                    additionalBottomInset = 80.0
+                    
                     self.nextOptionButtonNode.isHidden = true
                     signInWithAppleButton.isHidden = false
+
+                    let inset: CGFloat = 24.0
+                    let buttonSize = CGSize(width: layout.size.width - inset * 2.0, height: 50.0)
+                    transition.updateFrame(view: signInWithAppleButton, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - buttonSize.width) / 2.0), y: layout.size.height - insets.bottom - buttonSize.height - inset), size: buttonSize))
                     
                     let dividerSize = self.dividerNode.updateLayout(width: layout.size.width)
-                    items.append(AuthorizationLayoutItem(node: self.dividerNode, size: dividerSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-                    
-                    let buttonSize = CGSize(width: layout.size.width - 48.0, height: 50.0)
-                    items.append(AuthorizationLayoutItem(view: signInWithAppleButton, size: buttonSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                    transition.updateFrame(node: self.dividerNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - dividerSize.width) / 2.0), y: layout.size.height - insets.bottom - buttonSize.height - inset - dividerSize.height), size: dividerSize))
                 } else {
                     self.signInWithAppleButton?.isHidden = true
                     self.dividerNode.isHidden = true
@@ -450,13 +439,28 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: currentOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
             
             items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-            /*items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-            items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 88.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))*/
             
             items.append(AuthorizationLayoutItem(node: self.nextOptionButtonNode, size: nextOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         }
         
-        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 20.0)), items: items, transition: transition, failIfDoesNotFit: false)
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
+        
+        if let textLayout = self.currentOptionNode.cachedLayout, !textLayout.spoilers.isEmpty {
+            if self.dustNode == nil {
+                let dustNode = InvisibleInkDustNode(textNode: nil)
+                self.dustNode = dustNode
+                self.currentOptionNode.supernode?.insertSubnode(dustNode, aboveSubnode: self.currentOptionNode)
+                
+            }
+            if let dustNode = self.dustNode {
+                let textFrame = self.currentOptionNode.frame
+                dustNode.update(size: textFrame.size, color: self.theme.list.itemSecondaryTextColor, textColor: self.theme.list.itemPrimaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                transition.updateFrame(node: dustNode, frame: textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0))
+            }
+        } else if let dustNode = self.dustNode {
+            self.dustNode = nil
+            dustNode.removeFromSupernode()
+        }
         
         self.nextOptionTitleNode.frame = self.nextOptionButtonNode.bounds
     }
