@@ -14,11 +14,14 @@ import AnimationCache
 import MultiAnimationRenderer
 
 public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
+    var wantsFullWidth: Bool { get }
+    
     func update(
         presentationData: PresentationData,
         constrainedSize: CGSize,
         standardMinWidth: CGFloat,
         standardMaxWidth: CGFloat,
+        additionalBottomInset: CGFloat,
         transition: ContainedViewLayoutTransition
     ) -> (size: CGSize, apparentHeight: CGFloat)
     
@@ -411,6 +414,10 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         private var hapticFeedback: HapticFeedback?
         private var highlightedItemNode: Item?
         
+        var wantsFullWidth: Bool {
+            return false
+        }
+        
         init(
             getController: @escaping () -> ContextControllerProtocol?,
             requestDismiss: @escaping (ContextMenuActionResult) -> Void,
@@ -507,6 +514,7 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
             constrainedSize: CGSize,
             standardMinWidth: CGFloat,
             standardMaxWidth: CGFloat,
+            additionalBottomInset: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             var itemNodeLayouts: [(minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void)] = []
@@ -677,18 +685,23 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
             self.addSubnode(self.contentNode)
         }
         
+        var wantsFullWidth: Bool {
+            return true
+        }
+        
         func update(
             presentationData: PresentationData,
             constrainedSize: CGSize,
             standardMinWidth: CGFloat,
             standardMaxWidth: CGFloat,
+            additionalBottomInset: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             let contentLayout = self.contentNode.update(
                 presentationData: presentationData,
                 constrainedWidth: constrainedSize.width,
                 maxHeight: constrainedSize.height,
-                bottomInset: 0.0,
+                bottomInset: additionalBottomInset,
                 transition: transition
             )
             transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: contentLayout.cleanSize), beginWithCurrentState: true)
@@ -925,6 +938,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             constrainedSize: CGSize,
             standardMinWidth: CGFloat,
             standardMaxWidth: CGFloat,
+            additionalBottomInset: CGFloat,
             transitionFraction: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
@@ -933,6 +947,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 constrainedSize: constrainedSize,
                 standardMinWidth: standardMinWidth,
                 standardMaxWidth: standardMaxWidth,
+                additionalBottomInset: additionalBottomInset,
                 transition: transition
             )
             
@@ -1198,11 +1213,37 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 alphaTransitionFraction = 0.0
             }
             
+            var tip: TipLayout?
+            
+            let itemContainerConstrainedSize: CGSize
+            let standardMinWidth: CGFloat
+            let standardMaxWidth: CGFloat
+            let additionalBottomInset: CGFloat
+            
+            if itemContainer.node.wantsFullWidth {
+                itemContainerConstrainedSize = CGSize(width: constrainedSize.width, height: itemConstrainedHeight)
+                standardMaxWidth = 240.0
+                standardMinWidth = standardMaxWidth
+                
+                if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, width: standardMaxWidth, transition: itemContainerTransition) {
+                    tip = TipLayout(tipNode: tipNode, tipHeight: tipHeight)
+                    additionalBottomInset = tipHeight + 10.0
+                } else {
+                    additionalBottomInset = 0.0
+                }
+            } else {
+                itemContainerConstrainedSize = CGSize(width: constrainedSize.width, height: itemConstrainedHeight)
+                standardMinWidth = 220.0
+                standardMaxWidth = 240.0
+                additionalBottomInset = 0.0
+            }
+            
             let itemSize = itemContainer.update(
                 presentationData: presentationData,
-                constrainedSize: CGSize(width: constrainedSize.width, height: itemConstrainedHeight),
-                standardMinWidth: 220.0,
-                standardMaxWidth: 240.0,
+                constrainedSize: itemContainerConstrainedSize,
+                standardMinWidth: standardMinWidth,
+                standardMaxWidth: standardMaxWidth,
+                additionalBottomInset: additionalBottomInset,
                 transitionFraction: alphaTransitionFraction,
                 transition: itemContainerTransition
             )
@@ -1210,9 +1251,10 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 topItemSize = itemSize.size
             }
             
-            var tip: TipLayout?
-            if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, width: itemSize.size.width, transition: itemContainerTransition) {
-                tip = TipLayout(tipNode: tipNode, tipHeight: tipHeight)
+            if !itemContainer.node.wantsFullWidth {
+                if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, width: itemSize.size.width, transition: itemContainerTransition) {
+                    tip = TipLayout(tipNode: tipNode, tipHeight: tipHeight)
+                }
             }
             
             itemLayouts.append(ItemLayout(

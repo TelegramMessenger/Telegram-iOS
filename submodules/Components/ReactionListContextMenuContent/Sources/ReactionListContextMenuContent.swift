@@ -658,6 +658,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         private let scrollNode: ASScrollNode
         private var ignoreScrolling: Bool = false
         private var animateIn: Bool = false
+        private var bottomScrollInset: CGFloat = 0.0
         
         private var presentationData: PresentationData?
         private var currentSize: CGSize?
@@ -846,7 +847,18 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
         }
         
-        func update(presentationData: PresentationData, constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> (height: CGFloat, apparentHeight: CGFloat) {
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            var extendedScrollNodeFrame = self.scrollNode.frame
+            extendedScrollNodeFrame.size.height += self.bottomScrollInset
+            
+            if extendedScrollNodeFrame.contains(point) {
+                return self.scrollNode.view.hitTest(self.view.convert(point, to: self.scrollNode.view), with: event)
+            }
+            
+            return super.hitTest(point, with: event)
+        }
+        
+        func update(presentationData: PresentationData, constrainedSize: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (height: CGFloat, apparentHeight: CGFloat) {
             let itemHeight: CGFloat = 44.0
             
             if self.presentationData?.theme !== presentationData.theme {
@@ -895,8 +907,13 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             if self.scrollNode.frame != CGRect(origin: CGPoint(), size: containerSize) {
                 self.scrollNode.frame = CGRect(origin: CGPoint(), size: containerSize)
             }
-            if self.scrollNode.view.contentSize != size {
-                self.scrollNode.view.contentSize = size
+            if self.scrollNode.view.contentInset.bottom != bottomInset {
+                self.scrollNode.view.contentInset.bottom = bottomInset
+            }
+            self.bottomScrollInset = bottomInset
+            let scrollContentSize = CGSize(width: size.width, height: size.height)
+            if self.scrollNode.view.contentSize != scrollContentSize {
+                self.scrollNode.view.contentSize = scrollContentSize
             }
             self.ignoreScrolling = false
             
@@ -1216,7 +1233,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     tabTransition = .immediate
                 }
                 
-                let tabLayout = tabNode.update(presentationData: presentationData, constrainedSize: CGSize(width: constrainedSize.width, height: constrainedSize.height - topContentHeight), transition: tabTransition)
+                let tabLayout = tabNode.update(presentationData: presentationData, constrainedSize: CGSize(width: constrainedSize.width, height: constrainedSize.height - topContentHeight), bottomInset: bottomInset, transition: tabTransition)
                 tabLayouts[index] = tabLayout
                 let currentFractionalTabIndex: CGFloat
                 if let interactiveTransitionState = self.interactiveTransitionState {
