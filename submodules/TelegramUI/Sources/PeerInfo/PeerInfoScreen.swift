@@ -3095,7 +3095,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     guard let strongSelf = self else {
                         return
                     }
-                    if let emojiFile = emojiStatusFile {
+                    if let emojiStatusFile = emojiStatusFile {
                         let source: PremiumSource
                         if let peerStatus = peerStatus {
                             source = .emojiStatus(strongSelf.peerId, peerStatus.fileId, emojiStatusFile, emojiPackTitle)
