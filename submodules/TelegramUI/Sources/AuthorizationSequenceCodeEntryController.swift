@@ -118,12 +118,6 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
         self.termsOfService = termsOfService
         if self.data?.0 != number || self.data?.1 != codeType || self.data?.2 != nextType || self.data?.3 != timeout {
-            switch codeType {
-            case .otherSession, .missedCall:
-                self.title = number
-            default:
-                self.title = nil
-            }
             self.data = (number, codeType, nextType, timeout)
                         
             var appleSignInAllowed = false
