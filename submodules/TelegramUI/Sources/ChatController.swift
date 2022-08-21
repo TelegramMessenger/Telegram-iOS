@@ -1645,12 +1645,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         messageAlreadyHasThisReaction = currentReactions.contains(where: { $0.value == chosenReaction })
                     }
                     
-                    guard let allowedReactions = allowedReactions else {
-                        itemNode.openMessageContextMenu()
-                        return
-                    }
-                    
                     if removedReaction == nil {
+                        guard let allowedReactions = allowedReactions else {
+                            itemNode.openMessageContextMenu()
+                            return
+                        }
+                        
                         switch allowedReactions {
                         case let .set(set):
                             if !messageAlreadyHasThisReaction && updatedReactions.contains(where: { !set.contains($0) }) {
@@ -16965,7 +16965,7 @@ func peerAllowedReactions(context: AccountContext, peerId: PeerId) -> Signal<All
     |> map { peer, allowedReactions -> AllowedReactions? in
         switch allowedReactions {
         case .unknown:
-            return nil
+            return .all
         case let .known(value):
             switch value {
             case .all:
