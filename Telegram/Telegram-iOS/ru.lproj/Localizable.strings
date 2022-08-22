@@ -75,3 +75,10 @@
 "AccountActions.SessionsToHide.CleanConfirmation" = "Вы уверены?";
 
 "AccountActions.SessionsToTerminate.24hWarningMessage" = "Эта функция не сработает, если после входа в аккаунт на этом устройстве прошло менее 24 часов.";
+
+"CloudballonSettings.Title" = "Cloudballon";
+"CloudballonSettings.ShowPeerId" = "Показывать ID";
+"CloudballonSettings.ShowPeerIdHelp" = "Показывать ID в профилях пользователей, групп, каналов, ботов.";
+"Profile.Id" = "id";
+"Conversation.IdCopied" = "ID скопирован.";
+"Settings.CopyId" = "Копировать ID";

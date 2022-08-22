@@ -70,6 +70,7 @@ import PaymentMethodUI
 import PremiumUI
 import InstantPageCache
 import FakePasscode
+import FakePasscodeUI
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -415,6 +416,7 @@ private enum PeerInfoContextSubject {
     case bio
     case phone(String)
     case link
+    case id(String)
 }
 
 private enum PeerInfoSettingsSection {
@@ -442,6 +444,7 @@ private enum PeerInfoSettingsSection {
     case addAccount
     case logout
     case rememberPassword
+    case cloudballon
 }
 
 private final class PeerInfoInteraction {
@@ -590,6 +593,7 @@ private enum SettingsSection: Int, CaseIterable {
     case payment
     case extra
     case support
+    case cloudballon
 }
 
 private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, isExpanded: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
@@ -780,6 +784,10 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         interaction.openSettings(.tips)
     }))
     
+    items[.cloudballon]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.CloudballonSettings_Title, icon: PresentationResourcesSettings.cloudballon, action: {
+        interaction.openSettings(.cloudballon)
+    }))
+    
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
     for section in SettingsSection.allCases {
         if let sectionItems = items[section], !sectionItems.isEmpty {
@@ -924,6 +932,14 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 interaction.requestLayout(false)
             }))
         }
+        if data.cloudballonSettings?.showPeerId ?? false {
+            let id = String(user.id.id._internalGetInt64Value())
+            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 100, label: presentationData.strings.Profile_Id, text: id, action: nil, longTapAction: { sourceNode in
+                interaction.openPeerInfoContextMenu(.id(id), sourceNode)
+            }, requestLayout: {
+                interaction.requestLayout(false)
+            }))
+        }
         if let cachedData = data.cachedData as? CachedUserData {
             if user.isFake {
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_FakeBotWarning : presentationData.strings.UserInfo_FakeUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
@@ -1031,6 +1047,14 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 interaction.requestLayout(false)
             }))
         }
+        if data.cloudballonSettings?.showPeerId ?? false {
+            let id = String(channel.id.id._internalGetInt64Value())
+            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 100, label: presentationData.strings.Profile_Id, text: id, action: nil, longTapAction: { sourceNode in
+                interaction.openPeerInfoContextMenu(.id(id), sourceNode)
+            }, requestLayout: {
+                interaction.requestLayout(false)
+            }))
+        }
         if let cachedData = data.cachedData as? CachedChannelData {
             let aboutText: String?
             if channel.isFake {
@@ -1088,6 +1112,14 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }
         }
     } else if let group = data.peer as? TelegramGroup {
+        if data.cloudballonSettings?.showPeerId ?? false {
+            let id = String(group.id.id._internalGetInt64Value())
+            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 100, label: presentationData.strings.Profile_Id, text: id, action: nil, longTapAction: { sourceNode in
+                interaction.openPeerInfoContextMenu(.id(id), sourceNode)
+            }, requestLayout: {
+                interaction.requestLayout(false)
+            }))
+        }
         if let cachedData = data.cachedData as? CachedGroupData {
             let aboutText: String?
             if group.isFake {
@@ -2990,7 +3022,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             screenData = peerInfoScreenSettingsData(context: context, peerId: peerId, accountsAndPeers: self.accountsAndPeers.get(), activeSessionsContextAndCount: self.activeSessionsContextAndCount.get(), notificationExceptions: self.notificationExceptions.get(), privacySettings: self.privacySettings.get(), archivedStickerPacks: self.archivedPacks.get(), hasPassport: self.hasPassport.get())
             
 
-            self.headerNode.displayCopyContextMenu = { [weak self] node, copyPhone, copyUsername in
+            self.headerNode.displayCopyContextMenu = { [weak self] node, copyPhone, copyUsername, copyId in
                 guard let strongSelf = self, let data = strongSelf.data, let user = data.peer as? TelegramUser else {
                     return
                 }
@@ -3017,6 +3049,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }))
                 }
                 
+                if copyId {
+                    let id = String(user.id.id._internalGetInt64Value())
+                    actions.append(ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Settings_CopyId, accessibilityLabel: strongSelf.presentationData.strings.Settings_CopyId), action: { [weak self] in
+                        UIPasteboard.general.string = id
+                        
+                        if let strongSelf = self {
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_IdCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        }
+                    }))
+                }
+
                 let contextMenuController = ContextMenuController(actions: actions)
                 strongSelf.controller?.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
                     if let strongSelf = self {
@@ -5691,6 +5735,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                 }))
             }
+        case let .id(id):
+            let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
+                UIPasteboard.general.string = id
+                
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_IdCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            })])
+            controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
+                if let controller = self?.controller, let sourceNode = sourceNode {
+                    return (sourceNode, sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0), controller.displayNode, controller.view.bounds)
+                } else {
+                    return nil
+                }
+            }))
         }
     }
     
@@ -6356,6 +6414,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).start()
                 }
                 push(controller)
+            case .cloudballon:
+                self.controller?.push(cloudballonSettingsController(context: self.context))
         }
     }
 
@@ -7140,7 +7200,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         let headerInset = sectionInset
         
-        var headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, transition: transition, additive: additive)
+        var headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, transition: transition, additive: additive, cloudballonSettings: self.data?.cloudballonSettings)
         if !self.isSettings && !self.state.isEditing {
             headerHeight += 71.0
         }
@@ -7531,7 +7591,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 let headerInset = sectionInset
 
-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, transition: transition, additive: additive)
+                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, transition: transition, additive: additive, cloudballonSettings: self.data?.cloudballonSettings)
             }
             
             let paneAreaExpansionDistance: CGFloat = 32.0
@@ -8491,7 +8551,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 }
                 let headerInset = sectionInset
                 
-                topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, paneContainerY: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, notificationSettings: self.screenNode.data?.notificationSettings, statusData: self.screenNode.data?.status, panelStatusData: (nil, nil, nil), isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, metrics: layout.metrics, transition: transition, additive: false)
+                topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, paneContainerY: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, notificationSettings: self.screenNode.data?.notificationSettings, statusData: self.screenNode.data?.status, panelStatusData: (nil, nil, nil), isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, metrics: layout.metrics, transition: transition, additive: false, cloudballonSettings: self.screenNode.data?.cloudballonSettings)
             }
             
             let titleScale = (fraction * previousTitleNode.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.bounds.height

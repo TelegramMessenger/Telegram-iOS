@@ -91,4 +91,6 @@ public struct PresentationResourcesSettings {
     public static let changePhoneNumber = renderIcon(name: "Settings/Menu/ChangePhoneNumber")
     
     public static let websites = renderIcon(name: "Settings/Menu/Websites")
+    
+    public static let cloudballon = renderIcon(name: "Cloudballon")
 }

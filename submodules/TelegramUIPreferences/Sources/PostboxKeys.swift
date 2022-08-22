@@ -38,6 +38,7 @@ private enum ApplicationSpecificSharedDataKeyValues: Int32 {
     case translationSettings = 18
     case fakePasscodeSettings = 100
     case badPasscodeAttempts = 101
+    case cloudballonSettings = 102
 }
 
 public struct ApplicationSpecificSharedDataKeys {
@@ -62,6 +63,7 @@ public struct ApplicationSpecificSharedDataKeys {
     public static let translationSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.translationSettings.rawValue)
     public static let fakePasscodeSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.fakePasscodeSettings.rawValue)
     public static let badPasscodeAttempts = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.badPasscodeAttempts.rawValue)
+    public static let cloudballonSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.cloudballonSettings.rawValue)
 }
 
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
