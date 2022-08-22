@@ -106,6 +106,8 @@
 "PUSH_MESSAGE_FILES_TEXT_any" = "sent you %d files";
 "PUSH_MESSAGE_THEME" = "%1$@|changed chat theme to %2$@";
 "PUSH_MESSAGE_NOTHEME" = "%1$@|disabled chat theme";
+"PUSH_MESSAGE_RECURRING_PAY" = "%1$@|You were charged %2$@";
+"CHAT_MESSAGE_RECURRING_PAY" = "%1$@|You were charged %2$@";
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -868,7 +870,6 @@
 "MessageTimer.Years_2" = "%@ years";
 "MessageTimer.Years_3_10" = "%@ years";
 "MessageTimer.Years_any" = "%@ years";
-"MessageTimer.Months_many" = "%@ years";
 
 "MessageTimer.ShortSeconds_1" = "%@s";
 "MessageTimer.ShortSeconds_2" = "%@s";
@@ -7578,7 +7579,7 @@ Sorry for the inconvenience.";
 "Channel.AddUserKickedError" = "Sorry, you can't add this user because they are on the list of Removed Users and you can't unban them.";
 "Channel.AddAdminKickedError" = "Sorry, you can't add this user as an admin because they are in the Removed Users list and you can't unban them.";
 
-"Premium.Stickers.Description" = "Unlock this sticker and more by subscribing to Telegram Premium.";
+"Premium.Stickers.Description" = "Unlock this sticker and many more by subscribing to Telegram Premium.";
 "Premium.Stickers.Proceed" = "Unlock Premium Stickers";
 
 "Premium.Reactions.Proceed" = "Unlock Premium Reactions";
@@ -7627,9 +7628,9 @@ Sorry for the inconvenience.";
 "Premium.MaxFileSizeNoPremiumText" = "The document can't be sent, because it is larger than **%@**. We are working to let you increase this limit in the future.";
 "Premium.MaxFileSizeFinalText" = "The document can't be sent, because it is larger than **%@**.";
 
-"Premium.MaxPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
-"Premium.MaxPinsNoPremiumText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some of the currently pinned ones.";
-"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some of the currently pinned ones.";
+"Premium.MaxPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some that are currently pinned or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
+"Premium.MaxPinsNoPremiumText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some that are currently pinned.";
+"Premium.MaxPinsFinalText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some that are currently pinned.";
 
 "Premium.MaxFavedStickersTitle" = "The Limit of %@ Stickers Reached";
 "Premium.MaxFavedStickersText" = "An older sticker was replaced with this one. You can [increase the limit]() to %@ stickers.";
@@ -7639,7 +7640,7 @@ Sorry for the inconvenience.";
 "Premium.MaxSavedGifsText" = "An older GIF was replaced with this one. You can [increase the limit]() to %@ GIFS.";
 "Premium.MaxSavedGifsFinalText" = "An older GIF was replaced with this one.";
 
-"Premium.MaxAccountsText" = "You have reached the limit of **%@** connected accounts. You can free one place by subscribing to **Telegram Premium**.";
+"Premium.MaxAccountsText" = "You have reached the limit of **%@** connected accounts. You can add more by subscribing to **Telegram Premium**.";
 "Premium.MaxAccountsNoPremiumText" = "You have reached the limit of **%@** connected accounts.";
 "Premium.MaxAccountsFinalText" = "You have reached the limit of **%@** connected accounts.";
 
@@ -7670,10 +7671,10 @@ Sorry for the inconvenience.";
 "Premium.NoAds" = "No Ads";
 "Premium.NoAdsInfo" = "No more ads in public channels where Telegram sometimes shows ads.";
 
-"Premium.NoAdsStandaloneInfo" = "Remove ads such as this by subscribing to **Telegram Premium**.";
+"Premium.NoAdsStandaloneInfo" = "Remove ads such as this one by subscribing to **Telegram Premium**.";
 
 "Premium.Reactions" = "Unique Reactions";
-"Premium.ReactionsInfo" = "Additional animated reactions on messages, available only to the Premium subscribers.";
+"Premium.ReactionsInfo" = "Additional animated reactions on messages, available only to Premium subscribers.";
 
 "Premium.ReactionsStandalone" = "Additional Reactions";
 "Premium.ReactionsStandaloneInfo" = "Unlock a wider range of reactions on messages by subscribing to **Telegram Premium**.";
@@ -7682,7 +7683,7 @@ Sorry for the inconvenience.";
 "Premium.StickersInfo" = "Exclusive enlarged stickers featuring additional effects, updated monthly.";
 
 "Premium.ChatManagement" = "Advanced Chat Management";
-"Premium.ChatManagementInfo" = "Tools to set default folder, auto-archive and hide new chats.";
+"Premium.ChatManagementInfo" = "Tools to set the default folder, auto-archive and hide new chats from non-contacts.";
 
 "Premium.Badge" = "Profile Badge";
 "Premium.BadgeInfo" = "A badge next to your name showing that you are helping support Telegram.";
@@ -7701,10 +7702,10 @@ Sorry for the inconvenience.";
 "Premium.AboutTitle" = "ABOUT TELEGRAM PREMIUM";
 "Premium.AboutText" = "While the free version of Telegram already gives its users more than any other messaging application, **Telegram Premium** pushes its capabilities even further.\n\n**Telegram Premium** is a paid option, because most Premium Features require additional expenses from Telegram to third parties such as data center providers and server manufacturers. Contributions from **Telegram Premium** users allow us to cover such costs and also help Telegram stay free for everyone.";
 
-"Premium.Terms" = "By purchasing a Premium subscription, you agree to our [Terms of Service](terms) and [Privacy Policy](privacy).";
+"Premium.Terms" = "By purchasing a Premium subscription, you agree to the Telegram [Terms of Service](terms) and [Privacy Policy](privacy).";
 
 "Conversation.CopyProtectionSavingDisabledSecret" = "Saving is restricted";
-"Conversation.CopyProtectionForwardingDisabledSecret" = "Forwards are restricted";
+"Conversation.CopyProtectionForwardingDisabledSecret" = "Forwarding is restricted";
 
 "Settings.Terms_URL" = "https://telegram.org/tos";
 "Settings.PrivacyPolicy_URL" = "https://telegram.org/privacy";
@@ -7712,7 +7713,7 @@ Sorry for the inconvenience.";
 "Stickers.PremiumPackInfoText" = "This pack contains premium stickers like this one.";
 "Stickers.PremiumPackView" = "View";
 
-"Conversation.PremiumUploadFileTooLarge" = "File could not be sent, because it is larger than 4 GB.\n\nYou can send as many files as you like, but each must be smaller than 4 GB.";
+"Conversation.PremiumUploadFileTooLarge" = "File could not be sent because it is larger than 4 GB.\n\nYou can send as many files as you like, but each must be smaller than 4 GB.";
 
 "SponsoredMessageMenu.Hide" = "Hide";
 
@@ -7743,7 +7744,7 @@ Sorry for the inconvenience.";
 
 "WebApp.Settings" = "Settings";
 
-"Bot.AccepRecurrentInfo" = "I accept [Terms of Service]() of **%1$@**";
+"Bot.AccepRecurrentInfo" = "I accept the [Terms of Service]() of **%1$@**";
 
 "Chat.AudioTranscriptionRateAction" = "Rate Transcription";
 "Chat.AudioTranscriptionFeedbackTip" = "Thank you for your feedback.";
@@ -7760,7 +7761,6 @@ Sorry for the inconvenience.";
 "Premium.Restore.Success" = "Done";
 "Premium.Restore.ErrorUnknown" = "An error occurred. Please try again.";
 
-
 "Settings.Premium" = "Telegram Premium";
 
 "Settings.AddAnotherAccount.PremiumHelp" = "You can add up to four accounts with different phone numbers.";
@@ -7770,6 +7770,228 @@ Sorry for the inconvenience.";
 "Appearance.AppIconPremium" = "Premium";
 "Appearance.AppIconBlack" = "Black";
 "Appearance.AppIconTurbo" = "Turbo";
+
+"PrivacySettings.DeleteAccountNow" = "Delete Account Now";
+
+"DeleteAccount.AlternativeOptionsTitle" = "Alternative Options";
+
+"DeleteAccount.Options.ChangePhoneNumberTitle" = "Change Phone Number";
+"DeleteAccount.Options.ChangePhoneNumberText" = "Move your contacts, chats and media to a new number.";
+
+"DeleteAccount.Options.AddAccountTitle" = "Add Another Account";
+"DeleteAccount.Options.AddAccountText" = "You can use up to 3 accounts in one app at the same time.";
+"DeleteAccount.Options.AddAccountPremiumText" = "You can use up to 4 accounts in one app at the same time.";
+
+"DeleteAccount.Options.ChangePrivacyTitle" = "Change Your Privacy Settings";
+"DeleteAccount.Options.ChangePrivacyText" = "Choose who exactly can see which of your info.";
+
+"DeleteAccount.Options.SetTwoStepAuthTitle" = "Enable Two-Step Verification";
+"DeleteAccount.Options.SetTwoStepAuthText" = "Set a password that will be required each time you log in.";
+
+"DeleteAccount.Options.SetPasscodeTitle" = "Set a Passcode";
+"DeleteAccount.Options.SetPasscodeText" = "Lock the app with a passcode so that others can't open it.";
+
+"DeleteAccount.Options.ClearCacheTitle" = "Clear Cache";
+"DeleteAccount.Options.ClearCacheText" = "Free up disk space on your device; your media will stay in the cloud.";
+
+"DeleteAccount.Options.ClearSyncedContactsTitle" = "Clear Synced Contacts";
+"DeleteAccount.Options.ClearSyncedContactsText" = "Remove any unnecessary contacts you may have synced.";
+
+"DeleteAccount.Options.DeleteChatsTitle" = "Quickly Delete Your Chats";
+"DeleteAccount.Options.DeleteChatsText" = "Learn how to remove any info you don’t need in a few taps.";
+
+"DeleteAccount.Options.ContactSupportTitle" = "Contact Support";
+"DeleteAccount.Options.ContactSupportText" = "Tell us about any issues; deleting account doesn't usually help.";
+
+"DeleteAccount.DeleteMyAccountTitle" = "Delete My Account";
+"DeleteAccount.DeleteMyAccount" = "Delete My Account";
+
+"DeleteAccount.SavedMessages" = "Saved";
+
+"DeleteAccount.ComeBackLater" = "Come Back Later";
+"DeleteAccount.Continue" = "Continue";
+
+"DeleteAccount.CloudStorageTitle" = "Your Free Cloud Storage";
+"DeleteAccount.CloudStorageText" = "You will lose access to all your Saved Messages as well as all messages, media and files from your chats.";
+
+"DeleteAccount.GroupsAndChannelsTitle" = "Your Groups and Channels";
+"DeleteAccount.GroupsAndChannelsText" = "The groups and channels you created will either get new admins or become orphaned.";
+"DeleteAccount.GroupsAndChannelsInfo" = "You can transfer group and channel ownership to other users via Chat Info > Edit > Admins.";
+
+"DeleteAccount.MessageHistoryTitle" = "Your Message History";
+"DeleteAccount.MessageHistoryText" = "Your chat partners will keep their message history with you, including the messages you shared in secret chats.\n\nYou can remove any messages for both sides at any time, but this will not be possible if you delete your account.";
+
+"DeleteAccount.DeleteMessagesURL" = "https://telegram.org/faq#q-can-i-delete-my-messages";
+
+"DeleteAccount.EnterPhoneNumber" = "Enter Your Phone Number";
+"DeleteAccount.InvalidPhoneNumberError" = "Invalid phone number. Please try again.";
+
+"DeleteAccount.EnterPassword" = "Enter Your Password";
+"DeleteAccount.InvalidPasswordError" = "Invalid password. Please try again.";
+
+"DeleteAccount.ConfirmationAlertTitle" = "Proceed to Delete Your Account?";
+"DeleteAccount.ConfirmationAlertText" = "Deleting your account will permanently delete your data!\n\nIt is imposible to reverse this action!";
+"DeleteAccount.ConfirmationAlertDelete" = "Delete My Account";
+
+"DeleteAccount.Success" = "The account has been successfully deleted.";
+
+"PeerInfo.GiftPremium" = "Gift Premium";
+
+"Premium.Gift.Title" = "Gift Telegram Premium";
+"Premium.Gift.Description" = "Let **%@** enjoy exclusive features of Telegram with **Telegram Premium**.";
+"Premium.Gift.Info" = "You can review the list of features and terms of use for Telegram Premium [here]().";
+"Premium.Gift.GiftSubscription" = "Gift Subscription for %@";
+
+"Premium.Gift.PricePerMonth" = "%@ / month";
+
+"Premium.Gift.Months_1" = "%@ Month";
+"Premium.Gift.Months_any" = "%@ Months";
+
+"Premium.Gift.Years_1" = "%@ Year";
+"Premium.Gift.Years_any" = "%@ Years";
+
+"Premium.GiftedTitle" = "Telegram Premium";
+
+"Premium.GiftedTitle.3Month" = "[%@]() has gifted you a 3-month subscription for Telegram Premium";
+"Premium.GiftedTitle.6Month" = "[%@]() has gifted you a 6-month subscription for Telegram Premium";
+"Premium.GiftedTitle.12Month" = "[%@]() has gifted you a 12-month subscription for Telegram Premium";
+"Premium.GiftedDescription" = "You now have access to additional features.";
+
+"Premium.GiftedTitleYou.3Month" = "You gifted [%@]() a 3-month subscription for Telegram Premium";
+"Premium.GiftedTitleYou.6Month" = "You gifted [%@]() a 6-month subscription for Telegram Premium";
+"Premium.GiftedTitleYou.12Month" = "You gifted [%@]() a 12-month subscription for Telegram Premium";
+"Premium.GiftedDescriptionYou" = "They now have access to additional features.";
+
+"SettingsSearch.DeleteAccount.DeleteMyAccount" = " ";
+
+"Notification.PremiumGift.Sent" = "%1$@ sent you a gift for %2$@";
+"Notification.PremiumGift.SentYou" = "You sent a gift for %@";
+
+"Notification.PremiumGift.Months_1" = "%@ month";
+"Notification.PremiumGift.Months_any" = "%@ months";
+
+"Notification.PremiumGift.Title" = "Telegram Premium";
+"Notification.PremiumGift.Subtitle" = "for %@";
+"Notification.PremiumGift.View" = "View";
+
+"StickerPack.AddEmojiCount_1" = "Add 1 Emoji";
+"StickerPack.AddEmojiCount_any" = "Add %@ Emoji";
+
+"StickerPack.RemoveEmojiCount_1" = "Remove 1 Emoji";
+"StickerPack.RemoveEmojiCount_any" = "Remove %@ Emoji";
+
+"StickerPack.AddEmojiPacksCount_1" = "Add 1 Emoji Pack";
+"StickerPack.AddEmojiPacksCount_any" = "Add %@ Emoji Packs";
+
+"StickerPack.RemoveEmojiPacksCount_1" = "Remove 1 Emoji Packs";
+"StickerPack.RemoveEmojiPacksCount_any" = "Remove %@ Emoji Packs";
+
+"Gallery.AirPlay" = "AirPlay";
+"Gallery.AirPlayPlaceholder" = "This video is playing on the TV using AirPlay";
+
+"WebApp.CloseConfirmation" = "Changes that you made may not be saved.";
+"WebApp.CloseAnyway" = "Close Anyway";
+
+"Privacy.VoiceMessages" = "Voice Messages";
+
+"Privacy.VoiceMessages.Tooltip" = "Only subscribers of [Telegram Premium]() can restrict receiving voice messages.";
+
+"Privacy.VoiceMessages.WhoCanSend" = "WHO CAN SEND ME VOICE MESSAGES";
+"Privacy.VoiceMessages.CustomHelp" = "You can restrict who can send you voice messages with granular precision.";
+"Privacy.VoiceMessages.AlwaysAllow.Title" = "Always Allow";
+"Privacy.VoiceMessages.NeverAllow.Title" = "Never Allow";
+"Privacy.VoiceMessages.CustomShareHelp" = "These users will or will not be able to send you voice messages regardless of the settings above.";
+
+"Premium.AnimatedEmoji" = "Animated Emoji";
+"Premium.AnimatedEmojiInfo" = "Include animated emoji from different emoji sets in any message you send.";
+"Premium.AnimatedEmojiStandaloneInfo" = "Include animated emoji from different emoji sets in any message you send.";
+
+"ChatContextMenu.EmojiSetSingle" = "This message contains\n#[%@]() emoji.";
+"ChatContextMenu.EmojiSet_1" = "This message contains emoji from [%@ pack]().";
+"ChatContextMenu.EmojiSet_any" = "This message contains emoji from [%@ packs]().";
+
+"EmojiPack.Title" = "Emoji";
+"EmojiPack.Emoji_1" = "%@ emoji";
+"EmojiPack.Emoji_any" = "%@ emoji";
+"EmojiPack.Add" = "Add";
+"EmojiPack.Added" = "Added";
+
+"EmojiPackActionInfo.AddedTitle" = "Emoji Added";
+"EmojiPackActionInfo.AddedText" = "%@ has been added to your emoji.";
+"EmojiPackActionInfo.RemovedTitle" = "Emoji Removed";
+"EmojiPackActionInfo.ArchivedTitle" = "Emoji Archived";
+"EmojiPackActionInfo.RemovedText" = "%@ is no longer in your emoji.";
+
+"EmojiPackActionInfo.MultipleAddedText_1" = "%@ emoji pack has been added to your emoji.";
+"EmojiPackActionInfo.MultipleAddedText_any" = "%@ emoji packs have been added to your emoji.";
+
+"EmojiPackActionInfo.MultipleRemovedText_1" = "%@ emoji pack is no longer in your emoji.";
+"EmojiPackActionInfo.MultipleRemovedText_any" = "%@ emoji packs are no longer in your emoji.";
+
+"StickerPackActionInfo.MultipleRemovedText_1" = "%@ sticker pack is no longer in your stickers.";
+"StickerPackActionInfo.MultipleRemovedText_any" = "%@ sticker packs are no longer in your stickers.";
+
+"MaskPackActionInfo.RemovedTitle" = "Masks Removed";
+"MaskPackActionInfo.ArchivedTitle" = "Masks Archived";
+"MaskPackActionInfo.RemovedText" = "%@ is no longer in your masks.";
+
+"WebApp.ShareMyPhoneNumber" = "Share My Phone Number";
+"WebApp.ShareMyPhoneNumberConfirmation" = "Are you sure you want to share your phone number **%1$@** with **%2$@**?";
+
+"Conversation.VoiceMessagesRestricted" = "%@ doesn't accept voice and video messages";
+
+"Emoji.ClearRecent" = "Clear Recent Emoji";
+
+"Premium.AnimatedEmoji.Proceed" = "Unlock Animated Emoji";
+
+"EmojiPacksSettings.Title" = "Emoji";
+
+"EmojiStickerSettings.Info" = "Artists are welcome to add their own emoji sets using our @stickers bot.\n\nTap on a message to view and add the whole set.";
+
+"StickerPack.MaskCount_1" = "1 mask";
+"StickerPack.MaskCount_any" = "%@ masks";
+
+"StickerPack.EmojiCount_1" = "1 emoji";
+"StickerPack.EmojiCount_any" = "%@ emoji";
+
+"StickerSettings.EmojiContextInfo" = "If you archive an emoji set, you can quickly restore it later from the Archived Emoji section.";
+
+"StickerPack.CopyLinks" = "Copy Links";
+"Conversation.LinksCopied" = "Links copied to clipboard";
+
+"StickersList.EmojiItem" = "Custom Emoji";
+"StickersList.ArchivedEmojiItem" = "Archived Emoji";
+
+"EmojiInput.UnlockPack" = "Unlock %@";
+"EmojiInput.AddPack" = "Add %@";
+"EmojiInput.PanelTitlePremium" = "Premium";
+"EmojiInput.PanelTitleEmoji" = "Emoji";
+"EmojiInput.PanelTitleRecent" = "Recent";
+
+"EmojiInput.SectionTitleEmoji" = "Emoji";
+"EmojiInput.SectionTitleFavoriteStickers" = "Favorite Stickers";
+"EmojiInput.SectionTitlePremiumStickers" = "Premium Stickers";
+
+"EmojiInput.PremiumEmojiToast.Text" = "Subscribe to Telegram Premium to unlock premium emoji.";
+"EmojiInput.PremiumEmojiToast.Action" = "More";
+
+"EmojiInput.PremiumEmojiToast.TryText" = "Try sending these emojis in **Saved Messages** for free to test.";
+"EmojiInput.PremiumEmojiToast.TryAction" = "Open";
+
+"StickerPacks.DeleteEmojiPacksConfirmation_1" = "Delete 1 Emoji Pack";
+"StickerPacks.DeleteEmojiPacksConfirmation_any" = "Delete %@ Emoji Packs";
+
+"KeyCommand.LockWithPasscode" = "Lock with Passcode";
+"KeyCommand.Play" = "Play Video";
+"KeyCommand.Pause" = "Pause Video";
+"KeyCommand.SeekBackward" = "Seek Backward";
+"KeyCommand.SeekForward" = "Seek Forward";
+"KeyCommand.Share" = "Share";
+"KeyCommand.SwitchToPIP" = "Switch to Picture-in-Picture";
+"KeyCommand.EnterFullscreen" = "Enter Fullscreen";
+"KeyCommand.ExitFullscreen" = "Exit Fullscreen";
+
+"StickerPacksSettings.SuggestAnimatedEmoji" = "Suggest Animated Emoji";
 
 "Settings.Version" = "Telegram for iOS v%1$@ (%2$@)\nPTelegram version %3$@";
 

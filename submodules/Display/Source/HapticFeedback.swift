@@ -122,11 +122,12 @@ private final class HapticFeedbackImpl {
     }
     
     func warning() {
-        if let notificationGenerator = self.notificationGenerator {
-            notificationGenerator.notificationOccurred(.warning)
-        } else {
-
-        }
+        AudioServicesPlaySystemSound(1102)
+//        if let notificationGenerator = self.notificationGenerator {
+//            notificationGenerator.notificationOccurred(.warning)
+//        } else {
+//
+//        }
     }
     
     @objc dynamic func f() {

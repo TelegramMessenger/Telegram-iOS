@@ -51,6 +51,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case setChatTheme(emoji: String)
     case joinedByRequest
     case webViewData(String)
+    case giftPremium(currency: String, amount: Int64, months: Int32)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -119,6 +120,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 self = .joinedByRequest
             case 26:
                 self = .webViewData(decoder.decodeStringForKey("t", orElse: ""))
+            case 27:
+                self = .giftPremium(currency: decoder.decodeStringForKey("currency", orElse: ""), amount: decoder.decodeInt64ForKey("amount", orElse: 0), months: decoder.decodeInt32ForKey("months", orElse: 0))
             default:
                 self = .unknown
         }
@@ -243,6 +246,11 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             case let .webViewData(text):
                 encoder.encodeInt32(26, forKey: "_rawValue")
                 encoder.encodeString(text, forKey: "t")
+            case let .giftPremium(currency, amount, months):
+                encoder.encodeInt32(27, forKey: "_rawValue")
+                encoder.encodeString(currency, forKey: "currency")
+                encoder.encodeInt64(amount, forKey: "amount")
+                encoder.encodeInt32(months, forKey: "months")
         }
     }
     

@@ -44,6 +44,6 @@ public struct AnimationKeypath: Hashable, ExpressibleByStringLiteral {
     self.keys = keys
   }
 
-  var keys: [String]
+  public var keys: [String]
 
 }

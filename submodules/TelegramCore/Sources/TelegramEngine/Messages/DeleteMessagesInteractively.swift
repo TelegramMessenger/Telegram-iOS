@@ -53,7 +53,7 @@ func deleteMessagesInteractively(transaction: Transaction, stateManager: Account
         
         if peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudUser {
             let remoteMessageIds = peerMessageIds.filter { id in
-                if id.namespace == Namespaces.Message.Local {
+                if id.namespace == Namespaces.Message.Local || id.namespace == Namespaces.Message.ScheduledLocal {
                     return false
                 }
                 return true

@@ -30,7 +30,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
         let sourceNode = self.sourceNode
         return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
             if let sourceNode = sourceNode {
-                return (sourceNode, sourceNode.bounds)
+                return (sourceNode.view, sourceNode.bounds)
             } else {
                 return nil
             }
@@ -88,10 +88,10 @@ final class ContactsControllerNode: ASDisplayNode {
             }
         }
         
-        var contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?
+        var contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
         
-        self.contactListNode = ContactListNode(context: context, presentation: presentation, displaySortOptions: true, contextAction: { peer, node, gesture in
-            contextAction?(peer, node, gesture)
+        self.contactListNode = ContactListNode(context: context, presentation: presentation, displaySortOptions: true, contextAction: { peer, node, gesture, location in
+            contextAction?(peer, node, gesture, location)
         })
         
         super.init()
@@ -130,8 +130,8 @@ final class ContactsControllerNode: ASDisplayNode {
             }
         }
         
-        contextAction = { [weak self] peer, node, gesture in
-            self?.contextAction(peer: peer, node: node, gesture: gesture)
+        contextAction = { [weak self] peer, node, gesture, location in
+            self?.contextAction(peer: peer, node: node, gesture: gesture, location: location)
         }
     }
     
@@ -170,7 +170,7 @@ final class ContactsControllerNode: ASDisplayNode {
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
     }
     
-    private func contextAction(peer: EnginePeer, node: ASDisplayNode, gesture: ContextGesture?) {
+    private func contextAction(peer: EnginePeer, node: ASDisplayNode?, gesture: ContextGesture?, location: CGPoint?) {
         guard let contactsController = self.controller else {
             return
         }
@@ -193,8 +193,8 @@ final class ContactsControllerNode: ASDisplayNode {
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                 requestOpenPeerFromSearch(peer)
             }
-        }, contextAction: { [weak self] peer, node, gesture in
-            self?.contextAction(peer: peer, node: node, gesture: gesture)
+        }, contextAction: { [weak self] peer, node, gesture, location in
+            self?.contextAction(peer: peer, node: node, gesture: gesture, location: location)
         }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()

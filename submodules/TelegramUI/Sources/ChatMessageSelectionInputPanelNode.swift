@@ -17,7 +17,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let shareButton: HighlightableButtonNode
     private let separatorNode: ASDisplayNode
     
-    private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, metrics: LayoutMetrics, isSecondary: Bool)?
+    private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, metrics: LayoutMetrics, isSecondary: Bool, isMediaInputExpanded: Bool)?
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     private var actions: ChatAvailableMessageActions?
     
@@ -33,8 +33,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                 
                 if self.selectedMessages.isEmpty {
                     self.actions = nil
-                    if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary) = self.validLayout, let interfaceState = self.presentationInterfaceState {
-                        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                    if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded) = self.validLayout, let interfaceState = self.presentationInterfaceState {
+                        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics, isMediaInputExpanded: isMediaInputExpanded)
                     }
                     self.canDeleteMessagesDisposable.set(nil)
                 } else if let context = self.context {
@@ -42,8 +42,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                     |> deliverOnMainQueue).start(next: { [weak self] actions in
                         if let strongSelf = self {
                             strongSelf.actions = actions
-                            if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {
-                                let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                            if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {
+                                let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics, isMediaInputExpanded: isMediaInputExpanded)
                             }
                         }
                     }))
@@ -56,21 +56,21 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.theme = theme
         self.peerMedia = peerMedia
         
-        self.deleteButton = HighlightableButtonNode(pointerStyle: .default)
+        self.deleteButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
         self.deleteButton.isEnabled = false
         self.deleteButton.isAccessibilityElement = true
         self.deleteButton.accessibilityLabel = strings.VoiceOver_MessageContextDelete
         
-        self.reportButton = HighlightableButtonNode(pointerStyle: .default)
+        self.reportButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
         self.reportButton.isEnabled = false
         self.reportButton.isAccessibilityElement = true
         self.reportButton.accessibilityLabel = strings.VoiceOver_MessageContextReport
         
-        self.forwardButton = HighlightableButtonNode(pointerStyle: .default)
+        self.forwardButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
         self.forwardButton.isAccessibilityElement = true
         self.forwardButton.accessibilityLabel = strings.VoiceOver_MessageContextForward
         
-        self.shareButton = HighlightableButtonNode(pointerStyle: .default)
+        self.shareButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
         self.shareButton.isAccessibilityElement = true
         self.shareButton.accessibilityLabel = strings.VoiceOver_MessageContextShare
         
@@ -138,7 +138,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
         if let actions = self.actions, actions.isCopyProtected {
             self.interfaceInteraction?.displayCopyProtectionTip(self.forwardButton, false)
-        } else {
+        } else if !self.forwardButton.isImplicitlyDisabled {
             self.interfaceInteraction?.forwardSelectedMessages()
         }
     }
@@ -149,13 +149,13 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
         if let actions = self.actions, actions.isCopyProtected {
             self.interfaceInteraction?.displayCopyProtectionTip(self.shareButton, true)
-        } else {
+        } else if !self.shareButton.isImplicitlyDisabled {
             self.interfaceInteraction?.shareSelectedMessages()
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded)
         
         let panelHeight = defaultHeight(metrics: metrics)
         

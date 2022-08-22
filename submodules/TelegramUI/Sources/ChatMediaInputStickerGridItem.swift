@@ -74,7 +74,7 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
                 self.setupNode = setupNode
             case .clear:
                 let setupNode = HighlightableButtonNode()
-                setupNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme), for: [])
+                setupNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: theme.chat.inputMediaPanel.stickersSectionTextColor), for: [])
                 self.setupNode = setupNode
         }
         
@@ -412,7 +412,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
             if let isLocked = self.isLocked, isLocked {
             } else {
-                let _ = interfaceInteraction.sendSticker(.standalone(media: item.file), false, false, nil, false, self, self.bounds)
+                let _ = interfaceInteraction.sendSticker(.standalone(media: item.file), false, false, nil, false, self.view, self.bounds, nil)
                 self.imageNode.layer.animateAlpha(from: 0.5, to: 1.0, duration: 1.0)
             }
         }
@@ -454,7 +454,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState, let interaction = self.inputNodeInteraction {
-            isPreviewing = interaction.previewedStickerPackItem == .pack(item)
+            isPreviewing = interaction.previewedStickerPackItem == .pack(item.file)
         }
         if self.currentIsPreviewing != isPreviewing {
             self.currentIsPreviewing = isPreviewing

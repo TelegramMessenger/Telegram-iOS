@@ -1254,7 +1254,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 media: [fakeFile],
                 peers: SimpleDictionary<PeerId, Peer>(),
                 associatedMessages: SimpleDictionary<MessageId, Message>(),
-                associatedMessageIds: []
+                associatedMessageIds: [],
+                associatedMedia: [:]
             )
             let messageItem = ListMessageItem(
                 presentationData: self.chatPresentationData,
@@ -1689,7 +1690,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 return chatControllerInteraction.openMessage(message, mode)
             },
             openMessageContextMenu: { message, bool, node, rect, gesture in
-                chatControllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture)
+                chatControllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture, nil)
             },
             toggleMessagesSelection: { messageId, selected in
                 chatControllerInteraction.toggleMessagesSelection(messageId, selected)
@@ -2433,7 +2434,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                     media: [fakeFile],
                     peers: SimpleDictionary<PeerId, Peer>(),
                     associatedMessages: SimpleDictionary<MessageId, Message>(),
-                    associatedMessageIds: []
+                    associatedMessageIds: [],
+                    associatedMedia: [:]
                 )
                 let messageItem = ListMessageItem(
                     presentationData: self.itemGridBinding.chatPresentationData,

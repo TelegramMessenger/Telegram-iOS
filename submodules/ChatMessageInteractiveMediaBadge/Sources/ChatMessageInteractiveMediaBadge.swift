@@ -167,8 +167,8 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             sizeNode.bounds = CGRect(origin: CGPoint(), size: sizeFrame.size)
                             
                             let previousFrame = sizeNode.frame
-                            if previousFrame.center.y != sizeFrame.center.y {
-                                textTransition.updatePosition(node: sizeNode, position: sizeFrame.center)
+                            if previousFrame.midY != sizeFrame.midY {
+                                textTransition.updatePosition(node: sizeNode, position: CGPoint(x: sizeFrame.midX, y: sizeFrame.midY))
                             } else {
                                 sizeNode.layer.removeAllAnimations()
                                 sizeNode.frame = sizeFrame
@@ -178,7 +178,7 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             let sizeSize = sizeNode.frame.size
                             let sizeFrame = CGRect(x: active ? 42.0 : 7.0, y: active ? 19.0 : 2.0, width: sizeSize.width, height: sizeSize.height)
                             sizeNode.bounds = CGRect(origin: CGPoint(), size: sizeFrame.size)
-                            textTransition.updatePosition(node: sizeNode, position: sizeFrame.center)
+                            textTransition.updatePosition(node: sizeNode, position: CGPoint(x: sizeFrame.midX, y: sizeFrame.midY))
                             
                             transition.updateAlpha(node: sizeNode, alpha: 0.0)
                         }
@@ -190,7 +190,7 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         
                         let durationFrame = CGRect(x: active ? 42.0 : 7.0, y: active ? 6.0 : 2.0 + UIScreenPixel, width: durationSize.width, height: durationSize.height)
                         self.durationNode.bounds = CGRect(origin: CGPoint(), size: durationFrame.size)
-                        textTransition.updatePosition(node: self.durationNode, position: durationFrame.center)
+                        textTransition.updatePosition(node: self.durationNode, position: CGPoint(x: durationFrame.midX, y: durationFrame.midY))
                         
                         let iconNode: ASImageNode
                         if let current = self.iconNode {

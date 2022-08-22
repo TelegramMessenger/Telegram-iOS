@@ -180,8 +180,8 @@ private final class ChatListShimmerNode: ASDisplayNode {
             let peer1: EnginePeer = .user(TelegramUser(id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []))
             let timestamp1: Int32 = 100000
             let peers: [EnginePeer.Id: EnginePeer] = [:]
-            let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _, _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
-            }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in }, activateChatPreview: { _, _, gesture in
+            let interaction = ChatListNodeInteraction(context: context, activateSearch: {}, peerSelected: { _, _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
+            }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in }, activateChatPreview: { _, _, gesture, _ in
                 gesture?.cancel()
             }, present: { _ in })
             
@@ -206,7 +206,8 @@ private final class ChatListShimmerNode: ASDisplayNode {
                     media: [],
                     peers: peers,
                     associatedMessages: [:],
-                    associatedMessageIds: []
+                    associatedMessageIds: [],
+                    associatedMedia: [:]
                 )
                 let readState = EnginePeerReadCounters()
 
@@ -528,8 +529,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         itemNode.listNode.contentScrollingEnded = { [weak self] listView in
             return self?.contentScrollingEnded?(listView) ?? false
         }
-        itemNode.listNode.activateChatPreview = { [weak self] item, sourceNode, gesture in
-            self?.activateChatPreview?(item, sourceNode, gesture)
+        itemNode.listNode.activateChatPreview = { [weak self] item, sourceNode, gesture, location in
+            self?.activateChatPreview?(item, sourceNode, gesture, location)
         }
         itemNode.listNode.addedVisibleChatsWithPeerIds = { [weak self] ids in
             self?.addedVisibleChatsWithPeerIds?(ids)
@@ -576,7 +577,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var updatePeerGrouping: ((EnginePeer.Id, Bool) -> Void)?
     var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     var contentScrollingEnded: ((ListView) -> Bool)?
-    var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
+    var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
     var displayFilterLimit: (() -> Void)?
@@ -1087,7 +1088,7 @@ final class ChatListControllerNode: ASDisplayNode {
     var requestOpenRecentPeerOptions: ((EnginePeer) -> Void)?
     var requestOpenMessageFromSearch: ((EnginePeer, EngineMessage.Id, Bool) -> Void)?
     var requestAddContact: ((String) -> Void)?
-    var peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
+    var peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     var dismissSelfIfCompletedPresentation: (() -> Void)?
     var isEmptyUpdated: ((Bool) -> Void)?
     var emptyListAction: (() -> Void)?

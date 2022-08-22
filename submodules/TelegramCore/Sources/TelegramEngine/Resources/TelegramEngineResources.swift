@@ -1,9 +1,58 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
+import TelegramApi
 
 public typealias EngineTempBox = TempBox
 public typealias EngineTempBoxFile = TempBoxFile
+
+func bufferedFetch(_ signal: Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error>) -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> {
+    return Signal { subscriber in
+        final class State {
+            var data = Data()
+            var isCompleted: Bool = false
+            
+            init() {
+            }
+        }
+        
+        let state = Atomic<State>(value: State())
+        return signal.start(next: { value in
+            switch value {
+            case let .dataPart(_, data, _, _):
+                let _ = state.with { state in
+                    state.data.append(data)
+                }
+            case let .moveTempFile(file):
+                let _ = state.with { state in
+                    state.isCompleted = true
+                }
+                subscriber.putNext(.moveTempFile(file: file))
+            case .resourceSizeUpdated:
+                break
+            default:
+                assert(false)
+                break
+            }
+        }, error: { error in
+            subscriber.putError(error)
+        }, completed: {
+            let tempFile = state.with { state -> TempBoxFile? in
+                if state.isCompleted {
+                    return nil
+                } else {
+                    let tempFile = TempBox.shared.tempFile(fileName: "data")
+                    let _ = try? state.data.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic)
+                    return tempFile
+                }
+            }
+            if let tempFile = tempFile {
+                subscriber.putNext(.moveTempFile(file: tempFile))
+            }
+            subscriber.putCompletion()
+        })
+    }
+}
 
 public final class EngineMediaResource: Equatable {
     public enum CacheTimeout {
@@ -29,7 +78,14 @@ public final class EngineMediaResource: Equatable {
 
     public final class Fetch {
         public enum Result {
+            case dataPart(resourceOffset: Int64, data: Data, range: Range<Int64>, complete: Bool)
+            case resourceSizeUpdated(Int64)
+            case progressUpdated(Float)
+            case replaceHeader(data: Data, range: Range<Int64>)
+            case moveLocalFile(path: String)
             case moveTempFile(file: TempBoxFile)
+            case copyLocalItem(MediaResourceDataFetchCopyLocalItem)
+            case reset
         }
 
         public enum Error {
@@ -189,6 +245,9 @@ public extension TelegramEngine {
                                 switch result {
                                 case let .moveTempFile(file):
                                     mappedResult = .tempFile(file)
+                                default:
+                                    assert(false)
+                                    return
                                 }
                                 subscriber.putNext(mappedResult)
                             }, completed: {
@@ -218,6 +277,53 @@ public extension TelegramEngine {
                     return .complete()
                 }
             }
+        }
+        
+        public func fetchAlbumCover(file: FileMediaReference?, title: String, performer: String, isThumbnail: Bool) -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> {
+            let signal = currentWebDocumentsHostDatacenterId(postbox: self.account.postbox, isTestingEnvironment: self.account.testingEnvironment)
+            |> castError(EngineMediaResource.Fetch.Error.self)
+            |> take(1)
+            |> mapToSignal { datacenterId -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> in
+                let resource = AlbumCoverResource(datacenterId: Int(datacenterId), file: file, title: title, performer: performer, isThumbnail: isThumbnail)
+                
+                return multipartFetch(postbox: self.account.postbox, network: self.account.network, mediaReferenceRevalidationContext: self.account.mediaReferenceRevalidationContext, resource: resource, datacenterId: Int(datacenterId), size: nil, intervals: .single([(0 ..< Int64.max, .default)]), parameters: MediaResourceFetchParameters(
+                    tag: nil,
+                    info: TelegramCloudMediaResourceFetchInfo(
+                        reference: MediaResourceReference.standalone(resource: resource),
+                        preferBackgroundReferenceRevalidation: false,
+                        continueInBackground: false
+                    ),
+                    isRandomAccessAllowed: true
+                ))
+                |> map { result -> EngineMediaResource.Fetch.Result in
+                    switch result {
+                    case let .dataPart(resourceOffset, data, range, complete):
+                        return .dataPart(resourceOffset: resourceOffset, data: data, range: range, complete: complete)
+                    case let .resourceSizeUpdated(size):
+                        return .resourceSizeUpdated(size)
+                    case let .progressUpdated(value):
+                        return .progressUpdated(value)
+                    case let .replaceHeader(data, range):
+                        return .replaceHeader(data: data, range: range)
+                    case let .moveLocalFile(path):
+                        return .moveLocalFile(path: path)
+                    case let .moveTempFile(file):
+                        return .moveTempFile(file: file)
+                    case let .copyLocalItem(item):
+                        return .copyLocalItem(item)
+                    case .reset:
+                        return .reset
+                    }
+                }
+                |> mapError { error -> EngineMediaResource.Fetch.Error in
+                    switch error {
+                    case .generic:
+                        return .generic
+                    }
+                }
+            }
+            
+            return bufferedFetch(signal)
         }
 
         public func cancelAllFetches(id: String) {

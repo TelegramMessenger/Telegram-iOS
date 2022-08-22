@@ -14,6 +14,9 @@ import ItemListUI
 import SearchUI
 import ChatListSearchItemHeader
 import PremiumUI
+import AnimationCache
+import MultiAnimationRenderer
+import Postbox
 import FakePasscode
 
 public enum ChatListNodeMode {
@@ -70,13 +73,16 @@ public final class ChatListNodeInteraction {
     let togglePeerMarkedUnread: (EnginePeer.Id, Bool) -> Void
     let toggleArchivedFolderHiddenByDefault: () -> Void
     let hidePsa: (EnginePeer.Id) -> Void
-    let activateChatPreview: (ChatListItem, ASDisplayNode, ContextGesture?) -> Void
+    let activateChatPreview: (ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void
     let present: (ViewController) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
     
-    public init(activateSearch: @escaping () -> Void, peerSelected: @escaping (EnginePeer, EnginePeer?, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (EnginePeer) -> Void, togglePeerSelected: @escaping (EnginePeer) -> Void, togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (EnginePeer, EngineMessage, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (EngineChatList.Group) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, setItemPinned: @escaping (EngineChatList.PinnedItem.Id, Bool) -> Void, setPeerMuted: @escaping (EnginePeer.Id, Bool) -> Void, deletePeer: @escaping (EnginePeer.Id, Bool) -> Void, updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void, togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (EnginePeer.Id) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
+    let animationCache: AnimationCache
+    let animationRenderer: MultiAnimationRenderer
+
+    public init(context: AccountContext, activateSearch: @escaping () -> Void, peerSelected: @escaping (EnginePeer, EnginePeer?, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (EnginePeer) -> Void, togglePeerSelected: @escaping (EnginePeer) -> Void, togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (EnginePeer, EngineMessage, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (EngineChatList.Group) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, setItemPinned: @escaping (EngineChatList.PinnedItem.Id, Bool) -> Void, setPeerMuted: @escaping (EnginePeer.Id, Bool) -> Void, deletePeer: @escaping (EnginePeer.Id, Bool) -> Void, updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void, togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (EnginePeer.Id) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void, present: @escaping (ViewController) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.disabledPeerSelected = disabledPeerSelected
@@ -96,6 +102,11 @@ public final class ChatListNodeInteraction {
         self.hidePsa = hidePsa
         self.activateChatPreview = activateChatPreview
         self.present = present
+
+        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+            return TempBox.shared.tempFile(fileName: "file").path
+        })
+        self.animationRenderer = MultiAnimationRendererImpl()
     }
 }
 
@@ -621,7 +632,7 @@ public final class ChatListNode: ListView {
     public var push: ((ViewController) -> Void)?
     public var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     public var hidePsa: ((EnginePeer.Id) -> Void)?
-    public var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
+    public var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     
     private var theme: PresentationTheme
     
@@ -734,7 +745,7 @@ public final class ChatListNode: ListView {
         
         self.keepMinimalScrollHeightWithTopInset = navigationBarSearchContentHeight
         
-        let nodeInteraction = ChatListNodeInteraction(activateSearch: { [weak self] in
+        let nodeInteraction = ChatListNodeInteraction(context: context, activateSearch: { [weak self] in
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
                 activateSearch()
             }
@@ -907,12 +918,12 @@ public final class ChatListNode: ListView {
             self?.toggleArchivedFolderHiddenByDefault?()
         }, hidePsa: { [weak self] id in
             self?.hidePsa?(id)
-        }, activateChatPreview: { [weak self] item, node, gesture in
+        }, activateChatPreview: { [weak self] item, node, gesture, location in
             guard let strongSelf = self else {
                 return
             }
             if let activateChatPreview = strongSelf.activateChatPreview {
-                activateChatPreview(item, node, gesture)
+                activateChatPreview(item, node, gesture, location)
             } else {
                 gesture?.cancel()
             }
@@ -990,7 +1001,7 @@ public final class ChatListNode: ListView {
             }
             return Set()
         }
-        
+
         let chatListNodeViewTransition = combineLatest(queue: viewProcessingQueue, hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, chatListViewUpdate, self.statePromise.get(), hiddenPeerIds)
         |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, savedMessagesPeer, updateAndFilter, state, hiddenPeerIds) -> Signal<ChatListNodeListViewTransition, NoError> in
             let (update, filter) = updateAndFilter
@@ -1324,6 +1335,8 @@ public final class ChatListNode: ListView {
                     switch activity {
                     case .interactingWithEmoji:
                         return true
+                    case .speakingInGroupCall:
+                        return true
                     default:
                         return false
                     }
@@ -1355,9 +1368,9 @@ public final class ChatListNode: ListView {
                 return engine.data.get(EngineDataMap(
                     activitiesByPeerId.keys.filter { key in
                         if case .global = key.category {
-                            return false
-                        } else {
                             return true
+                        } else {
+                            return false
                         }
                     }.map { key in
                         return TelegramEngine.EngineData.Item.Peer.Peer(id: key.peerId)
@@ -2105,7 +2118,7 @@ public final class ChatListNode: ListView {
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { update in
                         let entries = update.view.entries
-                        if entries.count > index, case let .MessageEntry(index, _, _, _, _, renderedPeer, _, _, _, _) = entries[10 - index - 1] {
+                        if entries.count > index, case let .MessageEntry(index, _, _, _, _, renderedPeer, _, _, _, _) = entries[9 - index - 1] {
                             let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true, filter: filter)
                             self.setChatListLocation(location)
                             self.peerSelected?(EnginePeer(renderedPeer.peer!), false, false, nil)

@@ -14,6 +14,9 @@ import TelegramStringFormatting
 import InvisibleInkDustNode
 import TextFormat
 import ChatPresentationInterfaceState
+import TextNodeWithEntities
+import AnimationCache
+import MultiAnimationRenderer
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
@@ -25,7 +28,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     let lineNode: ASImageNode
     let iconNode: ASImageNode
     let titleNode: ImmediateTextNode
-    let textNode: ImmediateTextNode
+    let textNode: ImmediateTextNodeWithEntities
     var dustNode: InvisibleInkDustNode?
     let imageNode: TransformImageNode
     
@@ -36,7 +39,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
-    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat) {
+    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
         self.messageId = messageId
         
         self.theme = theme
@@ -63,10 +66,21 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.titleNode.displaysAsynchronously = false
         self.titleNode.insets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
         
-        self.textNode = ImmediateTextNode()
+        self.textNode = ImmediateTextNodeWithEntities()
         self.textNode.maximumNumberOfLines = 1
         self.textNode.displaysAsynchronously = false
         self.textNode.insets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
+        self.textNode.visibility = true
+        
+        if let animationCache = animationCache, let animationRenderer = animationRenderer {
+            self.textNode.arguments = TextNodeWithEntities.Arguments(
+                context: context,
+                cache: animationCache,
+                renderer: animationRenderer,
+                placeholderColor: theme.list.mediaPlaceholderColor,
+                attemptSynchronous: false
+            )
+        }
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -119,7 +133,9 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         default:
                             isMedia = true
                     }
-                    (text, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
+                    let (attributedText, _, isTextValue) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
+                    text = attributedText.string
+                    isText = isTextValue
                 } else {
                     isMedia = false
                 }
@@ -128,15 +144,16 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 let messageText: NSAttributedString
                 if isText, let message = message {
                     let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
-                        if case .Spoiler = entity.type {
+                        switch entity.type {
+                        case .Spoiler, .CustomEmoji:
                             return true
-                        } else {
+                        default:
                             return false
                         }
                     }
                     let textColor = strongSelf.theme.chat.inputPanel.primaryTextColor
                     if entities.count > 0 {
-                        messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false)
+                        messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false, message: message)
                     } else {
                         messageText = NSAttributedString(string: text, font: textFont, textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
                     }

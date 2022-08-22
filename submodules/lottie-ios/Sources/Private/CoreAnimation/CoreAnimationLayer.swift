@@ -393,6 +393,10 @@ extension CoreAnimationLayer: RootAnimationLayer {
   func logHierarchyKeypaths() {
     // Unimplemented / unused
   }
+    
+  func allKeypaths(predicate: (AnimationKeypath) -> Bool) -> [String] {
+    return []
+  }
 
   func setValueProvider(_ valueProvider: AnyValueProvider, keypath: AnimationKeypath) {
     valueProviderStore.setValueProvider(valueProvider, keypath: keypath)

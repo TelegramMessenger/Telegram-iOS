@@ -15,67 +15,70 @@ import TextFormat
 import Markdown
 import TelegramNotices
 import ChatPresentationInterfaceState
+import TextNodeWithEntities
+import AnimationCache
+import MultiAnimationRenderer
 
-func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
+func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (text: String, entities: [MessageTextEntity], isMedia: Bool) {
     for media in message.media {
         switch media {
-            case _ as TelegramMediaImage:
-                return (strings.Message_Photo, true)
-            case let file as TelegramMediaFile:
-                if file.isVideoSticker || file.isAnimatedSticker {
-                    return (strings.Message_Sticker, true)
-                }
-                var fileName: String = strings.Message_File
-                for attribute in file.attributes {
-                    switch attribute {
-                        case .Sticker:
-                            return (strings.Message_Sticker, true)
-                        case let .FileName(name):
-                            fileName = name
-                        case let .Audio(isVoice, _, title, performer, _):
-                            if isVoice {
-                                return (strings.Message_Audio, true)
-                            } else {
-                                if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
-                                    return (title + " — " + performer, true)
-                                } else if let title = title, !title.isEmpty {
-                                    return (title, true)
-                                } else if let performer = performer, !performer.isEmpty {
-                                    return (performer, true)
-                                } else {
-                                    return (strings.Message_Audio, true)
-                                }
-                            }
-                        case .Video:
-                            if file.isAnimated {
-                                return (strings.Message_Animation, true)
-                            } else {
-                                return (strings.Message_Video, true)
-                            }
-                        default:
-                            break
+        case _ as TelegramMediaImage:
+            return (strings.Message_Photo, [], true)
+        case let file as TelegramMediaFile:
+            if file.isVideoSticker || file.isAnimatedSticker {
+                return (strings.Message_Sticker, [], true)
+            }
+            var fileName: String = strings.Message_File
+            for attribute in file.attributes {
+                switch attribute {
+                case .Sticker:
+                    return (strings.Message_Sticker, [], true)
+                case let .FileName(name):
+                    fileName = name
+                case let .Audio(isVoice, _, title, performer, _):
+                    if isVoice {
+                        return (strings.Message_Audio, [], true)
+                    } else {
+                        if let title = title, let performer = performer, !title.isEmpty, !performer.isEmpty {
+                            return (title + " — " + performer, [], true)
+                        } else if let title = title, !title.isEmpty {
+                            return (title, [], true)
+                        } else if let performer = performer, !performer.isEmpty {
+                            return (performer, [], true)
+                        } else {
+                            return (strings.Message_Audio, [], true)
+                        }
                     }
+                case .Video:
+                    if file.isAnimated {
+                        return (strings.Message_Animation, [], true)
+                    } else {
+                        return (strings.Message_Video, [], true)
+                    }
+                default:
+                    break
                 }
-                return (fileName, true)
-            case _ as TelegramMediaContact:
-                return (strings.Message_Contact, true)
-            case let game as TelegramMediaGame:
-                return (game.title, true)
-            case _ as TelegramMediaMap:
-                return (strings.Message_Location, true)
-            case _ as TelegramMediaAction:
-                return ("", true)
-            case _ as TelegramMediaPoll:
-                return (strings.ForwardedPolls(1), true)
-            case let dice as TelegramMediaDice:
-                return (dice.emoji, true)
-            case let invoice as TelegramMediaInvoice:
-                return (invoice.title, true)
-            default:
-                break
+            }
+            return (fileName, [], true)
+        case _ as TelegramMediaContact:
+            return (strings.Message_Contact, [], true)
+        case let game as TelegramMediaGame:
+            return (game.title, [], true)
+        case _ as TelegramMediaMap:
+            return (strings.Message_Location, [], true)
+        case _ as TelegramMediaAction:
+            return ("", [], true)
+        case _ as TelegramMediaPoll:
+            return (strings.ForwardedPolls(1), [], true)
+        case let dice as TelegramMediaDice:
+            return (dice.emoji, [], true)
+        case let invoice as TelegramMediaInvoice:
+            return (invoice.title, [], true)
+        default:
+            break
         }
     }
-    return (message.text, false)
+    return (message.text, message.textEntitiesAttribute?.entities ?? [], false)
 }
 
 final class ForwardAccessoryPanelNode: AccessoryPanelNode {
@@ -89,7 +92,8 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     let lineNode: ASImageNode
     let iconNode: ASImageNode
     let titleNode: ImmediateTextNode
-    let textNode: ImmediateTextNode
+    let textNode: ImmediateTextNodeWithEntities
+    private var originalText: NSAttributedString?
     
     private let actionArea: AccessibilityAreaNode
     
@@ -102,7 +106,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
-    init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, nameDisplayOrder: PresentationPersonNameOrder, forwardOptionsState: ChatInterfaceForwardOptionsState?) {
+    init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, nameDisplayOrder: PresentationPersonNameOrder, forwardOptionsState: ChatInterfaceForwardOptionsState?, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
         self.context = context
         self.messageIds = messageIds
         self.theme = theme
@@ -131,7 +135,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.displaysAsynchronously = false
         
-        self.textNode = ImmediateTextNode()
+        self.textNode = ImmediateTextNodeWithEntities()
         self.textNode.maximumNumberOfLines = 1
         self.textNode.displaysAsynchronously = false
         
@@ -148,6 +152,16 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.textNode)
         self.addSubnode(self.actionArea)
         
+        if let animationCache = animationCache, let animationRenderer = animationRenderer {
+            self.textNode.arguments = TextNodeWithEntities.Arguments(
+                context: context,
+                cache: animationCache,
+                renderer: animationRenderer,
+                placeholderColor: theme.list.mediaPlaceholderColor,
+                attemptSynchronous: false
+            )
+        }
+        
         self.messageDisposable.set((context.account.postbox.messagesAtIds(messageIds)
         |> deliverOnMainQueue).start(next: { [weak self] messages in
             if let strongSelf = self {
@@ -157,7 +171,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                     var authors = ""
                     var uniquePeerIds = Set<PeerId>()
                     var title = ""
-                    var text = ""
+                    var text = NSMutableAttributedString(string: "")
                     var sourcePeer: (Bool, String)?
                     for message in messages {
                         if let author = message.forwardInfo?.author ?? message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
@@ -178,11 +192,27 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                     
                     if messages.count == 1 {
                         title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitleSingle
-                        let (string, _) = textStringForForwardedMessage(messages[0], strings: strings)
-                        text = "\(authors): \(string)"
+                        let (string, entities, _) = textStringForForwardedMessage(messages[0], strings: strings)
+                        
+                        text = NSMutableAttributedString(attributedString: NSAttributedString(string: "\(authors): ", font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor))
+                        
+                        let additionalText = NSMutableAttributedString(attributedString: NSAttributedString(string: string, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor))
+                        for entity in entities {
+                            switch entity.type {
+                            case let .CustomEmoji(_, fileId):
+                                let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                                if range.lowerBound >= 0 && range.upperBound <= additionalText.length {
+                                    additionalText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: fileId, file: messages[0].associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile), range: range)
+                                }
+                            default:
+                                break
+                            }
+                        }
+                        
+                        text.append(additionalText)
                     } else {
                         title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitle(Int32(messages.count))
-                        text = strongSelf.strings.Conversation_ForwardFrom(authors).string
+                        text = NSMutableAttributedString(attributedString: NSAttributedString(string: strongSelf.strings.Conversation_ForwardFrom(authors).string, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor))
                     }
                     
                     strongSelf.messages = messages
@@ -190,7 +220,9 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                     strongSelf.authors = authors
                     
                     strongSelf.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
-                    strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
+                    strongSelf.textNode.attributedText = text
+                    strongSelf.originalText = text
+                    strongSelf.textNode.visibility = true
                     
                     let headerString: String
                     if messages.count == 1 {
@@ -273,25 +305,21 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
             
             let filteredMessages = self.messages
             
-            var authors = self.authors ?? ""
-            if forwardOptionsState?.hideNames == true {
-                authors = self.strings.DialogList_You
-            }
-            
             var title = ""
-            var text = ""
-            if filteredMessages.count == 1, let message = filteredMessages.first {
+            if filteredMessages.count == 1 {
                 title = self.strings.Conversation_ForwardOptions_ForwardTitleSingle
-                let (string, _) = textStringForForwardedMessage(message, strings: strings)
-                text = "\(authors): \(string)"
             } else {
                 title = self.strings.Conversation_ForwardOptions_ForwardTitle(Int32(filteredMessages.count))
-                text = self.strings.Conversation_ForwardFrom(authors).string
             }
             
             self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
             
-            self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
+            if let attributedText = self.textNode.attributedText {
+                let updatedText = NSMutableAttributedString(attributedString: attributedText)
+                updatedText.addAttribute(.foregroundColor, value: self.theme.chat.inputPanel.secondaryTextColor, range: NSRange(location: 0, length: updatedText.length))
+                self.textNode.attributedText = updatedText
+                self.originalText = updatedText
+            }
             
             if let (size, inset, interfaceState) = self.validLayout {
                 self.updateState(size: size, inset: inset, interfaceState: interfaceState)

@@ -18,4 +18,16 @@ open class AlertContentNode: ASDisplayNode {
     open func updateTheme(_ theme: AlertControllerTheme) {
         
     }
+    
+    open func performHighlightedAction() {
+        
+    }
+    
+    open func decreaseHighlightedIndex() {
+        
+    }
+    
+    open func increaseHighlightedIndex() {
+
+    }
 }

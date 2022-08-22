@@ -32,7 +32,7 @@ func telegramStickerPackThumbnailRepresentationFromApiSizes(datacenterId: Int32,
 extension StickerPackCollectionInfo {
     convenience init(apiSet: Api.StickerSet, namespace: ItemCollectionId.Namespace) {
         switch apiSet {
-            case let .stickerSet(flags, _, id, accessHash, title, shortName, thumbs, thumbDcId, thumbVersion, count, nHash):
+            case let .stickerSet(flags, _, id, accessHash, title, shortName, thumbs, thumbDcId, thumbVersion, thumbDocumentId, count, nHash):
                 var setFlags: StickerPackCollectionInfoFlags = StickerPackCollectionInfoFlags()
                 if (flags & (1 << 2)) != 0 {
                     setFlags.insert(.isOfficial)
@@ -46,6 +46,9 @@ extension StickerPackCollectionInfo {
                 if (flags & (1 << 6)) != 0 {
                     setFlags.insert(.isVideo)
                 }
+                if (flags & (1 << 7)) != 0 {
+                    setFlags.insert(.isEmoji)
+                }
                 
                 var thumbnailRepresentation: TelegramMediaImageRepresentation?
                 var immediateThumbnailData: Data?
@@ -55,7 +58,7 @@ extension StickerPackCollectionInfo {
                     immediateThumbnailData = data
                 }
                 
-                self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, thumbnail: thumbnailRepresentation, immediateThumbnailData: immediateThumbnailData, hash: nHash, count: count)
+                self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, thumbnail: thumbnailRepresentation, thumbnailFileId: thumbDocumentId, immediateThumbnailData: immediateThumbnailData, hash: nHash, count: count)
         }
     }
 }
@@ -100,7 +103,7 @@ func _internal_stickerPacksAttachedToMedia(account: Account, media: AnyMediaRefe
     |> map { result -> [StickerPackReference] in
         return result.map { pack in
             switch pack {
-            case let .stickerSetCovered(set, _), let .stickerSetMultiCovered(set, _):
+            case let .stickerSetCovered(set, _), let .stickerSetMultiCovered(set, _), let .stickerSetFullCovered(set, _, _):
                 let info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
                 return .id(id: info.id.id, accessHash: info.accessHash)
             }

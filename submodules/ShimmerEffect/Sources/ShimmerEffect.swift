@@ -430,3 +430,69 @@ public final class ShimmerEffectNode: ASDisplayNode {
         self.effectNode.frame = CGRect(origin: CGPoint(), size: size)
     }
 }
+
+public final class StandaloneShimmerEffect {
+    private var image: UIImage?
+    
+    private var background: UIColor?
+    private var foreground: UIColor?
+    
+    public var layer: CALayer? {
+        didSet {
+            if self.layer !== oldValue {
+                self.updateLayer()
+            }
+        }
+    }
+    
+    public init() {
+    }
+    
+    public func update(background: UIColor, foreground: UIColor) {
+        if self.background == background && self.foreground == foreground {
+            return
+        }
+        self.background = background
+        self.foreground = foreground
+        
+        self.image = generateImage(CGSize(width: 1.0, height: 320.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(background.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+
+            context.clip(to: CGRect(origin: CGPoint(), size: size))
+
+            let transparentColor = foreground.withAlphaComponent(0.0).cgColor
+            let peakColor = foreground.cgColor
+
+            var locations: [CGFloat] = [0.0, 0.5, 1.0]
+            let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
+
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        })
+        
+        self.updateLayer()
+    }
+    
+    public func updateLayer() {
+        guard let layer = self.layer, let image = self.image else {
+            return
+        }
+        
+        layer.contents = image.cgImage
+        
+        if layer.animation(forKey: "shimmer") == nil {
+            let animation = CABasicAnimation(keyPath: "contentsRect.origin.y")
+            animation.fromValue = 1.0 as NSNumber
+            animation.toValue = -1.0 as NSNumber
+            animation.isAdditive = true
+            animation.repeatCount = .infinity
+            animation.duration = 0.8
+            animation.beginTime = layer.convertTime(1.0, from: nil)
+            layer.add(animation, forKey: "shimmer")
+        }
+    }
+}

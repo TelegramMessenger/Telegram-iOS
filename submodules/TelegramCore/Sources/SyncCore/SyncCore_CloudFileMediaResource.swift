@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramApi
 
 public struct CloudFileMediaResourceId: Hashable, Equatable {
     let datacenterId: Int
@@ -664,7 +665,11 @@ public struct WebFileReferenceMediaResourceId: Hashable, Equatable {
     }
 }
 
-public final class WebFileReferenceMediaResource: TelegramMediaResource {
+protocol MediaResourceWithWebFileReference: TelegramMediaResource {
+    var apiInputLocation: Api.InputWebFileLocation { get }
+}
+
+public final class WebFileReferenceMediaResource: TelegramMediaResource, MediaResourceWithWebFileReference {
     public let url: String
     public let actualSize: Int64
     public var size: Int64? {
@@ -705,8 +710,77 @@ public final class WebFileReferenceMediaResource: TelegramMediaResource {
             return false
         }
     }
+    
+    var apiInputLocation: Api.InputWebFileLocation {
+        return .inputWebFileLocation(url: self.url, accessHash: self.accessHash)
+    }
 }
 
+final class AlbumCoverResource: TelegramMediaResource, MediaResourceWithWebFileReference {
+    var id: MediaResourceId {
+        return MediaResourceId("AlbumCoverResource-\(self.datacenterId)-\(self.title)-\(self.performer)")
+    }
+    
+    let datacenterId: Int
+    let size: Int64? = nil
+    
+    func isEqual(to: MediaResource) -> Bool {
+        return self === to
+    }
+    
+    var fileReference: Data? {
+        if let file = self.file, let resource = file.media.resource as? CloudDocumentMediaResource {
+            return resource.fileReference
+        } else {
+            return nil
+        }
+    }
+    
+    let file: FileMediaReference?
+    let title: String
+    let performer: String
+    let isThumbnail: Bool
+    
+    init(datacenterId: Int, file: FileMediaReference?, title: String, performer: String, isThumbnail: Bool) {
+        self.datacenterId = datacenterId
+        self.file = file
+        self.title = title
+        self.performer = performer
+        self.isThumbnail = isThumbnail
+    }
+    
+    init(decoder: PostboxDecoder) {
+        preconditionFailure()
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+    }
+    
+    var apiInputLocation: Api.InputWebFileLocation {
+        var flags: Int32 = 0
+        var document: Api.InputDocument?
+        if let file = self.file, let resource = file.media.resource as? CloudDocumentMediaResource {
+            document = .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))
+            flags |= 1 << 0
+        }
+        var requestTitle: String?
+        var requestPerformer: String?
+        if !self.title.isEmpty || !self.performer.isEmpty {
+            requestTitle = self.title
+            requestPerformer = self.performer
+            flags |= 1 << 1
+        }
+        if self.isThumbnail {
+            flags |= 1 << 2
+        }
+        return .inputWebFileAudioAlbumThumbLocation(
+            flags: flags,
+            document: document,
+            title: requestTitle,
+            performer: requestPerformer
+        )
+    }
+}
 
 public struct SecretFileMediaResourceId: Hashable, Equatable {
     public let fileId: Int64

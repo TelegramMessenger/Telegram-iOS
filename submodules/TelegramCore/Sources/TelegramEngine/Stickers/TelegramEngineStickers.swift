@@ -1,5 +1,6 @@
 import SwiftSignalKit
 import Postbox
+import TelegramApi
 
 public extension TelegramEngine {
     final class Stickers {
@@ -45,7 +46,7 @@ public extension TelegramEngine {
             return _internal_searchGifs(account: self.account, query: query, nextOffset: nextOffset)
         }
 
-        public func addStickerPackInteractively(info: StickerPackCollectionInfo, items: [ItemCollectionItem], positionInList: Int? = nil) -> Signal<Void, NoError> {
+        public func addStickerPackInteractively(info: StickerPackCollectionInfo, items: [StickerPackItem], positionInList: Int? = nil) -> Signal<Void, NoError> {
             return _internal_addStickerPackInteractively(postbox: self.account.postbox, info: info, items: items, positionInList: positionInList)
         }
 
@@ -132,6 +133,13 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
+        public func clearRecentlyUsedEmoji() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_clearRecentlyUsedEmoji(transaction: transaction)
+            }
+            |> ignoreValues
+        }
+        
         public func reorderStickerPacks(namespace: ItemCollectionId.Namespace, itemIds: [ItemCollectionId]) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 let infos = transaction.getItemCollectionsInfos(namespace: namespace)
@@ -154,6 +162,51 @@ public extension TelegramEngine {
                 transaction.replaceItemCollectionInfos(namespace: namespace, itemCollectionInfos: sortedPacks)
             }
             |> ignoreValues
+        }
+        
+        public func resolveInlineStickers(fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
+            return self.account.postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
+                var cachedFiles: [Int64: TelegramMediaFile] = [:]
+                for fileId in fileIds {
+                    if let file = transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile {
+                        cachedFiles[fileId] = file
+                    }
+                }
+                return cachedFiles
+            }
+            |> mapToSignal { cachedFiles -> Signal<[Int64: TelegramMediaFile], NoError> in
+                if cachedFiles.count == fileIds.count {
+                    return .single(cachedFiles)
+                }
+                
+                var unknownIds = Set<Int64>()
+                for fileId in fileIds {
+                    if cachedFiles[fileId] == nil {
+                        unknownIds.insert(fileId)
+                    }
+                }
+                
+                return self.account.network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(unknownIds)))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<[Api.Document]?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<[Int64: TelegramMediaFile], NoError> in
+                    guard let result = result else {
+                        return .single(cachedFiles)
+                    }
+                    return self.account.postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
+                        var resultFiles: [Int64: TelegramMediaFile] = cachedFiles
+                        for document in result {
+                            if let file = telegramMediaFileFromApiDocument(document) {
+                                resultFiles[file.fileId.id] = file
+                                transaction.storeMediaIfNotPresent(media: file)
+                            }
+                        }
+                        return resultFiles
+                    }
+                }
+            }
         }
     }
 }

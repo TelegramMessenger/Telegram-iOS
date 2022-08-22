@@ -240,7 +240,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
         }
-        self.contentGridNode.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>? in
+        self.contentGridNode.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(UIView, CGRect, PeekControllerContent)?, NoError>? in
             if let strongSelf = self {
                 if let itemNode = strongSelf.contentGridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode, let item = itemNode.stickerPackItem {
                     var menuItems: [ContextMenuItem] = []
@@ -259,14 +259,14 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                             }
                         })))
                     }
-                    return .single((itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems)))
+                    return .single((itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems)))
                 }
             }
             return nil
-        }, present: { [weak self] content, sourceNode in
+        }, present: { [weak self] content, sourceView, sourceRect in
             if let strongSelf = self {
-                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
-                    return sourceNode
+                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceView: {
+                    return (sourceView, sourceRect)
                 })
                 controller.visibilityUpdated = { [weak self] visible in
                     if let strongSelf = self {
@@ -405,7 +405,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             } else {
                 title = self.presentationData.strings.ImportStickerPack_StickerCount(Int32(self.currentItems.count))
             }
-            self.contentTitleNode.attributedText = stringWithAppliedEntities(title, entities: [], baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont)
+            self.contentTitleNode.attributedText = stringWithAppliedEntities(title, entities: [], baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleFont, italicFont: titleFont, boldItalicFont: titleFont, fixedFont: titleFont, blockQuoteFont: titleFont, message: nil)
 
             if !forceTitleUpdate {
                 transaction = StickerPackPreviewGridTransaction(previousList: previousItems, list: self.currentItems, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme)
@@ -694,7 +694,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                         }
                         strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: firstItem ?? items.first, context: strongSelf.context), elevatedLayout: false, action: { action in
                             if case .info = action {
-                                (navigationController?.viewControllers.last as? ViewController)?.present(StickerPackScreen(context: context, mode: .settings, mainStickerPack: .id(id: info.id.id, accessHash: info.accessHash), stickerPacks: [], parentNavigationController: navigationController, actionPerformed: { _, _, _ in
+                                (navigationController?.viewControllers.last as? ViewController)?.present(StickerPackScreen(context: context, mode: .settings, mainStickerPack: .id(id: info.id.id, accessHash: info.accessHash), stickerPacks: [], parentNavigationController: navigationController, actionPerformed: { _ in
                             }), in: .window(.root))
                             }
                             return true

@@ -199,17 +199,17 @@ final class WatchSendMessageHandler: WatchRequestHandler {
                         if args.replyToMid != 0, let peerId = peerId {
                             replyMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.replyToMid)
                         }
-                        messageSignal = .single((.message(text: args.text, attributes: [], mediaReference: nil, replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil), peerId))
+                        messageSignal = .single((.message(text: args.text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil), peerId))
                     } else if let args = subscription as? TGBridgeSendLocationMessageSubscription, let location = args.location {
                         let peerId = makePeerIdFromBridgeIdentifier(args.peerId)
                         let map = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: makeVenue(from: location.venue), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
-                        messageSignal = .single((.message(text: "", attributes: [], mediaReference: .standalone(media: map), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil), peerId))
+                        messageSignal = .single((.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: map), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil), peerId))
                     } else if let args = subscription as? TGBridgeSendStickerMessageSubscription {
                         let peerId = makePeerIdFromBridgeIdentifier(args.peerId)
                         messageSignal = mediaForSticker(documentId: args.document.documentId, account: context.account)
                         |> map({ media -> (EnqueueMessage?, PeerId?) in
                             if let media = media {
-                                return (.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil), peerId)
+                                return (.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil), peerId)
                             } else {
                                 return (nil, nil)
                             }
@@ -720,7 +720,7 @@ final class WatchAudioHandler: WatchRequestHandler {
                         replyMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMid)
                     }
                     
-                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(data.count), attributes: [.Audio(isVoice: true, duration: Int(duration), title: nil, performer: nil, waveform: nil)])), replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil)]).start()
+                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(data.count), attributes: [.Audio(isVoice: true, duration: Int(duration), title: nil, performer: nil, waveform: nil)])), replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil)]).start()
                 }
             })
         } else {

@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
+import StickerPeekUI
 import ContextUI
 import ChatPresentationInterfaceState
 import UndoUI
@@ -91,7 +92,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     private var enqueuedTransitions: [(HorizontalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var hasValidLayout = false
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext) {
         self.strings = strings
         
         self.separatorNode = ASDisplayNode()
@@ -108,7 +109,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
             return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
-        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize, chatPresentationContext: chatPresentationContext)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -144,7 +145,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                     return nil
                 }
                 
-                var selectedItemNodeAndContent: (ASDisplayNode, PeekControllerContent)?
+                var selectedItemNodeAndContent: (UIView, CGRect, PeekControllerContent)?
                 strongSelf.listView.forEachItemNode { itemNode in
                     if itemNode.frame.contains(convertedPoint), let itemNode = itemNode as? HorizontalListContextResultsChatInputPanelItemNode, let item = itemNode.item {
                         if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isSticker {
@@ -162,9 +163,9 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     f(.default)
                                     
                                     if let strongSelf = self {
-                                        let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                        let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController(), sendSticker: { file, sourceView, sourceRect in
                                             if let strongSelf = self {
-                                                return strongSelf.interfaceInteraction?.sendSticker(file, false, sourceNode, sourceRect) ?? false
+                                                return strongSelf.interfaceInteraction?.sendSticker(file, false, sourceView, sourceRect, nil) ?? false
                                             } else {
                                                 return false
                                             }
@@ -175,7 +176,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     }
                                 })))
                             }
-                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems, openPremiumIntro: { [weak self] in
+                            selectedItemNodeAndContent = (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: item.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems, openPremiumIntro: { [weak self] in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -228,18 +229,18 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                 f(.default)
                                 let _ = item.resultSelected(item.result, itemNode, itemNode.bounds)
                             })))
-                            selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: menuItems))
+                            selectedItemNodeAndContent = (itemNode.view, itemNode.bounds, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: menuItems))
                         }
                     }
                 }
                 return .single(selectedItemNodeAndContent)
             }
             return nil
-        }, present: { [weak self] content, sourceNode in
+        }, present: { [weak self] content, sourceView, sourceRect in
             if let strongSelf = self {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
-                    return sourceNode
+                let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
+                    return (sourceView, sourceRect)
                 })
                 strongSelf.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
                 return controller

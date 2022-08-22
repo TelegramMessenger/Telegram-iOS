@@ -88,6 +88,18 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
+    func performHighlightedAction() {
+        self.itemGroupsContainerNode.performHighlightedAction()
+    }
+    
+    func decreaseHighlightedIndex() {
+        self.itemGroupsContainerNode.decreaseHighlightedIndex()
+    }
+    
+    func increaseHighlightedIndex() {
+        self.itemGroupsContainerNode.increaseHighlightedIndex()
+    }
+    
     func updateTheme() {
         self.leftDimView.backgroundColor = self.theme.dimColor
         self.rightDimView.backgroundColor = self.theme.dimColor

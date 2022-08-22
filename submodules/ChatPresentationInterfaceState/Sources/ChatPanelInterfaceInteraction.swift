@@ -46,6 +46,7 @@ public enum ChatPanelSearchNavigationAction {
 public enum ChatPanelRestrictionInfoSubject {
     case mediaRecording
     case stickers
+    case premiumVoiceMessages
 }
 
 public enum ChatPanelRestrictionInfoDisplayType {
@@ -98,7 +99,7 @@ public final class ChatPanelInterfaceInteraction {
     public let displayVideoUnmuteTip: (CGPoint?) -> Void
     public let switchMediaRecordingMode: () -> Void
     public let setupMessageAutoremoveTimeout: () -> Void
-    public let sendSticker: (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool
+    public let sendSticker: (FileMediaReference, Bool, UIView, CGRect, CALayer?) -> Bool
     public let unblockPeer: () -> Void
     public let pinMessage: (MessageId, ContextControllerProtocol?) -> Void
     public let unpinMessage: (MessageId, Bool, ContextControllerProtocol?) -> Void
@@ -123,7 +124,7 @@ public final class ChatPanelInterfaceInteraction {
     public let unarchiveChat: () -> Void
     public let openLinkEditing: () -> Void
     public let reportPeerIrrelevantGeoLocation: () -> Void
-    public let displaySlowmodeTooltip: (ASDisplayNode, CGRect) -> Void
+    public let displaySlowmodeTooltip: (UIView, CGRect) -> Void
     public let displaySendMessageOptions: (ASDisplayNode, ContextGesture) -> Void
     public let openScheduledMessages: () -> Void
     public let displaySearchResultsTooltip: (ASDisplayNode, CGRect) -> Void
@@ -144,6 +145,8 @@ public final class ChatPanelInterfaceInteraction {
     public let displayCopyProtectionTip: (ASDisplayNode, Bool) -> Void
     public let openWebView: (String, String, Bool, Bool) -> Void
     public let updateShowWebView: ((Bool) -> Bool) -> Void
+    public let insertText: (NSAttributedString) -> Void
+    public let backwardsDeleteText: () -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
     
@@ -192,7 +195,7 @@ public final class ChatPanelInterfaceInteraction {
         displayVideoUnmuteTip: @escaping (CGPoint?) -> Void,
         switchMediaRecordingMode: @escaping () -> Void,
         setupMessageAutoremoveTimeout: @escaping () -> Void,
-        sendSticker: @escaping (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, UIView, CGRect, CALayer?) -> Bool,
         unblockPeer: @escaping () -> Void,
         pinMessage: @escaping (MessageId, ContextControllerProtocol?) -> Void,
         unpinMessage: @escaping (MessageId, Bool, ContextControllerProtocol?) -> Void,
@@ -217,7 +220,7 @@ public final class ChatPanelInterfaceInteraction {
         unarchiveChat: @escaping () -> Void,
         openLinkEditing: @escaping () -> Void,
         reportPeerIrrelevantGeoLocation: @escaping () -> Void,
-        displaySlowmodeTooltip: @escaping (ASDisplayNode, CGRect) -> Void,
+        displaySlowmodeTooltip: @escaping (UIView, CGRect) -> Void,
         displaySendMessageOptions: @escaping (ASDisplayNode, ContextGesture) -> Void,
         openScheduledMessages: @escaping () -> Void,
         openPeersNearby: @escaping () -> Void,
@@ -238,6 +241,8 @@ public final class ChatPanelInterfaceInteraction {
         displayCopyProtectionTip: @escaping (ASDisplayNode, Bool) -> Void,
         openWebView: @escaping (String, String, Bool, Bool) -> Void,
         updateShowWebView: @escaping ((Bool) -> Bool) -> Void,
+        insertText: @escaping (NSAttributedString) -> Void,
+        backwardsDeleteText: @escaping () -> Void,
         chatController: @escaping () -> ViewController?,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
@@ -331,6 +336,9 @@ public final class ChatPanelInterfaceInteraction {
         self.displayCopyProtectionTip = displayCopyProtectionTip
         self.openWebView = openWebView
         self.updateShowWebView = updateShowWebView
+        self.insertText = insertText
+        self.backwardsDeleteText = backwardsDeleteText
+
         self.chatController = chatController
         self.statuses = statuses
     }
@@ -384,7 +392,7 @@ public final class ChatPanelInterfaceInteraction {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _ in
             return false
         }, unblockPeer: {
         }, pinMessage: { _, _ in
@@ -431,6 +439,8 @@ public final class ChatPanelInterfaceInteraction {
         }, displayCopyProtectionTip: { _, _ in
         }, openWebView: { _, _, _, _ in
         }, updateShowWebView: { _ in
+        }, insertText: { _ in
+        }, backwardsDeleteText: {
         }, chatController: {
             return nil
         }, statuses: nil)

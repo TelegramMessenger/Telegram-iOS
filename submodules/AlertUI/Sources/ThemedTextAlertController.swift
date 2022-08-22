@@ -18,7 +18,7 @@ public func textAlertController(alertContext: AlertControllerContext, title: Str
     let presentationDataDisposable = alertContext.themeSignal.start(next: { [weak controller] theme in
         controller?.theme = theme
     })
-    controller.dismissed = {
+    controller.dismissed = { _ in
         presentationDataDisposable.dispose()
     }
     
@@ -44,7 +44,7 @@ public func richTextAlertController(alertContext: AlertControllerContext, title:
     let presentationDataDisposable = alertContext.themeSignal.start(next: { [weak controller] theme in
         controller?.theme = theme
     })
-    controller.dismissed = {
+    controller.dismissed = { _ in
         presentationDataDisposable.dispose()
     }
     

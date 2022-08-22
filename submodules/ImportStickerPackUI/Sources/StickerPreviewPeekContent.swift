@@ -64,6 +64,8 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
+    private let _ready = Promise<Bool>()
+    
     init(account: Account, item: ImportStickerPack.Sticker) {
         self.account = account
         self.item = item
@@ -104,6 +106,21 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
         }
         
         self.addSubnode(self.textNode)
+        
+        if let animationNode = self.animationNode {
+            animationNode.started = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf._ready.set(.single(true))
+            }
+        } else {
+            self._ready.set(.single(true))
+        }
+    }
+    
+    func ready() -> Signal<Bool, NoError> {
+        return self._ready.get()
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {

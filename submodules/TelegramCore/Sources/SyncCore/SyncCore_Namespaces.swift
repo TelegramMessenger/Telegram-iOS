@@ -39,13 +39,15 @@ public struct Namespaces {
     }
     
     public struct ItemCollection {
-        public static let CloudStickerPacks: Int32 = 7
+        public static let CloudStickerPacks: Int32 = 0
         public static let CloudMaskPacks: Int32 = 1
         public static let EmojiKeywords: Int32 = 2
         public static let CloudAnimatedEmoji: Int32 = 3
         public static let CloudDice: Int32 = 4
         public static let CloudAnimatedEmojiAnimations: Int32 = 5
         public static let CloudAnimatedEmojiReactions: Int32 = 6
+        public static let CloudPremiumGifts: Int32 = 7
+        public static let CloudEmojiPacks: Int32 = 8
     }
     
     public struct OrderedItemList {
@@ -63,6 +65,9 @@ public struct Namespaces {
         public static let RecentDownloads: Int32 = 11
         public static let PremiumStickers: Int32 = 12
         public static let CloudPremiumStickers: Int32 = 13
+        public static let LocalRecentEmoji: Int32 = 14
+        public static let CloudFeaturedEmojiPacks: Int32 = 15
+        public static let CloudAllPremiumStickers: Int32 = 16
     }
     
     public struct CachedItemCollection {
@@ -164,6 +169,7 @@ public struct OperationLogTags {
     public static let SynchronizeEmojiKeywords = PeerOperationLogTag(value: 19)
     public static let SynchronizeChatListFilters = PeerOperationLogTag(value: 20)
     public static let SynchronizeMarkAllUnseenReactions = PeerOperationLogTag(value: 21)
+    public static let SynchronizeInstalledEmoji = PeerOperationLogTag(value: 22)
 }
 
 public struct LegacyPeerSummaryCounterTags: OptionSet, Sequence, Hashable {

@@ -11,13 +11,19 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import TelegramPresentationData
 import ShimmerEffect
+import StickerPeekUI
 
 final class StickerPackPreviewInteraction {
     var previewedItem: StickerPreviewPeekItem?
     var playAnimatedStickers: Bool
     
-    init(playAnimatedStickers: Bool) {
+    let addStickerPack: (StickerPackCollectionInfo, [StickerPackItem]) -> Void
+    let removeStickerPack: (StickerPackCollectionInfo) -> Void
+    
+    init(playAnimatedStickers: Bool, addStickerPack: @escaping (StickerPackCollectionInfo, [StickerPackItem]) -> Void, removeStickerPack: @escaping (StickerPackCollectionInfo) -> Void) {
         self.playAnimatedStickers = playAnimatedStickers
+        self.addStickerPack = addStickerPack
+        self.removeStickerPack = removeStickerPack
     }
 }
 
@@ -44,7 +50,7 @@ final class StickerPackPreviewGridItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPackPreviewGridItemNode()
-        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isEmpty: self.isEmpty)
+        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty)
         return node
     }
     
@@ -53,7 +59,7 @@ final class StickerPackPreviewGridItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isEmpty: self.isEmpty)
+        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty)
     }
 }
 
@@ -62,6 +68,7 @@ private let textFont = Font.regular(20.0)
 final class StickerPackPreviewGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem?)?
     private var isLocked: Bool?
+    private var isPremium: Bool?
     private var isEmpty: Bool?
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
@@ -161,11 +168,11 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     }
     
     private var setupTimestamp: Double?
-    func setup(account: Account, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isLocked: Bool, isEmpty: Bool) {
+    func setup(account: Account, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isLocked: Bool, isPremium: Bool, isEmpty: Bool) {
         self.interaction = interaction
         self.theme = theme
         
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem || self.isLocked != isLocked || self.isEmpty != isEmpty {
+        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem || self.isLocked != isLocked || self.isPremium != isPremium || self.isEmpty != isEmpty {
             self.isLocked = isLocked
             
             if isLocked {
@@ -186,7 +193,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     lockBackground.isUserInteractionEnabled = false
                     lockIconNode = ASImageNode()
                     lockIconNode.displaysAsynchronously = false
-                    lockIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: .white)
+                    lockIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
                     
                     let lockTintView = UIView()
                     lockTintView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.15)
@@ -315,8 +322,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         }
         
         if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {
-            let lockSize = CGSize(width: 30.0, height: 30.0)
-            let lockBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - lockSize.width) / 2.0), y: bounds.height - lockSize.height - 6.0), size: lockSize)
+            let lockSize = CGSize(width: 16.0, height: 16.0)
+            let lockBackgroundFrame = CGRect(origin: CGPoint(x: bounds.width - lockSize.width, y: bounds.height - lockSize.height), size: lockSize)
             lockBackground.frame = lockBackgroundFrame
             lockBackground.layer.cornerRadius = lockSize.width / 2.0
             if #available(iOS 13.0, *) {
@@ -324,7 +331,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             }
             lockTintView.frame = CGRect(origin: CGPoint(), size: lockBackgroundFrame.size)
             if let icon = lockIconNode.image {
-                lockIconNode.frame = CGRect(origin: CGPoint(x: lockBackgroundFrame.minX + floorToScreenPixels((lockBackgroundFrame.width - icon.size.width) / 2.0), y: lockBackgroundFrame.minY + floorToScreenPixels((lockBackgroundFrame.height - icon.size.height) / 2.0)), size: icon.size)
+                let iconSize = CGSize(width: icon.size.width - 4.0, height: icon.size.height - 4.0)
+                lockIconNode.frame = CGRect(origin: CGPoint(x: lockBackgroundFrame.minX + floorToScreenPixels((lockBackgroundFrame.width - iconSize.width) / 2.0), y: lockBackgroundFrame.minY + floorToScreenPixels((lockBackgroundFrame.height - iconSize.height) / 2.0)), size: iconSize)
             }
         }
     }
@@ -343,7 +351,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, maybeItem) = self.currentState, let interaction = self.interaction, let item = maybeItem {
-            isPreviewing = interaction.previewedItem == .pack(item)
+            isPreviewing = interaction.previewedItem == .pack(item.file)
         }
         if self.currentIsPreviewing != isPreviewing {
             self.currentIsPreviewing = isPreviewing

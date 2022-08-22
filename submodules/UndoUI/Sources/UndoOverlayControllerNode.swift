@@ -181,11 +181,18 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                    return ("URL", contents)
+                }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = Double(max(5, min(8, text.count / 14)))
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
             case let .actionSucceeded(title, text, cancel):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -628,7 +635,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
-            case let .sticker(context, file, title, text, customUndoText):
+            case let .sticker(context, file, title, text, customUndoText, _):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -880,17 +887,17 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
         case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal:
-            if self.textNode.tapAttributeAction != nil {
+            if self.textNode.tapAttributeAction != nil || displayUndo {
                 self.isUserInteractionEnabled = true
             } else {
                 self.isUserInteractionEnabled = false
             }
-        case let .sticker(_, _, _, _, undoText):
-            self.isUserInteractionEnabled = undoText != nil
+        case .sticker:
+            self.isUserInteractionEnabled = displayUndo
         case .dice:
             self.panelWrapperNode.clipsToBounds = true
         case .info:
-            if self.textNode.tapAttributeAction != nil {
+            if self.textNode.tapAttributeAction != nil || displayUndo {
                 self.isUserInteractionEnabled = true
             } else {
                 self.isUserInteractionEnabled = false
@@ -963,7 +970,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     @objc private func undoButtonPressed() {
-        let _ = self.action(.undo)
+        switch self.content {
+        case let .sticker(_, _, _, _, _, customAction):
+            if let customAction = customAction {
+                customAction()
+            } else {
+                let _ = self.action(.undo)
+            }
+        default:
+            let _ = self.action(.undo)
+        }
         self.dismiss()
     }
     

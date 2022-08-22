@@ -15,11 +15,11 @@ class ChatListRecentPeersListItem: ListViewItem {
     let context: AccountContext
     let peers: [EnginePeer]
     let peerSelected: (EnginePeer) -> Void
-    let peerContextAction: (EnginePeer, ASDisplayNode, ContextGesture?) -> Void
+    let peerContextAction: (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void
     
     let header: ListViewItemHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, context: AccountContext, peers: [EnginePeer], peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, context: AccountContext, peers: [EnginePeer], peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void) {
         self.theme = theme
         self.strings = strings
         self.context = context
@@ -120,10 +120,10 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                         peersNode = currentPeersNode
                         peersNode.updateThemeAndStrings(theme: item.theme, strings: item.strings)
                     } else {
-                        peersNode = ChatListSearchRecentPeersNode(context: item.context, theme: item.theme, mode: .list, strings: item.strings, peerSelected: { peer in
+                        peersNode = ChatListSearchRecentPeersNode(context: item.context, theme: item.theme, mode: .list(compact: false), strings: item.strings, peerSelected: { peer in
                             self?.item?.peerSelected(peer)
-                        }, peerContextAction: { peer, node, gesture in
-                            self?.item?.peerContextAction(peer, node, gesture)
+                        }, peerContextAction: { peer, node, gesture, location in
+                            self?.item?.peerContextAction(peer, node, gesture, location)
                         }, isPeerSelected: { _ in
                             return false
                         })

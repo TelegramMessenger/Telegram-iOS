@@ -8,6 +8,7 @@ import AccountContext
 import ContextUI
 import TelegramCore
 import ChatPresentationInterfaceState
+import TextFormat
 
 public final class ChatSendMessageActionSheetController: ViewController {
     private var controllerNode: ChatSendMessageActionSheetControllerNode {
@@ -32,6 +33,8 @@ public final class ChatSendMessageActionSheetController: ViewController {
     private var validLayout: ContainerViewLayout?
     
     private let hapticFeedback = HapticFeedback()
+    
+    public var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
 
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool = false, completion: @escaping () -> Void, sendMessage: @escaping (Bool) -> Void, schedule: @escaping () -> Void) {
         self.context = context
@@ -54,7 +57,9 @@ public final class ChatSendMessageActionSheetController: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
-                strongSelf.controllerNode.updatePresentationData(presentationData)
+                if strongSelf.isNodeLoaded {
+                    strongSelf.controllerNode.updatePresentationData(presentationData)
+                }
             }
         })
         
@@ -79,13 +84,18 @@ public final class ChatSendMessageActionSheetController: ViewController {
         var reminders = false
         var isSecret = false
         var canSchedule = false
+        var hasEntityKeyboard = false
         if case let .peer(peerId) = self.interfaceState.chatLocation {
             reminders = peerId == context.account.peerId
             isSecret = peerId.namespace == Namespaces.Peer.SecretChat
             canSchedule = !isSecret
         }
         
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, attachment: self.attachment, forwardedCount: forwardedCount, send: { [weak self] in
+        if case .media = self.interfaceState.inputMode {
+            hasEntityKeyboard = true
+        }
+        
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, attachment: self.attachment, forwardedCount: forwardedCount, hasEntityKeyboard: hasEntityKeyboard, emojiViewProvider: self.emojiViewProvider, send: { [weak self] in
             self?.sendMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in

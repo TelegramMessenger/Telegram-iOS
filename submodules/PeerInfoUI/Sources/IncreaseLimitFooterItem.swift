@@ -23,7 +23,7 @@ final class IncreaseLimitFooterItem: ItemListControllerFooterItem {
     
     func isEqual(to: ItemListControllerFooterItem) -> Bool {
         if let item = to as? IncreaseLimitFooterItem {
-            return self.theme === item.theme  && self.title == item.title
+            return self.theme === item.theme && self.title == item.title && self.colorful == item.colorful
         } else {
             return false
         }

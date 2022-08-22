@@ -214,6 +214,9 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
     }
     
+    func unreadMessageRangeUpdated() {
+    }
+    
     func reactionTargetView(value: String) -> UIView? {
         return nil
     }

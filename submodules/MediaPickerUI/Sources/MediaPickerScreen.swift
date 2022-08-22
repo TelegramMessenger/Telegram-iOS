@@ -1259,7 +1259,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             if let undoOverlayController = strongSelf.undoOverlayController {
                 undoOverlayController.content = .image(image: image ?? UIImage(), text: text)
             } else {
-                let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image ?? UIImage(), text: text), elevatedLayout: true, action: { [weak self] action in
+                var elevatedLayout = true
+                if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
+                    elevatedLayout = false
+                }
+                let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image ?? UIImage(), text: text), elevatedLayout: elevatedLayout, action: { [weak self] action in
                     guard let strongSelf = self else {
                         return true
                     }
@@ -1271,7 +1275,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     }
                     return true
                 })
-                strongSelf.present(undoOverlayController, in: .window(.root))
+                if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
+                    strongSelf.present(undoOverlayController, in: .current)
+                } else {
+                    strongSelf.present(undoOverlayController, in: .window(.root))
+                }
                 strongSelf.undoOverlayController = undoOverlayController
             }
         })
@@ -1326,12 +1334,20 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self?.dismissAllTooltips()
                 completion()
             })])
-            controller.dismissed = { [weak self] in
+            controller.dismissed = { [weak self] _ in
                 self?.isDismissing = false
             }
             self.present(controller, in: .window(.root))
         } else {
             completion()
+        }
+    }
+    
+    public func shouldDismissImmediately() -> Bool {
+        if let selectionState = self.interaction?.selectionState, selectionState.count() > 0 {
+            return false
+        } else {
+            return true
         }
     }
     

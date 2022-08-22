@@ -88,6 +88,23 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 return MessageIndex.absoluteLowerBound()
         }
     }
+    
+    var firstIndex: MessageIndex {
+        switch self {
+            case let .MessageEntry(message, _, _, _, _, _):
+                return message.index
+            case let .MessageGroupEntry(_, messages, _):
+                return messages[0].0.index
+            case let .UnreadEntry(index, _):
+                return index
+            case let .ReplyCountEntry(index, _, _, _):
+                return index
+            case .ChatInfoEntry:
+                return MessageIndex.absoluteLowerBound()
+            case .SearchEntry:
+                return MessageIndex.absoluteLowerBound()
+        }
+    }
 
     static func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
         switch lhs {

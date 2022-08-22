@@ -27,6 +27,7 @@ swift_library(
         "//submodules/MoreButtonNode:MoreButtonNode",
         "//submodules/BotPaymentsUI:BotPaymentsUI",
         "//submodules/PromptUI:PromptUI",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     visibility = [
         "//visibility:public",
