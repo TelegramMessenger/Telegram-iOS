@@ -531,15 +531,18 @@ public extension EnginePeer {
 public final class EngineRenderedPeer: Equatable {
     public let peerId: EnginePeer.Id
     public let peers: [EnginePeer.Id: EnginePeer]
+    public let associatedMedia: [EngineMedia.Id: Media]
 
-    public init(peerId: EnginePeer.Id, peers: [EnginePeer.Id: EnginePeer]) {
+    public init(peerId: EnginePeer.Id, peers: [EnginePeer.Id: EnginePeer], associatedMedia: [EngineMedia.Id: Media]) {
         self.peerId = peerId
         self.peers = peers
+        self.associatedMedia = associatedMedia
     }
 
     public init(peer: EnginePeer) {
         self.peerId = peer.id
         self.peers = [peer.id: peer]
+        self.associatedMedia = [:]
     }
 
     public static func ==(lhs: EngineRenderedPeer, rhs: EngineRenderedPeer) -> Bool {
@@ -547,6 +550,9 @@ public final class EngineRenderedPeer: Equatable {
             return false
         }
         if lhs.peers != rhs.peers {
+            return false
+        }
+        if !areMediaDictionariesEqual(lhs.associatedMedia, rhs.associatedMedia) {
             return false
         }
         return true
@@ -575,7 +581,7 @@ public extension EngineRenderedPeer {
         for (id, peer) in renderedPeer.peers {
             mappedPeers[id] = EnginePeer(peer)
         }
-        self.init(peerId: renderedPeer.peerId, peers: mappedPeers)
+        self.init(peerId: renderedPeer.peerId, peers: mappedPeers, associatedMedia: renderedPeer.associatedMedia)
     }
 
     convenience init(message: EngineMessage) {

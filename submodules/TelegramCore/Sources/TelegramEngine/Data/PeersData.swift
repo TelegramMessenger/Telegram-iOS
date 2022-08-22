@@ -188,7 +188,7 @@ public extension TelegramEngine.EngineData.Item {
                     peers[mainPeer.id] = EnginePeer(mainPeer)
                 }
 
-                return EngineRenderedPeer(peerId: self.id, peers: peers)
+                return EngineRenderedPeer(peerId: self.id, peers: peers, associatedMedia: view.media)
             }
         }
 

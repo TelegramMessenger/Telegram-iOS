@@ -72,6 +72,7 @@ import InstantPageCache
 import EmojiStatusSelectionComponent
 import AnimationCache
 import MultiAnimationRenderer
+import EntityKeyboard
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -3095,7 +3096,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 strongSelf.controller?.present(EmojiStatusSelectionController(
                     context: strongSelf.context,
                     sourceView: sourceView,
-                    emojiContent: ChatEntityKeyboardInputNode.emojiInputData(
+                    emojiContent: EmojiPagerContentComponent.emojiInputData(
                         context: strongSelf.context,
                         animationCache: animationCache,
                         animationRenderer: animationRenderer,
@@ -8487,7 +8488,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
     private var previousBackButtonBadge: ASDisplayNode?
     private var currentBackButton: ASDisplayNode?
     
-    private var previousTitleNode: (ASDisplayNode, ASDisplayNode)?
+    private var previousTitleNode: (ASDisplayNode, PortalView)?
     private var previousStatusNode: (ASDisplayNode, ASDisplayNode)?
     
     private var didSetup: Bool = false
@@ -8538,11 +8539,12 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 self.currentBackButton = currentBackButton
                 self.addSubnode(currentBackButton)
             }
-            if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView {
-                let previousTitleNode = previousTitleView.titleNode.makeCopy()
+            if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView, let previousTitleNode = PortalView(matchPosition: false) {
+                previousTitleNode.view.frame = previousTitleView.titleContainerView.frame
+                previousTitleView.titleContainerView.addPortal(view: previousTitleNode)
                 let previousTitleContainerNode = ASDisplayNode()
-                previousTitleContainerNode.addSubnode(previousTitleNode)
-                previousTitleNode.frame = previousTitleNode.frame.offsetBy(dx: -previousTitleNode.frame.width / 2.0, dy: -previousTitleNode.frame.height / 2.0)
+                previousTitleContainerNode.view.addSubview(previousTitleNode.view)
+                previousTitleNode.view.frame = previousTitleNode.view.frame.offsetBy(dx: -previousTitleNode.view.frame.width / 2.0, dy: -previousTitleNode.view.frame.height / 2.0)
                 self.previousTitleNode = (previousTitleContainerNode, previousTitleNode)
                 self.addSubnode(previousTitleContainerNode)
                 
@@ -8596,11 +8598,15 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         }
         
         if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView, let _ = (bottomNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode)?.avatarNode, let (previousTitleContainerNode, previousTitleNode) = self.previousTitleNode, let (previousStatusContainerNode, previousStatusNode) = self.previousStatusNode {
-            let previousTitleFrame = previousTitleView.titleNode.view.convert(previousTitleView.titleNode.bounds, to: bottomNavigationBar.view)
+            let previousTitleFrame = previousTitleView.titleContainerView.convert(previousTitleView.titleContainerView.bounds, to: bottomNavigationBar.view)
             let previousStatusFrame = previousTitleView.activityNode.view.convert(previousTitleView.activityNode.bounds, to: bottomNavigationBar.view)
             
             self.headerNode.navigationTransition = PeerInfoHeaderNavigationTransition(sourceNavigationBar: bottomNavigationBar, sourceTitleView: previousTitleView, sourceTitleFrame: previousTitleFrame, sourceSubtitleFrame: previousStatusFrame, fraction: fraction)
             var topHeight = topNavigationBar.backgroundNode.bounds.height
+            
+            if let iconView = previousTitleView.titleCredibilityIconView.componentView {
+                transition.updateFrame(view: iconView, frame: iconView.bounds.offsetBy(dx: (1.0 - fraction) * 8.0, dy: 0.0))
+            }
             
             if let (layout, _) = self.screenNode.validLayout {
                 let sectionInset: CGFloat
@@ -8614,11 +8620,11 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, paneContainerY: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, notificationSettings: self.screenNode.data?.notificationSettings, statusData: self.screenNode.data?.status, panelStatusData: (nil, nil, nil), isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, metrics: layout.metrics, transition: transition, additive: false)
             }
             
-            let titleScale = (fraction * previousTitleNode.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.bounds.height
+            let titleScale = (fraction * previousTitleNode.view.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.view.bounds.height
             let subtitleScale = max(0.01, min(10.0, (fraction * previousStatusNode.bounds.height + (1.0 - fraction) * self.headerNode.subtitleNodeRawContainer.bounds.height) / previousStatusNode.bounds.height))
             
             transition.updateFrame(node: previousTitleContainerNode, frame: CGRect(origin: self.headerNode.titleNodeRawContainer.frame.center, size: CGSize()))
-            transition.updateFrame(node: previousTitleNode, frame: CGRect(origin: CGPoint(x: -previousTitleFrame.width / 2.0, y: -previousTitleFrame.height / 2.0), size: previousTitleFrame.size))
+            transition.updateFrame(view: previousTitleNode.view, frame: CGRect(origin: CGPoint(x: -previousTitleFrame.width / 2.0, y: -previousTitleFrame.height / 2.0), size: previousTitleFrame.size))
             transition.updateFrame(node: previousStatusContainerNode, frame: CGRect(origin: self.headerNode.subtitleNodeRawContainer.frame.center, size: CGSize()))
             transition.updateFrame(node: previousStatusNode, frame: CGRect(origin: CGPoint(x: -previousStatusFrame.size.width / 2.0, y: -previousStatusFrame.size.height / 2.0), size: previousStatusFrame.size))
             
@@ -8626,7 +8632,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             transition.updateSublayerTransformScale(node: previousStatusContainerNode, scale: subtitleScale)
             
             transition.updateAlpha(node: self.headerNode.titleNode, alpha: (1.0 - fraction))
-            transition.updateAlpha(node: previousTitleNode, alpha: fraction)
+            transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: fraction)
             transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: (1.0 - fraction))
             transition.updateAlpha(node: previousStatusNode, alpha: fraction)
             

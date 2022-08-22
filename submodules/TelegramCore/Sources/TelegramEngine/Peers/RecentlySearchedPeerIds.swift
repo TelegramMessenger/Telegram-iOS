@@ -87,7 +87,7 @@ func _internal_recentlySearchedPeers(postbox: Postbox) -> Signal<[RecentlySearch
                         subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(count))
                     }
                     
-                    result.append(RecentlySearchedPeer(peer: RenderedPeer(peerId: peerId, peers: SimpleDictionary(peerView.peers)), presence: presence, notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings, unreadCount: unreadCount, subpeerSummary: subpeerSummary))
+                    result.append(RecentlySearchedPeer(peer: RenderedPeer(peerId: peerId, peers: SimpleDictionary(peerView.peers), associatedMedia: peerView.media), presence: presence, notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings, unreadCount: unreadCount, subpeerSummary: subpeerSummary))
                 }
             }
             
