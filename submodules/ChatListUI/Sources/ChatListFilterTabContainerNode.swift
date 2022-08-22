@@ -88,6 +88,8 @@ private final class ItemNode: ASDisplayNode {
     
     private var theme: PresentationTheme?
     
+    private var pointerInteraction: PointerInteraction?
+    
     init(pressed: @escaping (Bool) -> Void, requestedDeletion: @escaping () -> Void, contextGesture: @escaping (ContextExtractedContentContainingNode, ContextGesture, Bool) -> Void) {
         self.pressed = pressed
         self.requestedDeletion = requestedDeletion
@@ -187,6 +189,12 @@ private final class ItemNode: ASDisplayNode {
                 }
             })
         }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.pointerInteraction = PointerInteraction(view: self.containerNode.view, customInteractionView: nil, style: .insetRectangle(-10.0, 4.0))
     }
     
     @objc private func buttonPressed() {

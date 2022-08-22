@@ -15,6 +15,7 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/rlottie:RLottieBinding",
         "//submodules/GZip:GZip",
+        "//submodules/WebPBinding:WebPBinding",
     ],
     visibility = [
         "//visibility:public",

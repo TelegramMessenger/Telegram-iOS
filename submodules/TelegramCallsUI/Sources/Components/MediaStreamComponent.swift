@@ -800,13 +800,13 @@ public final class MediaStreamComponent: CombinedComponent {
                         AnyComponentWithIdentity(id: "a", component: AnyComponent(LottieAnimationComponent(
                             animation: LottieAnimationComponent.AnimationItem(
                                 name: "anim_profilemore",
-                                colors: [
-                                    "Point 2.Group 1.Fill 1": whiteColor,
-                                    "Point 3.Group 1.Fill 1": whiteColor,
-                                    "Point 1.Group 1.Fill 1": whiteColor
-                                ],
-                                mode: .still
+                                mode: .still(position: .begin)
                             ),
+                            colors: [
+                                "Point 2.Group 1.Fill 1": whiteColor,
+                                "Point 3.Group 1.Fill 1": whiteColor,
+                                "Point 1.Group 1.Fill 1": whiteColor
+                            ],
                             size: CGSize(width: 22.0, height: 22.0)
                         ).tagged(moreAnimationTag))),
                     ])),
@@ -1190,8 +1190,21 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
             view.expandFromPictureInPicture()
         }
         
+        if let validLayout = self.validLayout {
+            self.view.clipsToBounds = true
+            self.view.layer.cornerRadius = validLayout.deviceMetrics.screenCornerRadius
+            if #available(iOS 13.0, *) {
+                self.view.layer.cornerCurve = .continuous
+            }
+            
+            self.view.layer.animatePosition(from: CGPoint(x: self.view.frame.width * 0.9, y: 117.0), to: self.view.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
+                self?.view.layer.cornerRadius = 0.0
+            })
+            self.view.layer.animateScale(from: 0.001, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        }
+        
         self.view.layer.allowsGroupOpacity = true
-        self.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { [weak self] _ in
+        self.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
@@ -1226,6 +1239,18 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
             strongSelf.view.layer.allowsGroupOpacity = false
             strongSelf.dismissImpl(completion: completion)
         })
+        
+        if let validLayout = self.validLayout {
+            self.view.clipsToBounds = true
+            self.view.layer.cornerRadius = validLayout.deviceMetrics.screenCornerRadius
+            if #available(iOS 13.0, *) {
+                self.view.layer.cornerCurve = .continuous
+            }
+            
+            self.view.layer.animatePosition(from: self.view.center, to: CGPoint(x: self.view.frame.width * 0.9, y: 117.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+            })
+            self.view.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        }
     }
     
     private func dismissImpl(completion: (() -> Void)? = nil) {

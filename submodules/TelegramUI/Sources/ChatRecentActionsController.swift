@@ -105,7 +105,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _ in
             return false
         }, unblockPeer: {
         }, pinMessage: { _, _ in
@@ -153,6 +153,8 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, displayCopyProtectionTip: { _, _ in
         }, openWebView: { _, _, _, _ in
         }, updateShowWebView: { _ in
+        }, insertText: { _ in
+        }, backwardsDeleteText: {
         }, chatController: {
             return nil
         }, statuses: nil)

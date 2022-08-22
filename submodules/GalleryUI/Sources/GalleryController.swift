@@ -131,8 +131,8 @@ private let italicFont = Font.italic(16.0)
 private let boldItalicFont = Font.semiboldItalic(16.0)
 private let fixedFont = UIFont(name: "Menlo-Regular", size: 15.0) ?? textFont
 
-public func galleryCaptionStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> NSAttributedString {
-    return stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: UIColor(rgb: 0x5ac8fa), baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: textFont, underlineLinks: false)
+public func galleryCaptionStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], message: Message?) -> NSAttributedString {
+    return stringWithAppliedEntities(text, entities: entities, baseColor: .white, linkColor: UIColor(rgb: 0x5ac8fa), baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: textFont, underlineLinks: false, message: message)
 }
 
 private func galleryMessageCaptionText(_ message: Message) -> String {
@@ -176,7 +176,7 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                     entities = result
                 }
                                 
-                let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities)
+                let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities, message: message)
                 return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, displayInfoOnTop: displayInfoOnTop, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, isSecret: isSecret, landscape: landscape, timecode: timecode, playbackRate: playbackRate, configuration: configuration, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
             } else {
                 if let fileName = file.fileName, (fileName as NSString).pathExtension.lowercased() == "json" {
@@ -224,7 +224,7 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                     if let result = addLocallyGeneratedEntities(descriptionText, enabledTypes: [.timecode], entities: entities, mediaDuration: 86400) {
                         entities = result
                     }
-                    description = galleryCaptionStringWithAppliedEntities(descriptionText, entities: entities)
+                    description = galleryCaptionStringWithAppliedEntities(descriptionText, entities: entities, message: message)
                 }
                 return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), description: description, displayInfoOnTop: displayInfoOnTop, fromPlayingVideo: fromPlayingVideo, isSecret: isSecret, landscape: landscape, timecode: timecode, playbackRate: playbackRate, configuration: configuration, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
             } else {
@@ -329,7 +329,7 @@ public struct GalleryConfiguration {
     }
 }
 
-public class GalleryController: ViewController, StandalonePresentableController {
+public class GalleryController: ViewController, StandalonePresentableController, KeyShortcutResponder {
     public static let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), enableBackgroundBlur: false, separatorColor: UIColor(white: 0.0, alpha: 0.8), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     public static let lightNavigationTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007aff), disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), enableBackgroundBlur: false, separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     
@@ -1383,5 +1383,68 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 itemNode.updatePlaybackRate(playbackRate)
             }
         }
+    }
+    
+    public var keyShortcuts: [KeyShortcut] {
+        var keyShortcuts: [KeyShortcut] = []
+        keyShortcuts.append(
+            KeyShortcut(
+                title: "",
+                input: UIKeyCommand.inputUpArrow,
+                modifiers: [.command],
+                action: { [weak self] in
+                    self?.dismiss(forceAway: false)
+                }
+            )
+        )
+        keyShortcuts.append(
+            KeyShortcut(
+                title: "",
+                input: "W",
+                modifiers: [.command],
+                action: { [weak self] in
+                    self?.dismiss(forceAway: false)
+                }
+            )
+        )
+        keyShortcuts.append(
+            KeyShortcut(
+                title: self.galleryNode.areControlsHidden ? self.presentationData.strings.KeyCommand_ExitFullscreen : self.presentationData.strings.KeyCommand_EnterFullscreen,
+                input: "F",
+                modifiers: [.control, .command],
+                action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.galleryNode.setControlsHidden(!strongSelf.galleryNode.areControlsHidden, animated: true)
+                    }
+                }
+            )
+        )
+        if self.galleryNode.pager.items.count > 1 {
+            if self.galleryNode.pager.canGoToPreviousItem() {
+                keyShortcuts.append(
+                    KeyShortcut(
+                        input: UIKeyCommand.inputLeftArrow,
+                        modifiers: [],
+                        action: { [weak self] in
+                            self?.galleryNode.pager.goToPreviousItem()
+                        }
+                    )
+                )
+            }
+            if self.galleryNode.pager.canGoToNextItem() {
+                keyShortcuts.append(
+                    KeyShortcut(
+                        input: UIKeyCommand.inputRightArrow,
+                        modifiers: [],
+                        action: { [weak self] in
+                            self?.galleryNode.pager.goToNextItem()
+                        }
+                    )
+                )
+            }
+        }
+        let itemNodeShortcuts = self.galleryNode.pager.centralItemNode()?.keyShortcuts ?? []
+        keyShortcuts.append(contentsOf: itemNodeShortcuts)
+        return keyShortcuts
     }
 }

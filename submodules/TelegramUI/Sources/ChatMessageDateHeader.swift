@@ -395,6 +395,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     private let containerNode: ContextControllerSourceNode
     private let avatarNode: AvatarNode
     private var videoNode: UniversalVideoNode?
+    private var credibilityIconNode: ASImageNode?
     
     private var videoContent: NativeVideoContent?
     private let playbackStartDisposable = MetaDisposable()
@@ -519,7 +520,22 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
                 }
             }))
+            
+            let credibilityIconNode: ASImageNode
+            if let current = self.credibilityIconNode {
+                credibilityIconNode = current
+            } else {
+                credibilityIconNode = ASImageNode()
+                credibilityIconNode.displaysAsynchronously = false
+                credibilityIconNode.displayWithoutProcessing = true
+                credibilityIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
+                self.containerNode.addSubnode(credibilityIconNode)
+            }
+            credibilityIconNode.frame = CGRect(origin: CGPoint(x: 29.0 - UIScreenPixel, y: 29.0 - UIScreenPixel), size: CGSize(width: 10.0, height: 10.0))
         } else {
+            self.credibilityIconNode?.removeFromSupernode()
+            self.credibilityIconNode = nil
+            
             self.cachedDataDisposable.set(nil)
             self.videoContent = nil
             
@@ -612,14 +628,16 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                 videoNode.isUserInteractionEnabled = false
                 videoNode.isHidden = true
                 videoNode.playbackCompleted = { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.videoLoopCount += 1
-                        if strongSelf.videoLoopCount == maxVideoLoopCount {
-                            if let videoNode = strongSelf.videoNode {
-                                strongSelf.videoNode = nil
-                                videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
-                                    videoNode?.removeFromSupernode()
-                                })
+                    Queue.mainQueue().async {
+                        if let strongSelf = self {
+                            strongSelf.videoLoopCount += 1
+                            if strongSelf.videoLoopCount == maxVideoLoopCount {
+                                if let videoNode = strongSelf.videoNode {
+                                    strongSelf.videoNode = nil
+                                    videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
+                                        videoNode?.removeFromSupernode()
+                                    })
+                                }
                             }
                         }
                     }

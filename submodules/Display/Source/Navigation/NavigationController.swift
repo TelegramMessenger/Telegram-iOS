@@ -357,41 +357,10 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.updateContainers(layout: layout, transition: transition)
         }
     }
-    
-    private var forceBadgeHidden = false
-    public func setForceBadgeHidden(_ hidden: Bool) {
-        guard hidden != self.forceBadgeHidden else {
-            return
-        }
-        self.forceBadgeHidden = hidden
-        if let layout = self.validLayout {
-            self.updateBadgeVisibility(layout: layout)
-        }
-    }
-    
-    private func updateBadgeVisibility(layout: ContainerViewLayout) {
-        guard let badgeNode = self.badgeNode else {
-            return
-        }
         
-        let badgeIsHidden = !layout.deviceMetrics.hasTopNotch || self.forceBadgeHidden || layout.size.width > layout.size.height
-        if badgeIsHidden != badgeNode.isHidden && !badgeIsHidden {
-            Queue.mainQueue().after(0.3) {
-                badgeNode.isHidden = badgeIsHidden
-            }
-        } else {
-            badgeNode.isHidden = badgeIsHidden
-        }
-    }
-    
     private func updateContainers(layout rawLayout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.isUpdatingContainers = true
-        
-        if let badgeNode = self.badgeNode, let image = badgeNode.image {
-            self.updateBadgeVisibility(layout: rawLayout)
-            badgeNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((rawLayout.size.width - image.size.width) / 2.0), y: 6.0), size: image.size)
-        }
-        
+                
         var layout = rawLayout
         
         if self.ignoreInputHeight {
@@ -938,7 +907,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     rootModalFrame.updateDismissal(transition: transition, progress: effectiveRootModalDismissProgress, additionalProgress: additionalModalFrameProgress, completion: {})
                     forceStatusBarAnimation = true
                 } else {
-                    rootModalFrame = NavigationModalFrame(theme: self.theme)
+                    rootModalFrame = NavigationModalFrame()
                     self.rootModalFrame = rootModalFrame
                     if let rootContainer = self.rootContainer {
                         var rootContainerNode: ASDisplayNode
@@ -1268,16 +1237,8 @@ open class NavigationController: UINavigationController, ContainableController, 
                 self.displayNode.addSubnode(inCallStatusBar)
             }
         }
-        
-        let badgeNode = ASImageNode()
-        badgeNode.displaysAsynchronously = false
-        badgeNode.image = UIImage(bundleImageName: "Components/BadgeTest")
-        self.badgeNode = badgeNode
-        self.displayNode.addSubnode(badgeNode)
     }
-    
-    private var badgeNode: ASImageNode?
-    
+        
     public func pushViewController(_ controller: ViewController) {
         self.pushViewController(controller, completion: {})
     }

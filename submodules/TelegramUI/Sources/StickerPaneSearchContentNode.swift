@@ -11,6 +11,7 @@ import LegacyComponents
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
+import StickerPeekUI
 import Emoji
 import AppBundle
 import OverlayStatusController
@@ -19,10 +20,10 @@ import UndoUI
 final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void
     let install: (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void
-    let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Void
+    let sendSticker: (FileMediaReference, UIView, CGRect) -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, UIView, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.open = open
         self.install = install
         self.sendSticker = sendSticker
@@ -100,7 +101,7 @@ private enum StickerSearchEntry: Identifiable, Comparable {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
             return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
-                interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
+                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
             let itemContext = StickerPaneSearchGlobalItemContext()
@@ -186,7 +187,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         self.strings = strings
         
         self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
-            return inputNodeInteraction?.previewedStickerPackItem == .pack(item)
+            return inputNodeInteraction?.previewedStickerPackItem == .pack(item.file)
         }, isPane: false)
         
         self.gridNode = GridNode()
@@ -226,7 +227,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
                 let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
-                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
+                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
                     } else {
                         return false
                     }
@@ -319,12 +320,12 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 |> deliverOnMainQueue).start(next: { _ in
                 })
             }
-        }, sendSticker: { [weak self] file, sourceNode, sourceRect in
+        }, sendSticker: { [weak self] file, sourceView, sourceRect in
             if let strongSelf = self {
-                let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect)
+                let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
             }
         }, getItemIsPreviewed: { item in
-            return inputNodeInteraction.previewedStickerPackItem == .pack(item)
+            return inputNodeInteraction.previewedStickerPackItem == .pack(item.file)
         })
         
         self._ready.set(self.trendingPane.ready)
@@ -561,7 +562,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     func itemAt(point: CGPoint) -> (ASDisplayNode, Any)? {
         if !self.trendingPane.isHidden {
             if let (itemNode, item) = self.trendingPane.itemAt(point: self.view.convert(point, to: self.trendingPane.view)) {
-                return (itemNode, StickerPreviewPeekItem.pack(item))
+                return (itemNode, StickerPreviewPeekItem.pack(item.file))
             }
         } else {
             if let itemNode = self.gridNode.itemNodeAtPoint(self.view.convert(point, to: self.gridNode.view)) {
@@ -569,7 +570,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                     return (itemNode, StickerPreviewPeekItem.found(stickerItem))
                 } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                     if let (node, item) = itemNode.itemAt(point: self.view.convert(point, to: itemNode.view)) {
-                        return (node, StickerPreviewPeekItem.pack(item))
+                        return (node, StickerPreviewPeekItem.pack(item.file))
                     }
                 }
             }

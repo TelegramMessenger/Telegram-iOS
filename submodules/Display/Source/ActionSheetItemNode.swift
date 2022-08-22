@@ -13,6 +13,8 @@ open class ActionSheetItemNode: ASDisplayNode {
     
     private var validSize: CGSize?
     
+    var highlightedUpdated: (Bool) -> Void = { _ in }
+    
     public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
@@ -32,6 +34,14 @@ open class ActionSheetItemNode: ASDisplayNode {
         let size = CGSize(width: constrainedSize.width, height: 57.0)
         self.updateInternalLayout(size, constrainedSize: constrainedSize)
         return size
+    }
+    
+    func setHighlighted(_ highlighted: Bool, animated: Bool) {
+        
+    }
+    
+    func performAction() {
+        
     }
     
     public func updateInternalLayout(_ calculatedSize: CGSize, constrainedSize: CGSize) {

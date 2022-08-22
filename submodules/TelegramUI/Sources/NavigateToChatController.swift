@@ -11,6 +11,7 @@ import ChatListUI
 import PeerAvatarGalleryUI
 import SettingsUI
 import ChatPresentationInterfaceState
+import AttachmentUI
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false
@@ -21,6 +22,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let updateTextInputState = params.updateTextInputState {
                     controller.updateTextInputState(updateTextInputState)
                 }
+                var popAndComplete = true
                 if let subject = params.subject, case let .message(messageSubject, _, timecode) = subject {
                     if case let .id(messageId) = messageSubject {
                         let navigationController = params.navigationController
@@ -33,25 +35,27 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                             (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
                         })
                     }
+                    popAndComplete = false
                 } else if params.scrollToEndIfExists && isFirst {
                     controller.scrollToEndOfHistory()
-                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                    params.completion(controller)
                 } else if let search = params.activateMessageSearch {
                     controller.activateSearch(domain: search.0, query: search.1)
-                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                    params.completion(controller)
                 } else if let reportReason = params.reportReason {
                     controller.beginReportSelection(reason: reportReason)
-                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                    params.completion(controller)
-                } else {
-                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                }
+                
+                if popAndComplete {
+                    if let _ = params.navigationController.viewControllers.last as? AttachmentController, let controller = params.navigationController.viewControllers[params.navigationController.viewControllers.count - 2] as? ChatControllerImpl, controller.chatLocation == params.chatLocation {
+                        
+                    } else {
+                        let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                    }
                     params.completion(controller)
                 }
+                
                 controller.purposefulAction = params.purposefulAction
-                if params.activateInput {
-                    controller.activateInput()
+                if let activateInput = params.activateInput {
+                    controller.activateInput(type: activateInput)
                 }
                 if params.changeColors {
                     controller.presentThemeSelection()
@@ -134,8 +138,8 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 }
             }
         }
-        if params.activateInput {
-            controller.activateInput()
+        if let activateInput = params.activateInput {
+            controller.activateInput(type: activateInput)
         }
         if params.changeColors {
             Queue.mainQueue().after(0.1) {

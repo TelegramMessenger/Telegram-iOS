@@ -29,8 +29,8 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
     
     private let backgroundNode: ASDisplayNode
     
-    private var pointerInteraction: PointerInteraction?
-    
+    var highlightedUpdated: (Bool) -> Void = { _ in }
+        
     public init(theme: AlertControllerTheme, action: TextAlertAction) {
         self.theme = theme
         self.action = action
@@ -45,16 +45,7 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         
         self.highligthedChanged = { [weak self] value in
             if let strongSelf = self {
-                if value {
-                    if strongSelf.backgroundNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                    }
-                    strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.backgroundNode.alpha = 1.0
-                } else if !strongSelf.backgroundNode.alpha.isZero {
-                    strongSelf.backgroundNode.alpha = 0.0
-                    strongSelf.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
-                }
+                strongSelf.setHighlighted(value, animated: true)
             }
         }
         
@@ -68,15 +59,38 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         
         self.pointerInteraction = PointerInteraction(node: self, style: .hover, willEnter: { [weak self] in
             if let strongSelf = self {
-                strongSelf.backgroundNode.alpha = 0.25
+                strongSelf.setHighlighted(true, animated: false)
             }
         }, willExit: { [weak self] in
             if let strongSelf = self {
-                strongSelf.backgroundNode.alpha = 1.0
+                strongSelf.setHighlighted(false, animated: false)
             }
         })
     }
     
+    func performAction() {
+        if self.actionEnabled {
+            self.action.action()
+        }
+    }
+    
+    func setHighlighted(_ highlighted: Bool, animated: Bool) {
+        self.highlightedUpdated(highlighted)
+        if highlighted {
+            if self.backgroundNode.supernode == nil {
+                self.insertSubnode(self.backgroundNode, at: 0)
+            }
+            self.backgroundNode.alpha = 1.0
+        } else {
+            if animated {
+                UIView.animate(withDuration: 0.3, animations: {
+                    self.backgroundNode.alpha = 0.0
+                })
+            } else {
+                self.backgroundNode.alpha = 0.0
+            }
+        }
+    }
     public var actionEnabled: Bool = true {
         didSet {
             self.isUserInteractionEnabled = self.actionEnabled
@@ -141,6 +155,8 @@ public final class TextAlertContentNode: AlertContentNode {
     override public var dismissOnOutsideTap: Bool {
         return self._dismissOnOutsideTap
     }
+    
+    private var highlightedItemIndex: Int? = nil
     
     public var textAttributeAction: (NSAttributedString.Key, (Any) -> Void)? {
         didSet {
@@ -224,12 +240,64 @@ public final class TextAlertContentNode: AlertContentNode {
 
         self.addSubnode(self.actionNodesSeparator)
         
+        var i = 0
         for actionNode in self.actionNodes {
             self.addSubnode(actionNode)
+            
+            let index = i
+            actionNode.highlightedUpdated = { [weak self] highlighted in
+                if highlighted {
+                    self?.highlightedItemIndex = index
+                }
+            }
+            i += 1
         }
         
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
+        }
+    }
+    
+    func setHighlightedItemIndex(_ index: Int?, update: Bool = false) {
+        self.highlightedItemIndex = index
+        
+        if update {
+            var i = 0
+            for actionNode in self.actionNodes {
+                if i == index {
+                    actionNode.setHighlighted(true, animated: false)
+                } else {
+                    actionNode.setHighlighted(false, animated: false)
+                }
+                i += 1
+            }
+        }
+    }
+    
+    override public func decreaseHighlightedIndex() {
+        let currentHighlightedIndex = self.highlightedItemIndex ?? 0
+        
+        self.setHighlightedItemIndex(max(0, currentHighlightedIndex - 1), update: true)
+    }
+    
+    override public func increaseHighlightedIndex() {
+        let currentHighlightedIndex = self.highlightedItemIndex ?? -1
+        
+        self.setHighlightedItemIndex(min(self.actionNodes.count - 1, currentHighlightedIndex + 1), update: true)
+    }
+    
+    override public func performHighlightedAction() {
+        guard let highlightedItemIndex = self.highlightedItemIndex else {
+            return
+        }
+        
+        var i = 0
+        for itemNode in self.actionNodes {
+            if i == highlightedItemIndex {
+                itemNode.performAction()
+                return
+            }
+            i += 1
         }
     }
     

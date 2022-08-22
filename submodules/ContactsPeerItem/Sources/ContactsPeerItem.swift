@@ -148,17 +148,17 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)?
     let deletePeer: ((EnginePeer.Id) -> Void)?
     let itemHighlighting: ContactItemHighlighting?
-    let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    let contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     let arrowAction: (() -> Void)?
     let useBottomGroupedInset: Bool
-    
+
     public let selectable: Bool
     
     public let headerAccessoryItem: ListViewAccessoryItem?
     
     public let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, selectionPosition: ContactsPeerItemSelectionPosition = .right, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], additionalActions: [ContactsPeerItemAction] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: SortIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)? = nil, deletePeer: ((EnginePeer.Id) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, arrowAction: (() -> Void)? = nil, useBottomGroupedInset: Bool = false) {
+    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, selectionPosition: ContactsPeerItemSelectionPosition = .right, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], additionalActions: [ContactsPeerItemAction] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: SortIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)? = nil, deletePeer: ((EnginePeer.Id) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, arrowAction: (() -> Void)? = nil, useBottomGroupedInset: Bool = false) {
         self.presentationData = presentationData
         self.style = style
         self.sectionId = sectionId
@@ -186,7 +186,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.contextAction = contextAction
         self.arrowAction = arrowAction
         self.useBottomGroupedInset = useBottomGroupedInset
-        
+
         if let index = index {
             var letter: String = "#"
             switch peer {
@@ -433,7 +433,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 gesture.cancel()
                 return
             }
-            contextAction(strongSelf.containerNode, gesture)
+            contextAction(strongSelf.containerNode, gesture, nil)
         }
         
         self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
@@ -459,6 +459,13 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
+    public override func secondaryAction(at point: CGPoint) {
+        guard let item = self.item, let contextAction = item.contextAction else {
+            return
+        }
+        contextAction(self.containerNode, nil, point)
+    }
+
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let (item, _, _, _, _, _) = self.layoutParams {
             let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: item, previousItem: previousItem, nextItem: nextItem)
@@ -775,7 +782,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             }
             
             let bottomInset = item.useBottomGroupedInset ? itemListNeighborsGroupedInsets(neighbors, params).bottom : 0.0
-            
+
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + statusHeightComponent), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: bottomInset, right: 0.0))
             
             let titleFrame: CGRect

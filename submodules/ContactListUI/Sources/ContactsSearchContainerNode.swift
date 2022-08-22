@@ -121,7 +121,7 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
         }
     }
     
-    func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) -> ListViewItem {
         switch self {
             case let .addContact(theme, strings, phoneNumber):
                 return ContactsAddItem(theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
@@ -162,8 +162,8 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
                     openPeer(peer)
                 }, contextAction: contextAction.flatMap { contextAction in
                     return nativePeer.flatMap { nativePeer in
-                        return { node, gesture in
-                            contextAction(nativePeer, node, gesture)
+                        return { node, gesture, location in
+                            contextAction(nativePeer, node, gesture, location)
                         }
                     }
                 })
@@ -180,7 +180,7 @@ struct ContactListSearchContainerTransition {
     let query: String
 }
 
-private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, emptyResults: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?) -> ContactListSearchContainerTransition {
+private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, emptyResults: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) -> ContactListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -206,7 +206,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
     private let context: AccountContext
     private let addContact: ((String) -> Void)?
     private let openPeer: (ContactListPeer) -> Void
-    private let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?
+    private let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     
     private let dimNode: ASDisplayNode
     public let listNode: ListView
@@ -229,7 +229,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         return true
     }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) {
         self.context = context
         self.addContact = addContact
         self.openPeer = openPeer

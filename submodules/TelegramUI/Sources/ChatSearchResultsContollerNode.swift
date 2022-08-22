@@ -198,7 +198,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             return entries
         }
         
-        let interaction = ChatListNodeInteraction(activateSearch: {
+        let interaction = ChatListNodeInteraction(context: context, activateSearch: {
         }, peerSelected: { _, _, _ in
         }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in
@@ -225,7 +225,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, togglePeerMarkedUnread: { _, _ in
         }, toggleArchivedFolderHiddenByDefault: {
         }, hidePsa: { _ in
-        }, activateChatPreview: { [weak self] item, node, gesture in
+        }, activateChatPreview: { [weak self] item, node, gesture, _ in
             guard let strongSelf = self else {
                 gesture?.cancel()
                 return
@@ -398,7 +398,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
         let sourceNode = self.sourceNode
         return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
             if let sourceNode = sourceNode {
-                return (sourceNode, sourceNode.bounds)
+                return (sourceNode.view, sourceNode.bounds)
             } else {
                 return nil
             }

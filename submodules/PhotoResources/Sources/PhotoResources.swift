@@ -532,12 +532,25 @@ private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaRef
             
             return thumbnail
             |> mapToSignal { thumbnailData in
-                return combineLatest(fullSizeDataAndPath, reducedSizeDataAndPath)
-                |> map { fullSize, reducedSize in
-                    if !fullSize._1 && reducedSize._1 {
-                        return Tuple(thumbnailData, reducedSize._0, false)
+                if synchronousLoad, let thumbnailData = thumbnailData {
+                    return .single(Tuple(thumbnailData, nil, false))
+                    |> then(
+                        combineLatest(fullSizeDataAndPath, reducedSizeDataAndPath)
+                        |> map { fullSize, reducedSize in
+                            if !fullSize._1 && reducedSize._1 {
+                                return Tuple(thumbnailData, reducedSize._0, false)
+                            }
+                            return Tuple(thumbnailData, fullSize._0, fullSize._1)
+                        }
+                    )
+                } else {
+                    return combineLatest(fullSizeDataAndPath, reducedSizeDataAndPath)
+                    |> map { fullSize, reducedSize in
+                        if !fullSize._1 && reducedSize._1 {
+                            return Tuple(thumbnailData, reducedSize._0, false)
+                        }
+                        return Tuple(thumbnailData, fullSize._0, fullSize._1)
                     }
-                    return Tuple(thumbnailData, fullSize._0, fullSize._1)
                 }
             }
         }
@@ -2579,7 +2592,7 @@ public func albumArtThumbnailData(engine: TelegramEngine, thumbnail: ExternalMus
     return engine.resources.custom(
         id: thumbnail.id.stringRepresentation,
         fetch: EngineMediaResource.Fetch {
-            return fetchExternalMusicAlbumArtResource(engine: engine, resource: thumbnail)
+            return fetchExternalMusicAlbumArtResource(engine: engine, file: thumbnail.file, resource: thumbnail)
         },
         attemptSynchronously: attemptSynchronously
     )
@@ -2600,7 +2613,7 @@ public func albumArtThumbnailData(engine: TelegramEngine, thumbnail: ExternalMus
     })
 }
 
-private func albumArtFullSizeDatas(engine: TelegramEngine, thumbnail: ExternalMusicAlbumArtResource, fullSize: ExternalMusicAlbumArtResource, autoFetchFullSize: Bool = true) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
+private func albumArtFullSizeDatas(engine: TelegramEngine, file: FileMediaReference?, thumbnail: ExternalMusicAlbumArtResource, fullSize: ExternalMusicAlbumArtResource, autoFetchFullSize: Bool = true) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
     return engine.resources.custom(
         id: fullSize.id.stringRepresentation,
         fetch: nil,
@@ -2616,14 +2629,14 @@ private func albumArtFullSizeDatas(engine: TelegramEngine, thumbnail: ExternalMu
                 engine.resources.custom(
                     id: thumbnail.id.stringRepresentation,
                     fetch: EngineMediaResource.Fetch {
-                        return fetchExternalMusicAlbumArtResource(engine: engine, resource: thumbnail)
+                        return fetchExternalMusicAlbumArtResource(engine: engine, file: file, resource: thumbnail)
                     },
                     attemptSynchronously: false
                 ),
                 engine.resources.custom(
                     id: fullSize.id.stringRepresentation,
                     fetch: autoFetchFullSize ? EngineMediaResource.Fetch {
-                        return fetchExternalMusicAlbumArtResource(engine: engine, resource: fullSize)
+                        return fetchExternalMusicAlbumArtResource(engine: engine, file: file, resource: fullSize)
                     } : nil,
                     attemptSynchronously: false
                 )
@@ -2736,7 +2749,7 @@ public func playerAlbumArt(postbox: Postbox, engine: TelegramEngine, fileReferen
                 return Tuple(thumbnailData, nil, false)
             }
         } else {
-            immediateArtworkData = albumArtFullSizeDatas(engine: engine, thumbnail: albumArt.thumbnailResource, fullSize: albumArt.fullSizeResource)
+            immediateArtworkData = albumArtFullSizeDatas(engine: engine, file: fileReference, thumbnail: albumArt.thumbnailResource, fullSize: albumArt.fullSizeResource)
         }
     }
     

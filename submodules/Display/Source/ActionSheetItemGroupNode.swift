@@ -13,7 +13,7 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
     private let backgroundEffectView: UIVisualEffectView
     private let scrollNode: ASScrollNode
     
-    private var itemNodes: [ActionSheetItemNode] = []
+    var itemNodes: [ActionSheetItemNode] = []
     private var leadingVisibleNodeCount: CGFloat = 100.0
     
     private var validLayout: CGSize?

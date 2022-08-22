@@ -130,7 +130,7 @@ CGImageRef TGPhotoLanczosResize(UIImage *image, CGSize targetSize)
     
     NSUInteger bytesPerPixel = 4;
     NSUInteger dstBytesPerRow = bytesPerPixel * (NSUInteger)targetSize.width;
-    uint8_t *dstData = (uint8_t *)calloc((NSUInteger)targetSize.height * (NSInteger)targetSize.width * bytesPerPixel, sizeof(uint8_t));
+    uint8_t *dstData = (uint8_t *)calloc((NSUInteger)targetSize.height * (NSUInteger)dstBytesPerRow, sizeof(uint8_t));
     vImage_Buffer dstBuffer =
     {
         .data = dstData,
@@ -139,7 +139,11 @@ CGImageRef TGPhotoLanczosResize(UIImage *image, CGSize targetSize)
         .rowBytes = dstBytesPerRow
     };
     
-    ret = vImageScale_ARGB8888(&srcBuffer, &dstBuffer, NULL, kvImageHighQualityResampling);
+    vImage_Flags flags = kvImageHighQualityResampling;
+    if (MAX(image.size.width, image.size.height) > 4200) {
+        flags = kvImageNoFlags;
+    }
+    ret = vImageScale_ARGB8888(&srcBuffer, &dstBuffer, NULL, flags);
     free(srcBuffer.data);
     if (ret != kvImageNoError)
     {

@@ -147,6 +147,10 @@ private final class ChatContextResultPeekNode: ASDisplayNode, PeekControllerCont
         }
     }
     
+    func ready() -> Signal<Bool, NoError> {
+        return .single(true)
+    }
+    
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let imageLayout = self.imageNode.asyncLayout()
         let currentImageResource = self.currentImageResource

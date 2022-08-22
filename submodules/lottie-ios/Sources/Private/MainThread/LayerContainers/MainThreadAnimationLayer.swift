@@ -203,6 +203,14 @@ final class MainThreadAnimationLayer: CALayer, RootAnimationLayer {
     print("Lottie: Logging Animation Keypaths")
     animationLayers.forEach({ $0.logKeypaths(for: nil) })
   }
+    
+  func allKeypaths(predicate: (AnimationKeypath) -> Bool) -> [String] {
+    var result: [String] = []
+    for animationLayer in animationLayers {
+        result.append(contentsOf: animationLayer.allKeypaths(for: nil, predicate: predicate))
+    }
+    return result
+  }
 
   func setValueProvider(_ valueProvider: AnyValueProvider, keypath: AnimationKeypath) {
     for layer in animationLayers {

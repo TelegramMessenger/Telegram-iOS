@@ -11,7 +11,6 @@ import ViewControllerComponent
 import AccountContext
 import SolidRoundedButtonComponent
 import MultilineTextComponent
-import PrefixSectionGroupComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
@@ -37,10 +36,13 @@ public enum PremiumSource: Equatable {
     case accounts
     case about
     case appIcons
+    case animatedEmoji
     case deeplink(String?)
     case profile(PeerId)
+    case gift(from: PeerId, to: PeerId, duration: Int32)
+    case giftTerms
     
-    var identifier: String {
+    var identifier: String? {
         switch self {
             case .settings:
                 return "settings"
@@ -72,8 +74,12 @@ public enum PremiumSource: Equatable {
                 return "double_limits__accounts"
             case .about:
                 return "double_limits__about"
+            case .animatedEmoji:
+                return "animated_emoji"
             case let .profile(id):
                 return "profile__\(id.id._internalGetInt64Value())"
+            case .gift, .giftTerms:
+                return nil
             case let .deeplink(reference):
                 if let reference = reference {
                     return "deeplink_\(reference)"
@@ -96,6 +102,7 @@ enum PremiumPerk: CaseIterable {
     case profileBadge
     case animatedUserpics
     case appIcons
+    case animatedEmoji
     
     static var allCases: [PremiumPerk] {
         return [
@@ -109,7 +116,8 @@ enum PremiumPerk: CaseIterable {
             .advancedChatManagement,
             .profileBadge,
             .animatedUserpics,
-            .appIcons
+            .appIcons,
+            .animatedEmoji
         ]
     }
     
@@ -147,6 +155,8 @@ enum PremiumPerk: CaseIterable {
                 return "animated_userpics"
             case .appIcons:
                 return "app_icon"
+            case .animatedEmoji:
+                return "animated_emoji"
         }
     }
     
@@ -174,6 +184,8 @@ enum PremiumPerk: CaseIterable {
                 return strings.Premium_Avatar
             case .appIcons:
                 return strings.Premium_AppIcon
+            case .animatedEmoji:
+                return strings.Premium_AnimatedEmoji
         }
     }
     
@@ -201,6 +213,8 @@ enum PremiumPerk: CaseIterable {
                 return strings.Premium_AvatarInfo
             case .appIcons:
                 return strings.Premium_AppIconInfo
+            case .animatedEmoji:
+                return strings.Premium_AnimatedEmojiInfo
         }
     }
     
@@ -228,6 +242,8 @@ enum PremiumPerk: CaseIterable {
                 return "Premium/Perk/Avatar"
             case .appIcons:
                 return "Premium/Perk/AppIcon"
+            case .animatedEmoji:
+                return "Premium/Perk/Emoji"
         }
     }
 }
@@ -242,6 +258,7 @@ private struct PremiumIntroConfiguration {
             .noAds,
             .uniqueReactions,
             .premiumStickers,
+            .animatedEmoji,
             .advancedChatManagement,
             .profileBadge,
             .animatedUserpics,
@@ -273,9 +290,6 @@ private struct PremiumIntroConfiguration {
             }
             if perks.count < 4 {
                 perks = PremiumIntroConfiguration.defaultValue.perks
-            }
-            if !perks.contains(.appIcons) {
-                perks.append(.appIcons)
             }
             return PremiumIntroConfiguration(perks: perks)
         } else {
@@ -466,135 +480,6 @@ private final class SectionGroupComponent: Component {
     }
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
-
-
-private final class ScrollChildEnvironment: Equatable {
-    public let insets: UIEdgeInsets
-    
-    public init(insets: UIEdgeInsets) {
-        self.insets = insets
-    }
-    
-    public static func ==(lhs: ScrollChildEnvironment, rhs: ScrollChildEnvironment) -> Bool {
-        if lhs.insets != rhs.insets {
-            return false
-        }
-
-        return true
-    }
-}
-
-private final class ScrollComponent<ChildEnvironment: Equatable>: Component {
-    public typealias EnvironmentType = ChildEnvironment
-    
-    public let content: AnyComponent<(ChildEnvironment, ScrollChildEnvironment)>
-    public let contentInsets: UIEdgeInsets
-    public let contentOffsetUpdated: (_ top: CGFloat, _ bottom: CGFloat) -> Void
-    public let contentOffsetWillCommit: (UnsafeMutablePointer<CGPoint>) -> Void
-    
-    public init(
-        content: AnyComponent<(ChildEnvironment, ScrollChildEnvironment)>,
-        contentInsets: UIEdgeInsets,
-        contentOffsetUpdated: @escaping (_ top: CGFloat, _ bottom: CGFloat) -> Void,
-        contentOffsetWillCommit:  @escaping (UnsafeMutablePointer<CGPoint>) -> Void
-    ) {
-        self.content = content
-        self.contentInsets = contentInsets
-        self.contentOffsetUpdated = contentOffsetUpdated
-        self.contentOffsetWillCommit = contentOffsetWillCommit
-    }
-    
-    public static func ==(lhs: ScrollComponent, rhs: ScrollComponent) -> Bool {
-        if lhs.content != rhs.content {
-            return false
-        }
-        if lhs.contentInsets != rhs.contentInsets {
-            return false
-        }
-        
-        return true
-    }
-    
-    public final class View: UIScrollView, UIScrollViewDelegate {
-        private var component: ScrollComponent<ChildEnvironment>?
-        private let contentView: ComponentHostView<(ChildEnvironment, ScrollChildEnvironment)>
-                
-        override init(frame: CGRect) {
-            self.contentView = ComponentHostView()
-            
-            super.init(frame: frame)
-            
-            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                self.contentInsetAdjustmentBehavior = .never
-            }
-            self.delegate = self
-            self.showsVerticalScrollIndicator = false
-            self.showsHorizontalScrollIndicator = false
-            self.canCancelContentTouches = true
-                        
-            self.addSubview(self.contentView)
-        }
-        
-        public override func touchesShouldCancel(in view: UIView) -> Bool {
-            return true
-        }
-        
-        private var ignoreDidScroll = false
-        public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            guard let component = self.component, !self.ignoreDidScroll else {
-                return
-            }
-            let topOffset = scrollView.contentOffset.y
-            let bottomOffset = max(0.0, scrollView.contentSize.height - scrollView.contentOffset.y - scrollView.frame.height)
-            component.contentOffsetUpdated(topOffset, bottomOffset)
-        }
-        
-        public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
-            guard let component = self.component, !self.ignoreDidScroll else {
-                return
-            }
-            component.contentOffsetWillCommit(targetContentOffset)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-                
-        func update(component: ScrollComponent<ChildEnvironment>, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: Transition) -> CGSize {
-            let contentSize = self.contentView.update(
-                transition: transition,
-                component: component.content,
-                environment: {
-                    environment[ChildEnvironment.self]
-                    ScrollChildEnvironment(insets: component.contentInsets)
-                },
-                containerSize: CGSize(width: availableSize.width, height: .greatestFiniteMagnitude)
-            )
-            transition.setFrame(view: self.contentView, frame: CGRect(origin: .zero, size: contentSize), completion: nil)
-            
-            if self.contentSize != contentSize {
-                self.ignoreDidScroll = true
-                self.contentSize = contentSize
-                self.ignoreDidScroll = false
-            }
-            if self.scrollIndicatorInsets != component.contentInsets {
-                self.scrollIndicatorInsets = component.contentInsets
-            }
-            
-            self.component = component
-            
-            return availableSize
-        }
-    }
-    
-    public func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -825,22 +710,24 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     strongSelf.promoConfiguration = promoConfiguration
                     strongSelf.updated(transition: .immediate)
                     
-                    var jsonString: String = "{"
-                    jsonString += "\"source\": \"\(source.identifier)\","
-                    
-                    jsonString += "\"data\": {\"premium_promo_order\":["
-                    var isFirst = true
-                    for perk in strongSelf.configuration.perks {
-                        if !isFirst {
-                            jsonString += ","
+                    if let identifier = source.identifier {
+                        var jsonString: String = "{"
+                        jsonString += "\"source\": \"\(identifier)\","
+                        
+                        jsonString += "\"data\": {\"premium_promo_order\":["
+                        var isFirst = true
+                        for perk in strongSelf.configuration.perks {
+                            if !isFirst {
+                                jsonString += ","
+                            }
+                            isFirst = false
+                            jsonString += "\"\(perk.identifier)\""
                         }
-                        isFirst = false
-                        jsonString += "\"\(perk.identifier)\""
-                    }
-                    jsonString += "]}}"
-                    
-                    if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
-                        addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_show", data: json)
+                        jsonString += "]}}"
+                        
+                        if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
+                            addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_show", data: json)
+                        }
                     }
                     
                     for (_, video) in promoConfiguration.videos {
@@ -944,8 +831,18 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let boldTextFont = Font.semibold(15.0)
             
             let textString: String
-            if let _ = context.component.otherPeerName {
+            if case .giftTerms = context.component.source {
                 textString = strings.Premium_PersonalDescription
+            } else if let _ = context.component.otherPeerName {
+                if case let .gift(fromId, _, _) = context.component.source {
+                    if fromId == context.component.context.account.peerId {
+                        textString = strings.Premium_GiftedDescriptionYou
+                    } else {
+                        textString = strings.Premium_GiftedDescription
+                    }
+                } else {
+                    textString = strings.Premium_PersonalDescription
+                }
             } else if context.component.isPremium == true {
                 textString = strings.Premium_SubscribedDescription
             } else {
@@ -986,6 +883,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x7561EB),
                 UIColor(rgb: 0x5A6EEE),
                 UIColor(rgb: 0x548DFF),
+                UIColor(rgb: 0x54A3FF),
                 UIColor(rgb: 0x54A3FF)
             ]
             
@@ -1057,6 +955,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             demoSubject = .animatedUserpics
                         case .appIcons:
                             demoSubject = .appIcons
+                        case .animatedEmoji:
+                            demoSubject = .animatedEmoji
                         }
                         
                         let controller = PremiumDemoScreen(
@@ -1166,9 +1066,18 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 return (TelegramTextAttributes.URL, contents)
             })
                        
+            var isGiftView = false
+            if case let .gift(fromId, _, _) = context.component.source {
+                if fromId == context.component.context.account.peerId {
+                    isGiftView = true
+                }
+            }
+            
             let termsString: MultilineTextComponent.TextContent
-            if let promoConfiguration = context.state.promoConfiguration {
-                let attributedString = stringWithAppliedEntities(promoConfiguration.status, entities: promoConfiguration.statusEntities, baseColor: termsTextColor, linkColor: environment.theme.list.itemAccentColor, baseFont: termsFont, linkFont: termsFont, boldFont: boldTermsFont, italicFont: italicTermsFont, boldItalicFont: boldItalicTermsFont, fixedFont: monospaceTermsFont, blockQuoteFont: termsFont)
+            if isGiftView {
+                termsString = .plain(NSAttributedString())
+            } else if let promoConfiguration = context.state.promoConfiguration {
+                let attributedString = stringWithAppliedEntities(promoConfiguration.status, entities: promoConfiguration.statusEntities, baseColor: termsTextColor, linkColor: environment.theme.list.itemAccentColor, baseFont: termsFont, linkFont: termsFont, boldFont: boldTermsFont, italicFont: italicTermsFont, boldItalicFont: boldItalicTermsFont, fixedFont: monospaceTermsFont, blockQuoteFont: termsFont, message: nil)
                 termsString = .plain(attributedString)
             } else {
                 termsString = .markdown(
@@ -1359,7 +1268,14 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             }
             
             let otherPeerName: Signal<String?, NoError>
-            if case let .profile(peerId) = source {
+            if case let .gift(fromPeerId, toPeerId, _) = source {
+                let otherPeerId = fromPeerId != context.account.peerId ? fromPeerId : toPeerId
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: otherPeerId))
+                |> map { peer -> String? in
+                    return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                }
+            } else if case let .profile(peerId) = source {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> map { peer -> String? in
@@ -1379,7 +1295,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 otherPeerName
             ).start(next: { [weak self] products, isPremium, otherPeerName in
                 if let strongSelf = self {
-                    strongSelf.premiumProduct = products.first
+                    strongSelf.premiumProduct = products.first(where: { $0.isSubscription })
                     strongSelf.isPremium = isPremium
                     strongSelf.otherPeerName = otherPeerName
                     strongSelf.updated(transition: .immediate)
@@ -1405,7 +1321,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.updateInProgress(true)
             self.updated(transition: .immediate)
 
-            let _ = (self.context.engine.payments.canPurchasePremium()
+            let _ = (self.context.engine.payments.canPurchasePremium(purpose: .subscription)
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
                     if available {
@@ -1548,7 +1464,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             )
             
             let titleString: String
-            if state.isPremium == true {
+            if case .giftTerms = context.component.source {
+                titleString = environment.strings.Premium_Title
+            } else if case .gift = context.component.source {
+                titleString = environment.strings.Premium_GiftedTitle
+            } else if state.isPremium == true {
                 titleString = environment.strings.Premium_SubscribedTitle
             } else {
                 titleString = environment.strings.Premium_Title
@@ -1574,15 +1494,49 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: accentColor), linkAttribute: { _ in
                 return nil
             })
+            
+            let secondaryTitleText: String
+            if let otherPeerName = state.otherPeerName {
+                if case .profile = context.component.source {
+                    secondaryTitleText = environment.strings.Premium_PersonalTitle(otherPeerName).string
+                } else if case let .gift(fromPeerId, _, duration) = context.component.source {
+                    if fromPeerId == context.component.context.account.peerId {
+                        if duration == 12 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitleYou_12Month(otherPeerName).string
+                        } else if duration == 6  {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitleYou_6Month(otherPeerName).string
+                        } else if duration == 3 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitleYou_3Month(otherPeerName).string
+                        } else {
+                            secondaryTitleText = ""
+                        }
+                    } else {
+                        if duration == 12 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitle_12Month(otherPeerName).string
+                        } else if duration == 6 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitle_6Month(otherPeerName).string
+                        } else if duration == 3 {
+                            secondaryTitleText = environment.strings.Premium_GiftedTitle_3Month(otherPeerName).string
+                        } else {
+                            secondaryTitleText = ""
+                        }
+                    }
+                } else {
+                    secondaryTitleText = ""
+                }
+            } else {
+                secondaryTitleText = ""
+            }
+            
             let secondaryTitle = secondaryTitle.update(
                 component: MultilineTextComponent(
-                    text: .markdown(text: state.otherPeerName.flatMap({ environment.strings.Premium_PersonalTitle($0).string }) ?? "", attributes: markdownAttributes),
+                    text: .markdown(text: secondaryTitleText, attributes: markdownAttributes),
                     horizontalAlignment: .center,
                     truncationType: .end,
                     maximumNumberOfLines: 2,
                     lineSpacing: 0.0
                 ),
-                availableSize: context.availableSize,
+                availableSize: CGSize(width: context.availableSize.width - 32.0, height: context.availableSize.width),
                 transition: context.transition
             )
             
@@ -1687,8 +1641,15 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 .scale(titleScale)
                 .opacity(max(0.0, 1.0 - titleAlpha * 1.8))
             )
+            
+            var isGiftView = false
+            if case let .gift(fromId, _, _) = context.component.source {
+                if fromId == context.component.context.account.peerId {
+                    isGiftView = true
+                }
+            }
                         
-            if state.isPremium == true {
+            if state.isPremium == true || isGiftView {
                 
             } else {
                 let sideInset: CGFloat = 16.0

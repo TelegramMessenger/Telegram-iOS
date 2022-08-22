@@ -36,6 +36,8 @@ public struct PresentationResourcesSettings {
     public static let dataAndStorage = renderIcon(name: "Settings/Menu/DataAndStorage")
     public static let appearance = renderIcon(name: "Settings/Menu/Appearance")
     public static let language = renderIcon(name: "Settings/Menu/Language")
+    
+    public static let deleteAccount = renderIcon(name: "Chat/Info/GroupRemovedIcon")
 
     public static let wallet = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
@@ -89,6 +91,12 @@ public struct PresentationResourcesSettings {
     public static let setPasscode = renderIcon(name: "Settings/Menu/SetPasscode")
     public static let clearCache = renderIcon(name: "Settings/Menu/ClearCache")
     public static let changePhoneNumber = renderIcon(name: "Settings/Menu/ChangePhoneNumber")
+    
+    public static let deleteAddAccount = renderIcon(name: "Settings/Menu/DeleteAddAccount")
+    public static let deleteSetTwoStepAuth = renderIcon(name: "Settings/Menu/DeleteTwoStepAuth")
+    public static let deleteSetPasscode = renderIcon(name: "Settings/Menu/FaceId")
+    public static let deleteChats = renderIcon(name: "Settings/Menu/DeleteChats")
+    public static let clearSynced = renderIcon(name: "Settings/Menu/ClearSynced")
     
     public static let websites = renderIcon(name: "Settings/Menu/Websites")
     

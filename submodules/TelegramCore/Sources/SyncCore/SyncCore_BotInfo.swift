@@ -93,6 +93,6 @@ public final class BotInfo: PostboxCoding, Equatable {
     }
     
     public static func ==(lhs: BotInfo, rhs: BotInfo) -> Bool {
-        return lhs.description == rhs.description && lhs.commands == rhs.commands && lhs.menuButton == rhs.menuButton && lhs.photo != rhs.photo
+        return lhs.description == rhs.description && lhs.commands == rhs.commands && lhs.menuButton == rhs.menuButton && lhs.photo == rhs.photo
     }
 }

@@ -16,6 +16,16 @@ public final class EngineChatList {
         case later(than: EngineChatList.Item.Index?)
         case earlier(than: EngineChatList.Item.Index?)
     }
+    
+    public struct Draft {
+        public var text: String
+        public var entities: [MessageTextEntity]
+        
+        public init(text: String, entities: [MessageTextEntity]) {
+            self.text = text
+            self.entities = entities
+        }
+    }
 
     public final class Item {
         public typealias Index = ChatListIndex
@@ -24,7 +34,7 @@ public final class EngineChatList {
         public let messages: [EngineMessage]
         public let readCounters: EnginePeerReadCounters?
         public let isMuted: Bool
-        public let draftText: String?
+        public let draft: Draft?
         public let renderedPeer: EngineRenderedPeer
         public let presence: EnginePeer.Presence?
         public let hasUnseenMentions: Bool
@@ -37,7 +47,7 @@ public final class EngineChatList {
             messages: [EngineMessage],
             readCounters: EnginePeerReadCounters?,
             isMuted: Bool,
-            draftText: String?,
+            draft: Draft?,
             renderedPeer: EngineRenderedPeer,
             presence: EnginePeer.Presence?,
             hasUnseenMentions: Bool,
@@ -49,7 +59,7 @@ public final class EngineChatList {
             self.messages = messages
             self.readCounters = readCounters
             self.isMuted = isMuted
-            self.draftText = draftText
+            self.draft = draft
             self.renderedPeer = renderedPeer
             self.presence = presence
             self.hasUnseenMentions = hasUnseenMentions
@@ -209,11 +219,11 @@ extension EngineChatList.Item {
     convenience init?(_ entry: ChatListEntry) {
         switch entry {
         case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, hasFailed, isContact):
-            var draftText: String?
+            var draft: EngineChatList.Draft?
             if let embeddedState = embeddedState, let _ = embeddedState.overrideChatTimestamp {
                 if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
                     if let text = opaqueState.synchronizeableInputState?.text {
-                        draftText = text
+                        draft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
                     }
                 }
             }
@@ -239,7 +249,7 @@ extension EngineChatList.Item {
                 messages: messages.map(EngineMessage.init),
                 readCounters: readState.flatMap(EnginePeerReadCounters.init),
                 isMuted: isRemovedFromTotalUnreadCount,
-                draftText: draftText,
+                draft: draft,
                 renderedPeer: EngineRenderedPeer(renderedPeer),
                 presence: presence.flatMap(EnginePeer.Presence.init),
                 hasUnseenMentions: hasUnseenMentions,

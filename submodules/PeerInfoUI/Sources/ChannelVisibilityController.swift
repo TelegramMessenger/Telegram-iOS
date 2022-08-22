@@ -1147,7 +1147,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             let _ = combineLatest(
                 queue: Queue.mainQueue(),
                 adminedPublicChannels.get() |> filter { $0 != nil } |> take(1),
-                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+                context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
                 context.engine.data.get(
                     TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
                     TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)

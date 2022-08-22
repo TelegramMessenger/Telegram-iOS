@@ -812,5 +812,43 @@ public extension TelegramEngine.EngineData.Item {
                 }
             }
         }
+        
+        public struct SecretChatLayer: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Int?
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .peerChatState(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PeerChatStateView else {
+                    preconditionFailure()
+                }
+                
+                if let peerChatState = view.chatState?.getLegacy() as? SecretChatState {
+                    switch peerChatState.embeddedState {
+                    case .terminated:
+                        return nil
+                    case .handshake:
+                        return nil
+                    case .basicLayer:
+                        return 7
+                    case let .sequenceBasedLayer(secretChatSequenceBasedLayerState):
+                        return Int(secretChatSequenceBasedLayerState.layerNegotiationState.activeLayer.rawValue)
+                    }
+                } else {
+                    return nil
+                }
+            }
+        }
     }
 }

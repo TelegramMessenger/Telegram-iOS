@@ -71,7 +71,7 @@ public func adjustSaturationInContext(context: DrawingContext, saturation: CGFlo
     vImageMatrixMultiply_ARGB8888(&buffer, &buffer, &matrix, divisor, nil, nil, vImage_Flags(kvImageDoNotTile))
 }
 
-private func generateGradient(size: CGSize, colors inputColors: [UIColor], positions: [CGPoint], adjustSaturation: CGFloat = 1.0) -> UIImage {
+private func generateGradient(size: CGSize, colors inputColors: [UIColor], positions: [CGPoint], adjustSaturation: CGFloat = 1.0) -> (UIImage, String) {
     let colors: [UIColor] = inputColors.count == 1 ? [inputColors[0], inputColors[0], inputColors[0]] : inputColors
 
     let width = Int(size.width)
@@ -179,7 +179,23 @@ private func generateGradient(size: CGSize, colors inputColors: [UIColor], posit
         adjustSaturationInContext(context: context, saturation: adjustSaturation)
     }
 
-    return context.generateImage()!
+    var hashString = ""
+    hashString.append("\(size.width)x\(size.height)")
+    for color in colors {
+        hashString.append("_\(color.argb)")
+    }
+    for position in positions {
+        hashString.append("_\(position.x):\(position.y)")
+    }
+    hashString.append("_\(adjustSaturation)")
+    
+    return (context.generateImage()!, hashString)
+}
+
+public protocol GradientBackgroundPatternOverlayLayer: CALayer {
+    var isAnimating: Bool { get set }
+    
+    func updateCompositionData(size: CGSize, backgroundImage: UIImage, backgroundImageHash: String)
 }
 
 public final class GradientBackgroundNode: ASDisplayNode {
@@ -218,11 +234,13 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
     public static func generatePreview(size: CGSize, colors: [UIColor]) -> UIImage {
         let positions = gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: 0))
-        return generateGradient(size: size, colors: colors, positions: positions)
+        return generateGradient(size: size, colors: colors, positions: positions).0
     }
 
     private var colors: [UIColor]
     private var phase: Int = 0
+    
+    private var backgroundImageHash: String?
 
     public let contentView: UIImageView
     private var validPhase: Int?
@@ -234,7 +252,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
         if let current = self._dimmedImage {
             return current
         } else if let (size, colors, positions) = self.dimmedImageParams {
-            self._dimmedImage = generateGradient(size: size, colors: colors, positions: positions, adjustSaturation: self.saturation)
+            self._dimmedImage = generateGradient(size: size, colors: colors, positions: positions, adjustSaturation: self.saturation).0
             return self._dimmedImage
         } else {
             return nil
@@ -246,8 +264,12 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
     private let useSharedAnimationPhase: Bool
     static var sharedPhase: Int = 0
+    
+    private var isAnimating: Bool = false
 
     private let saturation: CGFloat
+    
+    private var patternOverlayLayer: GradientBackgroundPatternOverlayLayer?
     
     public init(colors: [UIColor]? = nil, useSharedAnimationPhase: Bool = false, adjustSaturation: Bool = true) {
         self.useSharedAnimationPhase = useSharedAnimationPhase
@@ -274,6 +296,31 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
     deinit {
     }
+    
+    public func setPatternOverlay(layer: GradientBackgroundPatternOverlayLayer?) {
+        if self.patternOverlayLayer === layer {
+            return
+        }
+        
+        if let patternOverlayLayer = self.patternOverlayLayer {
+            if patternOverlayLayer.superlayer == self.layer {
+                patternOverlayLayer.removeFromSuperlayer()
+            }
+            self.patternOverlayLayer = nil
+        }
+        
+        self.patternOverlayLayer = layer
+        
+        if let patternOverlayLayer = self.patternOverlayLayer {
+            self.layer.addSublayer(patternOverlayLayer)
+            
+            patternOverlayLayer.isAnimating = self.isAnimating
+            
+            if let image = self.contentView.image, let backgroundImageHash = self.backgroundImageHash, self.contentView.bounds.width > 1.0, self.contentView.bounds.height > 1.0 {
+                patternOverlayLayer.updateCompositionData(size: self.contentView.bounds.size, backgroundImage: image, backgroundImageHash: backgroundImageHash)
+            }
+        }
+    }
 
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, extendAnimation: Bool, backwards: Bool, completion: @escaping () -> Void) {
         let sizeUpdated = self.validLayout != size
@@ -283,6 +330,9 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
         let positions = gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: self.phase % 8))
 
+        let previousImage = self.contentView.image
+        let previousSize = self.contentView.bounds.size
+        
         if let validPhase = self.validPhase {
             if validPhase != self.phase || self.invalidated {
                 self.validPhase = self.phase
@@ -318,7 +368,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
                 }
 
                 if case let .animated(duration, curve) = transition, duration > 0.001 {
-                    var images: [UIImage] = []
+                    var images: [(UIImage, String)] = []
 
                     var dimmedImages: [UIImage] = []
                     let needDimmedImages = !self.cloneNodes.isEmpty
@@ -350,16 +400,17 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
                         images.append(generateGradient(size: imageSize, colors: self.colors, positions: morphedPositions))
                         if needDimmedImages {
-                            dimmedImages.append(generateGradient(size: imageSize, colors: self.colors, positions: morphedPositions, adjustSaturation: self.saturation))
+                            dimmedImages.append(generateGradient(size: imageSize, colors: self.colors, positions: morphedPositions, adjustSaturation: self.saturation).0)
                         }
                     }
 
                     self.dimmedImageParams = (imageSize, self.colors, gatherPositions(shiftArray(array: GradientBackgroundNode.basePositions, offset: self.phase % 8)))
 
-                    self.contentView.image = images.last
+                    self.contentView.image = images[images.count - 1].0
+                    self.backgroundImageHash = images[images.count - 1].1
 
                     let animation = CAKeyframeAnimation(keyPath: "contents")
-                    animation.values = images.map { $0.cgImage! }
+                    animation.values = images.map { $0.0.cgImage! }
                     animation.duration = duration * UIView.animationDurationFactor()
                     if backwards || extendAnimation {
                         animation.calculationMode = .discrete
@@ -372,7 +423,19 @@ public final class GradientBackgroundNode: ASDisplayNode {
                         animation.beginTime = self.contentView.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.25
                     }
 
-                    animation.completion = { _ in
+                    
+                    self.isAnimating = true
+                    if let patternOverlayLayer = self.patternOverlayLayer {
+                        patternOverlayLayer.isAnimating = true
+                    }
+                    animation.completion = { [weak self] value in
+                        if let strongSelf = self, value {
+                            strongSelf.isAnimating = false
+                            if let patternOverlayLayer = strongSelf.patternOverlayLayer {
+                                patternOverlayLayer.isAnimating = false
+                            }
+                        }
+                        
                         completion()
                     }
 
@@ -399,10 +462,11 @@ public final class GradientBackgroundNode: ASDisplayNode {
                         }
                     }
                 } else {
-                    let image = generateGradient(size: imageSize, colors: self.colors, positions: positions)
+                    let (image, imageHash) = generateGradient(size: imageSize, colors: self.colors, positions: positions)
                     self.contentView.image = image
+                    self.backgroundImageHash = imageHash
 
-                    let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: self.saturation)
+                    let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: self.saturation).0
                     self._dimmedImage = dimmedImage
                     self.dimmedImageParams = (imageSize, self.colors, positions)
 
@@ -412,14 +476,30 @@ public final class GradientBackgroundNode: ASDisplayNode {
 
                     completion()
                 }
+            } else if sizeUpdated {
+                let (image, imageHash) = generateGradient(size: imageSize, colors: self.colors, positions: positions)
+                self.contentView.image = image
+                self.backgroundImageHash = imageHash
+
+                let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: self.saturation).0
+                self.dimmedImageParams = (imageSize, self.colors, positions)
+
+                for cloneNode in self.cloneNodes {
+                    cloneNode.value?.image = dimmedImage
+                }
+
+                self.validPhase = self.phase
+
+                completion()
             } else {
                 completion()
             }
         } else if sizeUpdated {
-            let image = generateGradient(size: imageSize, colors: self.colors, positions: positions)
+            let (image, imageHash) = generateGradient(size: imageSize, colors: self.colors, positions: positions)
             self.contentView.image = image
+            self.backgroundImageHash = imageHash
 
-            let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: self.saturation)
+            let dimmedImage = generateGradient(size: imageSize, colors: self.colors, positions: positions, adjustSaturation: self.saturation).0
             self.dimmedImageParams = (imageSize, self.colors, positions)
 
             for cloneNode in self.cloneNodes {
@@ -434,6 +514,12 @@ public final class GradientBackgroundNode: ASDisplayNode {
         }
 
         transition.updateFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: size))
+        
+        if self.contentView.image !== previousImage || self.contentView.bounds.size != previousSize {
+            if let patternOverlayLayer = self.patternOverlayLayer, let imageHash = self.backgroundImageHash, let image = self.contentView.image, self.contentView.bounds.width > 1.0, self.contentView.bounds.height > 1.0 {
+                patternOverlayLayer.updateCompositionData(size: size, backgroundImage: image, backgroundImageHash: imageHash)
+            }
+        }
     }
 
     public func updateColors(colors: [UIColor]) {

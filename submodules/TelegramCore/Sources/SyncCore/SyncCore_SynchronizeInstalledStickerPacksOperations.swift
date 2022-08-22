@@ -4,6 +4,7 @@ import Postbox
 public enum SynchronizeInstalledStickerPacksOperationNamespace: Int32 {
     case stickers = 0
     case masks = 1
+    case emoji
 }
 
 public final class SynchronizeInstalledStickerPacksOperation: PostboxCoding {

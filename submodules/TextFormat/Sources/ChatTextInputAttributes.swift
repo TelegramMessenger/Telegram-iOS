@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import Postbox
+import TelegramCore
 import TelegramPresentationData
 import Emoji
 
@@ -17,9 +18,12 @@ public struct ChatTextInputAttributes {
     public static let textMention = NSAttributedString.Key(rawValue: "Attribute__TextMention")
     public static let textUrl = NSAttributedString.Key(rawValue: "Attribute__TextUrl")
     public static let spoiler = NSAttributedString.Key(rawValue: "Attribute__Spoiler")
+    public static let customEmoji = NSAttributedString.Key(rawValue: "Attribute__CustomEmoji")
     
-    public static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.textUrl, ChatTextInputAttributes.spoiler]
+    public static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.textUrl, ChatTextInputAttributes.spoiler, ChatTextInputAttributes.customEmoji]
 }
+
+public let originalTextAttributeKey = NSAttributedString.Key(rawValue: "Attribute__OriginalText")
 
 public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedString {
     let sourceString = NSMutableAttributedString(attributedString: text)
@@ -28,7 +32,7 @@ public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttrib
         let fullRange = NSRange(sourceString.string.startIndex ..< sourceString.string.endIndex, in: sourceString.string)
         sourceString.enumerateAttribute(NSAttributedString.Key.attachment, in: fullRange, options: [.longestEffectiveRangeNotRequired], using: { value, range, stop in
             if let value = value as? EmojiTextAttachment {
-                sourceString.replaceCharacters(in: range, with: NSAttributedString(string: value.emoji))
+                sourceString.replaceCharacters(in: range, with: NSAttributedString(string: value.text, attributes: [ChatTextInputAttributes.customEmoji: value.emoji]))
                 stop.pointee = true
                 found = true
             }
@@ -64,7 +68,7 @@ public struct ChatTextFontAttributes: OptionSet {
     public static let blockQuote = ChatTextFontAttributes(rawValue: 1 << 3)
 }
 
-public func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor, writingDirection: NSWritingDirection?, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((String) -> UIView)?) -> NSAttributedString {
+public func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor, writingDirection: NSWritingDirection?, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?) -> NSAttributedString {
     let result = NSMutableAttributedString(string: stateText.string)
     let fullRange = NSRange(location: 0, length: result.length)
     
@@ -108,6 +112,8 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
                 } else {
                     result.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
                 }
+            } else if key == ChatTextInputAttributes.customEmoji {
+                result.addAttribute(key, value: value, range: range)
             }
         }
             
@@ -134,35 +140,6 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
             }
         }
     })
-    
-    /*if #available(iOS 15, *), let emojiViewProvider = emojiViewProvider {
-        let _ = CustomTextAttachmentViewProvider.ensureRegistered
-        
-        var nextIndex: [String: Int] = [:]
-        
-        result.string.enumerateSubstrings(in: result.string.startIndex ..< result.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
-            if let substring = substring {
-                let emoji = substring.basicEmoji.0
-                
-                if !emoji.isEmpty && emoji.isSingleEmoji && availableEmojis.contains(emoji) {
-                    let index: Int
-                    if let value = nextIndex[emoji] {
-                        index = value
-                    } else {
-                        index = 0
-                    }
-                    nextIndex[emoji] = index + 1
-                    
-                    let attachment = EmojiTextAttachment(index: index, emoji: emoji, viewProvider: emojiViewProvider)
-                    attachment.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 16.0))
-                    
-                    result.replaceCharacters(in: NSRange(substringRange, in: result.string), with: NSAttributedString(attachment: attachment))
-                    
-                    stop = true
-                }
-            }
-        }
-    }*/
     
     return result
 }
@@ -209,6 +186,29 @@ public final class ChatTextInputTextUrlAttribute: NSObject {
     override public func isEqual(_ object: Any?) -> Bool {
         if let other = object as? ChatTextInputTextUrlAttribute {
             return self.url == other.url
+        } else {
+            return false
+        }
+    }
+}
+
+public final class ChatTextInputTextCustomEmojiAttribute: NSObject {
+    public let stickerPack: StickerPackReference?
+    public let fileId: Int64
+    public let file: TelegramMediaFile?
+    
+    public init(stickerPack: StickerPackReference?, fileId: Int64, file: TelegramMediaFile?) {
+        self.stickerPack = stickerPack
+        self.fileId = fileId
+        self.file = file
+        
+        super.init()
+    }
+    
+    override public func isEqual(_ object: Any?) -> Bool {
+        if let other = object as? ChatTextInputTextCustomEmojiAttribute {
+            return self === other
+            //return self.stickerPack == other.stickerPack && self.fileId == other.fileId && self.file?.fileId == other.file?.fileId
         } else {
             return false
         }
@@ -459,7 +459,7 @@ private func refreshTextUrls(text: NSString, initialAttributedText: NSAttributed
     }
 }
 
-public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((String) -> UIView)?) {
+public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?) {
     guard let initialAttributedText = textNode.attributedText, initialAttributedText.length != 0 else {
         return
     }
@@ -493,10 +493,14 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textUrl, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.spoiler, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.customEmoji, range: fullRange)
         
         textNode.textView.textStorage.addAttribute(NSAttributedString.Key.font, value: Font.regular(baseFontSize), range: fullRange)
         textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.chat.inputPanel.primaryTextColor, range: fullRange)
         
+        let replaceRanges: [(NSRange, EmojiTextAttachment)] = []
+        
+        //var emojiIndex = 0
         attributedText.enumerateAttributes(in: fullRange, options: [], using: { attributes, range, _ in
             var fontAttributes: ChatTextFontAttributes = []
             
@@ -530,6 +534,8 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
                     } else {
                         textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
                     }
+                } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
                 }
             }
                 
@@ -556,56 +562,14 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
                 }
             }
         })
-    }
-    
-    if #available(iOS 15, *), let emojiViewProvider = emojiViewProvider {
-        let _ = CustomTextAttachmentViewProvider.ensureRegistered
         
-        var nextIndex: [String: Int] = [:]
-        
-        var count = 0
-        
-        let fullRange = NSRange(textNode.textView.textStorage.string.startIndex ..< textNode.textView.textStorage.string.endIndex, in: textNode.textView.textStorage.string)
-        textNode.textView.textStorage.enumerateAttribute(NSAttributedString.Key.attachment, in: fullRange, options: [], using: { value, _, _ in
-            if let _ = value as? EmojiTextAttachment {
-                count += 1
-            }
-        })
-        
-        while count < 10 {
-            var found = false
-            textNode.textView.textStorage.string.enumerateSubstrings(in: textNode.textView.textStorage.string.startIndex ..< textNode.textView.textStorage.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
-                if let substring = substring {
-                    let emoji = substring.basicEmoji.0
-                    
-                    if !emoji.isEmpty && emoji.isSingleEmoji && availableEmojis.contains(emoji) {
-                        let index: Int
-                        if let value = nextIndex[emoji] {
-                            index = value
-                        } else {
-                            index = 0
-                        }
-                        nextIndex[emoji] = index + 1
-                        
-                        let attachment = EmojiTextAttachment(index: index, emoji: emoji, viewProvider: emojiViewProvider)
-                        attachment.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 16.0))
-                        
-                        textNode.textView.textStorage.replaceCharacters(in: NSRange(substringRange, in: textNode.textView.textStorage.string), with: NSAttributedString(attachment: attachment))
-                        
-                        count += 1
-                        found = true
-                        stop = true
-                    }
-                }
-            }
-            if !found {
-                break
-            }
+        for (range, attachment) in replaceRanges.sorted(by: { $0.0.location > $1.0.location }) {
+            textNode.textView.textStorage.replaceCharacters(in: range, with: NSAttributedString(attachment: attachment))
         }
     }
 }
 
-public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat, availableEmojis: Set<String>, emojiViewProvider: ((String) -> UIView)?, spoilersRevealed: Bool = false) {
+public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, spoilersRevealed: Bool = false) {
     guard let initialAttributedText = textNode.attributedText, initialAttributedText.length != 0 else {
         return
     }
@@ -902,10 +866,12 @@ public func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttribu
 }
 
 private final class EmojiTextAttachment: NSTextAttachment {
-    let emoji: String
-    let viewProvider: (String) -> UIView
+    let text: String
+    let emoji: ChatTextInputTextCustomEmojiAttribute
+    let viewProvider: (ChatTextInputTextCustomEmojiAttribute) -> UIView
     
-    init(index: Int, emoji: String, viewProvider: @escaping (String) -> UIView) {
+    init(index: Int, text: String, emoji: ChatTextInputTextCustomEmojiAttribute, viewProvider: @escaping (ChatTextInputTextCustomEmojiAttribute) -> UIView) {
+        self.text = text
         self.emoji = emoji
         self.viewProvider = viewProvider
         

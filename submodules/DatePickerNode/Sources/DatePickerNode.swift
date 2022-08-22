@@ -744,7 +744,7 @@ public final class DatePickerNode: ASDisplayNode {
         self.monthTextNode.frame = monthTextFrame
         
         let monthArrowFrame = CGRect(x: monthTextFrame.maxX + 10.0, y: monthTextFrame.minY + 4.0, width: 7.0, height: 12.0)
-        self.monthArrowNode.position = monthArrowFrame.center
+        self.monthArrowNode.position = CGPoint(x: monthArrowFrame.midX, y: monthArrowFrame.midY)
         self.monthArrowNode.bounds = CGRect(origin: CGPoint(), size: monthArrowFrame.size)
         
         transition.updateTransformRotation(node: self.monthArrowNode, angle: self.state.displayingMonthSelection ? CGFloat.pi / 2.0 : 0.0)

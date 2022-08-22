@@ -7,6 +7,12 @@ import UIKitRuntimeUtils
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 
+private extension CGRect {
+    var center: CGPoint {
+        return CGPoint(x: self.midX, y: self.midY)
+    }
+}
+
 private let separatorHeight: CGFloat = 1.0 / UIScreen.main.scale
 private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: UIColor, tintColor: UIColor, horizontal: Bool, imageMode: Bool, centered: Bool = false) -> (UIImage, CGFloat) {
     let font = horizontal ? Font.regular(13.0) : Font.medium(10.0)
@@ -317,6 +323,8 @@ class TabBarNode: ASDisplayNode {
         }
     }
     
+    var reduceMotion: Bool = false
+    
     var selectedIndex: Int? {
         didSet {
             if self.selectedIndex != oldValue {
@@ -574,12 +582,14 @@ class TabBarNode: ASDisplayNode {
                 node.contentWidth = max(contentWidth, imageContentWidth)
                 node.isSelected = true
                 
-                ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateTransformScale(node: node.ringImageNode, scale: 1.0, delay: 0.1)
-                node.imageNode.layer.animateScale(from: 1.0, to: 0.87, duration: 0.1, removeOnCompletion: false, completion: { [weak node] _ in
-                    node?.imageNode.layer.animateScale(from: 0.87, to: 1.0, duration: 0.14, removeOnCompletion: false, completion: { [weak node] _ in
-                        node?.imageNode.layer.removeAllAnimations()
+                if !self.reduceMotion && item.item.ringSelection {
+                    ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateTransformScale(node: node.ringImageNode, scale: 1.0, delay: 0.1)
+                    node.imageNode.layer.animateScale(from: 1.0, to: 0.87, duration: 0.1, removeOnCompletion: false, completion: { [weak node] _ in
+                        node?.imageNode.layer.animateScale(from: 0.87, to: 1.0, duration: 0.14, removeOnCompletion: false, completion: { [weak node] _ in
+                            node?.imageNode.layer.removeAllAnimations()
+                        })
                     })
-                })
+                }
             } else {
                 let (textImage, contentWidth) = tabBarItemImage(item.item.image, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
                 
@@ -642,7 +652,7 @@ class TabBarNode: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         self.backgroundNode.update(size: size, transition: transition)
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -separatorHeight), size: CGSize(width: size.width, height: separatorHeight)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: separatorHeight)))
         
         let horizontal = !leftInset.isZero
         if self.horizontal != horizontal {

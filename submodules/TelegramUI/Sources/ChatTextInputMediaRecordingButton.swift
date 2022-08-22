@@ -10,6 +10,8 @@ import AccountContext
 import ChatInterfaceState
 import AudioBlob
 import ChatPresentationInterfaceState
+import ComponentFlow
+import LottieAnimationComponent
 
 private let offsetThreshold: CGFloat = 10.0
 private let dismissOffsetThreshold: CGFloat = 70.0
@@ -185,7 +187,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     
     private var modeTimeoutTimer: SwiftSignalKit.Timer?
     
-    private let innerIconView: UIImageView
+    private let animationView: ComponentView<Empty>
     
     private var recordingOverlay: ChatTextInputAudioRecordingOverlay?
     private var startTouchLocation: CGPoint?
@@ -288,7 +290,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     init(theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
         self.theme = theme
         self.strings = strings
-        self.innerIconView = UIImageView()
+        self.animationView = ComponentView<Empty>()
         self.presentController = presentController
          
         super.init(frame: CGRect())
@@ -296,8 +298,6 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         self.disablesInteractiveTransitionGestureRecognizer = true
         
         self.pallete = legacyInputMicPalette(from: theme)
-        
-        self.insertSubview(self.innerIconView, at: 0)
         
         self.disablesInteractiveTransitionGestureRecognizer = true
         
@@ -318,51 +318,81 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
         
     private func updateMode(mode: ChatTextInputMediaRecordingButtonMode, animated: Bool, force: Bool) {
+        let previousMode = self.mode
         if mode != self.mode || force {
             self.mode = mode
-            
-            if animated {
-                let previousView = UIImageView(image: self.innerIconView.image)
-                previousView.frame = self.innerIconView.frame
-                self.addSubview(previousView)
-                previousView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
-                previousView.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false, completion: { [weak previousView] _ in
-                    previousView?.removeFromSuperview()
-                })
+
+            self.updateAnimation(previousMode: previousMode)
+        }
+    }
+    
+    private func updateAnimation(previousMode: ChatTextInputMediaRecordingButtonMode) {
+        let image: UIImage?
+        switch self.mode {
+            case .audio:
+                self.icon = PresentationResourcesChat.chatInputPanelVoiceActiveButtonImage(self.theme)
+                image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(self.theme)
+            case .video:
+                self.icon = PresentationResourcesChat.chatInputPanelVideoActiveButtonImage(self.theme)
+                image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(self.theme)
+        }
+        
+        let size = self.bounds.size
+        let iconSize: CGSize
+        if let image = image {
+            iconSize = image.size
+        } else {
+            iconSize = size
+        }
+
+        let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+        
+        let animationName: String
+        switch self.mode {
+            case .audio:
+                animationName = "anim_videoToMic"
+            case .video:
+                animationName = "anim_micToVideo"
+        }
+        
+        var animationMode: LottieAnimationComponent.AnimationItem.Mode = .still(position: .end)
+        if previousMode != mode {
+            animationMode = .animating(loop: false)
+        }
+    
+        let colorKeys = ["__allcolors__"]
+        var colors: [String: UIColor] = [:]
+        for colorKey in colorKeys {
+            colors[colorKey] = self.theme.chat.inputPanel.panelControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
+        }
+        
+        let _ = animationView.update(
+            transition: .immediate,
+            component: AnyComponent(LottieAnimationComponent(
+                animation: LottieAnimationComponent.AnimationItem(
+                    name: animationName,
+                    mode: animationMode
+                ),
+                colors: colors,
+                size: animationFrame.size
+            )),
+            environment: {},
+            containerSize: animationFrame.size
+        )
+
+        if let view = animationView.view {
+            view.isUserInteractionEnabled = false
+            if view.superview == nil {
+                self.insertSubview(view, at: 0)
             }
-            
-            switch self.mode {
-                case .audio:
-                    self.icon = PresentationResourcesChat.chatInputPanelVoiceActiveButtonImage(self.theme)
-                    self.innerIconView.image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(self.theme)
-                case .video:
-                    self.icon = PresentationResourcesChat.chatInputPanelVideoActiveButtonImage(self.theme)
-                    self.innerIconView.image = PresentationResourcesChat.chatInputPanelVideoButtonImage(self.theme)
-            }
-            if let image = self.innerIconView.image {
-                let size = self.bounds.size
-                let iconSize = image.size
-                self.innerIconView.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
-            }
-            
-            if animated {
-                self.innerIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
-                self.innerIconView.layer.animateSpring(from: 0.4 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
-            }
+            view.frame = animationFrame
         }
     }
     
     func updateTheme(theme: PresentationTheme) {
         self.theme = theme
         
-        switch self.mode {
-            case .audio:
-                self.icon = PresentationResourcesChat.chatInputPanelVoiceActiveButtonImage(self.theme)
-                self.innerIconView.image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(self.theme)
-            case .video:
-                self.icon = PresentationResourcesChat.chatInputPanelVideoActiveButtonImage(self.theme)
-                self.innerIconView.image = PresentationResourcesChat.chatInputPanelVideoButtonImage(self.theme)
-        }
+        self.updateAnimation(previousMode: self.mode)
         
         self.pallete = legacyInputMicPalette(from: theme)
         self.micDecorationValue?.setColor(self.theme.chat.inputPanel.actionControlFillColor)
@@ -467,8 +497,11 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         micDecoration.isHidden = false
         micDecoration.startAnimating()
 
-        innerIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
-        innerIconView.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false)
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
+        if let layer = self.animationView.view?.layer {
+            transition.updateAlpha(layer: layer, alpha: 0.0)
+            transition.updateTransformScale(layer: layer, scale: 0.3)
+        }
     }
 
     override func animateOut(_ toSmallSize: Bool) {
@@ -480,8 +513,11 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
             micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.03, delay: 0.15, removeOnCompletion: false)
         } else {
             micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false)
-            innerIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
-            innerIconView.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, removeOnCompletion: false)
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
+            if let layer = self.animationView.view?.layer {
+                transition.updateAlpha(layer: layer, alpha: 1.0)
+                transition.updateTransformScale(layer: layer, scale: 1.0)
+            }
         }
     }
     
@@ -490,8 +526,10 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         let size = self.bounds.size
         if size != self.previousSize {
             self.previousSize = size
-            let iconSize = self.innerIconView.bounds.size
-            self.innerIconView.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+            if let view = self.animationView.view {
+                let iconSize = view.bounds.size
+                view.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+            }
         }
     }
 }

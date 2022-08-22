@@ -9,6 +9,12 @@ import TelegramCore
 final class ChatMessageEventLogPreviousMessageContentNode: ChatMessageBubbleContentNode {
     private let contentNode: ChatMessageAttachedContentNode
     
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            self.contentNode.visibility = visibility
+        }
+    }
+    
     required init() {
         self.contentNode = ChatMessageAttachedContentNode()
         
@@ -43,7 +49,7 @@ final class ChatMessageEventLogPreviousMessageContentNode: ChatMessageBubbleCont
             }
             let mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)? = nil
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, true, .peer(id: item.message.id.peerId), title, nil, text, messageEntities, mediaAndFlags, nil, nil, nil, true, layoutConstants, preparePosition, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, true, .peer(id: item.message.id.peerId), title, nil, text, messageEntities, mediaAndFlags, nil, nil, nil, true, layoutConstants, preparePosition, constrainedSize, item.controllerInteraction.presentationContext.animationCache, item.controllerInteraction.presentationContext.animationRenderer)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             

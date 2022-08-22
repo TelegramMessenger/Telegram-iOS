@@ -197,7 +197,7 @@ extension ListMessageItemInteraction {
         self.init(openMessage: { message, mode -> Bool in
             return controllerInteraction.openMessage(message, mode)
         }, openMessageContextMenu: { message, bool, node, rect, gesture in
-            controllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture)
+            controllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture, nil)
         }, toggleMessagesSelection: { messageId, selected in
             controllerInteraction.toggleMessagesSelection(messageId, selected)
         }, openUrl: { url, param1, param2, message in
@@ -2189,6 +2189,34 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             return message
                         }
                     }
+                }
+            }
+        }
+        return nil
+    }
+    
+    public func messageInCurrentHistoryView(after messageId: MessageId) -> Message? {
+        if let historyView = self.historyView {
+            if let index = historyView.filteredEntries.firstIndex(where: { $0.firstIndex.id == messageId }), index < historyView.filteredEntries.count - 1 {
+                let nextEntry = historyView.filteredEntries[index + 1]
+                if case let .MessageEntry(message, _, _, _, _, _) = nextEntry {
+                    return message
+                } else if case let .MessageGroupEntry(_, messages, _) = nextEntry, let firstMessage = messages.first {
+                    return firstMessage.0
+                }
+            }
+        }
+        return nil
+    }
+    
+    public func messageInCurrentHistoryView(before messageId: MessageId) -> Message? {
+        if let historyView = self.historyView {
+            if let index = historyView.filteredEntries.firstIndex(where: { $0.firstIndex.id == messageId }), index > 0 {
+                let nextEntry = historyView.filteredEntries[index - 1]
+                if case let .MessageEntry(message, _, _, _, _, _) = nextEntry {
+                    return message
+                } else if case let .MessageGroupEntry(_, messages, _) = nextEntry, let firstMessage = messages.first {
+                    return firstMessage.0
                 }
             }
         }

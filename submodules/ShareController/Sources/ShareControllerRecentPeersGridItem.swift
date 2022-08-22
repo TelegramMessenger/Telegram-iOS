@@ -62,7 +62,7 @@ final class ShareControllerRecentPeersGridItemNode: GridItemNode {
             } else {
                 peersNode = ChatListSearchRecentPeersNode(context: context, theme: theme, mode: .actionSheet, strings: strings, peerSelected: { [weak self] peer in
                     self?.controllerInteraction?.togglePeer(EngineRenderedPeer(peer: peer), true)
-                }, peerContextAction: { _, _, gesture in gesture?.cancel() }, isPeerSelected: { [weak self] peerId in
+                }, peerContextAction: { _, _, gesture, _ in gesture?.cancel() }, isPeerSelected: { [weak self] peerId in
                     return self?.controllerInteraction?.selectedPeerIds.contains(peerId) ?? false
                 }, share: true)
                 self.peersNode = peersNode

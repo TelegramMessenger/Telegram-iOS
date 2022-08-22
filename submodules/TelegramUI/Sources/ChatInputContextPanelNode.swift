@@ -20,7 +20,7 @@ class ChatInputContextPanelNode: ASDisplayNode {
     var theme: PresentationTheme
     var fontSize: PresentationFontSize
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext) {
         self.context = context
         self.theme = theme
         self.fontSize = fontSize

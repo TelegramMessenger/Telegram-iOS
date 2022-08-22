@@ -19,6 +19,8 @@ swift_library(
         "//submodules/ChatPresentationInterfaceState:ChatPresentationInterfaceState",
         "//submodules/ContextUI:ContextUI",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
     ],
     visibility = [
         "//visibility:public",

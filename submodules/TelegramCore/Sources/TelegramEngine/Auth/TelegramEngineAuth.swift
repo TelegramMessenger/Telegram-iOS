@@ -90,12 +90,41 @@ public extension TelegramEngine {
             return _internal_updateTwoStepVerificationPassword(network: self.account.network, currentPassword: currentPassword, updatedPassword: updatedPassword)
         }
 
-        public func deleteAccount(reason: String) -> Signal<Never, DeleteAccountError> {
-            return self.account.network.request(Api.functions.account.deleteAccount(reason: reason))
-            |> mapError { _ -> DeleteAccountError in
-                return .generic
+        public func deleteAccount(reason: String, password: String?) -> Signal<Never, DeleteAccountError> {
+            let network = self.account.network
+            
+            let passwordSignal: Signal<Api.InputCheckPasswordSRP?, DeleteAccountError>
+            if let password = password {
+                passwordSignal = _internal_twoStepAuthData(network)
+                |> mapError { _ -> DeleteAccountError in
+                    return .generic
+                }
+                |> mapToSignal { authData -> Signal<Api.InputCheckPasswordSRP?, DeleteAccountError> in
+                    if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
+                        guard let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
+                            return .fail(.generic)
+                        }
+                        return .single(.inputCheckPasswordSRP(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1)))
+                    } else {
+                        return .single(nil)
+                    }
+                }
+            } else {
+                passwordSignal = .single(nil)
             }
-            |> ignoreValues
+            
+            return passwordSignal
+            |> mapToSignal { password -> Signal<Never, DeleteAccountError> in
+                var flags: Int32 = 0
+                if let _ = password {
+                    flags |= (1 << 0)
+                }
+                return self.account.network.request(Api.functions.account.deleteAccount(flags: flags, reason: reason, password: password))
+                |> mapError { _ -> DeleteAccountError in
+                    return .generic
+                }
+                |> ignoreValues
+            }
         }
 
         public func updateTwoStepVerificationEmail(currentPassword: String, updatedEmail: String) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
