@@ -46,12 +46,12 @@
 "FakePasscodes.Common.DoNotShowAgain" = "Не показывать снова";
 
 "FakePasscodes.AccountActions.ChatsToRemove" = "Чаты для удаления";
-"FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Чаты настроенные на удаление";
+"FakePasscodes.AccountActions.ChatsToRemove.ConfiguredChatsHeader" = "Настроенные чаты";
 "FakePasscodes.AccountActions.ChatsToRemove.AvailableChatsHeader" = "Доступные чаты";
 "FakePasscodes.AccountActions.ChatsToRemove.EmptyListInfo" = "Чаты не найдены.";
 "FakePasscodes.AccountActions.ChatsToRemove.SettingsTitle" = "Настройки удаления чатов";
 "FakePasscodes.AccountActions.ChatsToRemove.SelectedChatsHeader" = "Выбранные чаты";
-"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHeader" = "Способ удаления";
+"FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeHeader" = "Действие";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDelete" = "Удалить";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDeleteForEveryone" = "Удалить для всех";
 "FakePasscodes.AccountActions.ChatsToRemove.RemovalTypeDeleteJustForMe" = "Удалить только для меня";

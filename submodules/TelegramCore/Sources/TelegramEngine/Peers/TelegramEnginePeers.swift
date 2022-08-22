@@ -335,6 +335,15 @@ public extension TelegramEngine {
             |> ignoreValues
         }
 
+        public func removePeerChats(items: [(peerId: PeerId, deleteGloballyIfPossible: Bool)]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for (peerId, deleteGloballyIfPossible) in items {
+                    _internal_removePeerChat(account: self.account, transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible)
+                }
+            }
+            |> ignoreValues
+        }
+
         public func terminateSecretChat(peerId: PeerId, requestRemoteHistoryRemoval: Bool) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 _internal_terminateSecretChat(transaction: transaction, peerId: peerId, requestRemoteHistoryRemoval: requestRemoteHistoryRemoval)

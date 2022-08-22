@@ -268,19 +268,29 @@ public struct FakePasscodeSettings: Codable, Equatable {
         return withUpdatedAccountActions(self.accountActions.filter({ $0.peerId != accountAction.peerId }) + [accountAction])
     }
     
-    public func activate(sharedAccountContext: SharedAccountContext) {
+    public func activate(sharedAccountContext: SharedAccountContext, beforeUnlockTaskCounter: PendingTaskCounter) {
+        beforeUnlockTaskCounter.increment()
         let _ = (sharedAccountContext.activeAccountContexts
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { activeAccounts in
-            for (_, context, _) in activeAccounts.accounts {
+        |> take(1)).start(next: { activeAccounts in
+            let currentAccountId = activeAccounts.primary?.account.id
+            for (_, context, _) in activeAccounts.accounts.sorted(by: { lhs, rhs in
+                if lhs.0 == currentAccountId {
+                    return true
+                }
+                if rhs.0 == currentAccountId {
+                    return false
+                }
+                return lhs.2 < rhs.2
+            }) {
                 if let accountAction = accountActions.first(where: { $0.peerId == context.account.peerId && $0.recordId == context.account.id }) {
-                    accountAction.performActions(context: context, updateSettings: { updatedSettings in
+                    accountAction.performActions(context: context, isCurrentAccount: context.account.id == currentAccountId, beforeUnlockTaskCounter: beforeUnlockTaskCounter, updateSettings: { updatedSettings in
                         let _ = updateFakePasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, { holder in
                             return holder.withUpdatedSettingsItem(holder.settings.first(where: { $0.uuid == self.uuid })!.withUpdatedAccountActionItem(updatedSettings))
                         }).start()
                     })
                 }
             }
+            beforeUnlockTaskCounter.decrement()
         })
     }
 }

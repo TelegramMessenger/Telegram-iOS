@@ -193,20 +193,22 @@ public final class PasscodeEntryController: ViewController {
             }
             |> deliverOnMainQueue).start(next: { succeed, passcodeSwitched, fakePasscodeToActivate in
                 if succeed {
-                    if let completed = strongSelf.completed {
-                        completed()
-                    } else {
-                        strongSelf.appLockContext.unlock()
-                    }
-                    
-                    let isMainApp = strongSelf.applicationBindings.isMainApp
-                    let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { settings in
-                        if isMainApp {
-                            return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                    let completeUnlock = {
+                        if let completed = strongSelf.completed {
+                            completed()
                         } else {
-                            return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                            strongSelf.appLockContext.unlock()
                         }
-                    }).start()
+                        
+                        let isMainApp = strongSelf.applicationBindings.isMainApp
+                        let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { settings in
+                            if isMainApp {
+                                return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                            } else {
+                                return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                            }
+                        }).start()
+                    }
                     
                     if passcodeSwitched {
                         strongSelf.window?.forEachController { controller in
@@ -223,7 +225,15 @@ public final class PasscodeEntryController: ViewController {
                     }
                     
                     if let fakePasscodeToActivate = fakePasscodeToActivate, let sharedAccountContext = strongSelf.sharedAccountContext {
-                        fakePasscodeToActivate.activate(sharedAccountContext: sharedAccountContext)
+                        let beforeUnlockTaskCounter = PendingTaskCounter()
+                        fakePasscodeToActivate.activate(sharedAccountContext: sharedAccountContext, beforeUnlockTaskCounter: beforeUnlockTaskCounter)
+                        
+                        let _ = (beforeUnlockTaskCounter.completed()
+                        |> deliverOnMainQueue).start(next: {
+                            completeUnlock()
+                        })
+                    } else {
+                        completeUnlock()
                     }
                 } else {
                     strongSelf.appLockContext.failedUnlockAttempt()

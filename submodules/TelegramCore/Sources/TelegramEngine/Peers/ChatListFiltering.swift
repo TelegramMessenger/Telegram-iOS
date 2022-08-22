@@ -768,11 +768,11 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
     }
 }
 
-struct ChatListFiltersState: Codable, Equatable {
-    var filters: [ChatListFilter]
-    var remoteFilters: [ChatListFilter]?
+public struct ChatListFiltersState: Codable, Equatable {
+    public var filters: [ChatListFilter]
+    public var remoteFilters: [ChatListFilter]?
     
-    static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil)
+    public static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil)
     
     fileprivate init(filters: [ChatListFilter], remoteFilters: [ChatListFilter]?) {
         self.filters = filters
@@ -786,7 +786,7 @@ struct ChatListFiltersState: Codable, Equatable {
         self.remoteFilters = try container.decodeIfPresent([ChatListFilter].self, forKey: "remoteFilters")
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         try container.encode(self.filters, forKey: "filters")

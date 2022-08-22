@@ -205,7 +205,7 @@ public func chatsToRemovePeerSettingsController(context: AccountContext, peers: 
         
         // .textWithSubtitle to enable controller.navigationItem.titleView
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .textWithSubtitle(title, ""), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: nil)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

@@ -326,6 +326,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let extractedBackgroundImageNode: ASImageNode
 
     private let containerNode: ContextControllerSourceNode
+    // overriding controlsContainer fixes round edges of Delete button
     public override var controlsContainer: ASDisplayNode {
         return self.containerNode
     }
@@ -1087,6 +1088,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
                             strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(nodeLayout.insets.top, separatorHeight)), size: CGSize(width: nodeLayout.contentSize.width, height: separatorHeight))
                             strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - leftInset), height: separatorHeight))
+                            // the following line commented out because it seems like a bug.
+                            // it adds unwanted separator in last item of non-last section.
+                            // strongSelf.separatorNode.isHidden is already set in code above.
 //                            strongSelf.separatorNode.isHidden = last
                             
                             if let userPresence = userPresence {
