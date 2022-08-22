@@ -173,8 +173,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var animateFromExtensionDistance: CGFloat = 0.0
     private var extensionDistance: CGFloat = 0.0
     
+    private var emojiContentLayout: EmojiPagerContentComponent.CustomLayout?
     private var emojiContent: EmojiPagerContentComponent?
     private var emojiContentDisposable: Disposable?
+    
+    private var horizontalExpandRecognizer: UIPanGestureRecognizer?
+    private var horizontalExpandStartLocation: CGPoint?
+    private var horizontalExpandDistance: CGFloat = 0.0
     
     public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
@@ -270,6 +275,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.addSubnode(self.contentContainer)
         self.addSubnode(self.previewingItemContainer)
+        
+        if self.canBeExpanded {
+            let horizontalExpandRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.horizontalExpandGesture(_:)))
+            //self.view.addGestureRecognizer(horizontalExpandRecognizer)
+            self.horizontalExpandRecognizer = horizontalExpandRecognizer
+        }
     }
     
     deinit {
@@ -285,6 +296,34 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         longPressRecognizer.minimumPressDuration = 0.2
         self.longPressRecognizer = longPressRecognizer
         self.view.addGestureRecognizer(longPressRecognizer)
+    }
+    
+    @objc private func horizontalExpandGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            self.horizontalExpandStartLocation = recognizer.location(in: self.view)
+        case .changed:
+            if let horizontalExpandStartLocation = self.horizontalExpandStartLocation {
+                let currentLocation = recognizer.location(in: self.view)
+                
+                let distance = min(0.0, currentLocation.x - horizontalExpandStartLocation.x)
+                self.horizontalExpandDistance = distance
+                
+                if let (size, insets, anchorRect) = self.validLayout {
+                    self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
+                }
+            }
+        case .cancelled, .ended:
+            if self.horizontalExpandDistance != 0.0 {
+                self.horizontalExpandDistance = 0.0
+                
+                if let (size, insets, anchorRect) = self.validLayout {
+                    self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isAnimatingOut: false, transition: .animated(duration: 0.3, curve: .spring), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
+                }
+            }
+        default:
+            break
+        }
     }
     
     public func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, isAnimatingOut: Bool, transition: ContainedViewLayoutTransition) {
@@ -422,7 +461,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             if appearBounds.intersects(baseItemFrame) || (self.visibleItemNodes[i] != nil && visibleBounds.intersects(baseItemFrame)) {
                 validIndices.insert(i)
                 
-                let itemFrame = baseItemFrame
+                var itemFrame = baseItemFrame
+                itemFrame.origin.x -= self.horizontalExpandDistance
+                
                 var isPreviewing = false
                 if let highlightedReaction = self.highlightedReaction, highlightedReaction == self.items[i].reaction {
                     isPreviewing = true
@@ -598,6 +639,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.updateScrolling(transition: transition)
         
+        self.emojiContentLayout = EmojiPagerContentComponent.CustomLayout(
+            itemsPerRow: itemCount,
+            itemSize: itemSize,
+            sideInset: sideInset,
+            itemSpacing: itemSpacing
+        )
+        
         if (self.isExpanded || self.reactionSelectionComponentHost != nil), let getEmojiContent = self.getEmojiContent {
             let reactionSelectionComponentHost: ComponentView<Empty>
             var componentTransition = Transition(transition)
@@ -621,6 +669,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 semaphore.wait()
                 self.emojiContent = emojiContent
+                if let emojiContent = emojiContent {
+                    self.updateEmojiContent(emojiContent)
+                }
                 
                 self.emojiContentDisposable = (getEmojiContent(self.animationCache, self.animationRenderer)
                 |> deliverOnMainQueue).start(next: { [weak self] emojiContent in
@@ -629,6 +680,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                     
                     strongSelf.emojiContent = emojiContent
+                    strongSelf.updateEmojiContent(emojiContent)
                     
                     if let reactionSelectionComponentHost = strongSelf.reactionSelectionComponentHost, let componentView = reactionSelectionComponentHost.view {
                         let _ = reactionSelectionComponentHost.update(
@@ -649,73 +701,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             if let emojiContent = emojiContent {
-                emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
-                    performItemAction: { [weak self] groupId, item, sourceView, sourceRect, sourceLayer in
-                        guard let strongSelf = self, let itemFile = item.itemFile else {
-                            return
-                        }
-                        var found = false
-                        if let groupId = groupId.base as? String, groupId == "recent" {
-                            for reactionItem in strongSelf.items {
-                                if case let .reaction(reactionItem) = reactionItem {
-                                    if reactionItem.stillAnimation.fileId == itemFile.fileId {
-                                        found = true
-                                        
-                                        strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
-                                        strongSelf.reactionSelected?(reactionItem.updateMessageReaction, false)
-                                        
-                                        break
-                                    }
-                                }
-                            }
-                        }
-                        if !found {
-                            let reactionItem = ReactionItem(
-                                reaction: ReactionItem.Reaction(rawValue: .custom(itemFile.fileId.id)),
-                                appearAnimation: itemFile,
-                                stillAnimation: itemFile,
-                                listAnimation: itemFile,
-                                largeListAnimation: itemFile,
-                                applicationAnimation: nil,
-                                largeApplicationAnimation: nil,
-                                isCustom: true
-                            )
-                            strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
-                            strongSelf.reactionSelected?(reactionItem.updateMessageReaction, false)
-                        }
-                    },
-                    deleteBackwards: {
-                    },
-                    openStickerSettings: {
-                    },
-                    openFeatured: {
-                    },
-                    addGroupAction: { _, _ in
-                    },
-                    clearGroup: { _ in
-                    },
-                    pushController: { _ in
-                    },
-                    presentController: { _ in
-                    },
-                    presentGlobalOverlayController: { _ in
-                    },
-                    navigationController: {
-                        return nil
-                    },
-                    sendSticker: nil,
-                    chatPeerId: nil,
-                    peekBehavior: nil,
-                    customLayout: EmojiPagerContentComponent.CustomLayout(
-                        itemsPerRow: itemCount,
-                        itemSize: itemSize,
-                        sideInset: sideInset,
-                        itemSpacing: itemSpacing
-                    ),
-                    externalBackground: EmojiPagerContentComponent.ExternalBackground(
-                        effectContainerView: self.backgroundNode.vibrancyEffectView?.contentView
-                    )
-                )
+                self.updateEmojiContent(emojiContent)
                 
                 let _ = reactionSelectionComponentHost.update(
                     transition: componentTransition,
@@ -831,6 +817,75 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             self.position = CGPoint(x: self.position.x - offset.x, y: self.position.y - offset.y)
             self.layer.animatePosition(from: offset, to: CGPoint(), duration: 0.2, removeOnCompletion: true, additive: true)
         }
+    }
+    
+    private func updateEmojiContent(_ emojiContent: EmojiPagerContentComponent) {
+        guard let emojiContentLayout = self.emojiContentLayout else {
+            return
+        }
+        
+        emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+            performItemAction: { [weak self] groupId, item, sourceView, sourceRect, sourceLayer in
+                guard let strongSelf = self, let itemFile = item.itemFile else {
+                    return
+                }
+                var found = false
+                if let groupId = groupId.base as? String, groupId == "recent" {
+                    for reactionItem in strongSelf.items {
+                        if case let .reaction(reactionItem) = reactionItem {
+                            if reactionItem.stillAnimation.fileId == itemFile.fileId {
+                                found = true
+                                
+                                strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
+                                strongSelf.reactionSelected?(reactionItem.updateMessageReaction, false)
+                                
+                                break
+                            }
+                        }
+                    }
+                }
+                if !found {
+                    let reactionItem = ReactionItem(
+                        reaction: ReactionItem.Reaction(rawValue: .custom(itemFile.fileId.id)),
+                        appearAnimation: itemFile,
+                        stillAnimation: itemFile,
+                        listAnimation: itemFile,
+                        largeListAnimation: itemFile,
+                        applicationAnimation: nil,
+                        largeApplicationAnimation: nil,
+                        isCustom: true
+                    )
+                    strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
+                    strongSelf.reactionSelected?(reactionItem.updateMessageReaction, false)
+                }
+            },
+            deleteBackwards: {
+            },
+            openStickerSettings: {
+            },
+            openFeatured: {
+            },
+            addGroupAction: { _, _ in
+            },
+            clearGroup: { _ in
+            },
+            pushController: { _ in
+            },
+            presentController: { _ in
+            },
+            presentGlobalOverlayController: { _ in
+            },
+            navigationController: {
+                return nil
+            },
+            sendSticker: nil,
+            chatPeerId: nil,
+            peekBehavior: nil,
+            customLayout: emojiContentLayout,
+            externalBackground: EmojiPagerContentComponent.ExternalBackground(
+                effectContainerView: self.backgroundNode.vibrancyEffectView?.contentView
+            )
+        )
     }
     
     public func animateIn(from sourceAnchorRect: CGRect) {
