@@ -1543,7 +1543,7 @@ public final class EmojiPagerContentComponent: Component {
     }
     
     public final class InputInteraction {
-        public let performItemAction: (AnyHashable, Item, UIView, CGRect, CALayer) -> Void
+        public let performItemAction: (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void
         public let deleteBackwards: () -> Void
         public let openStickerSettings: () -> Void
         public let openFeatured: () -> Void
@@ -1560,7 +1560,7 @@ public final class EmojiPagerContentComponent: Component {
         public let externalBackground: ExternalBackground?
         
         public init(
-            performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer) -> Void,
+            performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void,
             deleteBackwards: @escaping () -> Void,
             openStickerSettings: @escaping () -> Void,
             openFeatured: @escaping () -> Void,
@@ -1777,6 +1777,7 @@ public final class EmojiPagerContentComponent: Component {
     public let itemGroups: [ItemGroup]
     public let itemLayoutType: ItemLayoutType
     public let warpContentsOnEdges: Bool
+    public let enableLongPress: Bool
     
     public init(
         id: AnyHashable,
@@ -1787,7 +1788,8 @@ public final class EmojiPagerContentComponent: Component {
         inputInteractionHolder: InputInteractionHolder,
         itemGroups: [ItemGroup],
         itemLayoutType: ItemLayoutType,
-        warpContentsOnEdges: Bool
+        warpContentsOnEdges: Bool,
+        enableLongPress: Bool
     ) {
         self.id = id
         self.context = context
@@ -1798,6 +1800,7 @@ public final class EmojiPagerContentComponent: Component {
         self.itemGroups = itemGroups
         self.itemLayoutType = itemLayoutType
         self.warpContentsOnEdges = warpContentsOnEdges
+        self.enableLongPress = enableLongPress
     }
     
     public static func ==(lhs: EmojiPagerContentComponent, rhs: EmojiPagerContentComponent) -> Bool {
@@ -1829,6 +1832,9 @@ public final class EmojiPagerContentComponent: Component {
             return false
         }
         if lhs.warpContentsOnEdges != rhs.warpContentsOnEdges {
+            return false
+        }
+        if lhs.enableLongPress != rhs.enableLongPress {
             return false
         }
         
@@ -2556,6 +2562,8 @@ public final class EmojiPagerContentComponent: Component {
         private var activeItemUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>?
         private var itemLayout: ItemLayout?
         
+        private var longTapRecognizer: UILongPressGestureRecognizer?
+        
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: nil)
             
@@ -2607,6 +2615,12 @@ public final class EmojiPagerContentComponent: Component {
             self.scrollView.addSubview(self.placeholdersContainerView)
             
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            
+            let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
+            longTapRecognizer.minimumPressDuration = 0.2
+            self.longTapRecognizer = longTapRecognizer
+            self.addGestureRecognizer(longTapRecognizer)
+            longTapRecognizer.isEnabled = false
         }
         
         required init?(coder: NSCoder) {
@@ -2665,7 +2679,7 @@ public final class EmojiPagerContentComponent: Component {
                 let distance = sqrt(distanceVector.x * distanceVector.x + distanceVector.y * distanceVector.y)
                 
                 let distanceNorm = min(1.0, max(0.0, distance / self.bounds.width))
-                let delay = 0.05 + (distanceNorm) * 0.4
+                let delay = 0.05 + (distanceNorm) * 0.3
                 itemLayer.animateScale(from: 0.01, to: 1.0, duration: 0.18, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
             }
         }
@@ -2692,7 +2706,7 @@ public final class EmojiPagerContentComponent: Component {
                     let clippedDistance = max(0.0, min(distance, maxDistance))
                     let distanceNorm = clippedDistance / maxDistance
                     
-                    let delay = listViewAnimationCurveSystem(distanceNorm) * 0.16
+                    let delay = listViewAnimationCurveSystem(distanceNorm) * 0.1
                     
                     itemLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
                     itemLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, delay: delay)
@@ -3196,7 +3210,7 @@ public final class EmojiPagerContentComponent: Component {
                     foundExactItem = true
                     foundItem = true
                     if !itemLayer.displayPlaceholder {
-                        component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer)
+                        component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, false)
                     }
                 }
                 
@@ -3204,12 +3218,93 @@ public final class EmojiPagerContentComponent: Component {
                     if let (item, itemKey) = self.item(atPoint: recognizer.location(in: self), extendedHitRange: true), let itemLayer = self.visibleItemLayers[itemKey] {
                         foundItem = true
                         if !itemLayer.displayPlaceholder {
-                            component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer)
+                            component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, false)
                         }
                     }
                 }
                 
                 let _ = foundItem
+            }
+        }
+        
+        private let longPressDuration: Double = 0.5
+        private var longPressItem: EmojiPagerContentComponent.View.ItemLayer.Key?
+        private var hapticFeedback: HapticFeedback?
+        private var continuousHaptic: AnyObject?
+        private var longPressTimer: SwiftSignalKit.Timer?
+        
+        @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
+            switch recognizer.state {
+            case .began:
+                let point = recognizer.location(in: self)
+                
+                guard let item = self.item(atPoint: point), let itemLayer = self.visibleItemLayers[item.1] else {
+                    return
+                }
+                switch item.0.content {
+                case .animation:
+                    break
+                default:
+                    return
+                }
+                self.longPressItem = item.1
+                
+                if #available(iOS 13.0, *) {
+                    self.continuousHaptic = try? ContinuousHaptic(duration: longPressDuration)
+                }
+                
+                if self.hapticFeedback == nil {
+                    self.hapticFeedback = HapticFeedback()
+                }
+                
+                let transition = Transition(animation: .curve(duration: longPressDuration, curve: .easeInOut))
+                transition.setScale(layer: itemLayer, scale: 1.3)
+                
+                self.longPressTimer?.invalidate()
+                self.longPressTimer = SwiftSignalKit.Timer(timeout: longPressDuration, repeat: false, completion: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.longTapRecognizer?.state = .ended
+                }, queue: .mainQueue())
+                self.longPressTimer?.start()
+            case .changed:
+                let point = recognizer.location(in: self)
+                
+                if let longPressItem = self.longPressItem, let item = self.item(atPoint: point), longPressItem == item.1 {
+                } else {
+                    self.longTapRecognizer?.state = .cancelled
+                }
+            case .cancelled:
+                self.longPressTimer?.invalidate()
+                self.continuousHaptic = nil
+                
+                if let itemKey = self.longPressItem {
+                    self.longPressItem = nil
+                    
+                    if let itemLayer = self.visibleItemLayers[itemKey] {
+                        let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                        transition.setScale(layer: itemLayer, scale: 1.0)
+                    }
+                }
+            case .ended:
+                self.longPressTimer?.invalidate()
+                self.continuousHaptic = nil
+                
+                if let itemKey = self.longPressItem {
+                    self.longPressItem = nil
+                    
+                    if let component = self.component, let itemLayer = self.visibleItemLayers[itemKey] {
+                        component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, itemLayer.item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, true)
+                    } else {
+                        if let itemLayer = self.visibleItemLayers[itemKey] {
+                            let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                            transition.setScale(layer: itemLayer, scale: 1.0)
+                        }
+                    }
+                }
+            default:
+                break
             }
         }
         
@@ -3411,7 +3506,7 @@ public final class EmojiPagerContentComponent: Component {
                                 guard let strongSelf = self, let component = strongSelf.component else {
                                     return
                                 }
-                                component.inputInteractionHolder.inputInteraction?.performItemAction(groupId, item, view, rect, layer)
+                                component.inputInteractionHolder.inputInteraction?.performItemAction(groupId, item, view, rect, layer, false)
                             }
                         )
                         self.visibleGroupHeaders[itemGroup.groupId] = groupHeaderView
@@ -4132,6 +4227,10 @@ public final class EmojiPagerContentComponent: Component {
             self.pagerEnvironment = pagerEnvironment
             
             self.updateIsWarpEnabled(isEnabled: component.warpContentsOnEdges)
+            
+            if let longTapRecognizer = self.longTapRecognizer {
+                longTapRecognizer.isEnabled = component.enableLongPress
+            }
             
             if let shimmerHostView = self.shimmerHostView {
                 transition.setFrame(view: shimmerHostView, frame: CGRect(origin: CGPoint(), size: availableSize))
@@ -4892,7 +4991,8 @@ public final class EmojiPagerContentComponent: Component {
                     )
                 },
                 itemLayoutType: .compact,
-                warpContentsOnEdges: isReactionSelection || isStatusSelection
+                warpContentsOnEdges: isReactionSelection || isStatusSelection,
+                enableLongPress: isReactionSelection
             )
         }
         return emojiItems

@@ -505,7 +505,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 },
                 itemLayoutType: .detailed,
-                warpContentsOnEdges: false
+                warpContentsOnEdges: false,
+                enableLongPress: false
             )
         }
         
@@ -902,7 +903,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         var premiumToastCounter = 0
         self.emojiInputInteraction = EmojiPagerContentComponent.InputInteraction(
-            performItemAction: { [weak self, weak interfaceInteraction, weak controllerInteraction] _, item, _, _, _ in
+            performItemAction: { [weak self, weak interfaceInteraction, weak controllerInteraction] _, item, _, _, _, _ in
                 let _ = (ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true) |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
                     guard let strongSelf = self,  let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
                         return
@@ -1099,7 +1100,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             )
         }
         self.stickerInputInteraction = EmojiPagerContentComponent.InputInteraction(
-            performItemAction: { [weak controllerInteraction, weak interfaceInteraction] groupId, item, view, rect, layer in
+            performItemAction: { [weak controllerInteraction, weak interfaceInteraction] groupId, item, view, rect, layer, _ in
                 let _ = (ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false) |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
                     guard let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
                         return
@@ -1918,7 +1919,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         self.clipsToBounds = true
         
         let inputInteraction = EmojiPagerContentComponent.InputInteraction(
-            performItemAction: { [weak self] _, item, _, _, _ in
+            performItemAction: { [weak self] _, item, _, _, _, _ in
                 let _ = (ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: nil, premiumIfSavedMessages: false) |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
                     guard let strongSelf = self else {
                         return

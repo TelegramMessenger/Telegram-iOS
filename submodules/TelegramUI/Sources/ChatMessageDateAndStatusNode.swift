@@ -143,6 +143,22 @@ private final class StatusReactionNode: ASDisplayNode {
                     animateIdle = false
                 }
                 
+                let placeholderColor: UIColor
+                switch type {
+                case .BubbleIncoming:
+                    placeholderColor = theme.chat.message.incoming.mediaPlaceholderColor
+                case .BubbleOutgoing:
+                    placeholderColor = theme.chat.message.incoming.mediaPlaceholderColor
+                case .ImageIncoming:
+                    placeholderColor = UIColor(white: 1.0, alpha: 0.1)
+                case .ImageOutgoing:
+                    placeholderColor = UIColor(white: 1.0, alpha: 0.1)
+                case .FreeIncoming:
+                    placeholderColor = UIColor(white: 0.0, alpha: 0.1)
+                case .FreeOutgoing:
+                    placeholderColor = UIColor(white: 0.0, alpha: 0.1)
+                }
+                
                 self.iconView.update(
                     size: boundingImageSize,
                     context: context,
@@ -150,7 +166,7 @@ private final class StatusReactionNode: ASDisplayNode {
                     fileId: fileId,
                     animationCache: animationCache,
                     animationRenderer: animationRenderer,
-                    placeholderColor: .gray,
+                    placeholderColor: placeholderColor,
                     animateIdle: animateIdle,
                     reaction: value,
                     transition: .immediate

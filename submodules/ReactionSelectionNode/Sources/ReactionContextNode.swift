@@ -114,7 +114,7 @@ private final class ExpandItemView: UIView {
         transition.updateCornerRadius(layer: self.tintView.layer, cornerRadius: size.width / 2.0)
         
         if let image = self.arrowView.image {
-            transition.updateFrame(view: self.arrowView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels(size.height - size.width + (size.width - image.size.height) / 2.0)), size: image.size))
+            transition.updateFrame(view: self.arrowView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels(size.height - size.width + (size.width - image.size.height) / 2.0 + 1.0)), size: image.size))
         }
     }
 }
@@ -874,7 +874,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let animateInFromAnchorRect = animateInFromAnchorRect {
-            let springDuration: Double = 0.3
+            let springDuration: Double = 0.5
             let springDamping: CGFloat = 104.0
             let springDelay: Double = 0.05
             
@@ -902,10 +902,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
-            performItemAction: { [weak self] groupId, item, sourceView, sourceRect, sourceLayer in
+            performItemAction: { [weak self] groupId, item, sourceView, sourceRect, sourceLayer, isLongPress in
                 guard let strongSelf = self, let itemFile = item.itemFile else {
                     return
                 }
+                
+                strongSelf.didTriggerExpandedReaction = isLongPress
                 
                 var found = false
                 if let groupId = groupId.base as? String, groupId == "recent" {
@@ -915,7 +917,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                 found = true
                                 
                                 strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
-                                strongSelf.reactionSelected?(reactionItem.updateMessageReaction, false)
+                                strongSelf.reactionSelected?(reactionItem.updateMessageReaction, isLongPress)
                                 
                                 break
                             }
@@ -934,7 +936,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         isCustom: true
                     )
                     strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
-                    strongSelf.reactionSelected?(reactionItem.updateMessageReaction, false)
+                    strongSelf.reactionSelected?(reactionItem.updateMessageReaction, isLongPress)
                 }
             },
             deleteBackwards: {
@@ -1157,10 +1159,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             case .builtin:
                 switchToInlineImmediately = false
             case .custom:
-                switchToInlineImmediately = true
+                switchToInlineImmediately = !self.didTriggerExpandedReaction
             }
         } else {
-            switchToInlineImmediately = true
+            switchToInlineImmediately = !self.didTriggerExpandedReaction
         }
         
         self.animationTargetView = targetView
@@ -1192,7 +1194,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         var expandedSize: CGSize = selfTargetRect.size
         if self.didTriggerExpandedReaction {
-            expandedSize = CGSize(width: 120.0, height: 120.0)
+            if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker {
+                expandedSize = CGSize(width: 80.0, height: 80.0)
+            } else {
+                expandedSize = CGSize(width: 120.0, height: 120.0)
+            }
         }
         
         let expandedFrame = CGRect(origin: CGPoint(x: selfTargetRect.midX - expandedSize.width / 2.0, y: selfTargetRect.midY - expandedSize.height / 2.0), size: expandedSize)
@@ -1200,7 +1206,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         let effectFrame: CGRect
         let incomingMessage: Bool = expandedFrame.midX < self.bounds.width / 2.0
         if self.didTriggerExpandedReaction {
-            effectFrame = expandedFrame.insetBy(dx: -expandedFrame.width * 0.5, dy: -expandedFrame.height * 0.5).offsetBy(dx: incomingMessage ? (expandedFrame.width - 50.0) : (-expandedFrame.width + 50.0), dy: 0.0)
+            let expandFactor: CGFloat = 0.5
+            effectFrame = expandedFrame.insetBy(dx: -expandedFrame.width * expandFactor, dy: -expandedFrame.height * expandFactor).offsetBy(dx: incomingMessage ? (expandedFrame.width - 50.0) : (-expandedFrame.width + 50.0), dy: 0.0)
         } else {
             effectFrame = expandedFrame.insetBy(dx: -expandedSize.width, dy: -expandedSize.height)
         }
@@ -1265,7 +1272,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         cache: animationCache,
                         renderer: animationRenderer,
                         placeholderColor: UIColor(white: 0.0, alpha: 0.0),
-                        pointSize: CGSize(width: 32.0, height: 32.0)
+                        pointSize: CGSize(width: self.didTriggerExpandedReaction ? 64.0 : 32.0, height: self.didTriggerExpandedReaction ? 64.0 : 32.0)
                     )
                     
                     if let sublayers = animationLayer.sublayers {
@@ -1484,6 +1491,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             if let expandItemView = self.expandItemView, expandItemView.bounds.contains(self.view.convert(point, to: self.expandItemView)) {
                 self.currentContentHeight = 300.0
                 self.isExpanded = true
+                self.longPressRecognizer?.isEnabled = false
                 self.isExpandedUpdated(.animated(duration: 0.4, curve: .spring))
             } else if let reaction = self.reaction(at: point) {
                 switch reaction {
@@ -1503,6 +1511,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             self.hapticFeedback = HapticFeedback()
         }
         self.hapticFeedback?.tap()
+        
+        self.longPressRecognizer?.isEnabled = false
         
         self.animateFromExtensionDistance = self.extensionDistance
         self.extensionDistance = 0.0

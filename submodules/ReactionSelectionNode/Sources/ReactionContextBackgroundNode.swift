@@ -215,7 +215,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     }
     
     func animateInFromAnchorRect(size: CGSize, sourceBackgroundFrame: CGRect) {
-        let springDuration: Double = 0.3
+        let springDuration: Double = 0.5
         let springDamping: CGFloat = 104.0
         let springDelay: Double = 0.05
         let shadowInset: CGFloat = 15.0
