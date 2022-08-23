@@ -11,6 +11,8 @@ import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
 import PagerComponent
+import Postbox
+import TelegramCore
 
 public final class EmojiStatusSelectionComponent: Component {
     public typealias EnvironmentType = Empty
@@ -180,6 +182,7 @@ public final class EmojiStatusSelectionController: ViewController {
         
         private var emojiContentDisposable: Disposable?
         private var emojiContent: EmojiPagerContentComponent?
+        private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         
         private var isDismissed: Bool = false
         
@@ -245,7 +248,28 @@ public final class EmojiStatusSelectionController: ViewController {
                     openFeatured: {
                     },
                     addGroupAction: { groupId, isPremiumLocked in
+                        guard let strongSelf = self, let collectionId = groupId.base as? ItemCollectionId else {
+                            return
+                        }
                         
+                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+                        let _ = (strongSelf.context.account.postbox.combinedView(keys: [viewKey])
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { views in
+                            guard let strongSelf = self, let view = views.views[viewKey] as? OrderedItemListView else {
+                                return
+                            }
+                            for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                                if featuredEmojiPack.info.id == collectionId {
+                                    if let strongSelf = self {
+                                        strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId))
+                                    }
+                                    let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
+                                    
+                                    break
+                                }
+                            }
+                        })
                     },
                     clearGroup: { groupId in
                     },
@@ -295,6 +319,8 @@ public final class EmojiStatusSelectionController: ViewController {
         func containerLayoutUpdated(layout: ContainerViewLayout, transition: Transition) {
             self.validLayout = layout
             
+            var transition = transition
+            
             guard let emojiContent = self.emojiContent else {
                 return
             }
@@ -319,6 +345,12 @@ public final class EmojiStatusSelectionController: ViewController {
             self.cloudLayer1.backgroundColor = listBackgroundColor.cgColor
             
             let sideInset: CGFloat = 16.0
+            
+            if let scheduledEmojiContentAnimationHint = self.scheduledEmojiContentAnimationHint {
+                self.scheduledEmojiContentAnimationHint = nil
+                let contentAnimation = scheduledEmojiContentAnimationHint
+                transition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
+            }
             
             let componentSize = self.componentHost.update(
                 transition: transition,

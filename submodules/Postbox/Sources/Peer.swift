@@ -299,6 +299,7 @@ public protocol Peer: AnyObject, PostboxCoding {
     var indexName: PeerIndexNameRepresentation { get }
     var associatedPeerId: PeerId? { get }
     var notificationSettingsPeerId: PeerId? { get }
+    var associatedMediaIds: [MediaId]? { get }
     
     func isEqual(_ other: Peer) -> Bool
 }

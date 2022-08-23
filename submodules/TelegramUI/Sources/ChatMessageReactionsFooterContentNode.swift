@@ -15,12 +15,12 @@ import WallpaperBackgroundNode
 
 func canViewMessageReactionList(message: Message) -> Bool {
     var found = false
+    var canViewList = false
     for attribute in message.attributes {
         if let attribute = attribute as? ReactionsMessageAttribute {
-            if !attribute.canViewList {
-                return false
-            }
+            canViewList = attribute.canViewList
             found = true
+            break
         }
     }
     
@@ -33,9 +33,11 @@ func canViewMessageReactionList(message: Message) -> Bool {
             if case .broadcast = channel.info {
                 return false
             } else {
-                return true
+                return canViewList
             }
         } else if let _ = peer as? TelegramGroup {
+            return canViewList
+        } else if let _ = peer as? TelegramUser {
             return true
         } else {
             return false

@@ -1258,6 +1258,14 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         return peer
                     }
                 })
+            case let .updateUserEmojiStatus(userId, emojiStatus):
+                updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), { peer in
+                    if let user = peer as? TelegramUser {
+                        return user.withUpdatedEmojiStatus(PeerEmojiStatus(apiStatus: emojiStatus))
+                    } else {
+                        return peer
+                    }
+                })
             case let .updatePeerSettings(peer, settings):
                 let peerStatusSettings = PeerStatusSettings(apiSettings: settings)
                 updatedState.updateCachedPeerData(peer.peerId, { current in

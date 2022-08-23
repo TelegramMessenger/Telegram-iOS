@@ -169,6 +169,8 @@ public final class TelegramChannel: Peer, Equatable {
         return .title(title: self.title, addressName: self.username)
     }
     
+    public var associatedMediaIds: [MediaId]? { return nil }
+    
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     

@@ -14,6 +14,8 @@ public final class TelegramSecretChat: Peer, Equatable {
         return .title(title: "", addressName: nil)
     }
     
+    public var associatedMediaIds: [MediaId]? { return nil }
+    
     public let associatedPeerId: PeerId?
     public let notificationSettingsPeerId: PeerId?
     

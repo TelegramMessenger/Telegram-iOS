@@ -110,70 +110,6 @@ public final class EmojiStatusComponent: Component {
             var emojiPlaceholderColor: UIColor?
             var emojiSize = CGSize()
             
-            /*
-             if case .fake = credibilityIcon {
-                 image = PresentationResourcesChatList.fakeIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
-             } else if case .scam = credibilityIcon {
-                 image = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
-             } else if case .verified = credibilityIcon {
-                 if let backgroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconForeground") {
-                     image = generateImage(backgroundImage.size, contextGenerator: { size, context in
-                         if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
-                             context.clear(CGRect(origin: CGPoint(), size: size))
-                             context.saveGState()
-                             context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
-
-                             context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                             context.fill(CGRect(origin: CGPoint(), size: size))
-                             context.restoreGState()
-                             
-                             context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
-                             context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
-                             context.fill(CGRect(origin: CGPoint(), size: size))
-                         }
-                     }, opaque: false)
-                     expandedImage = generateImage(backgroundImage.size, contextGenerator: { size, context in
-                         if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
-                             context.clear(CGRect(origin: CGPoint(), size: size))
-                             context.saveGState()
-                             context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
-                             context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.75).cgColor)
-                             context.fill(CGRect(origin: CGPoint(), size: size))
-                             context.restoreGState()
-                             
-                             context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
-                             context.setBlendMode(.clear)
-                             context.fill(CGRect(origin: CGPoint(), size: size))
-                         }
-                     }, opaque: false)
-                 } else {
-                     image = nil
-                 }
-             } else if case .premium = credibilityIcon {
-                 if let sourceImage = UIImage(bundleImageName: "Peer Info/PremiumIcon") {
-                     image = generateImage(sourceImage.size, contextGenerator: { size, context in
-                         if let cgImage = sourceImage.cgImage {
-                             context.clear(CGRect(origin: CGPoint(), size: size))
-                             context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                             
-                             context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                             context.fill(CGRect(origin: CGPoint(), size: size))
-                         }
-                     }, opaque: false)
-                     expandedImage = generateImage(sourceImage.size, contextGenerator: { size, context in
-                         if let cgImage = sourceImage.cgImage {
-                             context.clear(CGRect(origin: CGPoint(), size: size))
-                             context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                             context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.75).cgColor)
-                             context.fill(CGRect(origin: CGPoint(), size: size))
-                         }
-                     }, opaque: false)
-                 } else {
-                     image = nil
-                 }
-             }
-             */
-            
             if self.component?.content != component.content {
                 switch component.content {
                 case .none:
@@ -232,10 +168,15 @@ public final class EmojiStatusComponent: Component {
                             
                             if let animationLayer = self.animationLayer {
                                 self.animationLayer = nil
-                                animationLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak animationLayer] _ in
-                                    animationLayer?.removeFromSuperlayer()
-                                })
-                                animationLayer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                                
+                                if !transition.animation.isImmediate {
+                                    animationLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak animationLayer] _ in
+                                        animationLayer?.removeFromSuperlayer()
+                                    })
+                                    animationLayer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                                } else {
+                                    animationLayer.removeFromSuperlayer()
+                                }
                             }
                         }
                     }
@@ -262,8 +203,10 @@ public final class EmojiStatusComponent: Component {
                     self.iconView = iconView
                     self.addSubview(iconView)
                     
-                    iconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    iconView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                    if !transition.animation.isImmediate {
+                        iconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        iconView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                    }
                 }
                 iconView.image = iconImage
                 size = iconImage.size.aspectFilled(availableSize)
@@ -272,10 +215,14 @@ public final class EmojiStatusComponent: Component {
                 if let iconView = self.iconView {
                     self.iconView = nil
                     
-                    iconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak iconView] _ in
-                        iconView?.removeFromSuperview()
-                    })
-                    iconView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    if !transition.animation.isImmediate {
+                        iconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak iconView] _ in
+                            iconView?.removeFromSuperview()
+                        })
+                        iconView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    } else {
+                        iconView.removeFromSuperview()
+                    }
                 }
             }
             
@@ -304,8 +251,10 @@ public final class EmojiStatusComponent: Component {
                         self.animationLayer = animationLayer
                         self.layer.addSublayer(animationLayer)
                         
-                        animationLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        animationLayer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                        if !transition.animation.isImmediate {
+                            animationLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            animationLayer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                        }
                     }
                     animationLayer.frame = CGRect(origin: CGPoint(), size: size)
                     animationLayer.isVisibleForAnimations = true
@@ -317,7 +266,7 @@ public final class EmojiStatusComponent: Component {
                                 return
                             }
                             strongSelf.emojiFile = result[emojiFileId]
-                            strongSelf.state?.updated(transition: .immediate)
+                            strongSelf.state?.updated(transition: transition)
                             
                             emojiFileUpdated?(result[emojiFileId])
                         })
@@ -335,10 +284,14 @@ public final class EmojiStatusComponent: Component {
                 if let animationLayer = self.animationLayer {
                     self.animationLayer = nil
                     
-                    animationLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak animationLayer] _ in
-                        animationLayer?.removeFromSuperlayer()
-                    })
-                    animationLayer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    if !transition.animation.isImmediate {
+                        animationLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak animationLayer] _ in
+                            animationLayer?.removeFromSuperlayer()
+                        })
+                        animationLayer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    } else {
+                        animationLayer.removeFromSuperlayer()
+                    }
                 }
             }
             

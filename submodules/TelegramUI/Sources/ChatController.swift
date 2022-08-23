@@ -80,6 +80,7 @@ import PremiumUI
 import ImageTransparency
 import StickerPackPreviewUI
 import TextNodeWithEntities
+import EntityKeyboard
 
 #if DEBUG
 import os.signpost
@@ -1137,7 +1138,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         preconditionFailure()
                                     }
                                     
-                                    return ChatEntityKeyboardInputNode.emojiInputData(
+                                    return EmojiPagerContentComponent.emojiInputData(
                                         context: strongSelf.context,
                                         animationCache: animationCache,
                                         animationRenderer: animationRenderer,
@@ -1673,26 +1674,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return
                             }
                             if let itemNode = itemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: chosenReaction) {
-                                for reaction in availableReactions.reactions {
-                                    guard let centerAnimation = reaction.centerAnimation else {
-                                        continue
-                                    }
-                                    guard let aroundAnimation = reaction.aroundAnimation else {
-                                        continue
-                                    }
-                                    
-                                    if reaction.value == chosenReaction {
-                                        let standaloneReactionAnimation = StandaloneReactionAnimation()
-                                        
-                                        strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                        
-                                        strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                                        standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
-                                        standaloneReactionAnimation.animateReactionSelection(
-                                            context: strongSelf.context,
-                                            theme: strongSelf.presentationData.theme,
-                                            animationCache: strongSelf.controllerInteraction!.presentationContext.animationCache,
-                                            reaction: ReactionItem(
+                                var reactionItem: ReactionItem?
+                                
+                                switch chosenReaction {
+                                case .builtin:
+                                    for reaction in availableReactions.reactions {
+                                        guard let centerAnimation = reaction.centerAnimation else {
+                                            continue
+                                        }
+                                        guard let aroundAnimation = reaction.aroundAnimation else {
+                                            continue
+                                        }
+                                        if reaction.value == chosenReaction {
+                                            reactionItem = ReactionItem(
                                                 reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                                 appearAnimation: reaction.appearAnimation,
                                                 stillAnimation: reaction.selectAnimation,
@@ -1701,26 +1695,53 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 applicationAnimation: aroundAnimation,
                                                 largeApplicationAnimation: reaction.effectAnimation,
                                                 isCustom: false
-                                            ),
-                                            avatarPeers: [],
-                                            playHaptic: false,
-                                            isLarge: false,
-                                            targetView: targetView,
-                                            addStandaloneReactionAnimation: { standaloneReactionAnimation in
-                                                guard let strongSelf = self else {
-                                                    return
-                                                }
-                                                strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                                standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
-                                                strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                                            },
-                                            completion: { [weak standaloneReactionAnimation] in
-                                                standaloneReactionAnimation?.removeFromSupernode()
-                                            }
-                                        )
-                                        
-                                        break
+                                            )
+                                            break
+                                        }
                                     }
+                                case let .custom(fileId):
+                                    if let itemFile = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                                        reactionItem = ReactionItem(
+                                            reaction: ReactionItem.Reaction(rawValue: chosenReaction),
+                                            appearAnimation: itemFile,
+                                            stillAnimation: itemFile,
+                                            listAnimation: itemFile,
+                                            largeListAnimation: itemFile,
+                                            applicationAnimation: nil,
+                                            largeApplicationAnimation: nil,
+                                            isCustom: true
+                                        )
+                                    }
+                                }
+                                
+                                if let reactionItem = reactionItem {
+                                    let standaloneReactionAnimation = StandaloneReactionAnimation()
+                                    
+                                    strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                    
+                                    strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                    standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
+                                    standaloneReactionAnimation.animateReactionSelection(
+                                        context: strongSelf.context,
+                                        theme: strongSelf.presentationData.theme,
+                                        animationCache: strongSelf.controllerInteraction!.presentationContext.animationCache,
+                                        reaction: reactionItem,
+                                        avatarPeers: [],
+                                        playHaptic: false,
+                                        isLarge: false,
+                                        targetView: targetView,
+                                        addStandaloneReactionAnimation: { standaloneReactionAnimation in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                            standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
+                                            strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                        },
+                                        completion: { [weak standaloneReactionAnimation] in
+                                            standaloneReactionAnimation?.removeFromSupernode()
+                                        }
+                                    )
                                 }
                             }
                         })
@@ -4444,7 +4465,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let associatedPeerId = peer.associatedPeerId, let associatedPeer = peerView.peers[associatedPeerId] {
                                 peers[associatedPeer.id] = associatedPeer
                             }
-                            renderedPeer = RenderedPeer(peerId: peer.id, peers: peers)
+                            renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: peerView.media)
                         }
                         
                         var isNotAccessible: Bool = false
@@ -4741,7 +4762,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let associatedPeerId = peer.associatedPeerId, let associatedPeer = peerView.peers[associatedPeerId] {
                                 peers[associatedPeer.id] = associatedPeer
                             }
-                            renderedPeer = RenderedPeer(peerId: peer.id, peers: peers)
+                            renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: peerView.media)
                         }
                         
                         var isNotAccessible: Bool = false

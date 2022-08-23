@@ -263,6 +263,24 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateFrameAdditive(view: UIView, frame: CGRect, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if view.frame.equalTo(frame) && !force {
+            completion?(true)
+        } else {
+            switch self {
+            case .immediate:
+                view.frame = frame
+                if let completion = completion {
+                    completion(true)
+                }
+            case .animated:
+                let previousFrame = view.frame
+                view.frame = frame
+                self.animatePositionAdditive(layer: view.layer, offset: CGPoint(x: previousFrame.minX - frame.minX, y: previousFrame.minY - frame.minY))
+            }
+        }
+    }
+    
     func updateFrameAdditiveToCenter(node: ASDisplayNode, frame: CGRect, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if node.frame.equalTo(frame) && !force {
             completion?(true)
@@ -279,6 +297,26 @@ public extension ContainedViewLayoutTransition {
                 node.position = frame.center
                 node.bounds = CGRect(origin: node.bounds.origin, size: frame.size)
                 self.animatePositionAdditive(node: node, offset: CGPoint(x: previousCenter.x - frame.midX, y: previousCenter.y - frame.midY))
+            }
+        }
+    }
+    
+    func updateFrameAdditiveToCenter(view: UIView, frame: CGRect, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if view.frame.equalTo(frame) && !force {
+            completion?(true)
+        } else {
+            switch self {
+            case .immediate:
+                view.center = frame.center
+                view.bounds = CGRect(origin: view.bounds.origin, size: frame.size)
+                if let completion = completion {
+                    completion(true)
+                }
+            case .animated:
+                let previousCenter = view.frame.center
+                view.center = frame.center
+                view.bounds = CGRect(origin: view.bounds.origin, size: frame.size)
+                self.animatePositionAdditive(layer: view.layer, offset: CGPoint(x: previousCenter.x - frame.midX, y: previousCenter.y - frame.midY))
             }
         }
     }
