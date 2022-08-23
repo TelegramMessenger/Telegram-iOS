@@ -885,12 +885,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             self.backgroundNode.animateInFromAnchorRect(size: visualBackgroundFrame.size, sourceBackgroundFrame: sourceBackgroundFrame.offsetBy(dx: -visualBackgroundFrame.minX, dy: -visualBackgroundFrame.minY))
             
-            self.animateInInfo = (visualBackgroundFrame.midX - sourceBackgroundFrame.midX, visualBackgroundFrame.width)
+            self.animateInInfo = (sourceBackgroundFrame.minX - visualBackgroundFrame.minX, visualBackgroundFrame.width)
             self.contentContainer.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - visualBackgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
-            self.contentContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(x: -(sourceBackgroundFrame.midX - visualBackgroundFrame.midX), y: 0.0), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
+            self.contentContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(x: (sourceBackgroundFrame.minX - visualBackgroundFrame.minX), y: 0.0), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
             
             self.contentTintContainer.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - visualBackgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
-            self.contentTintContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
+            self.contentTintContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(x: (sourceBackgroundFrame.minX - visualBackgroundFrame.minX), y: 0.0), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
         } else if let animateOutToAnchorRect = animateOutToAnchorRect {
             let targetBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateOutToAnchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight)).0
             
