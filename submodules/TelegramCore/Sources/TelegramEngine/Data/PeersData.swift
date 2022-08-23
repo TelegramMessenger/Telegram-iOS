@@ -7,6 +7,15 @@ public typealias EngineSecretChatKeyFingerprint = SecretChatKeyFingerprint
 public enum EnginePeerCachedInfoItem<T> {
     case known(T)
     case unknown
+    
+    public var knownValue: T? {
+        switch self {
+        case let .known(value):
+            return value
+        case .unknown:
+            return nil
+        }
+    }
 }
 
 extension EnginePeerCachedInfoItem: Equatable where T: Equatable {
