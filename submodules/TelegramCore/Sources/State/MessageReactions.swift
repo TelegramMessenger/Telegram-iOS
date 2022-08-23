@@ -57,6 +57,31 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
                 }
             }
             
+            for attribute in currentMessage.attributes {
+                if let attribute = attribute as? ReactionsMessageAttribute {
+                    for updatedReaction in reactions {
+                        if !attribute.reactions.contains(where: { $0.value == updatedReaction.reaction }) {
+                            let recentReactionItem: RecentReactionItem
+                            switch updatedReaction {
+                            case let .builtin(value):
+                                recentReactionItem = RecentReactionItem(.builtin(value))
+                            case let .custom(fileId, file):
+                                if let file = file ?? (transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile) {
+                                    recentReactionItem = RecentReactionItem(.custom(file))
+                                } else {
+                                    continue
+                                }
+                            }
+                            
+                            if let entry = CodableEntry(recentReactionItem) {
+                                let itemEntry = OrderedItemListEntry(id: recentReactionItem.id.rawValue, contents: entry)
+                                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentReactions, item: itemEntry, removeTailIfCountExceeds: 50)
+                            }
+                        }
+                    }
+                }
+            }
+            
             var mappedReactions = mappedReactions
             
             let updatedReactions = mergedMessageReactions(attributes: attributes + [PendingReactionsMessageAttribute(accountPeerId: account.peerId, reactions: mappedReactions, isLarge: isLarge)])?.reactions ?? []

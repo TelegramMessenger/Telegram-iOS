@@ -7977,3 +7977,5 @@ Sorry for the inconvenience.";
 "Premium.EmojiStatusText" = "Emoji status is a premium feature.\n Other features included in **Telegram Premium**:";
 
 "Login.SelectCountry" = "Country";
+
+"ReportPeer.ReportReaction" = "Report Reaction";

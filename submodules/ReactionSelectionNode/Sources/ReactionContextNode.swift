@@ -184,6 +184,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var emojiContentLayout: EmojiPagerContentComponent.CustomLayout?
     private var emojiContent: EmojiPagerContentComponent?
+    private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
     private var emojiContentDisposable: Disposable?
     
     private var horizontalExpandRecognizer: UIPanGestureRecognizer?
@@ -746,8 +747,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     strongSelf.updateEmojiContent(emojiContent)
                     
                     if let reactionSelectionComponentHost = strongSelf.reactionSelectionComponentHost, let componentView = reactionSelectionComponentHost.view {
+                        var emojiTransition: Transition = .immediate
+                        if let scheduledEmojiContentAnimationHint = strongSelf.scheduledEmojiContentAnimationHint {
+                            strongSelf.scheduledEmojiContentAnimationHint = nil
+                            let contentAnimation = scheduledEmojiContentAnimationHint
+                            emojiTransition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
+                        }
+                        
                         let _ = reactionSelectionComponentHost.update(
-                            transition: .immediate,
+                            transition: emojiTransition,
                             component: AnyComponent(EmojiStatusSelectionComponent(
                                 theme: strongSelf.presentationData.theme,
                                 strings: strongSelf.presentationData.strings,
@@ -765,6 +773,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             if let emojiContent = emojiContent {
                 self.updateEmojiContent(emojiContent)
+                
+                if let scheduledEmojiContentAnimationHint = self.scheduledEmojiContentAnimationHint {
+                    self.scheduledEmojiContentAnimationHint = nil
+                    let contentAnimation = scheduledEmojiContentAnimationHint
+                    componentTransition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
+                }
                 
                 let _ = reactionSelectionComponentHost.update(
                     transition: componentTransition,
@@ -892,6 +906,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 guard let strongSelf = self, let itemFile = item.itemFile else {
                     return
                 }
+                
                 var found = false
                 if let groupId = groupId.base as? String, groupId == "recent" {
                     for reactionItem in strongSelf.items {
@@ -928,7 +943,34 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             },
             openFeatured: {
             },
-            addGroupAction: { _, _ in
+            addGroupAction: { [weak self] groupId, isPremiumLocked in
+                guard let strongSelf = self, let collectionId = groupId.base as? ItemCollectionId else {
+                    return
+                }
+                
+                if isPremiumLocked {
+                    strongSelf.premiumReactionsSelected?()
+                    return
+                }
+                
+                let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+                let _ = (strongSelf.context.account.postbox.combinedView(keys: [viewKey])
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { views in
+                    guard let strongSelf = self, let view = views.views[viewKey] as? OrderedItemListView else {
+                        return
+                    }
+                    for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                        if featuredEmojiPack.info.id == collectionId {
+                            if let strongSelf = self {
+                                strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId))
+                            }
+                            let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
+                            
+                            break
+                        }
+                    }
+                })
             },
             clearGroup: { _ in
             },
@@ -1457,6 +1499,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func expand() {
+        if self.hapticFeedback == nil {
+            self.hapticFeedback = HapticFeedback()
+        }
+        self.hapticFeedback?.tap()
+        
         self.animateFromExtensionDistance = self.extensionDistance
         self.extensionDistance = 0.0
         self.visibleExtensionDistance = 0.0

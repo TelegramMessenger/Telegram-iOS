@@ -853,7 +853,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 isStandalone: false,
                 isStatusSelection: true,
                 isReactionSelection: false,
-                reactionItems: [],
+                topReactionItems: [],
                 areUnicodeEmojiEnabled: false,
                 areCustomEmojiEnabled: true,
                 chatPeerId: self.context.account.peerId

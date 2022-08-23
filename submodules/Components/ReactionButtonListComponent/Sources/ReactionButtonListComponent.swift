@@ -1121,7 +1121,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
             }
             
             return false
-        }).prefix(10) {
+        }) {
             validIds.insert(reaction.reaction.value)
             
             var avatarPeers = reaction.peers

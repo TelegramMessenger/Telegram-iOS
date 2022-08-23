@@ -828,6 +828,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[791617983] = { return Api.Update.parse_updateReadHistoryOutbox($0) }
     dict[1757493555] = { return Api.Update.parse_updateReadMessagesContents($0) }
     dict[821314523] = { return Api.Update.parse_updateRecentEmojiStatuses($0) }
+    dict[1870160884] = { return Api.Update.parse_updateRecentReactions($0) }
     dict[-1706939360] = { return Api.Update.parse_updateRecentStickers($0) }
     dict[-1821035490] = { return Api.Update.parse_updateSavedGifs($0) }
     dict[1960361625] = { return Api.Update.parse_updateSavedRingtones($0) }
@@ -1007,6 +1008,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[978610270] = { return Api.messages.Messages.parse_messagesSlice($0) }
     dict[863093588] = { return Api.messages.PeerDialogs.parse_peerDialogs($0) }
     dict[1753266509] = { return Api.messages.PeerSettings.parse_peerSettings($0) }
+    dict[-352454890] = { return Api.messages.Reactions.parse_reactions($0) }
+    dict[-1334846497] = { return Api.messages.Reactions.parse_reactionsNotModified($0) }
     dict[-1999405994] = { return Api.messages.RecentStickers.parse_recentStickers($0) }
     dict[186120336] = { return Api.messages.RecentStickers.parse_recentStickersNotModified($0) }
     dict[-2069878259] = { return Api.messages.SavedGifs.parse_savedGifs($0) }
@@ -1779,6 +1782,8 @@ public extension Api {
             case let _1 as Api.messages.PeerDialogs:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.PeerSettings:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.Reactions:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.RecentStickers:
                 _1.serialize(buffer, boxed)

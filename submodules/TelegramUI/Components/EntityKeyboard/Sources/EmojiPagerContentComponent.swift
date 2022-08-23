@@ -4455,7 +4455,7 @@ public final class EmojiPagerContentComponent: Component {
         return hasPremium
     }
     
-    public static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool, isStatusSelection: Bool, isReactionSelection: Bool, reactionItems: [AvailableReactions.Reaction], areUnicodeEmojiEnabled: Bool, areCustomEmojiEnabled: Bool, chatPeerId: EnginePeer.Id?) -> Signal<EmojiPagerContentComponent, NoError> {
+    public static func emojiInputData(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isStandalone: Bool, isStatusSelection: Bool, isReactionSelection: Bool, topReactionItems: [AvailableReactions.Reaction], areUnicodeEmojiEnabled: Bool, areCustomEmojiEnabled: Bool, chatPeerId: EnginePeer.Id?) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
@@ -4468,14 +4468,24 @@ public final class EmojiPagerContentComponent: Component {
         if isStatusSelection {
             orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudFeaturedStatusEmoji)
             orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudRecentStatusEmoji)
+        } else if isReactionSelection {
+            orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudRecentReactions)
+        }
+        
+        let availableReactions: Signal<AvailableReactions?, NoError>
+        if isReactionSelection {
+            availableReactions = context.engine.stickers.availableReactions()
+        } else {
+            availableReactions = .single(nil)
         }
         
         let emojiItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
             hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true),
-            context.account.viewTracker.featuredEmojiPacks()
+            context.account.viewTracker.featuredEmojiPacks(),
+            availableReactions
         )
-        |> map { view, hasPremium, featuredEmojiPacks -> EmojiPagerContentComponent in
+        |> map { view, hasPremium, featuredEmojiPacks, availableReactions -> EmojiPagerContentComponent in
             struct ItemGroup {
                 var supergroupId: AnyHashable
                 var id: AnyHashable
@@ -4493,6 +4503,7 @@ public final class EmojiPagerContentComponent: Component {
             var recentEmoji: OrderedItemListView?
             var featuredStatusEmoji: OrderedItemListView?
             var recentStatusEmoji: OrderedItemListView?
+            var recentReactions: OrderedItemListView?
             for orderedView in view.orderedItemListsViews {
                 if orderedView.collectionId == Namespaces.OrderedItemList.LocalRecentEmoji {
                     recentEmoji = orderedView
@@ -4500,6 +4511,8 @@ public final class EmojiPagerContentComponent: Component {
                     featuredStatusEmoji = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStatusEmoji {
                     recentStatusEmoji = orderedView
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentReactions {
+                    recentReactions = orderedView
                 }
             }
             
@@ -4516,7 +4529,7 @@ public final class EmojiPagerContentComponent: Component {
                     itemGroups[groupIndex].items.append(resultItem)
                 } else {
                     itemGroupIndexById[groupId] = itemGroups.count
-                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
+                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: true, headerItem: nil, items: [resultItem]))
                 }
                 
                 var existingIds = Set<MediaId>()
@@ -4575,7 +4588,13 @@ public final class EmojiPagerContentComponent: Component {
                     }
                 }
             } else if isReactionSelection {
-                for reactionItem in reactionItems {
+                var existingIds = Set<MessageReaction.Reaction>()
+                for reactionItem in topReactionItems {
+                    if existingIds.contains(reactionItem.value) {
+                        continue
+                    }
+                    existingIds.insert(reactionItem.value)
+                    
                     let animationFile = reactionItem.selectAnimation
                     let animationData = EntityKeyboardAnimationData(file: animationFile, isReaction: true)
                     let resultItem = EmojiPagerContentComponent.Item(
@@ -4591,6 +4610,54 @@ public final class EmojiPagerContentComponent: Component {
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
                         itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
+                    }
+                }
+                
+                if let recentReactions = recentReactions {
+                    for item in recentReactions.items {
+                        guard let item = item.contents.get(RecentReactionItem.self) else {
+                            continue
+                        }
+                        
+                        let animationFile: TelegramMediaFile
+                        switch item.content {
+                        case let .builtin(value):
+                            if existingIds.contains(.builtin(value)) {
+                                continue
+                            }
+                            existingIds.insert(.builtin(value))
+                            if let availableReactions = availableReactions, let availableReaction = availableReactions.reactions.first(where: { $0.value == .builtin(value) }) {
+                                if let centerAnimation = availableReaction.centerAnimation {
+                                    animationFile = centerAnimation
+                                } else {
+                                    continue
+                                }
+                            } else {
+                                continue
+                            }
+                        case let .custom(file):
+                            if existingIds.contains(.custom(file.fileId.id)) {
+                                continue
+                            }
+                            existingIds.insert(.custom(file.fileId.id))
+                            animationFile = file
+                        }
+                        
+                        let animationData = EntityKeyboardAnimationData(file: animationFile, isReaction: true)
+                        let resultItem = EmojiPagerContentComponent.Item(
+                            animationData: animationData,
+                            content: .animation(animationData),
+                            itemFile: animationFile,
+                            subgroupId: nil
+                        )
+                        
+                        let groupId = "recent"
+                        if let groupIndex = itemGroupIndexById[groupId] {
+                            itemGroups[groupIndex].items.append(resultItem)
+                        } else {
+                            itemGroupIndexById[groupId] = itemGroups.count
+                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
+                        }
                     }
                 }
             }

@@ -1106,7 +1106,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                         return lhs.count > rhs.count
                                     }
                                 }
-                            }).prefix(10) {
+                            }) {
                                 let node: StatusReactionNode
                                 var animateNode = true
                                 if let current = strongSelf.reactionNodes[reaction.value] {
