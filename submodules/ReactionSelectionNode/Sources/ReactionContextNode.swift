@@ -1022,7 +1022,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 if let animateInInfo = self.animateInInfo {
                     let distance = abs(itemNode.frame.center.x - animateInInfo.centerX)
                     let distanceNorm = distance / animateInInfo.width
-                    itemDelay = mainCircleDelay + distanceNorm * 0.4
+                    let adjustedDistanceNorm = distanceNorm//listViewAnimationCurveSystem(distanceNorm)
+                    itemDelay = mainCircleDelay + adjustedDistanceNorm * 0.3
                 } else {
                     itemDelay = mainCircleDelay + Double(i) * 0.06
                 }
@@ -1037,7 +1038,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 if let animateInInfo = self.animateInInfo {
                     let distance = abs(expandItemView.frame.center.x - animateInInfo.centerX)
                     let distanceNorm = distance / animateInInfo.width
-                    itemDelay = mainCircleDelay + distanceNorm * 0.4
+                    let adjustedDistanceNorm = distanceNorm//listViewAnimationCurveSystem(distanceNorm)
+                    itemDelay = mainCircleDelay + adjustedDistanceNorm * 0.3
                 } else {
                     itemDelay = mainCircleDelay + Double(8) * 0.06
                 }
