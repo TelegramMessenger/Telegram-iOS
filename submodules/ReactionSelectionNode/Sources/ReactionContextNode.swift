@@ -191,6 +191,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var horizontalExpandStartLocation: CGPoint?
     private var horizontalExpandDistance: CGFloat = 0.0
     
+    private var animateInInfo: (centerX: CGFloat, width: CGFloat)?
+    
     public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
         self.presentationData = presentationData
@@ -876,14 +878,16 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         if let animateInFromAnchorRect = animateInFromAnchorRect {
             let springDuration: Double = 0.5
             let springDamping: CGFloat = 104.0
-            let springDelay: Double = 0.05
+            let springScaleDelay: Double = 0.1
+            let springDelay: Double = springScaleDelay + 0.01
             
             let sourceBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateInFromAnchorRect, contentSize: CGSize(width: visualBackgroundFrame.height, height: contentHeight)).0
             
             self.backgroundNode.animateInFromAnchorRect(size: visualBackgroundFrame.size, sourceBackgroundFrame: sourceBackgroundFrame.offsetBy(dx: -visualBackgroundFrame.minX, dy: -visualBackgroundFrame.minY))
             
+            self.animateInInfo = (visualBackgroundFrame.midX - sourceBackgroundFrame.midX, visualBackgroundFrame.width)
             self.contentContainer.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - visualBackgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
-            self.contentContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
+            self.contentContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(x: -(sourceBackgroundFrame.midX - visualBackgroundFrame.midX), y: 0.0), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
             
             self.contentTintContainer.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - visualBackgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
             self.contentTintContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
@@ -1002,7 +1006,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: sourceAnchorRect, animateOutToAnchorRect: nil)
         }
         
-        //let mainCircleDuration: Double = 0.5
         let mainCircleDelay: Double = 0.01
         
         self.backgroundNode.animateIn()
@@ -1014,14 +1017,31 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 guard let itemNode = self.visibleItemNodes[i] else {
                     continue
                 }
-                let itemDelay = mainCircleDelay + Double(i) * 0.06
-                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + itemDelay, execute: { [weak itemNode] in
+                
+                let itemDelay: Double
+                if let animateInInfo = self.animateInInfo {
+                    let distance = abs(itemNode.frame.center.x - animateInInfo.centerX)
+                    let distanceNorm = distance / animateInInfo.width
+                    itemDelay = mainCircleDelay + distanceNorm * 0.4
+                } else {
+                    itemDelay = mainCircleDelay + Double(i) * 0.06
+                }
+
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + itemDelay * UIView.animationDurationFactor(), execute: { [weak itemNode] in
                     itemNode?.appear(animated: true)
                 })
             }
             
-            let itemDelay = mainCircleDelay + Double(self.visibleItemNodes.count) * 0.06
             if let expandItemView = self.expandItemView {
+                let itemDelay: Double
+                if let animateInInfo = self.animateInInfo {
+                    let distance = abs(expandItemView.frame.center.x - animateInInfo.centerX)
+                    let distanceNorm = distance / animateInInfo.width
+                    itemDelay = mainCircleDelay + distanceNorm * 0.4
+                } else {
+                    itemDelay = mainCircleDelay + Double(8) * 0.06
+                }
+                
                 expandItemView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, delay: itemDelay)
                 expandItemView.tintView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, delay: itemDelay)
             }

@@ -131,7 +131,11 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     
     func appear(animated: Bool) {
         if animated {
-            self.animateInAnimationNode?.visibility = true
+            if self.item.isCustom {
+                self.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+            } else {
+                self.animateInAnimationNode?.visibility = true
+            }
         } else {
             self.animateInAnimationNode?.completed(true)
         }
