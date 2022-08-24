@@ -30,6 +30,7 @@ import ComponentFlow
 import LottieAnimationComponent
 import ProgressIndicatorComponent
 import PremiumUI
+import ConfettiEffect
 import AnimationCache
 import MultiAnimationRenderer
 import EmojiStatusSelectionComponent
@@ -1584,7 +1585,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        
+                
         self.didAppear = true
         
         self.chatListDisplayNode.containerNode.updateEnableAdjacentFilterLoading(true)
@@ -3461,6 +3462,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatListTabBarContextExtractedContentSource(controller: strongSelf, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
             strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
         })
+    }
+    
+    private var playedSignUpCompletedAnimation = false
+    public func playSignUpCompletedAnimation() {
+        guard !self.playedSignUpCompletedAnimation else {
+            return
+        }
+        self.playedSignUpCompletedAnimation = true
+        Queue.mainQueue().after(0.3) {
+            self.view.addSubview(ConfettiView(frame: self.view.bounds))
+        }
     }
 }
 

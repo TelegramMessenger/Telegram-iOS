@@ -6,15 +6,17 @@ import TelegramPresentationData
 import TextFormat
 import Markdown
 
-public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> NSAttributedString {
+public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, phoneNumber: String, email: String?, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> NSAttributedString {
     let fontSize: CGFloat = 17.0
+    let body = MarkdownAttributeSet(font: Font.regular(fontSize), textColor: primaryColor)
+    let bold = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: primaryColor)
+    let attributes = MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })
+    
     switch type {
     case .sms:
-        return NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
+        return parseMarkdownIntoAttributedString(strings.Login_EnterCodeSMSText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     case .otherSession:
-        let body = MarkdownAttributeSet(font: Font.regular(fontSize), textColor: primaryColor)
-        let bold = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: primaryColor)
-        return parseMarkdownIntoAttributedString(strings.Login_CodeSentInternal, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
+        return parseMarkdownIntoAttributedString(strings.Login_EnterCodeTelegramText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     case .missedCall:
         let body = MarkdownAttributeSet(font: Font.regular(fontSize), textColor: primaryColor)
         let bold = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: primaryColor)
@@ -26,8 +28,7 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, st
     case .emailSetupRequired:
         return NSAttributedString(string: "", font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
     case let .email(emailPattern, _, _, _, _):
-        //TODO: localize
-        let mutableString = NSAttributedString(string: "Please enter the code we have sent to your email \(emailPattern).", font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center).mutableCopy() as! NSMutableAttributedString
+        let mutableString = NSAttributedString(string: strings.Login_EnterCodeEmailText(email ?? emailPattern).string, font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center).mutableCopy() as! NSMutableAttributedString
         let range = (mutableString.string as NSString).range(of: "*******")
         if range.location != NSNotFound {
             mutableString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: range)

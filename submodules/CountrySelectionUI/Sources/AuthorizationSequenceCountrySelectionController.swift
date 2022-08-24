@@ -43,11 +43,17 @@ private func loadCountryCodes() -> [Country] {
         
         let countryId = String(data[codeRange.upperBound ..< idRange.lowerBound])
         
-        let maybeNameRange = data.range(of: endOfLine, options: [], range: idRange.upperBound ..< data.endIndex)
+        guard let patternRange = data.range(of: delimiter, options: [], range: idRange.upperBound ..< data.endIndex) else {
+            break
+        }
+        
+        let pattern = String(data[idRange.upperBound ..< patternRange.lowerBound])
+        
+        let maybeNameRange = data.range(of: endOfLine, options: [], range: patternRange.upperBound ..< data.endIndex)
         
         let countryName = locale.localizedString(forIdentifier: countryId) ?? ""
         if let _ = Int(countryCode) {
-            let code = Country.CountryCode(code: countryCode, prefixes: [], patterns: [])
+            let code = Country.CountryCode(code: countryCode, prefixes: [], patterns: !pattern.isEmpty ? [pattern] : [])
             let country = Country(id: countryId, name: countryName, localizedName: nil, countryCodes: [code], hidden: false)
             result.append(country)
             countriesByPrefix["\(code.code)"] = (country, code)
@@ -86,6 +92,7 @@ public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccoun
             }
         }
         countryCodesByPrefix = countriesByPrefix
+                
         Queue.mainQueue().async {
             completion()
         }

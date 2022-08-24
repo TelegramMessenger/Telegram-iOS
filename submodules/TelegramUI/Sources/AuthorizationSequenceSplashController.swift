@@ -7,7 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import LegacyComponents
-
+import SolidRoundedButtonNode
 import RMIntro
 
 final class AuthorizationSequenceSplashController: ViewController {
@@ -27,6 +27,8 @@ final class AuthorizationSequenceSplashController: ViewController {
     
     private let suggestedLocalization = Promise<SuggestedLocalizationInfo?>()
     private let activateLocalizationDisposable = MetaDisposable()
+    
+    private let startButton: SolidRoundedButtonNode
     
     init(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, theme: PresentationTheme) {
         self.accountManager = accountManager
@@ -68,7 +70,9 @@ final class AuthorizationSequenceSplashController: ViewController {
             })
         })
         
-        self.controller = RMIntroViewController(backgroundColor: theme.list.plainBackgroundColor, primaryColor: theme.list.itemPrimaryTextColor, buttonColor: theme.intro.startButtonColor, accentColor: theme.list.itemAccentColor, regularDotColor: theme.intro.dotColor, highlightedDotColor: theme.list.itemPrimaryTextColor, suggestedLocalizationSignal: localizationSignal)
+        self.controller = RMIntroViewController(backgroundColor: theme.list.plainBackgroundColor, primaryColor: theme.list.itemPrimaryTextColor, buttonColor: theme.intro.startButtonColor, accentColor: theme.list.itemAccentColor, regularDotColor: theme.intro.dotColor, highlightedDotColor: theme.list.itemAccentColor, suggestedLocalizationSignal: localizationSignal)
+        
+        self.startButton = SolidRoundedButtonNode(title: "Start Messaging", theme: SolidRoundedButtonTheme(theme: theme), height: 50.0, cornerRadius: 13.0, gloss: true)
         
         super.init(navigationBarPresentationData: nil)
         
@@ -83,6 +87,15 @@ final class AuthorizationSequenceSplashController: ViewController {
             if let code = code {
                 self?.activateLocalization(code)
             }
+        }
+        
+        self.startButton.pressed = { [weak self] in
+            self?.activateLocalization("en")
+        }
+        
+        self.controller.createStartButton = { [weak self] width in
+            let _ = self?.startButton.updateLayout(width: width, transition: .immediate)
+            return self?.startButton.view
         }
     }
     
@@ -99,20 +112,32 @@ final class AuthorizationSequenceSplashController: ViewController {
         self.displayNodeDidLoad()
     }
     
+    var buttonFrame: CGRect {
+        return self.startButton.frame
+    }
+    
+    var animationSnapshot: UIView? {
+        return self.controller.createAnimationSnapshot()
+    }
+    
+    var textSnaphot: UIView? {
+        return self.controller.createTextSnapshot()
+    }
+    
     private func addControllerIfNeeded() {
-        if !controller.isViewLoaded || controller.view.superview == nil {
-            self.displayNode.view.addSubview(controller.view)
+        if !self.controller.isViewLoaded || self.controller.view.superview == nil {
+            self.displayNode.view.addSubview(self.controller.view)
             if let layout = self.validLayout {
                 controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
             }
-            controller.viewDidAppear(false)
+            self.controller.viewDidAppear(false)
         }
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         self.addControllerIfNeeded()
-        controller.viewWillAppear(false)
+        self.controller.viewWillAppear(false)
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -182,6 +207,7 @@ final class AuthorizationSequenceSplashController: ViewController {
             }
             
             strongSelf.controller.isEnabled = false
+            strongSelf.startButton.alpha = 0.6
             let accountManager = strongSelf.accountManager
             
             strongSelf.activateLocalizationDisposable.set(TelegramEngineUnauthorized(account: strongSelf.account).localization.downloadAndApplyLocalization(accountManager: accountManager, languageCode: code).start(completed: {
@@ -202,6 +228,7 @@ final class AuthorizationSequenceSplashController: ViewController {
                 }
                 |> deliverOnMainQueue).start(next: { strings in
                     self?.controller.isEnabled = true
+                    self?.startButton.alpha = 1.0
                     self?.pressNext(strings: strings)
                 })
             }))
