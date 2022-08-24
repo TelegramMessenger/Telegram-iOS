@@ -115,6 +115,15 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         self.controllerNode.resetCode()
     }
     
+    func animateSuccess() {
+        self.controllerNode.animateSuccess()
+    }
+    
+    func animateError(text: String) {
+        self.hapticFeedback.error()
+        self.controllerNode.animateError(text: text)
+    }
+    
     func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
         self.termsOfService = termsOfService
         if self.data?.0 != number || self.data?.1 != codeType || self.data?.2 != nextType || self.data?.3 != timeout {

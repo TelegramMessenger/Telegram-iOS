@@ -51,10 +51,10 @@ final class NavigationSplitContainer: ASDisplayNode {
             scrollToTop(.detail)
         }
         
-        self.masterContainer = NavigationContainer(controllerRemoved: controllerRemoved)
+        self.masterContainer = NavigationContainer(isFlat: false, controllerRemoved: controllerRemoved)
         self.masterContainer.clipsToBounds = true
         
-        self.detailContainer = NavigationContainer(controllerRemoved: controllerRemoved)
+        self.detailContainer = NavigationContainer(isFlat: false, controllerRemoved: controllerRemoved)
         self.detailContainer.clipsToBounds = true
         
         self.separator = ASDisplayNode()

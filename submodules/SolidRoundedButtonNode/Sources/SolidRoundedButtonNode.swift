@@ -263,7 +263,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.setupGloss()
     }
-    
+        
     private func setupGloss() {
         if self.gloss {
             if self.shimmerView == nil {
@@ -309,6 +309,39 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             self.borderView = nil
             self.borderMaskView = nil
             self.borderShimmerView = nil
+        }
+    }
+    
+    public func animateTitle(from title: String) {
+        let originalTitle = self.title ?? ""
+        self.title = title
+        
+        Queue.mainQueue().justDispatch {
+            if let snapshotView = self.titleNode.view.snapshotView(afterScreenUpdates: false) {
+                snapshotView.frame = self.titleNode.frame
+                
+                self.view.insertSubview(snapshotView, aboveSubview: self.titleNode.view)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+                self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                
+                self.title = originalTitle
+            }
+        }
+    }
+    
+    public func animateTitle(to title: String) {
+        if let snapshotView = self.titleNode.view.snapshotView(afterScreenUpdates: false) {
+            snapshotView.frame = self.titleNode.frame
+            
+            self.view.insertSubview(snapshotView, aboveSubview: self.titleNode.view)
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+            self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            
+            self.title = title
         }
     }
     

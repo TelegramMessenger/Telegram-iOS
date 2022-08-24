@@ -37,6 +37,7 @@ final class NavigationTransitionCoordinator {
     private let container: NavigationContainer
     private let transition: NavigationTransition
     let isInteractive: Bool
+    let isFlat: Bool
     let topNode: ASDisplayNode
     let bottomNode: ASDisplayNode
     private let topNavigationBar: NavigationBar?
@@ -51,9 +52,10 @@ final class NavigationTransitionCoordinator {
     private var currentCompletion: (() -> Void)?
     private var didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)?
     
-    init(transition: NavigationTransition, isInteractive: Bool, container: NavigationContainer, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil) {
+    init(transition: NavigationTransition, isInteractive: Bool, isFlat: Bool, container: NavigationContainer, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil) {
         self.transition = transition
         self.isInteractive = isInteractive
+        self.isFlat = isFlat
         self.container = container
         self.didUpdateProgress = didUpdateProgress
         self.topNode = topNode
@@ -98,8 +100,10 @@ final class NavigationTransitionCoordinator {
             self.container.insertSubnode(bottomNode, belowSubnode: topNode)
         }
         
-        self.container.insertSubnode(self.dimNode, belowSubnode: topNode)
-        self.container.insertSubnode(self.shadowNode, belowSubnode: self.dimNode)
+        if !self.isFlat {
+            self.container.insertSubnode(self.dimNode, belowSubnode: topNode)
+            self.container.insertSubnode(self.shadowNode, belowSubnode: self.dimNode)
+        }
         if let customTransitionNode = self.customTransitionNode {
             self.container.addSubnode(customTransitionNode)
         }

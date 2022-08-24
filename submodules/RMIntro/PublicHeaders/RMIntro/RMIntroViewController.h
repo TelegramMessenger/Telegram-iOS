@@ -61,6 +61,11 @@
 @property (nonatomic, copy) void (^startMessaging)(void);
 @property (nonatomic, copy) void (^startMessagingInAlternativeLanguage)(NSString *);
 
+@property (nonatomic, copy) UIView *(^createStartButton)(CGFloat);
+
+- (UIView *)createAnimationSnapshot;
+- (UIView *)createTextSnapshot;
+
 @property (nonatomic) bool isEnabled;
 
 - (void)startTimer;

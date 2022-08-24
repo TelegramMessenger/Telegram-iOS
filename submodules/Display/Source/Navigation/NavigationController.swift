@@ -142,6 +142,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     private let mode: NavigationControllerMode
     private var theme: NavigationControllerTheme
+    private let isFlat: Bool
     
     var inCallNavigate: (() -> Void)?
     private var inCallStatusBar: StatusBar?
@@ -235,9 +236,10 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.requestLayout(transition: transition)
     }
     
-    public init(mode: NavigationControllerMode, theme: NavigationControllerTheme, backgroundDetailsMode: NavigationEmptyDetailsBackgoundMode? = nil) {
+    public init(mode: NavigationControllerMode, theme: NavigationControllerTheme, isFlat: Bool = false, backgroundDetailsMode: NavigationEmptyDetailsBackgoundMode? = nil) {
         self.mode = mode
         self.theme = theme
+        self.isFlat = isFlat
         self.backgroundDetailsMode = backgroundDetailsMode
         
         super.init(nibName: nil, bundle: nil)
@@ -759,7 +761,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     transition.updateFrame(node: flatContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
                     flatContainer.update(layout: layout, canBeClosed: false, controllers: controllers, transition: transition)
                 case let .split(splitContainer):
-                    let flatContainer = NavigationContainer(controllerRemoved: { [weak self] controller in
+                    let flatContainer = NavigationContainer(isFlat: self.isFlat, controllerRemoved: { [weak self] controller in
                         self?.controllerRemoved(controller)
                     })
                     flatContainer.statusBarStyleUpdated = { [weak self] transition in
@@ -782,7 +784,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     splitContainer.removeFromSupernode()
                 }
             } else {
-                let flatContainer = NavigationContainer(controllerRemoved: { [weak self] controller in
+                let flatContainer = NavigationContainer(isFlat: self.isFlat, controllerRemoved: { [weak self] controller in
                     self?.controllerRemoved(controller)
                 })
                 flatContainer.statusBarStyleUpdated = { [weak self] transition in

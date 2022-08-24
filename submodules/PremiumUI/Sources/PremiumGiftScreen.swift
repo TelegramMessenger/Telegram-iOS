@@ -590,45 +590,14 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                         strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(product.storeProduct, targetPeerId: strongSelf.peerId)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
                             if let strongSelf = self, case .purchased = status {
-                                strongSelf.activationDisposable.set((strongSelf.context.account.postbox.peerView(id: strongSelf.context.account.peerId)
-                                |> castError(AssignAppStoreTransactionError.self)
-                                |> take(until: { view in
-                                    if let peer = view.peers[view.peerId], peer.isPremium {
-                                        return SignalTakeAction(passthrough: false, complete: true)
-                                    } else {
-                                        return SignalTakeAction(passthrough: false, complete: false)
-                                    }
-                                })
-                                |> mapToSignal { _ -> Signal<Never, AssignAppStoreTransactionError> in
-                                    return .never()
+                                Queue.mainQueue().after(2.0) {
+                                    let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
+                                    strongSelf.inProgress = false
+                                    strongSelf.updateInProgress(false)
+                                    
+                                    strongSelf.updated(transition: .easeInOut(duration: 0.25))
+                                    strongSelf.completion(duration)
                                 }
-                                |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.timeout))
-                                |> deliverOnMainQueue).start(error: { [weak self] _ in
-                                    if let strongSelf = self {
-                                        strongSelf.inProgress = false
-                                        strongSelf.updateInProgress(false)
-                                        
-                                        strongSelf.updated(transition: .immediate)
-                                        
-//                                        addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_fail")
-                                        
-                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                        let errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                                        let alertController = textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                                        strongSelf.present(alertController)
-                                    }
-                                }, completed: { [weak self] in
-                                    if let strongSelf = self {
-                                        Queue.mainQueue().after(2.0) {
-                                            let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
-                                            strongSelf.inProgress = false
-                                            strongSelf.updateInProgress(false)
-                                            
-                                            strongSelf.updated(transition: .easeInOut(duration: 0.25))
-                                            strongSelf.completion(duration)
-                                        }
-                                    }
-                                }))
                             }
                         }, error: { [weak self] error in
                             if let strongSelf = self {
