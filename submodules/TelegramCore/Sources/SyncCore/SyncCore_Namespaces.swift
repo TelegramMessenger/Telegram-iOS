@@ -70,6 +70,8 @@ public struct Namespaces {
         public static let CloudAllPremiumStickers: Int32 = 16
         public static let CloudRecentStatusEmoji: Int32 = 17
         public static let CloudFeaturedStatusEmoji: Int32 = 18
+        public static let CloudRecentReactions: Int32 = 19
+        public static let CloudTopReactions: Int32 = 20
     }
     
     public struct CachedItemCollection {

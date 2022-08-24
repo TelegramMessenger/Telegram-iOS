@@ -977,7 +977,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 interaction.openChat()
             }))
             
-            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_Report, color: .destructive, action: {
+            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_ReportReaction, color: .destructive, action: {
                 interaction.openReport(.reaction(reactionSourceMessageId))
             }))
         } else if let _ = nearbyPeerDistance {
@@ -1296,7 +1296,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         switch allowedReactions {
                         case .all:
                             //TODO:localize
-                            label = "Enabled"
+                            label = "All Reactions"
                         case .empty:
                             label = presentationData.strings.PeerInfo_ReactionsDisabled
                         case let .limited(reactions):
@@ -1462,7 +1462,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                 switch allowedReactions {
                                 case .all:
                                     //TODO:localize
-                                    label = "Enabled"
+                                    label = "All Reactions"
                                 case .empty:
                                     label = presentationData.strings.PeerInfo_ReactionsDisabled
                                 case let .limited(reactions):
@@ -1488,7 +1488,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                 switch allowedReactions {
                                 case .all:
                                     //TODO:localize
-                                    label = "Enabled"
+                                    label = "All Reactions"
                                 case .empty:
                                     label = presentationData.strings.PeerInfo_ReactionsDisabled
                                 case let .limited(reactions):
@@ -1602,7 +1602,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         switch allowedReactions {
                         case .all:
                             //TODO:localize
-                            label = "Enabled"
+                            label = "All Reactions"
                         case .empty:
                             label = presentationData.strings.PeerInfo_ReactionsDisabled
                         case let .limited(reactions):
@@ -3103,7 +3103,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         isStandalone: false,
                         isStatusSelection: true,
                         isReactionSelection: false,
-                        reactionItems: [],
+                        topReactionItems: [],
                         areUnicodeEmojiEnabled: false,
                         areCustomEmojiEnabled: true,
                         chatPeerId: strongSelf.context.account.peerId

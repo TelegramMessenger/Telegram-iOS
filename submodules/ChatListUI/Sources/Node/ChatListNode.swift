@@ -393,7 +393,9 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 if let chatPeer = chatPeer {
                                     nodeInteraction.disabledPeerSelected(chatPeer)
                                 }
-                            }
+                            },
+                            animationCache: nodeInteraction.animationCache,
+                            animationRenderer: nodeInteraction.animationRenderer
                         ), directionHint: entry.directionHint)
                 }
             case let .HoleEntry(_, theme):
@@ -533,7 +535,9 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 if let chatPeer = chatPeer {
                                     nodeInteraction.disabledPeerSelected(chatPeer)
                                 }
-                            }
+                            },
+                            animationCache: nodeInteraction.animationCache,
+                            animationRenderer: nodeInteraction.animationRenderer
                     ), directionHint: entry.directionHint)
                 }
             case let .HoleEntry(_, theme):

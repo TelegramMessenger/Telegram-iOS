@@ -435,6 +435,14 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let titleCredibilityIconView = self.titleCredibilityIconView, !titleCredibilityIconView.isHidden, titleCredibilityIconView.alpha != 0.0 {
+            if titleCredibilityIconView.bounds.insetBy(dx: -8.0, dy: -8.0).contains(self.convert(point, to: titleCredibilityIconView)) {
+                if let result = titleCredibilityIconView.hitTest(titleCredibilityIconView.bounds.center, with: event) {
+                    return result
+                }
+            }
+        }
+        
         if !self.proxyButton.isHidden {
             if let result = self.proxyButton.hitTest(point.offsetBy(dx: -self.proxyButton.frame.minX, dy: -self.proxyButton.frame.minY), with: event) {
                 return result;

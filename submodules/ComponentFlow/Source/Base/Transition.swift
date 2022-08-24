@@ -390,7 +390,11 @@ public struct Transition {
     }
     
     public func setScale(view: UIView, scale: CGFloat, completion: ((Bool) -> Void)? = nil) {
-        let t = view.layer.presentation()?.transform ?? view.layer.transform
+        self.setScale(layer: view.layer, scale: scale, completion: completion)
+    }
+    
+    public func setScale(layer: CALayer, scale: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        let t = layer.presentation()?.transform ?? layer.transform
         let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
         if currentScale == scale {
             completion?(true)
@@ -398,12 +402,12 @@ public struct Transition {
         }
         switch self.animation {
         case .none:
-            view.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+            layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
             completion?(true)
         case let .curve(duration, curve):
             let previousScale = currentScale
-            view.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
-            view.layer.animate(
+            layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+            layer.animate(
                 from: previousScale as NSNumber,
                 to: scale as NSNumber,
                 keyPath: "transform.scale",

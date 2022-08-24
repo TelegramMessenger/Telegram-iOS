@@ -344,12 +344,11 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
-                static func getEmojiStatuses(flags: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.EmojiStatuses>) {
+                static func getDefaultEmojiStatuses(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.EmojiStatuses>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(644729392)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(-696962170)
                     serializeInt64(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "account.getEmojiStatuses", parameters: [("flags", String(describing: flags)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.EmojiStatuses? in
+                    return (FunctionDescription(name: "account.getDefaultEmojiStatuses", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.EmojiStatuses? in
                         let reader = BufferReader(buffer)
                         var result: Api.account.EmojiStatuses?
                         if let signature = reader.readInt32() {
@@ -464,6 +463,21 @@ public extension Api.functions.account {
                         var result: Api.account.PrivacyRules?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.PrivacyRules
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func getRecentEmojiStatuses(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.EmojiStatuses>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(257392901)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getRecentEmojiStatuses", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.EmojiStatuses? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.EmojiStatuses?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.EmojiStatuses
                         }
                         return result
                     })
@@ -3393,6 +3407,21 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func clearRecentReactions() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1644236876)
+                    
+                    return (FunctionDescription(name: "messages.clearRecentReactions", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func clearRecentStickers(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1986437075)
@@ -4646,6 +4675,22 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getRecentReactions(limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Reactions>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(960896434)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getRecentReactions", parameters: [("limit", String(describing: limit)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Reactions? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Reactions?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Reactions
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getRecentStickers(flags: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.RecentStickers>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1649852357)
@@ -4848,6 +4893,22 @@ public extension Api.functions.messages {
                         var result: [Api.DialogFilterSuggested]?
                         if let _ = reader.readInt32() {
                             result = Api.parseVector(reader, elementSignature: 0, elementType: Api.DialogFilterSuggested.self)
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func getTopReactions(limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Reactions>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1149164102)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getTopReactions", parameters: [("limit", String(describing: limit)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Reactions? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Reactions?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Reactions
                         }
                         return result
                     })
