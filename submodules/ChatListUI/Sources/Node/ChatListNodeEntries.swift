@@ -351,7 +351,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         readState: nil,
                         isRemovedFromTotalUnreadCount: false,
                         draftState: nil,
-                        peer: EngineRenderedPeer(peerId: peer.0.id, peers: peers),
+                        peer: EngineRenderedPeer(peerId: peer.0.id, peers: peers, associatedMedia: [:]),
                         presence: nil,
                         hasUnseenMentions: false,
                         hasUnseenReactions: false,
@@ -369,7 +369,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                 }
             }
             
-            result.append(.PeerEntry(index: EngineChatList.Item.Index.absoluteUpperBound.predecessor, presentationData: state.presentationData, messages: [], readState: nil, isRemovedFromTotalUnreadCount: false, draftState: nil, peer: EngineRenderedPeer(peerId: savedMessagesPeer.id, peers: [savedMessagesPeer.id: savedMessagesPeer]), presence: nil, hasUnseenMentions: false, hasUnseenReactions: false, editing: state.editing, hasActiveRevealControls: false, selected: state.selectedPeerIds.contains(savedMessagesPeer.id), inputActivities: nil, promoInfo: nil, hasFailedMessages: false, isContact: false))
+            result.append(.PeerEntry(index: EngineChatList.Item.Index.absoluteUpperBound.predecessor, presentationData: state.presentationData, messages: [], readState: nil, isRemovedFromTotalUnreadCount: false, draftState: nil, peer: EngineRenderedPeer(peerId: savedMessagesPeer.id, peers: [savedMessagesPeer.id: savedMessagesPeer], associatedMedia: [:]), presence: nil, hasUnseenMentions: false, hasUnseenReactions: false, editing: state.editing, hasActiveRevealControls: false, selected: state.selectedPeerIds.contains(savedMessagesPeer.id), inputActivities: nil, promoInfo: nil, hasFailedMessages: false, isContact: false))
         } else {
             if !filteredAdditionalItemEntries.isEmpty {
                 for item in filteredAdditionalItemEntries.reversed() {

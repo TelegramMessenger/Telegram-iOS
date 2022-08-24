@@ -3040,7 +3040,7 @@ final class PostboxImpl {
                         peers[associatedPeer.id] = associatedPeer
                     }
                 }
-                chatPeers.append(RenderedPeer(peerId: peer.id, peers: peers))
+                chatPeers.append(RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: self, peers: peers)))
                 peerIds.insert(peerId)
             }
         }
@@ -3051,7 +3051,7 @@ final class PostboxImpl {
                 if let peer = self.peerTable.get(peerId) {
                     var peers = SimpleDictionary<PeerId, Peer>()
                     peers[peer.id] = peer
-                    contactPeers.append(RenderedPeer(peerId: peer.id, peers: peers))
+                    contactPeers.append(RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: self, peers: peers)))
                 }
             }
         }

@@ -135,6 +135,64 @@ public extension Api.messages {
     }
 }
 public extension Api.messages {
+    enum Reactions: TypeConstructorDescription {
+        case reactions(hash: Int64, reactions: [Api.Reaction])
+        case reactionsNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .reactions(let hash, let reactions):
+                    if boxed {
+                        buffer.appendInt32(-352454890)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(reactions.count))
+                    for item in reactions {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .reactionsNotModified:
+                    if boxed {
+                        buffer.appendInt32(-1334846497)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .reactions(let hash, let reactions):
+                return ("reactions", [("hash", String(describing: hash)), ("reactions", String(describing: reactions))])
+                case .reactionsNotModified:
+                return ("reactionsNotModified", [])
+    }
+    }
+    
+        public static func parse_reactions(_ reader: BufferReader) -> Reactions? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.Reaction]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Reaction.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.Reactions.reactions(hash: _1!, reactions: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_reactionsNotModified(_ reader: BufferReader) -> Reactions? {
+            return Api.messages.Reactions.reactionsNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
     enum RecentStickers: TypeConstructorDescription {
         case recentStickers(hash: Int64, packs: [Api.StickerPack], stickers: [Api.Document], dates: [Int32])
         case recentStickersNotModified
@@ -1364,114 +1422,6 @@ public extension Api.payments {
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.payments.ValidatedRequestedInfo.validatedRequestedInfo(flags: _1!, id: _2, shippingOptions: _3)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.phone {
-    enum ExportedGroupCallInvite: TypeConstructorDescription {
-        case exportedGroupCallInvite(link: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .exportedGroupCallInvite(let link):
-                    if boxed {
-                        buffer.appendInt32(541839704)
-                    }
-                    serializeString(link, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .exportedGroupCallInvite(let link):
-                return ("exportedGroupCallInvite", [("link", String(describing: link))])
-    }
-    }
-    
-        public static func parse_exportedGroupCallInvite(_ reader: BufferReader) -> ExportedGroupCallInvite? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.phone.ExportedGroupCallInvite.exportedGroupCallInvite(link: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.phone {
-    enum GroupCall: TypeConstructorDescription {
-        case groupCall(call: Api.GroupCall, participants: [Api.GroupCallParticipant], participantsNextOffset: String, chats: [Api.Chat], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .groupCall(let call, let participants, let participantsNextOffset, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(-1636664659)
-                    }
-                    call.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(participants.count))
-                    for item in participants {
-                        item.serialize(buffer, true)
-                    }
-                    serializeString(participantsNextOffset, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .groupCall(let call, let participants, let participantsNextOffset, let chats, let users):
-                return ("groupCall", [("call", String(describing: call)), ("participants", String(describing: participants)), ("participantsNextOffset", String(describing: participantsNextOffset)), ("chats", String(describing: chats)), ("users", String(describing: users))])
-    }
-    }
-    
-        public static func parse_groupCall(_ reader: BufferReader) -> GroupCall? {
-            var _1: Api.GroupCall?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.GroupCall
-            }
-            var _2: [Api.GroupCallParticipant]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallParticipant.self)
-            }
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.phone.GroupCall.groupCall(call: _1!, participants: _2!, participantsNextOffset: _3!, chats: _4!, users: _5!)
             }
             else {
                 return nil

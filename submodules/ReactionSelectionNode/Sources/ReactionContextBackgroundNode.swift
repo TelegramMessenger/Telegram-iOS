@@ -215,15 +215,19 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     }
     
     func animateInFromAnchorRect(size: CGSize, sourceBackgroundFrame: CGRect) {
-        let springDuration: Double = 0.3
+        let springDuration: Double = 0.5
         let springDamping: CGFloat = 104.0
-        let springDelay: Double = 0.05
+        let springScaleDelay: Double = 0.1
+        let springDelay: Double = springScaleDelay + 0.01
         let shadowInset: CGFloat = 15.0
         
         let contentBounds = self.backgroundView.frame
         
         let visualSourceBackgroundFrame = sourceBackgroundFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY)
         let sourceShadowFrame = visualSourceBackgroundFrame.insetBy(dx: -shadowInset, dy: -shadowInset)
+        
+        self.backgroundClippingLayer.animateScale(from: 0.001, to: 1.0, duration: 0.2, delay: springScaleDelay, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+        self.backgroundShadowLayer.animateScale(from: 0.001, to: 1.0, duration: 0.2, delay: springScaleDelay, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
         
         self.backgroundClippingLayer.animateSpring(from: NSValue(cgPoint: CGPoint(x: visualSourceBackgroundFrame.midX - size.width / 2.0, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
         self.backgroundClippingLayer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualSourceBackgroundFrame.size)), to: NSValue(cgRect: self.backgroundClippingLayer.bounds), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
@@ -232,11 +236,12 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     }
     
     func animateOut() {
-        self.backgroundClippingLayer.animateAlpha(from: CGFloat(self.backgroundClippingLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.maskLayer.allowsGroupOpacity = true
+        self.maskLayer.animateAlpha(from: CGFloat(self.backgroundClippingLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.backgroundShadowLayer.animateAlpha(from: CGFloat(self.backgroundShadowLayer.opacity), to: 0.0, duration: 0.1, removeOnCompletion: false)
-        self.largeCircleLayer.animateAlpha(from: CGFloat(self.largeCircleLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false)
+        //self.largeCircleLayer.animateAlpha(from: CGFloat(self.largeCircleLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.largeCircleShadowLayer.animateAlpha(from: CGFloat(self.largeCircleShadowLayer.opacity), to: 0.0, duration: 0.1, removeOnCompletion: false)
-        self.smallCircleLayer.animateAlpha(from: CGFloat(self.smallCircleLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false)
+        //self.smallCircleLayer.animateAlpha(from: CGFloat(self.smallCircleLayer.opacity), to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.smallCircleShadowLayer.animateAlpha(from: CGFloat(self.smallCircleShadowLayer.opacity), to: 0.0, duration: 0.1, removeOnCompletion: false)
     }
 }

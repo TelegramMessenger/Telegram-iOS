@@ -11,6 +11,8 @@ import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
 import PagerComponent
+import Postbox
+import TelegramCore
 
 public final class EmojiStatusSelectionComponent: Component {
     public typealias EnvironmentType = Empty
@@ -180,6 +182,7 @@ public final class EmojiStatusSelectionController: ViewController {
         
         private var emojiContentDisposable: Disposable?
         private var emojiContent: EmojiPagerContentComponent?
+        private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         
         private var isDismissed: Bool = false
         
@@ -232,7 +235,7 @@ public final class EmojiStatusSelectionController: ViewController {
                 strongSelf.emojiContent = emojiContent
                 
                 emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
-                    performItemAction: { _, item, _, _, _ in
+                    performItemAction: { _, item, _, _, _, _ in
                         guard let strongSelf = self else {
                             return
                         }
@@ -245,7 +248,28 @@ public final class EmojiStatusSelectionController: ViewController {
                     openFeatured: {
                     },
                     addGroupAction: { groupId, isPremiumLocked in
+                        guard let strongSelf = self, let collectionId = groupId.base as? ItemCollectionId else {
+                            return
+                        }
                         
+                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+                        let _ = (strongSelf.context.account.postbox.combinedView(keys: [viewKey])
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { views in
+                            guard let strongSelf = self, let view = views.views[viewKey] as? OrderedItemListView else {
+                                return
+                            }
+                            for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                                if featuredEmojiPack.info.id == collectionId {
+                                    if let strongSelf = self {
+                                        strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId))
+                                    }
+                                    let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
+                                    
+                                    break
+                                }
+                            }
+                        })
                     },
                     clearGroup: { groupId in
                     },
@@ -295,6 +319,8 @@ public final class EmojiStatusSelectionController: ViewController {
         func containerLayoutUpdated(layout: ContainerViewLayout, transition: Transition) {
             self.validLayout = layout
             
+            var transition = transition
+            
             guard let emojiContent = self.emojiContent else {
                 return
             }
@@ -319,6 +345,12 @@ public final class EmojiStatusSelectionController: ViewController {
             self.cloudLayer1.backgroundColor = listBackgroundColor.cgColor
             
             let sideInset: CGFloat = 16.0
+            
+            if let scheduledEmojiContentAnimationHint = self.scheduledEmojiContentAnimationHint {
+                self.scheduledEmojiContentAnimationHint = nil
+                let contentAnimation = scheduledEmojiContentAnimationHint
+                transition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
+            }
             
             let componentSize = self.componentHost.update(
                 transition: transition,
@@ -384,16 +416,14 @@ public final class EmojiStatusSelectionController: ViewController {
                 transition.setFrame(layer: self.cloudShadowLayer1, frame: cloudFrame1)
                 transition.setCornerRadius(layer: self.cloudLayer1, cornerRadius: cloudFrame1.width / 2.0)
                 
-                //transition.setFrame(view: componentView, frame: componentFrame)
                 transition.setFrame(view: componentView, frame: CGRect(origin: componentFrame.origin, size: CGSize(width: componentFrame.width, height: componentFrame.height)))
                 
                 if animateIn {
-                    //self.allowsGroupOpacity = true
                     self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { [weak self] _ in
                         self?.allowsGroupOpacity = false
                     })
                     
-                    let contentDuration: Double = 0.5
+                    let contentDuration: Double = 0.3
                     let contentDelay: Double = 0.14
                     let initialContentFrame = CGRect(origin: CGPoint(x: cloudFrame0.midX - 24.0, y: componentFrame.minY), size: CGSize(width: 24.0 * 2.0, height: 24.0 * 2.0))
                     
@@ -407,15 +437,8 @@ public final class EmojiStatusSelectionController: ViewController {
                     componentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.04, delay: contentDelay)
                     self.componentShadowLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.04, delay: contentDelay)
                     
-                    //componentView.layer.animateScale(from: 0.5, to: 1.0, duration: contentDuration, delay: contentDelay, timingFunction: kCAMediaTimingFunctionSpring)
-                    //self.componentShadowLayer.animateScale(from: 0.5, to: 1.0, duration: contentDuration, delay: contentDelay, timingFunction: kCAMediaTimingFunctionSpring)
-                    
                     let initialComponentShadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: initialContentFrame.size), cornerRadius: 24.0).cgPath
                     self.componentShadowLayer.animate(from: initialComponentShadowPath, to: self.componentShadowLayer.shadowPath!, keyPath: "shadowPath", timingFunction: kCAMediaTimingFunctionSpring, duration: contentDuration, delay: contentDelay)
-                    
-                    //componentView.layer.animateScale(from: (componentView.bounds.width - 10.0) / componentView.bounds.width, to: 1.0, duration: 0.4, delay: 0.1, timingFunction: kCAMediaTimingFunctionSpring)
-                    //componentView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, delay: contentDelay)
-                    //self.componentShadowLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, delay: contentDelay)
                     
                     self.cloudLayer0.animateScale(from: 0.01, to: 1.0, duration: 0.4, delay: 0.05, timingFunction: kCAMediaTimingFunctionSpring)
                     self.cloudShadowLayer0.animateScale(from: 0.01, to: 1.0, duration: 0.4, delay: 0.05, timingFunction: kCAMediaTimingFunctionSpring)

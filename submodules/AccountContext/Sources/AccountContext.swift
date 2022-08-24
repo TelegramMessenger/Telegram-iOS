@@ -467,6 +467,7 @@ public enum PeerInfoControllerMode {
     case calls(messages: [Message])
     case nearbyPeer(distance: Int32)
     case group(PeerId)
+    case reaction(MessageId)
 }
 
 public enum ContactListActionItemInlineIconPosition {

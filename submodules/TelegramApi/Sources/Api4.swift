@@ -319,6 +319,80 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ChatReactions: TypeConstructorDescription {
+        case chatReactionsAll(flags: Int32)
+        case chatReactionsNone
+        case chatReactionsSome(reactions: [Api.Reaction])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .chatReactionsAll(let flags):
+                    if boxed {
+                        buffer.appendInt32(1385335754)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+                case .chatReactionsNone:
+                    if boxed {
+                        buffer.appendInt32(-352570692)
+                    }
+                    
+                    break
+                case .chatReactionsSome(let reactions):
+                    if boxed {
+                        buffer.appendInt32(1713193015)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(reactions.count))
+                    for item in reactions {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatReactionsAll(let flags):
+                return ("chatReactionsAll", [("flags", String(describing: flags))])
+                case .chatReactionsNone:
+                return ("chatReactionsNone", [])
+                case .chatReactionsSome(let reactions):
+                return ("chatReactionsSome", [("reactions", String(describing: reactions))])
+    }
+    }
+    
+        public static func parse_chatReactionsAll(_ reader: BufferReader) -> ChatReactions? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChatReactions.chatReactionsAll(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_chatReactionsNone(_ reader: BufferReader) -> ChatReactions? {
+            return Api.ChatReactions.chatReactionsNone
+        }
+        public static func parse_chatReactionsSome(_ reader: BufferReader) -> ChatReactions? {
+            var _1: [Api.Reaction]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Reaction.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChatReactions.chatReactionsSome(reactions: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum CodeSettings: TypeConstructorDescription {
         case codeSettings(flags: Int32, logoutTokens: [Buffer]?)
     

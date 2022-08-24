@@ -2201,12 +2201,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let phoneGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePhoneLongPress(_:)))
         self.subtitleNodeRawContainer.view.addGestureRecognizer(phoneGestureRecognizer)
-        
-        /*let premiumGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleStarTap(_:)))
-        self.titleCredibilityIconNode.view.addGestureRecognizer(premiumGestureRecognizer)
-        
-        let expandedPremiumGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleStarTap(_:)))
-        self.titleExpandedCredibilityIconNode.view.addGestureRecognizer(expandedPremiumGestureRecognizer)*/
     }
     
     @objc private func handleUsernameLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
@@ -2341,76 +2335,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if themeUpdated || self.currentCredibilityIcon != credibilityIcon {
             self.currentCredibilityIcon = credibilityIcon
             
-            let image: UIImage?
-            var expandedImage: UIImage?
-            
-            if case .fake = credibilityIcon {
-                image = PresentationResourcesChatList.fakeIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
-            } else if case .scam = credibilityIcon {
-                image = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
-            } else if case .verified = credibilityIcon {
-                if let backgroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconForeground") {
-                    image = generateImage(backgroundImage.size, contextGenerator: { size, context in
-                        if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
-                            context.clear(CGRect(origin: CGPoint(), size: size))
-                            context.saveGState()
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
-
-                            context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                            context.restoreGState()
-                            
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
-                            context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                        }
-                    }, opaque: false)
-                    expandedImage = generateImage(backgroundImage.size, contextGenerator: { size, context in
-                        if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
-                            context.clear(CGRect(origin: CGPoint(), size: size))
-                            context.saveGState()
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
-                            context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.75).cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                            context.restoreGState()
-                            
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
-                            context.setBlendMode(.clear)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                        }
-                    }, opaque: false)
-                } else {
-                    image = nil
-                }
-            } else if case .premium = credibilityIcon {
-                if let sourceImage = UIImage(bundleImageName: "Peer Info/PremiumIcon") {
-                    image = generateImage(sourceImage.size, contextGenerator: { size, context in
-                        if let cgImage = sourceImage.cgImage {
-                            context.clear(CGRect(origin: CGPoint(), size: size))
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                            
-                            context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                        }
-                    }, opaque: false)
-                    expandedImage = generateImage(sourceImage.size, contextGenerator: { size, context in
-                        if let cgImage = sourceImage.cgImage {
-                            context.clear(CGRect(origin: CGPoint(), size: size))
-                            context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                            context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.75).cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                        }
-                    }, opaque: false)
-                } else {
-                    image = nil
-                }
-            } else {
-                image = nil
-            }
-            
-            let _ = image
-            let _ = expandedImage
-            
             var currentEmojiStatus: PeerEmojiStatus?
             let emojiRegularStatusContent: EmojiStatusComponent.Content
             let emojiExpandedStatusContent: EmojiStatusComponent.Content
@@ -2436,8 +2360,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiExpandedStatusContent = .emojiStatus(status: emojiStatus, size: CGSize(width: 32.0, height: 32.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15))
             }
             
+            let animateStatusIcon = !self.titleCredibilityIconView.bounds.isEmpty
+            
             let iconSize = self.titleCredibilityIconView.update(
-                transition: Transition(transition),
+                transition: animateStatusIcon ? Transition(animation: .curve(duration: 0.3, curve: .easeInOut)) : .immediate,
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -2497,7 +2423,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 containerSize: CGSize(width: 34.0, height: 34.0)
             )
             let expandedIconSize = self.titleExpandedCredibilityIconView.update(
-                transition: Transition(transition),
+                transition: animateStatusIcon ? Transition(animation: .curve(duration: 0.3, curve: .easeInOut)) : .immediate,
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -2522,17 +2448,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             
             self.credibilityIconSize = iconSize
             self.titleExpandedCredibilityIconSize = expandedIconSize
-            
-            /*if let image = image {
-                self.credibilityIconSize = image.size
-                self.titleExpandedCredibilityIconSize = (expandedImage ?? image).size
-            } else {
-                self.credibilityIconSize = nil
-                self.titleExpandedCredibilityIconSize = nil
-            }*/
-            
-            //self.titleCredibilityIconNode.image = image
-            //self.titleExpandedCredibilityIconNode.image = expandedImage ?? image
         }
         
         self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
@@ -2755,7 +2670,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var titleHorizontalOffset: CGFloat = 0.0
         if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
             titleHorizontalOffset = -(credibilityIconSize.width + 4.0) / 2.0
-            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0, y: floor((titleSize.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize))
+            
+            var collapsedTransitionOffset: CGFloat = 0.0
+            if let navigationTransition = self.navigationTransition {
+                collapsedTransitionOffset = -10.0 * navigationTransition.fraction
+            }
+            
+            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0 + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize))
             transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
         }
         

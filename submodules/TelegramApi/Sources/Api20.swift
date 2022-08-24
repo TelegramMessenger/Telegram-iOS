@@ -640,6 +640,7 @@ public extension Api {
         case updateReadHistoryOutbox(peer: Api.Peer, maxId: Int32, pts: Int32, ptsCount: Int32)
         case updateReadMessagesContents(messages: [Int32], pts: Int32, ptsCount: Int32)
         case updateRecentEmojiStatuses
+        case updateRecentReactions
         case updateRecentStickers
         case updateSavedGifs
         case updateSavedRingtones
@@ -1429,6 +1430,12 @@ public extension Api {
                     }
                     
                     break
+                case .updateRecentReactions:
+                    if boxed {
+                        buffer.appendInt32(1870160884)
+                    }
+                    
+                    break
                 case .updateRecentStickers:
                     if boxed {
                         buffer.appendInt32(-1706939360)
@@ -1736,6 +1743,8 @@ public extension Api {
                 return ("updateReadMessagesContents", [("messages", String(describing: messages)), ("pts", String(describing: pts)), ("ptsCount", String(describing: ptsCount))])
                 case .updateRecentEmojiStatuses:
                 return ("updateRecentEmojiStatuses", [])
+                case .updateRecentReactions:
+                return ("updateRecentReactions", [])
                 case .updateRecentStickers:
                 return ("updateRecentStickers", [])
                 case .updateSavedGifs:
@@ -3346,6 +3355,9 @@ public extension Api {
         }
         public static func parse_updateRecentEmojiStatuses(_ reader: BufferReader) -> Update? {
             return Api.Update.updateRecentEmojiStatuses
+        }
+        public static func parse_updateRecentReactions(_ reader: BufferReader) -> Update? {
+            return Api.Update.updateRecentReactions
         }
         public static func parse_updateRecentStickers(_ reader: BufferReader) -> Update? {
             return Api.Update.updateRecentStickers

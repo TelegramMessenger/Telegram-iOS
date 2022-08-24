@@ -159,6 +159,24 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         return self.recentPeers.map(\.peerId)
     }
     
+    public var associatedMediaIds: [MediaId] {
+        var result: [MediaId] = []
+        
+        for reaction in self.reactions {
+            switch reaction.value {
+            case .builtin:
+                break
+            case let .custom(fileId):
+                let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                if !result.contains(mediaId) {
+                    result.append(mediaId)
+                }
+            }
+        }
+        
+        return result
+    }
+    
     public init(canViewList: Bool, reactions: [MessageReaction], recentPeers: [RecentPeer]) {
         self.canViewList = canViewList
         self.reactions = reactions
@@ -239,6 +257,24 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
         } else {
             return []
         }
+    }
+    
+    public var associatedMediaIds: [MediaId] {
+        var result: [MediaId] = []
+        
+        for reaction in self.reactions {
+            switch reaction.value {
+            case .builtin:
+                break
+            case let .custom(fileId):
+                let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                if !result.contains(mediaId) {
+                    result.append(mediaId)
+                }
+            }
+        }
+        
+        return result
     }
     
     public init(accountPeerId: PeerId?, reactions: [PendingReaction], isLarge: Bool) {

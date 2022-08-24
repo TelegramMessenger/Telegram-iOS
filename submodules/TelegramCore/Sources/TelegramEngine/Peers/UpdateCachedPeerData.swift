@@ -376,6 +376,20 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         }
                                     }
                                     
+                                    let mappedAllowedReactions: PeerAllowedReactions
+                                    if let allowedReactions = allowedReactions {
+                                        switch allowedReactions {
+                                        case .chatReactionsAll:
+                                            mappedAllowedReactions = .all
+                                        case let .chatReactionsSome(reactions):
+                                            mappedAllowedReactions = .limited(reactions.compactMap(MessageReaction.Reaction.init(apiReaction:)))
+                                        case .chatReactionsNone:
+                                            mappedAllowedReactions = .empty
+                                        }
+                                    } else {
+                                        mappedAllowedReactions = .empty
+                                    }
+                                    
                                     return previous.withUpdatedParticipants(participants)
                                         .withUpdatedExportedInvitation(exportedInvitation)
                                         .withUpdatedBotInfos(botInfos)
@@ -389,7 +403,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         .withUpdatedCallJoinPeerId(groupCallDefaultJoinAs?.peerId)
                                         .withUpdatedThemeEmoticon(chatFullThemeEmoticon)
                                         .withUpdatedInviteRequestsPending(chatFullRequestsPending)
-                                        .withUpdatedAllowedReactions(allowedReactions.flatMap({ $0.map(MessageReaction.Reaction.builtin) }) ?? [])
+                                        .withUpdatedAllowedReactions(.known(mappedAllowedReactions))
                                 })
                             case .channelFull:
                                 break
@@ -602,6 +616,20 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     }
                                                 }
                                                 
+                                                let mappedAllowedReactions: PeerAllowedReactions
+                                                if let allowedReactions = allowedReactions {
+                                                    switch allowedReactions {
+                                                    case .chatReactionsAll:
+                                                        mappedAllowedReactions = .all
+                                                    case let .chatReactionsSome(reactions):
+                                                        mappedAllowedReactions = .limited(reactions.compactMap(MessageReaction.Reaction.init(apiReaction:)))
+                                                    case .chatReactionsNone:
+                                                        mappedAllowedReactions = .empty
+                                                    }
+                                                } else {
+                                                    mappedAllowedReactions = .empty
+                                                }
+                                                
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
                                                     .withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: bannedCount, kickedCount: kickedCount))
@@ -627,7 +655,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedThemeEmoticon(themeEmoticon)
                                                     .withUpdatedInviteRequestsPending(requestsPending)
                                                     .withUpdatedSendAsPeerId(sendAsPeerId)
-                                                    .withUpdatedAllowedReactions(allowedReactions.flatMap({ $0.map(MessageReaction.Reaction.builtin) }) ?? [])
+                                                    .withUpdatedAllowedReactions(.known(mappedAllowedReactions))
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

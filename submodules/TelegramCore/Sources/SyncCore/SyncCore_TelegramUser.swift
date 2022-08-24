@@ -104,6 +104,14 @@ public final class TelegramUser: Peer, Equatable {
         return .personName(first: self.firstName ?? "", last: self.lastName ?? "", addressName: self.username, phoneNumber: self.phone)
     }
     
+    public var associatedMediaIds: [MediaId]? {
+        if let emojiStatus = self.emojiStatus {
+            return [MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId)]
+        } else {
+            return nil
+        }
+    }
+    
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     

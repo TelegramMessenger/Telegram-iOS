@@ -1521,7 +1521,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         if !items.reactionItems.isEmpty, let context = items.context, let animationCache = items.animationCache {
-            let reactionContextNode = ReactionContextNode(context: context, animationCache: animationCache, presentationData: self.presentationData, items: items.reactionItems, getEmojiContent: items.getEmojiContent, isExpandedUpdated: { _ in })
+            let reactionContextNode = ReactionContextNode(context: context, animationCache: animationCache, presentationData: self.presentationData, items: items.reactionItems, getEmojiContent: items.getEmojiContent, isExpandedUpdated: { _ in }, requestLayout: { _ in })
             self.reactionContextNode = reactionContextNode
             self.addSubnode(reactionContextNode)
             

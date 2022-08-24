@@ -746,7 +746,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     fileId: fileId,
                     animationCache: arguments.animationCache,
                     animationRenderer: arguments.animationRenderer,
-                    placeholderColor: .gray,
+                    placeholderColor: layout.spec.component.chosenOrder != nil ? UIColor(argb: layout.spec.component.colors.selectedForeground).withMultipliedAlpha(0.1) : UIColor(argb: layout.spec.component.colors.deselectedForeground).withMultipliedAlpha(0.1),
                     animateIdle: animateIdle,
                     reaction: layout.spec.component.reaction.value,
                     transition: animation.transition
@@ -1121,7 +1121,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
             }
             
             return false
-        }).prefix(10) {
+        }) {
             validIds.insert(reaction.reaction.value)
             
             var avatarPeers = reaction.peers

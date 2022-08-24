@@ -72,6 +72,7 @@ import InstantPageCache
 import EmojiStatusSelectionComponent
 import AnimationCache
 import MultiAnimationRenderer
+import EntityKeyboard
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -449,6 +450,12 @@ private enum PeerInfoSettingsSection {
     case emojiStatus
 }
 
+private enum PeerInfoReportType {
+    case `default`
+    case user
+    case reaction(MessageId)
+}
+
 private final class PeerInfoInteraction {
     let openChat: () -> Void
     let openUsername: (String) -> Void
@@ -459,7 +466,7 @@ private final class PeerInfoInteraction {
     let requestDeleteContact: () -> Void
     let openAddContact: () -> Void
     let updateBlocked: (Bool) -> Void
-    let openReport: (Bool) -> Void
+    let openReport: (PeerInfoReportType) -> Void
     let openShareBot: () -> Void
     let openAddBotToGroup: () -> Void
     let performBotCommand: (PeerInfoBotCommand) -> Void
@@ -503,7 +510,7 @@ private final class PeerInfoInteraction {
         openChat: @escaping () -> Void,
         openAddContact: @escaping () -> Void,
         updateBlocked: @escaping (Bool) -> Void,
-        openReport: @escaping (Bool) -> Void,
+        openReport: @escaping (PeerInfoReportType) -> Void,
         openShareBot: @escaping () -> Void,
         openAddBotToGroup: @escaping () -> Void,
         performBotCommand: @escaping (PeerInfoBotCommand) -> Void,
@@ -900,7 +907,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     return result
 }
 
-private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeerDistance: Int32?, callMessages: [Message]) -> [(AnyHashable, [PeerInfoScreenItem])] {
+private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message]) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
@@ -965,13 +972,21 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }))
             }
         }
-        if let _ = nearbyPeerDistance {
+        if let reactionSourceMessageId = reactionSourceMessageId {
+            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
+                interaction.openChat()
+            }))
+            
+            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_ReportReaction, color: .destructive, action: {
+                interaction.openReport(.reaction(reactionSourceMessageId))
+            }))
+        } else if let _ = nearbyPeerDistance {
             items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
                 interaction.openChat()
             }))
             
             items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_Report, color: .destructive, action: {
-                interaction.openReport(true)
+                interaction.openReport(.user)
             }))
         } else {
             if !data.isContact {
@@ -1010,7 +1025,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             
             if user.botInfo != nil, !user.isVerified {
                 items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 6, text: presentationData.strings.ReportPeer_Report, action: {
-                    interaction.openReport(false)
+                    interaction.openReport(.default)
                 }))
             }
             
@@ -1277,11 +1292,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 
                 if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                     let label: String
-                    if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
-                        if allowedReactions.isEmpty {
+                    if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
+                        switch allowedReactions {
+                        case .all:
+                            //TODO:localize
+                            label = "All Reactions"
+                        case .empty:
                             label = presentationData.strings.PeerInfo_ReactionsDisabled
-                        } else {
-                            label = "\(allowedReactions.count)"
+                        case let .limited(reactions):
+                            label = "\(reactions.count)"
                         }
                     } else {
                         label = ""
@@ -1439,11 +1458,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         
                         if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                             let label: String
-                            if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
-                                if allowedReactions.isEmpty {
+                            if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
+                                switch allowedReactions {
+                                case .all:
+                                    //TODO:localize
+                                    label = "All Reactions"
+                                case .empty:
                                     label = presentationData.strings.PeerInfo_ReactionsDisabled
-                                } else {
-                                    label = "\(allowedReactions.count)"
+                                case let .limited(reactions):
+                                    label = "\(reactions.count)"
                                 }
                             } else {
                                 label = ""
@@ -1461,11 +1484,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     } else {
                         if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                             let label: String
-                            if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
-                                if allowedReactions.isEmpty {
+                            if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
+                                switch allowedReactions {
+                                case .all:
+                                    //TODO:localize
+                                    label = "All Reactions"
+                                case .empty:
                                     label = presentationData.strings.PeerInfo_ReactionsDisabled
-                                } else {
-                                    label = "\(allowedReactions.count)"
+                                case let .limited(reactions):
+                                    label = "\(reactions.count)"
                                 }
                             } else {
                                 label = ""
@@ -1571,11 +1598,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 
                 do {
                     let label: String
-                    if let cachedData = data.cachedData as? CachedGroupData, let allowedReactions = cachedData.allowedReactions {
-                        if allowedReactions.isEmpty {
+                    if let cachedData = data.cachedData as? CachedGroupData, case let .known(allowedReactions) = cachedData.allowedReactions {
+                        switch allowedReactions {
+                        case .all:
+                            //TODO:localize
+                            label = "All Reactions"
+                        case .empty:
                             label = presentationData.strings.PeerInfo_ReactionsDisabled
-                        } else {
-                            label = "\(allowedReactions.count)"
+                        case let .limited(reactions):
+                            label = "\(reactions.count)"
                         }
                     } else {
                         label = ""
@@ -1701,6 +1732,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         highlightedButton: nil
     )
     private let nearbyPeerDistance: Int32?
+    private let reactionSourceMessageId: MessageId?
     private var dataDisposable: Disposable?
     
     private let activeActionDisposable = MetaDisposable()
@@ -1741,7 +1773,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreenImpl, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool, hintGroupInCommon: PeerId?, requestsContext: PeerInvitationImportersContext?) {
+    init(controller: PeerInfoScreenImpl, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool, hintGroupInCommon: PeerId?, requestsContext: PeerInvitationImportersContext?) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
@@ -1749,6 +1781,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.videoCallsEnabled = true
         self.presentationData = controller.presentationData
         self.nearbyPeerDistance = nearbyPeerDistance
+        self.reactionSourceMessageId = reactionSourceMessageId
         self.callMessages = callMessages
         self.isSettings = isSettings
         self.isMediaOnly = context.account.peerId == peerId && !isSettings
@@ -1792,8 +1825,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             updateBlocked: { [weak self] block in
                 self?.updateBlocked(block: block)
             },
-            openReport: { [weak self] user in
-                self?.openReport(user: user, contextController: nil, backAction: nil)
+            openReport: { [weak self] type in
+                self?.openReport(type: type, contextController: nil, backAction: nil)
             },
             openShareBot: { [weak self] in
                 self?.openShareBot()
@@ -1898,7 +1931,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 return false
             }
             return strongSelf.openMessage(id: message.id)
-        }, openPeer: { [weak self] id, navigation, _, _ in
+        }, openPeer: { [weak self] id, navigation, _, _, _ in
             if let id = id {
                 self?.openPeer(peerId: id, navigation: navigation)
             }
@@ -2427,7 +2460,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             let items: [ContextMenuItem] = [
                 .action(ContextMenuActionItem(text: presentationData.strings.Conversation_LinkDialogOpen, icon: { _ in nil }, action: { _, f in
                     f(.dismissWithoutContent)
-                    self?.chatInterfaceInteraction.openPeer(peer.id, .default, nil, nil)
+                    self?.chatInterfaceInteraction.openPeer(peer.id, .default, nil, false, nil)
                 }))
             ]
             let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
@@ -3063,14 +3096,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 strongSelf.controller?.present(EmojiStatusSelectionController(
                     context: strongSelf.context,
                     sourceView: sourceView,
-                    emojiContent: ChatEntityKeyboardInputNode.emojiInputData(
+                    emojiContent: EmojiPagerContentComponent.emojiInputData(
                         context: strongSelf.context,
                         animationCache: animationCache,
                         animationRenderer: animationRenderer,
                         isStandalone: false,
                         isStatusSelection: true,
                         isReactionSelection: false,
-                        reactionItems: [],
+                        topReactionItems: [],
                         areUnicodeEmojiEnabled: false,
                         areCustomEmojiEnabled: true,
                         chatPeerId: strongSelf.context.account.peerId
@@ -4280,7 +4313,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.ReportPeer_Report, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, f in
-                            self?.openReport(user: false, contextController: c, backAction: { c in
+                            self?.openReport(type: .default, contextController: c, backAction: { c in
                                 if let mainItemsImpl = mainItemsImpl {
                                     c.setItems(mainItemsImpl() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
                                 }
@@ -5338,26 +5371,37 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         })
     }
     
-    private func openReport(user: Bool, contextController: ContextControllerProtocol?, backAction: ((ContextControllerProtocol) -> Void)?) {
+    private func openReport(type: PeerInfoReportType, contextController: ContextControllerProtocol?, backAction: ((ContextControllerProtocol) -> Void)?) {
         guard let controller = self.controller else {
             return
         }
         self.view.endEditing(true)
         
-        let options: [PeerReportOption]
-        if user {
-            options = [.spam, .fake, .violence, .pornography, .childAbuse]
-        } else {
-            options = [.spam, .fake, .violence, .pornography, .childAbuse, .copyright, .other]
-        }
-        
-        presentPeerReportOptions(context: self.context, parent: controller, contextController: contextController, backAction: backAction, subject: .peer(self.peerId), options: options, passthrough: true, completion: { [weak self] reason, _ in
-            if let reason = reason {
-                DispatchQueue.main.async {
-                    self?.openChatForReporting(reason)
+        switch type {
+        case let .reaction(sourceMessageId):
+            let _ = (self.context.engine.peers.reportPeerReaction(authorId: self.peerId, messageId: sourceMessageId)
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
                 }
+                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .emoji(name: "PoliceCar", text: strongSelf.presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
+            })
+        default:
+            let options: [PeerReportOption]
+            if case .user = type {
+                options = [.spam, .fake, .violence, .pornography, .childAbuse]
+            } else {
+                options = [.spam, .fake, .violence, .pornography, .childAbuse, .copyright, .other]
             }
-        })
+            
+            presentPeerReportOptions(context: self.context, parent: controller, contextController: contextController, backAction: backAction, subject: .peer(self.peerId), options: options, passthrough: true, completion: { [weak self] reason, _ in
+                if let reason = reason {
+                    DispatchQueue.main.async {
+                        self?.openChatForReporting(reason)
+                    }
+                }
+            })
+        }
     }
     
     private func openEncryptionKey() {
@@ -7242,7 +7286,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             insets.left += sectionInset
             insets.right += sectionInset
             
-            let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages)
+            let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, reactionSourceMessageId: self.reactionSourceMessageId, callMessages: self.callMessages)
             
             contentHeight += headerHeight
             if !(self.isSettings && self.state.isEditing) {
@@ -7857,6 +7901,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     private let avatarInitiallyExpanded: Bool
     private let isOpenedFromChat: Bool
     private let nearbyPeerDistance: Int32?
+    private let reactionSourceMessageId: MessageId?
     private let callMessages: [Message]
     private let isSettings: Bool
     private let hintGroupInCommon: PeerId?
@@ -7895,13 +7940,14 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
         self.avatarInitiallyExpanded = avatarInitiallyExpanded
         self.isOpenedFromChat = isOpenedFromChat
         self.nearbyPeerDistance = nearbyPeerDistance
+        self.reactionSourceMessageId = reactionSourceMessageId
         self.callMessages = callMessages
         self.isSettings = isSettings
         self.hintGroupInCommon = hintGroupInCommon
@@ -8188,7 +8234,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages, isSettings: self.isSettings, hintGroupInCommon: self.hintGroupInCommon, requestsContext: requestsContext)
+        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, reactionSourceMessageId: self.reactionSourceMessageId, callMessages: self.callMessages, isSettings: self.isSettings, hintGroupInCommon: self.hintGroupInCommon, requestsContext: requestsContext)
         self.controllerNode.accountsAndPeers.set(self.accountsAndPeers.get() |> map { $0.1 })
         self.controllerNode.activeSessionsContextAndCount.set(self.activeSessionsContextAndCount.get())
         self.cachedDataPromise.set(self.controllerNode.cachedDataPromise.get())
@@ -8442,7 +8488,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
     private var previousBackButtonBadge: ASDisplayNode?
     private var currentBackButton: ASDisplayNode?
     
-    private var previousTitleNode: (ASDisplayNode, ASDisplayNode)?
+    private var previousTitleNode: (ASDisplayNode, PortalView)?
     private var previousStatusNode: (ASDisplayNode, ASDisplayNode)?
     
     private var didSetup: Bool = false
@@ -8493,11 +8539,12 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 self.currentBackButton = currentBackButton
                 self.addSubnode(currentBackButton)
             }
-            if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView {
-                let previousTitleNode = previousTitleView.titleNode.makeCopy()
+            if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView, let previousTitleNode = PortalView(matchPosition: false) {
+                previousTitleNode.view.frame = previousTitleView.titleContainerView.frame
+                previousTitleView.titleContainerView.addPortal(view: previousTitleNode)
                 let previousTitleContainerNode = ASDisplayNode()
-                previousTitleContainerNode.addSubnode(previousTitleNode)
-                previousTitleNode.frame = previousTitleNode.frame.offsetBy(dx: -previousTitleNode.frame.width / 2.0, dy: -previousTitleNode.frame.height / 2.0)
+                previousTitleContainerNode.view.addSubview(previousTitleNode.view)
+                previousTitleNode.view.frame = previousTitleNode.view.frame.offsetBy(dx: -previousTitleNode.view.frame.width / 2.0, dy: -previousTitleNode.view.frame.height / 2.0)
                 self.previousTitleNode = (previousTitleContainerNode, previousTitleNode)
                 self.addSubnode(previousTitleContainerNode)
                 
@@ -8551,11 +8598,15 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         }
         
         if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView, let _ = (bottomNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode)?.avatarNode, let (previousTitleContainerNode, previousTitleNode) = self.previousTitleNode, let (previousStatusContainerNode, previousStatusNode) = self.previousStatusNode {
-            let previousTitleFrame = previousTitleView.titleNode.view.convert(previousTitleView.titleNode.bounds, to: bottomNavigationBar.view)
+            let previousTitleFrame = previousTitleView.titleContainerView.convert(previousTitleView.titleContainerView.bounds, to: bottomNavigationBar.view)
             let previousStatusFrame = previousTitleView.activityNode.view.convert(previousTitleView.activityNode.bounds, to: bottomNavigationBar.view)
             
             self.headerNode.navigationTransition = PeerInfoHeaderNavigationTransition(sourceNavigationBar: bottomNavigationBar, sourceTitleView: previousTitleView, sourceTitleFrame: previousTitleFrame, sourceSubtitleFrame: previousStatusFrame, fraction: fraction)
             var topHeight = topNavigationBar.backgroundNode.bounds.height
+            
+            if let iconView = previousTitleView.titleCredibilityIconView.componentView {
+                transition.updateFrame(view: iconView, frame: iconView.bounds.offsetBy(dx: (1.0 - fraction) * 8.0, dy: 0.0))
+            }
             
             if let (layout, _) = self.screenNode.validLayout {
                 let sectionInset: CGFloat
@@ -8569,11 +8620,11 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, paneContainerY: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, notificationSettings: self.screenNode.data?.notificationSettings, statusData: self.screenNode.data?.status, panelStatusData: (nil, nil, nil), isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, metrics: layout.metrics, transition: transition, additive: false)
             }
             
-            let titleScale = (fraction * previousTitleNode.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.bounds.height
+            let titleScale = (fraction * previousTitleNode.view.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.view.bounds.height
             let subtitleScale = max(0.01, min(10.0, (fraction * previousStatusNode.bounds.height + (1.0 - fraction) * self.headerNode.subtitleNodeRawContainer.bounds.height) / previousStatusNode.bounds.height))
             
             transition.updateFrame(node: previousTitleContainerNode, frame: CGRect(origin: self.headerNode.titleNodeRawContainer.frame.center, size: CGSize()))
-            transition.updateFrame(node: previousTitleNode, frame: CGRect(origin: CGPoint(x: -previousTitleFrame.width / 2.0, y: -previousTitleFrame.height / 2.0), size: previousTitleFrame.size))
+            transition.updateFrame(view: previousTitleNode.view, frame: CGRect(origin: CGPoint(x: -previousTitleFrame.width / 2.0, y: -previousTitleFrame.height / 2.0), size: previousTitleFrame.size))
             transition.updateFrame(node: previousStatusContainerNode, frame: CGRect(origin: self.headerNode.subtitleNodeRawContainer.frame.center, size: CGSize()))
             transition.updateFrame(node: previousStatusNode, frame: CGRect(origin: CGPoint(x: -previousStatusFrame.size.width / 2.0, y: -previousStatusFrame.size.height / 2.0), size: previousStatusFrame.size))
             
@@ -8581,7 +8632,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             transition.updateSublayerTransformScale(node: previousStatusContainerNode, scale: subtitleScale)
             
             transition.updateAlpha(node: self.headerNode.titleNode, alpha: (1.0 - fraction))
-            transition.updateAlpha(node: previousTitleNode, alpha: fraction)
+            transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: fraction)
             transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: (1.0 - fraction))
             transition.updateAlpha(node: previousStatusNode, alpha: fraction)
             

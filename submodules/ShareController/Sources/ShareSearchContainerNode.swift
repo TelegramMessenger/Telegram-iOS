@@ -93,7 +93,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                 if let associatedPeer = associatedPeer {
                     peers[associatedPeer.id] = associatedPeer
                 }
-                let peer = EngineRenderedPeer(RenderedPeer(peerId: peer.id, peers: SimpleDictionary(peers)))
+                let peer = EngineRenderedPeer(RenderedPeer(peerId: peer.id, peers: SimpleDictionary(peers), associatedMedia: [:]))
                 return ShareControllerPeerGridItem(context: context, theme: theme, strings: strings, peer: peer, presence: presence, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }

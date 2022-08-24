@@ -335,6 +335,60 @@ public struct ChatListAdditionalItemEntry: Equatable {
     }
 }
 
+func renderAssociatedMediaForPeers(postbox: PostboxImpl, peers: SimpleDictionary<PeerId, Peer>) -> [MediaId: Media] {
+    var result: [MediaId: Media] = [:]
+    
+    for (_, peer) in peers {
+        if let associatedMediaIds = peer.associatedMediaIds {
+            for id in associatedMediaIds {
+                if result[id] == nil {
+                    if let media = postbox.messageHistoryTable.getMedia(id) {
+                        result[id] = media
+                    }
+                }
+            }
+        }
+    }
+    
+    return result
+}
+
+func renderAssociatedMediaForPeers(postbox: PostboxImpl, peers: [Peer]) -> [MediaId: Media] {
+    var result: [MediaId: Media] = [:]
+    
+    for peer in peers {
+        if let associatedMediaIds = peer.associatedMediaIds {
+            for id in associatedMediaIds {
+                if result[id] == nil {
+                    if let media = postbox.messageHistoryTable.getMedia(id) {
+                        result[id] = media
+                    }
+                }
+            }
+        }
+    }
+    
+    return result
+}
+
+func renderAssociatedMediaForPeers(postbox: PostboxImpl, peers: [PeerId: Peer]) -> [MediaId: Media] {
+    var result: [MediaId: Media] = [:]
+    
+    for (_, peer) in peers {
+        if let associatedMediaIds = peer.associatedMediaIds {
+            for id in associatedMediaIds {
+                if result[id] == nil {
+                    if let media = postbox.messageHistoryTable.getMedia(id) {
+                        result[id] = media
+                    }
+                }
+            }
+        }
+    }
+    
+    return result
+}
+
 final class MutableChatListView {
     let groupId: PeerGroupId
     let filterPredicate: ChatListFilterPredicate?
@@ -448,7 +502,7 @@ final class MutableChatListView {
                                 }
                             }
                             
-                            let renderedPeer = RenderedPeer(peerId: peer.id, peers: peers)
+                            let renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers))
                             let isUnread = postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false
                             renderedPeers.append(ChatListGroupReferencePeer(peer: renderedPeer, isUnread: isUnread))
                             
@@ -601,7 +655,7 @@ final class MutableChatListView {
                 }
             }
             
-            return .MessageEntry(index: index, messages: renderedMessages, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers), presence: presence, tagSummaryInfo: [:], hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId), isContact: isContact)
+            return .MessageEntry(index: index, messages: renderedMessages, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers)), presence: presence, tagSummaryInfo: [:], hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId), isContact: isContact)
         default:
             return nil
         }

@@ -71,10 +71,13 @@ swift_library(
         "//submodules/PremiumUI:PremiumUI",
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
+        "//submodules/TelegramUI/Components/EmojiStatusSelectionComponent",
+        "//submodules/TelegramUI/Components/EntityKeyboard",
     ],
     visibility = [
         "//visibility:public",
