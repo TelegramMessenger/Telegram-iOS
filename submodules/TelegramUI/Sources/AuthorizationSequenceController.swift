@@ -68,7 +68,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             navigationStatusBar = .white
         }
         
-        super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), isFlat: true, emptyAreaColor: .black))
+        super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), emptyAreaColor: .black), isFlat: true)
         
         self.stateDisposable = (TelegramEngineUnauthorized(account: self.account).auth.state()
         |> map { state -> InnerState in
