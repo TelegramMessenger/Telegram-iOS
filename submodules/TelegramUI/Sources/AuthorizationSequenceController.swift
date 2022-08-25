@@ -68,7 +68,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             navigationStatusBar = .white
         }
         
-        super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), emptyAreaColor: .black))
+        super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), emptyAreaColor: .black), isFlat: true)
         
         self.stateDisposable = (TelegramEngineUnauthorized(account: self.account).auth.state()
         |> map { state -> InnerState in
@@ -130,7 +130,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         return controller
     }
     
-    private func phoneEntryController(countryCode: Int32, number: String) -> AuthorizationSequencePhoneEntryController {
+    private func phoneEntryController(countryCode: Int32, number: String, splashController: AuthorizationSequenceSplashController?) -> AuthorizationSequencePhoneEntryController {
         var currentController: AuthorizationSequencePhoneEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequencePhoneEntryController {
@@ -156,6 +156,9 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .empty)).start()
                 }
             })
+            if let splahController = splashController {
+                controller.animateWithSplashController(splahController)
+            }
             controller.accountUpdated = { [weak self] updatedAccount in
                 guard let strongSelf = self else {
                     return
@@ -393,35 +396,39 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         let _ = beginSignUp(account: strongSelf.account, data: data).start()
                                     }
                                 case .loggedIn:
-                                    break
+                                    controller?.animateSuccess()
                             }
                         }, error: { error in
                             Queue.mainQueue().async {
                                 if let strongSelf = self, let controller = controller {
                                     controller.inProgress = false
                                     
-                                    var resetCode = false
-                                    let text: String
-                                    switch error {
-                                        case .limitExceeded:
-                                            resetCode = true
-                                            text = strongSelf.presentationData.strings.Login_CodeFloodError
-                                        case .invalidCode:
-                                            resetCode = true
-                                            text = strongSelf.presentationData.strings.Login_InvalidCodeError
-                                        case .generic:
-                                            text = strongSelf.presentationData.strings.Login_UnknownError
-                                        case .codeExpired:
-                                            text = strongSelf.presentationData.strings.Login_CodeExpired
-                                            let account = strongSelf.account
-                                            let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                    if case .invalidCode = error {
+                                        controller.animateError(text: strongSelf.presentationData.strings.Login_WrongCodeError)
+                                    } else {
+                                        var resetCode = false
+                                        let text: String
+                                        switch error {
+                                            case .limitExceeded:
+                                                resetCode = true
+                                                text = strongSelf.presentationData.strings.Login_CodeFloodError
+                                            case .invalidCode:
+                                                resetCode = true
+                                                text = strongSelf.presentationData.strings.Login_InvalidCodeError
+                                            case .generic:
+                                                text = strongSelf.presentationData.strings.Login_UnknownError
+                                            case .codeExpired:
+                                                text = strongSelf.presentationData.strings.Login_CodeExpired
+                                                let account = strongSelf.account
+                                                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                        }
+                                        
+                                        if resetCode {
+                                            controller.resetCode()
+                                        }
+                                        
+                                        controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                     }
-                                    
-                                    if resetCode {
-                                        controller.resetCode()
-                                    }
-                                    
-                                    controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 }
                             }
                         }))
@@ -985,7 +992,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         if self.otherAccountPhoneNumbers.1.isEmpty {
                             controllers.append(self.splashController())
                         } else {
-                            controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
+                            controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: "", splashController: nil))
                         }
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     }
@@ -994,14 +1001,21 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
                         controllers.append(self.splashController())
                     }
-                    controllers.append(self.phoneEntryController(countryCode: countryCode, number: number))
-                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
+                    var previousSplashController: AuthorizationSequenceSplashController?
+                    for c in self.viewControllers {
+                        if let c = c as? AuthorizationSequenceSplashController {
+                            previousSplashController = c
+                            break
+                        }
+                    }
+                    controllers.append(self.phoneEntryController(countryCode: countryCode, number: number, splashController: previousSplashController))
+                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty && (previousSplashController == nil || self.viewControllers.count > 2))
                 case let .confirmationCodeEntry(number, type, _, timeout, nextType, _):
                     var controllers: [ViewController] = []
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
                         controllers.append(self.splashController())
                     }
-                    controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
+                    controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: "", splashController: nil))
                     if case let .emailSetupRequired(appleSignInAllowed) = type {
                         controllers.append(self.emailSetupController(number: number, appleSignInAllowed: appleSignInAllowed))
                     } else {

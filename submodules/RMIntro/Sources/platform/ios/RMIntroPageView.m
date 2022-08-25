@@ -24,7 +24,7 @@
         _headline=headline;
         
         UILabel *headlineLabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, frame.size.width, 64+8)];
-        headlineLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:IPAD ? 96/2 : 36];
+        headlineLabel.font = [UIFont boldSystemFontOfSize:35.0]; //[UIFont fontWithName:@"HelveticaNeue-Light" size:IPAD ? 96/2 : 36];
         headlineLabel.text = _headline;
         headlineLabel.textColor = color;
         headlineLabel.textAlignment = NSTextAlignmentCenter;
@@ -32,14 +32,11 @@
         
       
         NSMutableParagraphStyle *style = [[NSMutableParagraphStyle alloc] init];
-        style.lineSpacing = IPAD ? 6 : 5;
+        style.lineSpacing = IPAD ? 4 : 3;
         style.lineBreakMode = NSLineBreakByWordWrapping;
         style.alignment = NSTextAlignmentCenter;
         
-        
-        
-        
-        
+
         NSMutableArray *boldRanges = [[NSMutableArray alloc] init];
         
         NSMutableString *cleanText = [[NSMutableString alloc] initWithString:description];
@@ -60,11 +57,9 @@
             [boldRanges addObject:[NSValue valueWithRange:NSMakeRange(startRange.location, endRange.location - startRange.location)]];
         }
         
-        
-        
         _description = [[NSMutableAttributedString alloc]initWithString:cleanText];
         NSDictionary *boldAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
-                                        [UIFont fontWithName:@"HelveticaNeue-Medium" size:IPAD ? 44/2 : 17], NSFontAttributeName, nil];
+                                        [UIFont boldSystemFontOfSize:IPAD ? 22 : 17.0], NSFontAttributeName, nil];
         for (NSValue *nRange in boldRanges)
         {
             [_description addAttributes:boldAttributes range:[nRange rangeValue]];
@@ -76,7 +71,7 @@
         [_description addAttribute:NSForegroundColorAttributeName value:color range:NSMakeRange(0, _description.length)];
         
         UILabel *descriptionLabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 25 + (IPAD ? 22 : 0), frame.size.width, 120+8+5)];
-        descriptionLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:IPAD ? 44/2 : 17];
+        descriptionLabel.font = [UIFont systemFontOfSize:IPAD ? 22 : 17.0];
         descriptionLabel.attributedText = _description;
         descriptionLabel.numberOfLines=0;
         descriptionLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleWidth;

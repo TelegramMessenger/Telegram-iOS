@@ -97,6 +97,17 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         }
     }
     
+    private var shouldAnimateIn = false
+    private var transitionInArguments: (buttonFrame: CGRect, animationSnapshot: UIView, textSnapshot: UIView)?
+    
+    func animateWithSplashController(_ controller: AuthorizationSequenceSplashController) {
+        self.shouldAnimateIn = true
+        
+        if let animationSnapshot = controller.animationSnapshot, let textSnapshot = controller.textSnaphot {
+            self.transitionInArguments = (controller.buttonFrame, animationSnapshot, textSnapshot)
+        }
+    }
+    
     override public func loadDisplayNode() {
         self.displayNode = AuthorizationSequencePhoneEntryControllerNode(sharedContext: self.sharedContext, account: self.account, strings: self.presentationData.strings, theme: self.presentationData.theme, debugAction: { [weak self] in
             guard let strongSelf = self else {
@@ -146,22 +157,42 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         })
     }
     
+    private var animatingIn = false
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        self.controllerNode.activateInput()
+        if self.shouldAnimateIn {
+            self.animatingIn = true
+            if let (buttonFrame, animationSnapshot, textSnapshot) = self.transitionInArguments {
+                self.controllerNode.willAnimateIn(buttonFrame: buttonFrame, animationSnapshot: animationSnapshot, textSnapshot: textSnapshot)
+            }
+            Queue.mainQueue().justDispatch {
+                self.controllerNode.activateInput()
+            }
+        } else {
+            self.controllerNode.activateInput()
+        }
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.controllerNode.activateInput()
+        if !self.animatingIn {
+            self.controllerNode.activateInput()
+        }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+        
+        if self.shouldAnimateIn, let inputHeight = layout.inputHeight, inputHeight > 0.0 {
+            if let (buttonFrame, animationSnapshot, textSnapshot) = self.transitionInArguments {
+                self.shouldAnimateIn = false
+                self.controllerNode.animateIn(buttonFrame: buttonFrame, animationSnapshot: animationSnapshot, textSnapshot: textSnapshot)
+            }
+        }
     }
     
     @objc func nextPressed() {

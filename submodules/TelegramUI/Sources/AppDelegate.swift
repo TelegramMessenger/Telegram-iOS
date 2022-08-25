@@ -1105,8 +1105,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     |> take(1)
                     |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
                     |> deliverOnMainQueue).start(completed: {
-                        authContextValue.rootController.view.endEditing(true)
-                        authContextValue.rootController.dismiss()
+                        Queue.mainQueue().after(0.75) {
+                            authContextValue.rootController.view.endEditing(true)
+                            authContextValue.rootController.dismiss()
+                        }
                     })
                 } else {
                     authContextValue.rootController.view.endEditing(true)

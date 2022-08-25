@@ -33,6 +33,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private var signInWithAppleButton: UIControl?
     
     private let codeInputView: CodeInputView
+    private let errorTextNode: ImmediateTextNode
     
     private var codeType: SentAuthorizationCodeType?
     
@@ -69,7 +70,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.codeInputView.alpha = self.inProgress ? 0.6 : 1.0
         }
     }
-    
+        
     init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
         self.theme = theme
@@ -119,6 +120,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.codeInputView.textField.keyboardType = .numberPad
         }
         
+        self.errorTextNode = ImmediateTextNode()
+        self.errorTextNode.alpha = 0.0
+        self.errorTextNode.displaysAsynchronously = false
+        self.errorTextNode.textAlignment = .center
+        
         self.dividerNode = AuthorizationDividerNode(theme: self.theme, strings: self.strings)
         
         if #available(iOS 13.0, *) {
@@ -136,8 +142,6 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.backgroundColor = self.theme.list.plainBackgroundColor
         
         self.addSubnode(self.codeInputView)
-        //self.addSubnode(self.codeSeparatorNode)
-        //self.addSubnode(self.codeField)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.titleIconNode)
         self.addSubnode(self.currentOptionNode)
@@ -145,6 +149,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.addSubnode(self.nextOptionButtonNode)
         self.addSubnode(self.animationNode)
         self.addSubnode(self.dividerNode)
+        self.addSubnode(self.errorTextNode)
         
         self.codeInputView.updated = { [weak self] in
             guard let strongSelf = self else {
@@ -208,7 +213,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
         self.appleSignInAllowed = appleSignInAllowed
         
-        self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
+        self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType, phoneNumber: self.phoneNumber, email: nil, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
         if case .missedCall = codeType {
             self.currentOptionInfoNode.attributedText = NSAttributedString(string: self.strings.Login_CodePhonePatternInfoText, font: Font.regular(17.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         } else {
@@ -259,18 +264,18 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         var animationName = "IntroMessage"
         if let codeType = self.codeType {
             switch codeType {
-            case .otherSession:
-                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_CheckOtherSessionMessages, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
             case .missedCall:
                 self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterMissingDigits, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
             case .email:
-                self.titleNode.attributedText = NSAttributedString(string: "Check Your Email", font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeEmailTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
                 animationName = "IntroLetter"
+            case .sms:
+                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeSMSTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
             default:
-                self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeTelegramTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
             }
         } else {
-            self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.semibold(40.0), textColor: self.theme.list.itemPrimaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeTelegramTitle, font: Font.semibold(40.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
         
         if let inputHeight = layout.inputHeight {
@@ -286,11 +291,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.animationNode.visibility = true
         }
         
-        let animationSize = CGSize(width: 88.0, height: 88.0)
+        let animationSize = CGSize(width: 100.0, height: 100.0)
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         
-        let currentOptionSize = self.currentOptionNode.updateLayout(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
-        let currentOptionInfoSize = self.currentOptionInfoNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        let currentOptionSize = self.currentOptionNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: CGFloat.greatestFiniteMagnitude))
+        let currentOptionInfoSize = self.currentOptionInfoNode.measure(CGSize(width: layout.size.width - 48.0, height: CGFloat.greatestFiniteMagnitude))
         let nextOptionSize = self.nextOptionTitleNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         
         let codeLength: Int
@@ -323,6 +328,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             theme: CodeInputView.Theme(
                 inactiveBorder: self.theme.list.itemPlainSeparatorColor.argb,
                 activeBorder: self.theme.list.itemAccentColor.argb,
+                succeedBorder: self.theme.list.itemDisclosureActions.constructive.fillColor.argb,
+                failedBorder: self.theme.list.itemDestructiveColor.argb,
                 foreground: self.theme.list.itemPrimaryTextColor.argb,
                 isDark: self.theme.overallDarkAppearance
             ),
@@ -372,9 +379,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: currentOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 
-                items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-                //items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-                //items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 88.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 
                 items.append(AuthorizationLayoutItem(node: self.nextOptionButtonNode, size: nextOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
             case .missedCall:
@@ -393,14 +398,10 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                     })
                 }
                 
-//                items.append(AuthorizationLayoutItem(node: self.titleIconNode, size: self.titleIconNode.image!.size, spacingBefore: AuthorizationLayoutItemSpacing(weight: 41.0, maxValue: 41.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: currentOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 
                 items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-                
-                /*items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-                items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 88.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))*/
                 
                 items.append(AuthorizationLayoutItem(node: self.currentOptionInfoNode, size: currentOptionInfoSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 60.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 
@@ -467,12 +468,38 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     func activateInput() {
         let _ = self.codeInputView.becomeFirstResponder()
-        //self.codeField.textField.becomeFirstResponder()
     }
     
     func animateError() {
         self.codeInputView.layer.addShakeAnimation()
-        //self.codeField.layer.addShakeAnimation()
+    }
+    
+    func animateError(text: String) {
+        self.codeInputView.animateError()
+        self.codeInputView.layer.addShakeAnimation(amplitude: -30.0, duration: 0.5, count: 6, decay: true)
+        
+        self.errorTextNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: self.theme.list.itemDestructiveColor, paragraphAlignment: .center)
+        
+        if let (layout, _) = self.layoutArguments {
+            let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: .greatestFiniteMagnitude))
+            self.errorTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - errorTextSize.width) / 2.0), y: self.codeInputView.frame.maxY + 28.0), size: errorTextSize)
+        
+        }
+        self.errorTextNode.alpha = 1.0
+        self.errorTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        self.errorTextNode.layer.addShakeAnimation(amplitude: -8.0, duration: 0.5, count: 6, decay: true)
+        
+        Queue.mainQueue().after(0.85) {
+            self.errorTextNode.alpha = 0.0
+            self.errorTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+        }
+    }
+    
+    func animateSuccess() {
+        self.codeInputView.animateSuccess()
+        
+        let values: [NSNumber] = [1.0, 1.1, 1.0]
+        self.codeInputView.layer.animateKeyframes(values: values, duration: 0.4, keyPath: "transform.scale")
     }
     
     @objc func codeFieldTextChanged(_ textField: UITextField) {

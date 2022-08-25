@@ -17,7 +17,7 @@ final class AuthorizationDividerNode: ASDisplayNode {
     init(theme: PresentationTheme, strings: PresentationStrings) {
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.attributedText = NSAttributedString(string: "or", font: Font.regular(17.0), textColor: theme.list.itemSecondaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: strings.Login_Or, font: Font.regular(17.0), textColor: theme.list.itemSecondaryTextColor)
 
         self.leftLineNode = ASDisplayNode()
         self.leftLineNode.backgroundColor = theme.list.itemSecondaryTextColor
@@ -90,20 +90,20 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: "Add Email", font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_AddEmailTitle, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
         
         self.noticeNode = ASTextNode()
         self.noticeNode.isUserInteractionEnabled = false
         self.noticeNode.displaysAsynchronously = false
         self.noticeNode.lineSpacing = 0.1
-        self.noticeNode.attributedText = NSAttributedString(string: "Please enter your valid email address to protect your account.", font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        self.noticeNode.attributedText = NSAttributedString(string: self.strings.Login_AddEmailText, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         if #available(iOS 13.0, *) {
             self.signInWithAppleButton = ASAuthorizationAppleIDButton(authorizationButtonType: .signIn, authorizationButtonStyle: theme.overallDarkAppearance ? .white : .black)
             (self.signInWithAppleButton as? ASAuthorizationAppleIDButton)?.cornerRadius = 11
         }
         
-        self.proceedNode = SolidRoundedButtonNode(title: "Continue", theme: SolidRoundedButtonTheme(theme: self.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
+        self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: self.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
 
         self.codeSeparatorNode = ASDisplayNode()
         self.codeSeparatorNode.isLayerBacked = true
@@ -120,7 +120,7 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.codeField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.codeField.textField.tintColor = self.theme.list.itemAccentColor
-        self.codeField.textField.placeholder = "Enter Your Email"
+        self.codeField.textField.placeholder = self.strings.Login_AddEmailPlaceholder
                 
         self.dividerNode = AuthorizationDividerNode(theme: self.theme, strings: self.strings)
         
@@ -193,9 +193,9 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
             insets.bottom += max(inputHeight, insets.bottom)
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: "Add Email", font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_AddEmailTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
 
-        let animationSize = CGSize(width: 88.0, height: 88.0)
+        let animationSize = CGSize(width: 100.0, height: 100.0)
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
         
         let noticeSize = self.noticeNode.measure(CGSize(width: layout.size.width - 80.0, height: CGFloat.greatestFiniteMagnitude))
