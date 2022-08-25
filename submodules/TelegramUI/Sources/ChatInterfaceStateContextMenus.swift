@@ -1573,8 +1573,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             var readStats = readStats
             if !canViewStats {
-                readStats = MessageReadStats(peers: [])
+                readStats = MessageReadStats(reactionCount: 0, peers: [])
             }
+            
+            let reactionCount = readStats?.reactionCount ?? 0
 
             if hasReadReports || reactionCount != 0 {
                 if !actions.isEmpty {
