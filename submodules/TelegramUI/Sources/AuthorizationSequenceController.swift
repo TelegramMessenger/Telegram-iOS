@@ -68,7 +68,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             navigationStatusBar = .white
         }
         
-        super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), isFlat: true, emptyAreaColor: .black))
+        super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), emptyAreaColor: .black), isFlat: true)
         
         self.stateDisposable = (TelegramEngineUnauthorized(account: self.account).auth.state()
         |> map { state -> InnerState in
@@ -130,7 +130,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         return controller
     }
     
-    private func phoneEntryController(countryCode: Int32, number: String, splahController: AuthorizationSequenceSplashController?) -> AuthorizationSequencePhoneEntryController {
+    private func phoneEntryController(countryCode: Int32, number: String, splashController: AuthorizationSequenceSplashController?) -> AuthorizationSequencePhoneEntryController {
         var currentController: AuthorizationSequencePhoneEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequencePhoneEntryController {
@@ -156,7 +156,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .empty)).start()
                 }
             })
-            if let splahController = splahController {
+            if let splahController = splashController {
                 controller.animateWithSplashController(splahController)
             }
             controller.accountUpdated = { [weak self] updatedAccount in
@@ -992,7 +992,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         if self.otherAccountPhoneNumbers.1.isEmpty {
                             controllers.append(self.splashController())
                         } else {
-                            controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: "", splahController: nil))
+                            controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: "", splashController: nil))
                         }
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     }
@@ -1008,14 +1008,14 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             break
                         }
                     }
-                    controllers.append(self.phoneEntryController(countryCode: countryCode, number: number, splahController: previousSplashController))
-                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty && previousSplashController == nil)
+                    controllers.append(self.phoneEntryController(countryCode: countryCode, number: number, splashController: previousSplashController))
+                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty && (previousSplashController == nil || self.viewControllers.count > 2))
                 case let .confirmationCodeEntry(number, type, _, timeout, nextType, _):
                     var controllers: [ViewController] = []
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
                         controllers.append(self.splashController())
                     }
-                    controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: "", splahController: nil))
+                    controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: "", splashController: nil))
                     if case let .emailSetupRequired(appleSignInAllowed) = type {
                         controllers.append(self.emailSetupController(number: number, appleSignInAllowed: appleSignInAllowed))
                     } else {

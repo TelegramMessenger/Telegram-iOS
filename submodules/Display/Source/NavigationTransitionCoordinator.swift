@@ -139,7 +139,7 @@ final class NavigationTransitionCoordinator {
         let containerSize = self.container.bounds.size
         
         let topFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(position * containerSize.width), y: 0.0), size: containerSize)
-        let bottomFrame = CGRect(origin: CGPoint(x: ((position - 1.0) * containerSize.width * 0.3), y: 0.0), size: containerSize)
+        let bottomFrame = CGRect(origin: CGPoint(x: self.isFlat ? -floorToScreenPixels((1.0 - position) * containerSize.width) : ((position - 1.0) * containerSize.width * 0.3), y: 0.0), size: containerSize)
         
         var canInvokeCompletion = false
         var hadEarlyCompletion = false
