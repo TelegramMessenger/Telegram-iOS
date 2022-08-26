@@ -298,18 +298,8 @@ class ChatPresentationContext {
     init(context: AccountContext, backgroundNode: WallpaperBackgroundNode?) {
         self.backgroundNode = backgroundNode
         
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        
-        let animationRenderer: MultiAnimationRenderer
-        /*if #available(iOS 13.0, *) {
-            animationRenderer = MultiAnimationMetalRendererImpl()
-        } else {*/
-            animationRenderer = MultiAnimationRendererImpl()
-        //}
-        
-        self.animationRenderer = animationRenderer
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
     }
 }
 

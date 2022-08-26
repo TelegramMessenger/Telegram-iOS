@@ -16,15 +16,37 @@ func topMessageReactions(context: AccountContext, message: Message) -> Signal<[R
             return item.contents.get(RecentReactionItem.self)
         }
     }
+    
+    let allowedReactionsWithFiles: Signal<(reactions: AllowedReactions, files: [Int64: TelegramMediaFile])?, NoError> = peerMessageAllowedReactions(context: context, message: message)
+    |> mapToSignal { allowedReactions -> Signal<(reactions: AllowedReactions, files: [Int64: TelegramMediaFile])?, NoError> in
+        guard let allowedReactions = allowedReactions else {
+            return .single(nil)
+        }
+        if case let .set(reactions) = allowedReactions {
+            return context.engine.stickers.resolveInlineStickers(fileIds: reactions.compactMap { item -> Int64? in
+                switch item {
+                case .builtin:
+                    return nil
+                case let .custom(fileId):
+                    return fileId
+                }
+            })
+            |> map { files -> (reactions: AllowedReactions, files: [Int64: TelegramMediaFile]) in
+                return (allowedReactions, files)
+            }
+        } else {
+            return .single((allowedReactions, [:]))
+        }
+    }
 
     return combineLatest(
         context.engine.stickers.availableReactions(),
-        peerMessageAllowedReactions(context: context, message: message),
+        allowedReactionsWithFiles,
         topReactions
     )
     |> take(1)
-    |> map { availableReactions, allowedReactions, topReactions -> [ReactionItem] in
-        guard let availableReactions = availableReactions, let allowedReactions = allowedReactions else {
+    |> map { availableReactions, allowedReactionsAndFiles, topReactions -> [ReactionItem] in
+        guard let availableReactions = availableReactions, let allowedReactionsAndFiles = allowedReactionsAndFiles else {
             return []
         }
         
@@ -48,7 +70,7 @@ func topMessageReactions(context: AccountContext, message: Message) -> Signal<[R
                     }
                     existingIds.insert(reaction.value)
                     
-                    switch allowedReactions {
+                    switch allowedReactionsAndFiles.reactions {
                     case let .set(set):
                         if !set.contains(reaction.value) {
                             continue
@@ -71,7 +93,7 @@ func topMessageReactions(context: AccountContext, message: Message) -> Signal<[R
                     continue
                 }
             case let .custom(file):
-                switch allowedReactions {
+                switch allowedReactionsAndFiles.reactions {
                 case let .set(set):
                     if !set.contains(.custom(file.fileId.id)) {
                         continue
@@ -109,13 +131,13 @@ func topMessageReactions(context: AccountContext, message: Message) -> Signal<[R
                 continue
             }
 
-            switch allowedReactions {
+            switch allowedReactionsAndFiles.reactions {
             case let .set(set):
                 if !set.contains(reaction.value) {
                     continue
                 }
             case .all:
-                break
+                continue
             }
             
             if existingIds.contains(reaction.value) {
@@ -133,6 +155,33 @@ func topMessageReactions(context: AccountContext, message: Message) -> Signal<[R
                 largeApplicationAnimation: reaction.effectAnimation,
                 isCustom: false
             ))
+        }
+        
+        if case let .set(reactions) = allowedReactionsAndFiles.reactions {
+            for reaction in reactions {
+                if existingIds.contains(reaction) {
+                    continue
+                }
+                existingIds.insert(reaction)
+                
+                switch reaction {
+                case .builtin:
+                    break
+                case let .custom(fileId):
+                    if let file = allowedReactionsAndFiles.files[fileId] {
+                        result.append(ReactionItem(
+                            reaction: ReactionItem.Reaction(rawValue: .custom(file.fileId.id)),
+                            appearAnimation: file,
+                            stillAnimation: file,
+                            listAnimation: file,
+                            largeListAnimation: file,
+                            applicationAnimation: nil,
+                            largeApplicationAnimation: nil,
+                            isCustom: true
+                        ))
+                    }
+                }
+            }
         }
 
         return result

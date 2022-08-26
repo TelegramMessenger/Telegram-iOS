@@ -522,6 +522,15 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return false
     }
     
+    public var isStaticEmoji: Bool {
+        for attribute in self.attributes {
+            if case .CustomEmoji = attribute {
+                return self.mimeType == "image/webp"
+            }
+        }
+        return false
+    }
+    
     public var isVideo: Bool {
         for attribute in self.attributes {
             if case .Video = attribute {

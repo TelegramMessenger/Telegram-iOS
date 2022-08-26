@@ -384,6 +384,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
                 containerSize: CGSize(width: 22.0, height: 22.0)
             )
             titleCredibilityIconTransition.setFrame(view: titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 2.0, y: floorToScreenPixels(titleFrame.midY - titleIconSize.height / 2.0)), size: titleIconSize))
+            titleCredibilityIconView.isHidden = self.title.activity
         } else {
             if let titleCredibilityIconView = self.titleCredibilityIconView {
                 self.titleCredibilityIconView = nil

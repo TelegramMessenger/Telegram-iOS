@@ -270,7 +270,7 @@ func managedRecentReactions(postbox: Postbox, network: Network) -> Signal<Void, 
             return fileId.id
         }
     }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
-        return network.request(Api.functions.messages.getRecentReactions(limit: 24, hash: hash))
+        return network.request(Api.functions.messages.getRecentReactions(limit: 100, hash: hash))
         |> retryRequest
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
             switch result {
@@ -321,7 +321,7 @@ func managedTopReactions(postbox: Postbox, network: Network) -> Signal<Void, NoE
             return fileId.id
         }
     }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
-        return network.request(Api.functions.messages.getTopReactions(limit: 24, hash: hash))
+        return network.request(Api.functions.messages.getTopReactions(limit: 32, hash: hash))
         |> retryRequest
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
             switch result {

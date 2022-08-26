@@ -2410,6 +2410,8 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         }
 
         if let currentStats = self.currentStats {
+            reactionCount = currentStats.reactionCount
+            
             if currentStats.peers.isEmpty {
                 if reactionCount != 0 {
                     let text: String = self.presentationData.strings.Chat_ContextReactionCount(Int32(reactionCount))

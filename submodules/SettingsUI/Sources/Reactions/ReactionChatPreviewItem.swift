@@ -169,15 +169,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                             let standaloneReactionAnimation = StandaloneReactionAnimation()
                             self.standaloneReactionAnimation = standaloneReactionAnimation
                             
-                            let animationCache: AnimationCache
-                            if let current = self.animationCache {
-                                animationCache = current
-                            } else {
-                                animationCache = AnimationCacheImpl(basePath: item.context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-                                    return TempBox.shared.tempFile(fileName: "file").path
-                                })
-                                self.animationCache = animationCache
-                            }
+                            let animationCache = item.context.animationCache
                             
                             supernode.addSubnode(standaloneReactionAnimation)
                             standaloneReactionAnimation.frame = supernode.bounds

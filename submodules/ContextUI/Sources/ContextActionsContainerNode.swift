@@ -576,10 +576,13 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         }
         
         self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
-        self.highlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         
         return size
+    }
+    
+    func setActualSize(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.highlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     func updateTheme(presentationData: PresentationData) {
@@ -802,6 +805,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
             contentSize.height += 8.0
             let textSelectionTipSize = textSelectionTipNode.updateLayout(widthClass: widthClass, width: actionsSize.width, transition: transition)
             transition.updateFrame(node: textSelectionTipNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentSize.height), size: textSelectionTipSize))
+            textSelectionTipNode.setActualSize(size: textSelectionTipSize, transition: transition)
             contentSize.height += textSelectionTipSize.height
         }
         

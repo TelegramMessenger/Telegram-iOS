@@ -624,16 +624,19 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         displaySetPhoto = true
     }
     
-    //TODO:localize
     var setStatusTitle: String = ""
     let displaySetStatus: Bool
     var hasEmojiStatus = false
     if let peer = data.peer as? TelegramUser, peer.isPremium {
         if peer.emojiStatus != nil {
             hasEmojiStatus = true
+            //TODO:localize
+            setStatusTitle = "Change Emoji Status"
+        } else {
+            //TODO:localize
+            setStatusTitle = "Set Emoji Status"
         }
         displaySetStatus = true
-        setStatusTitle = "Set Emoji Status"
     } else {
         displaySetStatus = false
     }
@@ -972,7 +975,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }))
             }
         }
-        if let reactionSourceMessageId = reactionSourceMessageId {
+        if let reactionSourceMessageId = reactionSourceMessageId, !data.isContact {
             items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
                 interaction.openChat()
             }))
@@ -3089,10 +3092,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 
-                let animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-                    return TempBox.shared.tempFile(fileName: "file").path
-                })
-                let animationRenderer = MultiAnimationRendererImpl()
+                let animationCache = context.animationCache
+                let animationRenderer = context.animationRenderer
+                
                 strongSelf.controller?.present(EmojiStatusSelectionController(
                     context: strongSelf.context,
                     sourceView: sourceView,
@@ -3107,7 +3109,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         areUnicodeEmojiEnabled: false,
                         areCustomEmojiEnabled: true,
                         chatPeerId: strongSelf.context.account.peerId
-                    )
+                    ),
+                    destinationItemView: { [weak sourceView] in
+                        return sourceView
+                    }
                 ), in: .window(.root))
             }
         } else {
@@ -3128,20 +3133,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     guard let strongSelf = self else {
                         return
                     }
-                    if let emojiStatusFile = emojiStatusFile {
-                        let source: PremiumSource
-                        if let peerStatus = peerStatus {
-                            source = .emojiStatus(strongSelf.peerId, peerStatus.fileId, emojiStatusFile, emojiPackTitle)
-                        } else {
-                            source = .profile(strongSelf.peerId)
-                        }
-                        
-                        let controller = PremiumIntroScreen(context: strongSelf.context, source: source)
-                        controller.sourceView = sourceView
-                        controller.containerView = strongSelf.controller?.navigationController?.view
-                        controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
-                        strongSelf.controller?.push(controller)
+                    let source: PremiumSource
+                    if let peerStatus = peerStatus, let emojiStatusFile = emojiStatusFile {
+                        source = .emojiStatus(strongSelf.peerId, peerStatus.fileId, emojiStatusFile, emojiPackTitle)
+                    } else {
+                        source = .profile(strongSelf.peerId)
                     }
+                    
+                    let controller = PremiumIntroScreen(context: strongSelf.context, source: source)
+                    controller.sourceView = sourceView
+                    controller.containerView = strongSelf.controller?.navigationController?.view
+                    controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
+                    strongSelf.controller?.push(controller)
                 })
             }
             
